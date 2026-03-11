@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.6] - 2026-03-07
+
+### Changed
+- **Task Logging Workflow Guidance** (PR #200) - Strengthened implementation instructions so AI agents are explicitly directed to record implementation details before marking tasks complete:
+  - Updated the `implement-task` prompt to make `log-implementation` a mandatory step before changing tasks from `[-]` to `[x]`
+  - Updated the `spec-workflow-guide` implementation phase to reinforce the same ordering and emphasize implementation logs as required workflow context for future agents
+
+## [2.2.5] - 2026-03-02
+
+### Security
+- **Upgrade Fastify and Plugins** - Resolved all remaining npm audit vulnerabilities by upgrading from Fastify v4 to v5:
+  - `fastify` 4.29.1 -> 5.7.4 (fixes DoS via unbounded memory in sendWebStream, Content-Type header bypass)
+  - `@fastify/cors` 9.0.1 -> 11.2.0
+  - `@fastify/static` 7.0.4 -> 9.0.0
+  - `@fastify/websocket` 8.3.1 -> 11.2.0
+  - Updated WebSocket handler to use v11 API (socket-first signature instead of connection wrapper)
+  - Also resolved: `@isaacs/brace-expansion`, `@modelcontextprotocol/sdk`, `ajv`, `hono`, `markdown-it`, `minimatch`, `qs`, `rollup` vulnerabilities via `npm audit fix`
+
+## [2.2.4] - 2026-03-02
+
+### Security
+- **Fix Arbitrary File Read Vulnerability** (Issue #201) - Prevented reading files outside the project directory via crafted `filePath` values in approval requests:
+  - Reject absolute paths and path traversal (`..`) sequences at three defense layers: MCP tool input, approval creation, and file path resolution
+  - Replace unsafe `join()` calls with `PathUtils.safeJoin()` which validates resolved paths stay within project bounds
+  - Add `PathUtils.validatePathWithinBases()` for verifying resolved paths against allowed directories
+  - Previously, an attacker with dashboard access could read arbitrary system files (e.g., `/etc/passwd`) by creating approval requests with absolute or traversal paths
+
+### Fixed
+- **Empty Test Suite on Linux** - Case-sensitivity tests in `path-utils.test.ts` used a conditional `if` block that produced an empty `describe` on Linux, causing vitest to error. Replaced with `it.skipIf()` for proper test skipping
+- **Missing `@mdx-js/mdx` Dependency** - Restored missing package to fix 4 cascading test suite failures
+
 ## [2.2.3] - 2026-02-08
 
 ### Added
