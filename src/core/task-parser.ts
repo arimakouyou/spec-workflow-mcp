@@ -112,7 +112,7 @@ export interface ParsedTask {
   lineNumber: number;                  // Line number in the file (0-based)
   indentLevel: number;                 // Indentation level (for hierarchy)
   isHeader: boolean;                   // Whether this is a header task (no implementation details)
-  
+
   // Optional metadata
   requirements?: string[];              // Referenced requirements
   leverage?: string;                   // Code to leverage
@@ -121,14 +121,24 @@ export interface ParsedTask {
   implementationDetails?: string[];    // Implementation bullet points
   prompt?: string;                     // AI prompt for this task (full text)
   promptStructured?: PromptSection[];  // Structured prompt sections (if prompt contains pipe separators)
-  
+  testFocus?: string;                  // RED phase test guidance
+  isPhaseReview?: boolean;             // Whether this is a phase review task
+  phase?: string;                      // Owning phase name (e.g., "Phase 1: Core Domain Layer")
+
   // For backward compatibility
   completed: boolean;                  // true if status === 'completed'
   inProgress: boolean;                 // true if status === 'in-progress'
 }
+export interface PhaseInfo {
+  name: string;           // e.g., "Phase 1: Core Domain Layer"
+  taskIds: string[];      // Task IDs belonging to this phase
+  reviewTaskId?: string;  // ID of the phase review task (if any)
+}
+
 export interface TaskParserResult {
   tasks: ParsedTask[];
   inProgressTask: string | null;       // ID of current in-progress task (e.g., "1.1")
+  phases: PhaseInfo[];                 // Phase groupings (empty if no phases)
   summary: {
     total: number;
     completed: number;
@@ -146,7 +156,21 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
   const lines = content.split('\n');
   const tasks: ParsedTask[] = [];
   let inProgressTask: string | null = null;
-  
+
+  // Track phases from ## Phase headings
+  const phases: PhaseInfo[] = [];
+  let currentPhase: string | undefined;
+  const phaseHeadingLines: { line: number; name: string }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const phaseMatch = lines[i].match(/^##\s+(Phase\s+\d+\s*:.+)/i);
+    if (phaseMatch) {
+      const phaseName = phaseMatch[1].trim();
+      phaseHeadingLines.push({ line: i, name: phaseName });
+      phases.push({ name: phaseName, taskIds: [] });
+    }
+  }
+
   // Find all lines with checkboxes (supports both - and * list markers)
   const checkboxIndices: number[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -203,7 +227,9 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
     const purposes: string[] = [];
     const implementationDetails: string[] = [];
     let prompt: string | undefined;
-    
+    let testFocus: string | undefined;
+    let isPhaseReview = false;
+
     for (let lineIdx = lineNumber + 1; lineIdx < endLine; lineIdx++) {
       const contentLine = lines[lineIdx].trim();
       
@@ -257,6 +283,16 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
           const levText = levMatch[1].trim();
           leverage.push(...levText.split(',').map(l => l.trim()).filter(l => l));
         }
+      } else if (contentLine.includes('_TestFocus:') && !contentLine.includes('_Prompt:')) {
+        const tfMatch = contentLine.match(/_TestFocus:\s*([^_]+?)_/);
+        if (tfMatch) {
+          testFocus = tfMatch[1].trim();
+        }
+      } else if (contentLine.includes('_PhaseReview:') && !contentLine.includes('_Prompt:')) {
+        const prMatch = contentLine.match(/_PhaseReview:\s*([^_]+?)_/);
+        if (prMatch) {
+          isPhaseReview = prMatch[1].trim().toLowerCase() === 'true';
+        }
       } else if (contentLine.match(/Files?:/)) {
         const fileMatch = contentLine.match(/Files?:\s*(.+)$/);
         if (fileMatch) {
@@ -279,19 +315,31 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
     }
     
     // Determine if this is a header task (has no implementation details)
-    const hasDetails = requirements.length > 0 || 
-                      leverage.length > 0 || 
-                      files.length > 0 || 
-                      purposes.length > 0 || 
+    const hasDetails = requirements.length > 0 ||
+                      leverage.length > 0 ||
+                      files.length > 0 ||
+                      purposes.length > 0 ||
                       implementationDetails.length > 0 ||
-                      !!prompt;
-    
+                      !!prompt ||
+                      isPhaseReview;
+
     // Parse structured prompt if applicable
     let promptStructured: PromptSection[] | undefined;
     if (prompt) {
       promptStructured = parseStructuredPrompt(prompt);
     }
-    
+
+    // Determine which phase this task belongs to
+    let taskPhase: string | undefined;
+    if (phaseHeadingLines.length > 0) {
+      for (let p = phaseHeadingLines.length - 1; p >= 0; p--) {
+        if (lineNumber > phaseHeadingLines[p].line) {
+          taskPhase = phaseHeadingLines[p].name;
+          break;
+        }
+      }
+    }
+
     const task: ParsedTask = {
       id: taskId,
       description,
@@ -301,7 +349,7 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
       isHeader: !hasDetails,
       completed: status === 'completed',
       inProgress: status === 'in-progress',
-      
+
       // Add metadata if present
       ...(requirements.length > 0 && { requirements }),
       ...(leverage.length > 0 && { leverage: leverage.join(', ') }),
@@ -309,9 +357,23 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
       ...(purposes.length > 0 && { purposes }),
       ...(implementationDetails.length > 0 && { implementationDetails }),
       ...(prompt && { prompt }),
-      ...(promptStructured && { promptStructured })
-    };    
+      ...(promptStructured && { promptStructured }),
+      ...(testFocus && { testFocus }),
+      ...(isPhaseReview && { isPhaseReview }),
+      ...(taskPhase && { phase: taskPhase })
+    };
     tasks.push(task);
+
+    // Register task in its phase
+    if (taskPhase) {
+      const phaseInfo = phases.find(p => p.name === taskPhase);
+      if (phaseInfo) {
+        phaseInfo.taskIds.push(taskId);
+        if (isPhaseReview) {
+          phaseInfo.reviewTaskId = taskId;
+        }
+      }
+    }
     
     // Track first in-progress task (for UI highlighting)
     if (status === 'in-progress' && !inProgressTask) {
@@ -331,6 +393,7 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
   return {
     tasks,
     inProgressTask,
+    phases,
     summary
   };
 }

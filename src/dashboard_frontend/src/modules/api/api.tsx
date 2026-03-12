@@ -74,6 +74,20 @@ export interface BatchApprovalResult {
   failed: Array<{ id: string; error: string }>;
 }
 
+export type PromptSummary = {
+  name: string;
+  title: string;
+  description: string;
+  arguments: Array<{ name: string; description: string; required?: boolean }>;
+  isCustomized: boolean;
+};
+
+export type PromptDetail = PromptSummary & {
+  defaultContent: string;
+  customContent: string | null;
+  lastModified: string | null;
+};
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`GET ${url} failed: ${res.status}`);
@@ -93,6 +107,11 @@ async function postJsonWithData<T>(url: string, body: any): Promise<{ ok: boolea
 
 async function putJson(url: string, body: any) {
   const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return { ok: res.ok, status: res.status, data: res.ok ? await res.json() : null };
+}
+
+async function deleteJson(url: string) {
+  const res = await fetch(url, { method: 'DELETE' });
   return { ok: res.ok, status: res.status, data: res.ok ? await res.json() : null };
 }
 
@@ -132,6 +151,10 @@ type ApiActionsContextType = {
   getImplementationLogs: (specName: string, query?: { taskId?: string; search?: string }) => Promise<{ entries: ImplementationLogEntry[] }>;
   getImplementationLogStats: (specName: string, taskId: string) => Promise<any>;
   getChangelog: (version: string) => Promise<{ content: string }>;
+  getPrompts: () => Promise<PromptSummary[]>;
+  getPrompt: (name: string) => Promise<PromptDetail>;
+  savePromptOverride: (name: string, customContent: string) => Promise<{ ok: boolean; status: number; data?: any }>;
+  deletePromptOverride: (name: string) => Promise<{ ok: boolean; status: number; data?: any }>;
 };
 
 const ApiDataContext = createContext<ApiDataContextType | undefined>(undefined);
@@ -302,6 +325,10 @@ export function ApiProvider({ initial, projectId, children }: ApiProviderProps) 
         getImplementationLogs: async () => ({ entries: [] }),
         getImplementationLogStats: async () => ({}),
         getChangelog: async () => ({ content: '' }),
+        getPrompts: async () => [],
+        getPrompt: async () => ({} as any),
+        savePromptOverride: async () => ({ ok: false, status: 400 }),
+        deletePromptOverride: async () => ({ ok: false, status: 400 }),
       };
     }
 
@@ -344,6 +371,10 @@ export function ApiProvider({ initial, projectId, children }: ApiProviderProps) 
       },
       getImplementationLogStats: (specName: string, taskId: string) => getJson(`${prefix}/specs/${encodeURIComponent(specName)}/implementation-log/task/${encodeURIComponent(taskId)}/stats`),
       getChangelog: (version: string) => getJson(`${prefix}/changelog/${encodeURIComponent(version)}`),
+      getPrompts: () => getJson(`${prefix}/prompts`),
+      getPrompt: (name: string) => getJson(`${prefix}/prompts/${encodeURIComponent(name)}`),
+      savePromptOverride: (name: string, customContent: string) => putJson(`${prefix}/prompts/${encodeURIComponent(name)}`, { customContent }),
+      deletePromptOverride: (name: string) => deleteJson(`${prefix}/prompts/${encodeURIComponent(name)}`),
     };
   }, [projectId, reloadAll]);
 

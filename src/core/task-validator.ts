@@ -20,6 +20,8 @@ export interface ValidationResult {
     totalTasks: number;
     validTasks: number;
     invalidTasks: number;
+    phases: number;
+    phaseReviewTasks: number;
   };
 }
 
@@ -229,9 +231,90 @@ export function validateTasksMarkdown(content: string): ValidationResult {
       }
     }
 
+    // Check for _TestFocus field
+    let hasTestFocus = false;
+    let hasPhaseReview = false;
+    for (let lineIdx = lineIndex + 1; lineIdx < endLine; lineIdx++) {
+      const trimmedLine = lines[lineIdx].trim();
+      if (trimmedLine.includes('_TestFocus:')) hasTestFocus = true;
+      if (trimmedLine.includes('_PhaseReview:')) hasPhaseReview = true;
+    }
+
+    // Warn if non-phase-review task is missing _TestFocus
+    if (!hasPhaseReview && !hasTestFocus && taskId) {
+      warnings.push({
+        line: lineNum,
+        taskId,
+        field: 'testFocus',
+        message: 'Task missing _TestFocus field for TDD guidance',
+        suggestion: 'Add "_TestFocus: ..." to describe what tests should cover in the RED phase',
+        severity: 'warning'
+      });
+    }
+
+    // Warn if _PhaseReview task is missing _Prompt
+    if (hasPhaseReview && !hasPrompt && taskId) {
+      warnings.push({
+        line: lineNum,
+        taskId,
+        field: 'prompt',
+        message: 'Phase review task missing _Prompt field',
+        suggestion: 'Add a _Prompt field with review and commit instructions',
+        severity: 'warning'
+      });
+    }
+
+    // Detect standalone test tasks (TDD makes them unnecessary)
+    const standaloneTestPattern = /\b(write\s+tests?|create\s+unit\s+tests?|add\s+tests?|write\s+.*\s+tests?)\b/i;
+    if (taskId && taskText && standaloneTestPattern.test(taskText)) {
+      warnings.push({
+        line: lineNum,
+        taskId,
+        field: 'taskDesign',
+        message: 'Standalone test task detected — TDD handles testing automatically',
+        suggestion: 'Merge test requirements into the implementation task and use _TestFocus to guide the RED phase',
+        severity: 'warning'
+      });
+    }
+
     // Track if task is valid (only errors affect validity, not warnings)
     if (taskValid) {
       validTaskCount++;
+    }
+  }
+
+  // Phase-level validations
+  let phaseCount = 0;
+  let phaseReviewCount = 0;
+  const hasPhaseHeadings = lines.some(l => /^##\s+Phase\s+\d+/i.test(l));
+
+  if (hasPhaseHeadings) {
+    // Count phases
+    for (const line of lines) {
+      if (/^##\s+Phase\s+\d+/i.test(line)) phaseCount++;
+    }
+
+    // Count phase review tasks
+    for (let idx = 0; idx < checkboxIndices.length; idx++) {
+      const lineIndex = checkboxIndices[idx];
+      const endLine = idx < checkboxIndices.length - 1 ? checkboxIndices[idx + 1] : lines.length;
+      for (let j = lineIndex + 1; j < endLine; j++) {
+        if (lines[j].trim().includes('_PhaseReview:')) {
+          phaseReviewCount++;
+          break;
+        }
+      }
+    }
+
+    // Warn if phases exist but no phase review tasks
+    if (phaseReviewCount === 0) {
+      warnings.push({
+        line: 1,
+        field: 'phaseReview',
+        message: 'Phase headings found but no phase review tasks',
+        suggestion: 'Add a "_PhaseReview: true_" task at the end of each phase for review and commit',
+        severity: 'warning'
+      });
     }
   }
 
@@ -242,7 +325,9 @@ export function validateTasksMarkdown(content: string): ValidationResult {
     summary: {
       totalTasks: taskCount,
       validTasks: validTaskCount,
-      invalidTasks: taskCount - validTaskCount
+      invalidTasks: taskCount - validTaskCount,
+      phases: phaseCount,
+      phaseReviewTasks: phaseReviewCount
     }
   };
 }

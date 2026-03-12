@@ -9,7 +9,8 @@
     "tasks": "タスク",
     "approvals": "承認",
     "settings": "設定",
-    "logs": "実装ログ"
+    "logs": "実装ログ",
+    "prompts": "プロンプト"
   },
   "connectionStatus": {
     "connected": "接続済み",
@@ -541,6 +542,35 @@
     "cancel": "キャンセル",
     "close": "閉じる",
     "jobDescription": "{{schedule}}のスケジュールに従い、{{days}}日以上古いレコードを削除"
+  },
+  "promptsPage": {
+    "header": {
+      "title": "プロンプト",
+      "subtitle": "AIエージェントが使用するMCPプロンプトテンプレートをカスタマイズ"
+    },
+    "empty": "利用可能なプロンプトがありません",
+    "badge": {
+      "default": "デフォルト",
+      "customized": "カスタム"
+    },
+    "actions": {
+      "edit": "編集",
+      "reset": "リセット"
+    },
+    "resetConfirm": {
+      "title": "デフォルトにリセット",
+      "message": "このプロンプトをデフォルトの内容にリセットしてもよろしいですか？カスタマイズした内容は失われます。",
+      "confirm": "リセット"
+    },
+    "editor": {
+      "title": "プロンプトを編集",
+      "defaultContent": "デフォルト内容",
+      "customContent": "カスタム内容",
+      "readOnly": "読み取り専用",
+      "placeholder": "カスタムプロンプトの内容を入力してください...",
+      "variables": "変数:",
+      "notFound": "プロンプトが見つかりません"
+    }
   },
   "changelog": {
     "viewChangelog": "変更履歴を表示",
