@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; echo \"$f\" | grep -qE '\\.rs$' || exit 0; rustfmt \"$f\"; d=\"$(dirname \"$f\")\"; while [ \"$d\" != \"/\" ]; do [ -f \"$d/Cargo.toml\" ] && { cargo clippy --quiet --all-targets --manifest-path \"$d/Cargo.toml\" -- -D warnings 2>&1; break; }; d=\"$(dirname \"$d\")\"; done; true; }",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; echo \"$f\" | grep -qE '\\.rs$' || exit 0; rustfmt \"$f\"; d=\"$(dirname \"$f\")\"; while [ \"$d\" != \"/\" ]; do [ -f \"$d/Cargo.toml\" ] && { cargo clippy --quiet --all-targets --manifest-path \"$d/Cargo.toml\" -- -D warnings 2>&1 || exit $?; break; }; d=\"$(dirname \"$d\")\"; done; }",
             "timeout": 120,
             "statusMessage": "Running rustfmt + clippy..."
           }

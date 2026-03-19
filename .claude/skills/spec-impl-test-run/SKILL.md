@@ -66,10 +66,11 @@ From the test output, extract:
 
 **Red mode** (`red`):
 - EXPECTED: All tests fail (passed = 0)
+- **Compile error**: If the test runner fails to build/compile (e.g. unresolved import of not-yet-implemented module), treat this as a hard failure — return `{ status: "fail", message: "Compile error: {error summary}", ... }`. The calling agent must fix the compile error before RED can be validated.
 - If any test passes, report it as a problem — this means either:
   - The test is not actually testing new behavior
   - There's already an implementation that satisfies the test
-- Return: `{ status: "pass", ... }` if all failed, `{ status: "fail", message: "N tests unexpectedly passed", ... }` otherwise
+- Return: `{ status: "pass", ... }` if all failed (and build succeeded), `{ status: "fail", message: "N tests unexpectedly passed", ... }` otherwise
 
 **Green mode** (`green`):
 - EXPECTED: All tests pass (failed = 0)

@@ -114,7 +114,12 @@ let app = Router::new()
             .layer(TraceLayer::new_for_http())
             .layer(HandleErrorLayer::new(handle_timeout))
             .timeout(Duration::from_secs(30))
-            .layer(CorsLayer::permissive())
+            .layer(
+                CorsLayer::new()
+                    .allow_origin("https://example.com".parse::<HeaderValue>().unwrap())
+                    .allow_methods([Method::GET, Method::POST])
+                    .allow_headers([AUTHORIZATION, CONTENT_TYPE]),
+            )
     )
     .with_state(state);
 ```

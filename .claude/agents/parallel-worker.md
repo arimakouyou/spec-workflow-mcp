@@ -34,7 +34,7 @@ permissionMode: bypassPermissions
 `.claude/rules/quality-checks.md` に定義された統一コマンドを使用すること。
 
 ```bash
-rustfmt --check src/**/*.rs tests/**/*.rs
+cargo fmt --all -- --check
 cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
 ```

@@ -48,7 +48,7 @@ Write the file to:
 
 ### 5. Self-Review via Subagent (before approval)
 
-Spawn a subagent to review and fix the document before requesting approval. This keeps review details out of your main context:
+Spawn a subagent to review the document before requesting approval. This keeps review details out of your main context. The subagent checks only — apply any fixes yourself after receiving the report:
 
 ```
 Agent({
