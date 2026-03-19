@@ -11,11 +11,11 @@ parallel-worker, review-worker, およびその他のエージェントが品質
 ## rustfmt
 
 ```bash
-rustfmt --check src/**/*.rs tests/**/*.rs
+cargo fmt --all -- --check
 ```
 
 - src と tests の両方を対象とする（片方だけチェックしない）
-- 自動修正時は `--check` を外して実行: `rustfmt src/**/*.rs tests/**/*.rs`
+- 自動修正時は `--check` を外して実行: `cargo fmt --all`
 
 ## clippy
 

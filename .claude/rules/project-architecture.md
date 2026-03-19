@@ -89,7 +89,7 @@ pub enum AppError {
 
 impl From<diesel::result::Error> for AppError { /* ... */ }
 impl From<redis::RedisError> for AppError { /* ... */ }
-impl From<deadpool::managed::PoolError</* ... */>> for AppError { /* ... */ }
+impl From<deadpool::managed::PoolError<deadpool_diesel::postgres::Manager>> for AppError { /* ... */ }
 impl IntoResponse for AppError { /* ... */ }
 ```
 

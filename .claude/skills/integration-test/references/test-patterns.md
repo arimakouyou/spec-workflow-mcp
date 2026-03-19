@@ -6,6 +6,7 @@
 
 ```
 tests/
+├── integration.rs           # テストバイナリエントリポイント（mod で下記を参照）
 ├── integration/
 │   ├── helpers/
 │   │   ├── mod.rs          # 共通ヘルパー
@@ -13,8 +14,7 @@ tests/
 │   │   ├── db.rs           # testcontainers DB セットアップ
 │   │   └── auth.rs         # テスト用認証ヘッダー
 │   ├── test_users.rs       # ドメインごとのテストファイル
-│   ├── test_posts.rs
-│   └── main.rs             # テストバイナリエントリポイント
+│   └── test_posts.rs
 ```
 
 ## パターン1: リスト取得 (GET /)
@@ -130,9 +130,11 @@ async fn delete_user_removes_record() {
 ```rust
 use rstest::rstest;
 
+const LONG_NAME: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // 256文字
+
 #[rstest]
 #[case("", StatusCode::BAD_REQUEST)]
-#[case("a".repeat(256).as_str(), StatusCode::BAD_REQUEST)]
+#[case(LONG_NAME, StatusCode::BAD_REQUEST)]
 #[case("valid_name", StatusCode::CREATED)]
 #[tokio::test]
 async fn create_user_validates_name(
