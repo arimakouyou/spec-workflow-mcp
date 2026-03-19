@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm:*)",
+      "Bash(rm -rf:*)",
+      "Bash(rmdir:*)",
+      "Bash(git reset:*)",
+      "Read(.env.*)",
+      "Read(env.yaml)",
+      "Read(id_rsa)",
+      "Read(id_ed25519)",
+      "Read(**/*key*)",
+      "Write(.env*)",
+      "Write(**/secrets/**)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(nc:*)",
+      "Bash(psql:*)"
+    ]
+  },
+  "plansDirectory": "./.claude/_docs/plans",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; echo \"$f\" | grep -qE '\\.rs$' || exit 0; rustfmt \"$f\"; d=\"$(dirname \"$f\")\"; while [ \"$d\" != \"/\" ]; do [ -f \"$d/Cargo.toml\" ] && { cargo clippy --quiet --all-targets --manifest-path \"$d/Cargo.toml\" -- -D warnings 2>&1 || exit $?; break; }; d=\"$(dirname \"$d\")\"; done; }",
+            "timeout": 120,
+            "statusMessage": "Running rustfmt + clippy..."
+          }
+        ]
+      }
+    ]
+  }
+}

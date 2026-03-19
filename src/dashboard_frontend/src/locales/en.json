@@ -9,7 +9,8 @@
     "tasks": "Tasks",
     "approvals": "Approvals",
     "settings": "Settings",
-    "logs": "Implementation Logs"
+    "logs": "Implementation Logs",
+    "prompts": "Prompts"
   },
   "connectionStatus": {
     "connected": "Connected",
@@ -540,6 +541,35 @@
     "section": {
       "automatedCleanup": "Automated Cleanup",
       "automatedCleanupDesc": "Automatically delete old approval records, specifications, and archived specifications based on a schedule. Configure cleanup jobs to run on a recurring basis across all connected projects."
+    }
+  },
+  "promptsPage": {
+    "header": {
+      "title": "Prompts",
+      "subtitle": "Customize MCP prompt templates used by AI agents"
+    },
+    "empty": "No prompts available",
+    "badge": {
+      "default": "Default",
+      "customized": "Customized"
+    },
+    "actions": {
+      "edit": "Edit",
+      "reset": "Reset"
+    },
+    "resetConfirm": {
+      "title": "Reset to Default",
+      "message": "Are you sure you want to reset this prompt to its default content? Your customizations will be lost.",
+      "confirm": "Reset"
+    },
+    "editor": {
+      "title": "Edit Prompt",
+      "defaultContent": "Default Content",
+      "customContent": "Custom Content",
+      "readOnly": "read-only",
+      "placeholder": "Enter your custom prompt content...",
+      "variables": "Variables:",
+      "notFound": "Prompt not found"
     }
   },
   "changelog": {

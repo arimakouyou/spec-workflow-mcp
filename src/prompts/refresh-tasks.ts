@@ -156,7 +156,10 @@ Example: REST to GraphQL migration with completed REST endpoints:
 - [ ] 3.7 Remove REST endpoints after GraphQL verified (NEW)
 
 ## Task Format Requirements
-Each task must follow this format:
+Each task must follow this format (with phase headings and _TestFocus):
+
+## Phase 1: Core Domain Layer
+
 - [ ] 1.1 Create user authentication interface
   - File: src/auth/UserAuth.ts
   - Implement login and registration forms
@@ -164,6 +167,11 @@ Each task must follow this format:
   - Purpose: Enable user account management
   - _Leverage: src/components/BaseForm.tsx, src/utils/validation.ts_
   - _Requirements: 1.1, 1.2_
+  - _TestFocus: Form validation, auth flow, error handling_
+
+- [ ] 1.2 Review and commit Phase 1
+  - _PhaseReview: true_
+  - _Prompt: Role: Code reviewer | Task: Review Phase 1 changes, run tests, commit | Success: All tests pass, committed_
 
 Migration tasks should follow this format:
 - [ ] 2.4 Migrate MongoDB schemas to PostgreSQL tables
@@ -174,6 +182,7 @@ Migration tasks should follow this format:
   - Purpose: Transition database layer to new architecture
   - _Leverage: Completed MongoDB schemas in tasks 2.1-2.3_
   - _Requirements: Design section 3.2_
+  - _TestFocus: Schema mapping correctness, data integrity, relationship preservation_
 
 ## Critical Rules
 - ALWAYS preserve completed [x] tasks exactly as written
@@ -184,6 +193,10 @@ Migration tasks should follow this format:
 - MAKE tasks atomic, specific, and actionable
 - PRESERVE the original tasks.md structure and format
 - KEEP tasks.md clean - only include the task list itself
+- DO NOT create standalone test tasks — TDD handles testing automatically in each task
+- PRESERVE phase structure (## Phase headings). Add new tasks to the appropriate phase, or create a new phase
+- PRESERVE _TestFocus fields on existing tasks and add them to new tasks
+- PRESERVE _PhaseReview tasks at the end of each phase
 
 ## Progressive Migration Strategy
 

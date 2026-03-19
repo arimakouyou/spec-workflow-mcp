@@ -39,7 +39,8 @@ export class WorkspaceInitializer {
       'specs',
       'steering',
       'templates',
-      'user-templates'
+      'user-templates',
+      'user-prompts'
     ];
     
     for (const dir of directories) {

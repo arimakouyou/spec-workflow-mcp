@@ -137,7 +137,13 @@ dist
 
 # AI
 CLAUDE.md
-.claude
+.claude/*
+!.claude/skills/
+!.claude/agents/
+!.claude/commands/
+!.claude/rules/
+!.claude/_docs/
+!.claude/settings.json
 .serena
 AGENTS.md
 opencodetmp.spec-workflow/session.json

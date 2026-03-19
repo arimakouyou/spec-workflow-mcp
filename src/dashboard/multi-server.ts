@@ -24,6 +24,8 @@ import {
   DEFAULT_SECURITY_CONFIG
 } from '../core/security-utils.js';
 import { SecurityConfig } from '../types.js';
+import { getPromptDefinitions } from '../prompts/index.js';
+import { PathUtils } from '../core/path-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1344,6 +1346,166 @@ export class MultiProjectDashboardServer {
         return stats;
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
+      }
+    });
+
+    // ── Prompt API endpoints ──
+
+    // List all prompts with customization status
+    this.app.get('/api/projects/:projectId/prompts', async (request, reply) => {
+      const { projectId } = request.params as { projectId: string };
+      const project = this.projectManager.getProject(projectId);
+
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const definitions = getPromptDefinitions();
+      const userPromptsDir = join(project.projectPath, '.spec-workflow', 'user-prompts');
+
+      const prompts = await Promise.all(definitions.map(async (def) => {
+        let isCustomized = false;
+        try {
+          await fs.access(join(userPromptsDir, `${def.prompt.name}.json`));
+          isCustomized = true;
+        } catch {
+          // File doesn't exist
+        }
+        return {
+          name: def.prompt.name,
+          title: def.prompt.title || def.prompt.name,
+          description: def.prompt.description || '',
+          arguments: def.prompt.arguments || [],
+          isCustomized
+        };
+      }));
+
+      return prompts;
+    });
+
+    // Get individual prompt (default content + custom content if exists)
+    this.app.get('/api/projects/:projectId/prompts/:name', async (request, reply) => {
+      const { projectId, name } = request.params as { projectId: string; name: string };
+      const project = this.projectManager.getProject(projectId);
+
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const definitions = getPromptDefinitions();
+      const promptDef = definitions.find(def => def.prompt.name === name);
+
+      if (!promptDef) {
+        return reply.code(404).send({ error: `Prompt not found: ${name}` });
+      }
+
+      // Generate default content by calling the handler with sample arguments
+      let defaultContent = '';
+      try {
+        const sampleArgs: Record<string, string> = {};
+        if (promptDef.prompt.arguments) {
+          for (const arg of promptDef.prompt.arguments) {
+            sampleArgs[arg.name] = `{{${arg.name}}}`;
+          }
+        }
+        const sampleContext = {
+          projectPath: '{{projectPath}}',
+          dashboardUrl: '{{dashboardUrl}}'
+        } as any;
+        const messages = await promptDef.handler(sampleArgs, sampleContext);
+        defaultContent = messages.map(m => typeof m.content === 'string' ? m.content : (m.content as any).text || '').join('\n');
+      } catch (error: any) {
+        defaultContent = `(Error generating default content: ${error.message})`;
+      }
+
+      // Read custom override if exists
+      let customContent: string | null = null;
+      let lastModified: string | null = null;
+      try {
+        const filePath = join(project.projectPath, '.spec-workflow', 'user-prompts', `${name}.json`);
+        const fileContent = await fs.readFile(filePath, 'utf-8');
+        const data = JSON.parse(fileContent);
+        customContent = data.customContent || null;
+        lastModified = data.lastModified || null;
+      } catch {
+        // No custom override
+      }
+
+      return {
+        name: promptDef.prompt.name,
+        title: promptDef.prompt.title || promptDef.prompt.name,
+        description: promptDef.prompt.description || '',
+        arguments: promptDef.prompt.arguments || [],
+        defaultContent,
+        customContent,
+        lastModified
+      };
+    });
+
+    // Save custom prompt override
+    this.app.put('/api/projects/:projectId/prompts/:name', async (request, reply) => {
+      const { projectId, name } = request.params as { projectId: string; name: string };
+      const { customContent } = request.body as { customContent: string };
+      const project = this.projectManager.getProject(projectId);
+
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const definitions = getPromptDefinitions();
+      const promptDef = definitions.find(def => def.prompt.name === name);
+
+      if (!promptDef) {
+        return reply.code(404).send({ error: `Prompt not found: ${name}` });
+      }
+
+      if (typeof customContent !== 'string' || customContent.trim().length === 0) {
+        return reply.code(400).send({ error: 'customContent must be a non-empty string' });
+      }
+
+      const userPromptsDir = join(project.projectPath, '.spec-workflow', 'user-prompts');
+      const filePath = join(userPromptsDir, `${name}.json`);
+
+      try {
+        await fs.mkdir(userPromptsDir, { recursive: true });
+        const data = {
+          name,
+          customContent,
+          lastModified: new Date().toISOString()
+        };
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+        return { success: true, message: 'Prompt override saved successfully' };
+      } catch (error: any) {
+        return reply.code(500).send({ error: `Failed to save prompt override: ${error.message}` });
+      }
+    });
+
+    // Delete custom prompt override (reset to default)
+    this.app.delete('/api/projects/:projectId/prompts/:name', async (request, reply) => {
+      const { projectId, name } = request.params as { projectId: string; name: string };
+      const project = this.projectManager.getProject(projectId);
+
+      if (!project) {
+        return reply.code(404).send({ error: 'Project not found' });
+      }
+
+      const definitions = getPromptDefinitions();
+      const promptDef = definitions.find(def => def.prompt.name === name);
+
+      if (!promptDef) {
+        return reply.code(404).send({ error: `Prompt not found: ${name}` });
+      }
+
+      const filePath = join(project.projectPath, '.spec-workflow', 'user-prompts', `${name}.json`);
+
+      try {
+        await fs.unlink(filePath);
+        return { success: true, message: 'Prompt reset to default' };
+      } catch (error: any) {
+        if (error.code === 'ENOENT') {
+          return { success: true, message: 'Prompt was already using default' };
+        }
+        return reply.code(500).send({ error: `Failed to reset prompt: ${error.message}` });
       }
     });
   }

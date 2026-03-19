@@ -219,7 +219,7 @@ Just some text.
           { line: 5, field: 'taskId', message: 'Missing task ID', suggestion: 'Add numeric ID', severity: 'error' as const }
         ],
         warnings: [],
-        summary: { totalTasks: 1, validTasks: 0, invalidTasks: 1 }
+        summary: { totalTasks: 1, validTasks: 0, invalidTasks: 1, phases: 0, phaseReviewTasks: 0 }
       };
 
       const formatted = formatValidationErrors(result);
@@ -235,7 +235,7 @@ Just some text.
         warnings: [
           { line: 10, taskId: '1', field: 'requirements', message: 'Missing underscores', suggestion: 'Use _Requirements:_', severity: 'warning' as const }
         ],
-        summary: { totalTasks: 1, validTasks: 1, invalidTasks: 0 }
+        summary: { totalTasks: 1, validTasks: 1, invalidTasks: 0, phases: 0, phaseReviewTasks: 0 }
       };
 
       const formatted = formatValidationErrors(result);
@@ -248,7 +248,7 @@ Just some text.
         valid: true,
         errors: [],
         warnings: [],
-        summary: { totalTasks: 2, validTasks: 2, invalidTasks: 0 }
+        summary: { totalTasks: 2, validTasks: 2, invalidTasks: 0, phases: 0, phaseReviewTasks: 0 }
       };
 
       const formatted = formatValidationErrors(result);
