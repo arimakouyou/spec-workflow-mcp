@@ -83,9 +83,18 @@ export class MultiProjectDashboardServer {
       );
     }
 
-    // Initialize security features configuration with the actual port
-    // This ensures CORS allowedOrigins and CSP are port-aware
-    this.securityConfig = getSecurityConfig(options.security, options.port);
+    // Initialize security features configuration with the actual port and bind address.
+    // This ensures CORS allowedOrigins include the bind address when using external access.
+    this.securityConfig = getSecurityConfig(options.security, options.port, this.bindAddress);
+
+    // When binding to all interfaces (0.0.0.0) with external access, allow all origins.
+    // The user has already explicitly opted in via allowExternalAccess=true.
+    if (this.allowExternalAccess && this.bindAddress === '0.0.0.0') {
+      this.securityConfig = {
+        ...this.securityConfig,
+        allowedOrigins: [...this.securityConfig.allowedOrigins, '*'],
+      };
+    }
 
     this.app = fastify({ logger: false });
   }

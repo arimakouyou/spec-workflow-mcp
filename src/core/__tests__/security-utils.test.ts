@@ -109,6 +109,23 @@ describe('security-utils', () => {
       expect(origins).toContain('http://localhost:3000');
       expect(origins).toContain('http://127.0.0.1:3000');
     });
+
+    it('should add specific non-localhost bindAddress to allowed origins', () => {
+      const origins = generateAllowedOrigins(5000, '192.168.1.100');
+      expect(origins).toContain('http://192.168.1.100:5000');
+      expect(origins).toContain('http://localhost:5000');
+    });
+
+    it('should NOT add 0.0.0.0 as an origin (handled via wildcard elsewhere)', () => {
+      const origins = generateAllowedOrigins(5000, '0.0.0.0');
+      expect(origins).not.toContain('http://0.0.0.0:5000');
+    });
+
+    it('should NOT add localhost bindAddress (already included)', () => {
+      const origins = generateAllowedOrigins(5000, '127.0.0.1');
+      const count = origins.filter(o => o === 'http://127.0.0.1:5000').length;
+      expect(count).toBe(1);
+    });
   });
 
   describe('getSecurityConfig', () => {
