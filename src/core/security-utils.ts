@@ -28,9 +28,10 @@ export const VITE_DEV_PORT = 5173;
 /**
  * Generate allowed origins for CORS based on the actual port
  * @param port - The port the dashboard is running on
+ * @param bindAddress - Optional bind address; non-localhost IPs are added to the list
  * @returns Array of allowed origin URLs
  */
-export function generateAllowedOrigins(port: number): string[] {
+export function generateAllowedOrigins(port: number, bindAddress?: string): string[] {
   const origins = [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
 
   // In non-production environments, also allow Vite dev server origin (port 5173)
@@ -38,6 +39,12 @@ export function generateAllowedOrigins(port: number): string[] {
   // Use !== 'production' to be permissive by default for local dev tools
   if (process.env.NODE_ENV !== 'production') {
     origins.push(`http://localhost:${VITE_DEV_PORT}`, `http://127.0.0.1:${VITE_DEV_PORT}`);
+  }
+
+  // When binding to a specific non-localhost address (e.g. 192.168.x.x), add it as allowed origin.
+  // '0.0.0.0' means all interfaces — handled separately via the '*' wildcard in getCorsConfig.
+  if (bindAddress && !isLocalhostAddress(bindAddress) && bindAddress !== '0.0.0.0') {
+    origins.push(`http://${bindAddress}:${port}`);
   }
 
   return origins;
@@ -59,12 +66,13 @@ export function isLocalhostAddress(address: string): boolean {
  * Note: Network binding validation (bindAddress/allowExternalAccess) is handled separately at the config layer
  * @param userConfig - Optional user-provided security configuration overrides
  * @param port - The port the dashboard is running on (used to generate dynamic allowedOrigins)
+ * @param bindAddress - Optional bind address; non-localhost IPs are added to allowedOrigins
  */
-export function getSecurityConfig(userConfig?: Partial<SecurityConfig>, port?: number): SecurityConfig {
+export function getSecurityConfig(userConfig?: Partial<SecurityConfig>, port?: number, bindAddress?: string): SecurityConfig {
   const actualPort = port || DEFAULT_DASHBOARD_PORT;
 
   // Generate dynamic allowedOrigins based on the actual port if not explicitly provided
-  const dynamicAllowedOrigins = generateAllowedOrigins(actualPort);
+  const dynamicAllowedOrigins = generateAllowedOrigins(actualPort, bindAddress);
 
   const config = {
     ...DEFAULT_SECURITY_CONFIG,
@@ -299,21 +307,26 @@ export function getCorsConfig(config: SecurityConfig) {
     return false; // Disable CORS
   }
 
-  return {
-    origin: (origin: string, callback: (error: Error | null, allow?: boolean) => void) => {
-      // Allow requests with no origin (e.g., curl, Postman)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
+  // '*' sentinel means all origins are allowed (used when binding to 0.0.0.0 with external access)
+  const allowAll = config.allowedOrigins.includes('*');
 
-      // Check if origin is in allowed list
-      if (config.allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+  return {
+    origin: allowAll
+      ? true
+      : (origin: string, callback: (error: Error | null, allow?: boolean) => void) => {
+          // Allow requests with no origin (e.g., curl, Postman)
+          if (!origin) {
+            callback(null, true);
+            return;
+          }
+
+          // Check if origin is in allowed list
+          if (config.allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type']
