@@ -9,14 +9,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Package root: dist/tools/ -> package root
 const PACKAGE_ROOT = join(__dirname, '..', '..');
-const SKILLS_SOURCE = join(PACKAGE_ROOT, '.claude', 'skills');
+const CLAUDE_SOURCE = join(PACKAGE_ROOT, '.claude');
+
+// Files to exclude from copying (project-specific settings)
+const EXCLUDED_FILES = new Set(['settings.json', 'settings.local.json']);
 
 export const setupClaudeSkillsTool: Tool = {
   name: 'setup-claude-skills',
-  description: `Install skill files into a project's .claude/skills/ directory. This is a FILE COPY operation only — it does NOT start any workflow or create any spec documents.
+  description: `Install .claude/ configuration files (skills, rules, agents, commands, _docs) into a target project. This is a FILE COPY operation only — it does NOT start any workflow or create any spec documents.
 
 # Instructions
-This tool copies .claude/skills/ files from the spec-workflow-mcp package into the target project directory. It is a one-time setup step, not a workflow step. Do NOT call spec-workflow-guide or start any spec creation process when this tool is requested. Just copy the files and report the result.`,
+This tool copies .claude/ files from the spec-workflow-mcp package into the target project directory. It copies skills/, rules/, agents/, commands/, and _docs/ — but excludes settings.json and settings.local.json (project-specific). It is a one-time setup step, not a workflow step. Do NOT call spec-workflow-guide or start any spec creation process when this tool is requested. Just copy the files and report the result.`,
   inputSchema: {
     type: 'object',
     properties: {
@@ -64,34 +67,47 @@ export async function setupClaudeSkillsHandler(args: any, context: ToolContext):
   const targetProject = PathUtils.translatePath(args.projectPath || context.projectPath);
   const dryRun = args.dryRun === true;
 
-  // Verify source skills directory exists
+  // Verify source .claude directory exists
   try {
-    await fs.access(SKILLS_SOURCE);
+    await fs.access(CLAUDE_SOURCE);
   } catch {
     return {
       success: false,
-      message: `Skills source directory not found at ${SKILLS_SOURCE}. Ensure the package is installed correctly.`
+      message: `Source .claude directory not found at ${CLAUDE_SOURCE}. Ensure the package is installed correctly.`
     };
   }
 
-  // Collect all skill files
-  const relativeFiles = await collectFiles(SKILLS_SOURCE, SKILLS_SOURCE);
+  // Collect all files from .claude/, excluding settings files
+  const allFiles = await collectFiles(CLAUDE_SOURCE, CLAUDE_SOURCE);
+  const relativeFiles = allFiles.filter(f => !EXCLUDED_FILES.has(f));
   if (relativeFiles.length === 0) {
     return {
       success: false,
-      message: 'No skill files found in the package.'
+      message: 'No files found in the package .claude/ directory.'
     };
   }
 
-  const targetSkillsDir = join(targetProject, '.claude', 'skills');
+  // Categorize files for reporting
+  const categories: Record<string, string[]> = {};
+  for (const f of relativeFiles) {
+    const category = f.split('/')[0] || 'root';
+    if (!categories[category]) categories[category] = [];
+    categories[category].push(f);
+  }
+
+  const targetClaudeDir = join(targetProject, '.claude');
 
   if (dryRun) {
     return {
       success: true,
-      message: `Dry run: ${relativeFiles.length} files would be copied to ${targetSkillsDir}`,
+      message: `Dry run: ${relativeFiles.length} files would be copied to ${targetClaudeDir}`,
       data: {
-        targetDir: targetSkillsDir,
-        files: relativeFiles
+        targetDir: targetClaudeDir,
+        files: relativeFiles,
+        categories: Object.fromEntries(
+          Object.entries(categories).map(([k, v]) => [k, v.length])
+        ),
+        excluded: Array.from(EXCLUDED_FILES)
       }
     };
   }
@@ -101,8 +117,8 @@ export async function setupClaudeSkillsHandler(args: any, context: ToolContext):
   const errors: string[] = [];
 
   for (const relPath of relativeFiles) {
-    const srcPath = join(SKILLS_SOURCE, relPath);
-    const destPath = join(targetSkillsDir, relPath);
+    const srcPath = join(CLAUDE_SOURCE, relPath);
+    const destPath = join(targetClaudeDir, relPath);
 
     try {
       await fs.mkdir(dirname(destPath), { recursive: true });
@@ -118,17 +134,26 @@ export async function setupClaudeSkillsHandler(args: any, context: ToolContext):
   if (errors.length > 0 && copied.length === 0) {
     return {
       success: false,
-      message: `Failed to copy skills: ${errors.join(', ')}`
+      message: `Failed to copy files: ${errors.join(', ')}`
     };
+  }
+
+  // Categorize copied files for response
+  const copiedCategories: Record<string, number> = {};
+  for (const f of copied) {
+    const category = f.split('/')[0] || 'root';
+    copiedCategories[category] = (copiedCategories[category] || 0) + 1;
   }
 
   return {
     success: true,
-    message: `Copied ${copied.length} skill files to ${targetSkillsDir}${errors.length > 0 ? ` (${errors.length} errors)` : ''}`,
+    message: `Copied ${copied.length} files to ${targetClaudeDir}${errors.length > 0 ? ` (${errors.length} errors)` : ''}`,
     data: {
-      targetDir: targetSkillsDir,
+      targetDir: targetClaudeDir,
       copied,
+      copiedCategories,
       errors: errors.length > 0 ? errors : undefined,
+      excluded: Array.from(EXCLUDED_FILES),
       skills: [
         'spec-requirements',
         'spec-design',
@@ -139,14 +164,19 @@ export async function setupClaudeSkillsHandler(args: any, context: ToolContext):
         'spec-impl-test-run',
         'spec-impl-code',
         'spec-impl-review',
-        'tdd-skills'
+        'tdd-skills',
+        'tdd-skills-rust',
+        'knowhow-capture',
+        'integration-test'
       ]
     },
     nextSteps: [
-      'Claude Code skills are now available in your project',
+      'Claude Code configuration is now available in your project',
       'Use /spec-requirements to start a new spec',
       'Use /spec-implement to implement tasks with TDD',
-      'Skills will be auto-detected by Claude Code from .claude/skills/'
+      'Skills will be auto-detected by Claude Code from .claude/skills/',
+      'Rules from .claude/rules/ will be applied based on file path patterns',
+      'Agents from .claude/agents/ are available for subagent workflows'
     ]
   };
 }

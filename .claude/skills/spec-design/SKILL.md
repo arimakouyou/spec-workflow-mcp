@@ -43,7 +43,63 @@ The design should address:
 - Component structure and relationships
 - Data models and API contracts
 - Integration points with existing code
-- Error handling and edge cases
+- **Error Handling（エラーコード一覧必須）** — 下記フォーマットで全エラーコードを列挙。実装時に一覧外のコード追加を防ぐため網羅的に定義する
+- **Requirements Traceability Matrix** — 各要件 ID がどの設計コンポーネントで実現されるかのマッピング
+- **Code Reuse Analysis（具体パス必須）** — 下記フォーマットで再利用対象を一覧化
+
+#### Code Reuse Analysis フォーマット
+
+コードベースを grep/glob で調査し、再利用すべき既存コードを**具体的なファイルパス**で列挙する。Phase 3 で `_Leverage` フィールドに転記されるため、抽象的な記述（「既存の認証ミドルウェアを使う」等）は不可。
+
+```markdown
+| 再利用対象 | パス | 用途 |
+|-----------|------|------|
+| 認証ミドルウェア | `src/middleware/auth.rs` | エンドポイント保護 |
+| AppError | `src/error.rs` | エラーレスポンス統一 |
+| TestContext | `tests/integration/helpers/context.rs` | テストセットアップ |
+```
+
+#### Requirements Traceability Matrix フォーマット
+
+要件→設計コンポーネントのマッピング。**コンポーネントは1行1つ**で列挙する（`+` で結合しない）。「対象タスク ID」列は Phase 3 (spec-tasks) 完了後に逆記入する。
+
+```markdown
+| Requirement ID | 設計コンポーネント | 対象タスク ID | 備考 |
+|---------------|-------------------|-------------|------|
+| REQ-1 | UserHandler | (Phase 3 後に記入) | CRUD エンドポイント |
+| REQ-1 | UserRepository | (Phase 3 後に記入) | DB アクセス |
+| REQ-2 | AuthMiddleware | (Phase 3 後に記入) | 認証チェック |
+| REQ-2 | SessionRepository | (Phase 3 後に記入) | セッション管理 |
+```
+
+Phase 3 完了後に tasks.md のタスク ID を逆記入した例:
+```markdown
+| Requirement ID | 設計コンポーネント | 対象タスク ID | 備考 |
+|---------------|-------------------|-------------|------|
+| REQ-1 | UserHandler | Task 1.1 | CRUD エンドポイント |
+| REQ-1 | UserRepository | Task 1.2 | DB アクセス |
+| REQ-2 | AuthMiddleware | Task 2.1 | 認証チェック |
+| REQ-2 | SessionRepository | Task 2.2 | セッション管理 |
+```
+
+#### Error Handling フォーマット
+
+全エラーコードをテーブル形式で列挙する。実装時にこの一覧外のエラーコードを追加することは design-conformance ルールで禁止されるため、想定される全エラーケースを網羅的に定義すること。
+
+```markdown
+## Error Handling
+
+エラーレスポンスフォーマット: `{ "error": { "code": "...", "message": "..." } }`
+
+| エラーコード | HTTP Status | 発生条件 |
+|-------------|-------------|---------|
+| NotFound | 404 | リソースが存在しない |
+| BadRequest | 400 | バリデーション失敗、不正な入力 |
+| Unauthorized | 401 | 認証失敗、トークン無効/期限切れ |
+| Forbidden | 403 | 認可失敗、権限不足 |
+| Conflict | 409 | 重複キー、楽観的ロック競合 |
+| Internal | 500 | 予期しない内部エラー |
+```
 
 ### 4. Self-Review via Subagent (before approval)
 
@@ -68,7 +124,8 @@ Agent({
        Components/Interfaces (Purpose, Interfaces, Dependencies, Reuses), Data Models, Error Handling, Testing Strategy
     4. Data models must cover all entities referenced in requirements
 
-    Fix all issues directly in the file. Return a summary of checks and fixes."
+    Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
+    Return a structured report (PASS/FAIL with issues list)."
 })
 ```
 

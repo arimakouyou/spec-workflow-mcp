@@ -66,7 +66,8 @@ Agent({
     3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability
     4. Requirements should be uniquely identified (REQ-1, REQ-2, etc.)
 
-    Fix all issues directly in the file. Return a summary of checks and fixes."
+    Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
+    Return a structured report (PASS/FAIL with issues list)."
 })
 ```
 

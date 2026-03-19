@@ -40,7 +40,7 @@ Agent({
 ### 1. Understand What to Test
 
 - Read the task's `_Prompt` field (provided in the prompt) for Role, Task, Restrictions, Success criteria
-- If a `_TestFocus` field is provided (via the "Test focus areas" parameter), **prioritize testing the behaviors listed there** — these are the key areas identified during task design
+- If a `_TestFocus` field is provided (via the "Test focus areas" parameter), it is structured in 4 categories: **正常系 / 境界値 / 例外処理 / エッジケース**. Write tests covering **all 4 categories** as specified — these categories are aligned with the unit-test-engineer's quality verification criteria to minimize rework
 - Read the design document to understand interfaces, data models, and expected behavior
 - Identify the public API surface: functions, methods, endpoints, components
 
