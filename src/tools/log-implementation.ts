@@ -280,6 +280,44 @@ Task: "Implemented logs dashboard with real-time updates"
             items: { type: 'object' }
           }
         }
+      },
+      reviewProcess: {
+        type: 'object',
+        description: 'Review quality metrics: rework count, final outcome, and per-attempt findings from review-worker.',
+        properties: {
+          reworkCount: {
+            type: 'number',
+            description: 'Number of rework iterations required. 0 = passed on first review.'
+          },
+          reviewOutcome: {
+            type: 'string',
+            enum: ['commit', 'escalated'],
+            description: 'Final review outcome: commit = merged cleanly, escalated = required user intervention.'
+          },
+          findings: {
+            type: 'array',
+            description: 'Per-attempt review findings (omit if reworkCount is 0).',
+            items: {
+              type: 'object',
+              properties: {
+                attempt: { type: 'number', description: '1-based attempt number (1 = first review)' },
+                categories: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Violated review categories (e.g. ["B:設計", "C:セキュリティ"])'
+                },
+                summary: { type: 'string', description: 'Brief description of what was found' },
+                action: {
+                  type: 'string',
+                  enum: ['commit', 'rework', 'escalate'],
+                  description: "review-worker's decision for this attempt"
+                }
+              },
+              required: ['attempt', 'categories', 'summary', 'action']
+            }
+          }
+        },
+        required: ['reworkCount', 'reviewOutcome']
       }
     },
     required: ['specName', 'taskId', 'summary', 'filesModified', 'filesCreated', 'statistics', 'artifacts']
@@ -301,7 +339,8 @@ export async function logImplementationHandler(
     filesModified = [],
     filesCreated = [],
     statistics,
-    artifacts
+    artifacts,
+    reviewProcess
   } = args;
   
   // Use context projectPath as default, allow override via args
@@ -376,7 +415,8 @@ export async function logImplementationHandler(
         linesRemoved: statistics.linesRemoved || 0,
         filesChanged: (filesModified?.length || 0) + (filesCreated?.length || 0)
       },
-      artifacts
+      artifacts,
+      ...(reviewProcess !== undefined && { reviewProcess })
     };
 
     const createdEntry = await logManager.addLogEntry(logEntry);
