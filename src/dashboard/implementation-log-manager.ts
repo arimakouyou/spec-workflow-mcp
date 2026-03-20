@@ -67,6 +67,7 @@ export class ImplementationLogManager {
       let currentSection = '';
       let currentArtifactType: keyof ImplementationLogEntry['artifacts'] | null = null;
       let currentItem: any = {};
+      let reviewProcessJson = '';
 
       // Helper function to normalize markdown keys to camelCase
       const normalizeKey = (key: string): string => {
@@ -148,6 +149,9 @@ export class ImplementationLogManager {
         } else if (line.startsWith('## Artifacts')) {
           currentSection = 'artifacts';
           currentArtifactType = null;
+        } else if (line.startsWith('## Review Process')) {
+          currentSection = 'reviewProcess';
+          currentArtifactType = null;
         }
         // Parse artifact subsections (### headers)
         else if (line.startsWith('### ')) {
@@ -205,6 +209,10 @@ export class ImplementationLogManager {
             filesCreated.push(fileName);
           }
         }
+        // Collect Review Process JSON block
+        else if (currentSection === 'reviewProcess' && !line.startsWith('```') && line.trim() !== '') {
+          reviewProcessJson += line + '\n';
+        }
         // Parse artifact key-value details
         else if (currentArtifactType && line.startsWith('- **')) {
           const kv = parseKeyValue(line);
@@ -235,6 +243,15 @@ export class ImplementationLogManager {
         return null;
       }
 
+      let reviewProcess: ImplementationLogEntry['reviewProcess'];
+      if (reviewProcessJson.trim()) {
+        try {
+          reviewProcess = JSON.parse(reviewProcessJson.trim());
+        } catch {
+          // Ignore malformed JSON — reviewProcess remains undefined
+        }
+      }
+
       const entry: ImplementationLogEntry = {
         id: idValue,
         taskId,
@@ -247,7 +264,8 @@ export class ImplementationLogManager {
           linesRemoved,
           filesChanged
         },
-        artifacts
+        artifacts,
+        ...(reviewProcess !== undefined && { reviewProcess })
       };
 
       return entry;
@@ -422,6 +440,14 @@ export class ImplementationLogManager {
         markdown += `- **Data Flow:** ${intg.dataFlow}\n`;
         markdown += `\n`;
       });
+    }
+
+    // Review Process
+    if (entry.reviewProcess !== undefined) {
+      markdown += `---\n\n## Review Process\n\n`;
+      markdown += '```json\n';
+      markdown += JSON.stringify(entry.reviewProcess, null, 2);
+      markdown += '\n```\n';
     }
 
     return markdown;

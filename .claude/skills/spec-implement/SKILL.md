@@ -324,12 +324,12 @@ Required fields:
 - `filesModified`: List of files you edited
 - `filesCreated`: List of new files — **include test files**
 - `statistics`: `{ linesAdded: number, linesRemoved: number }`
-- `artifacts` (optional — 該当するカテゴリのみ記載。該当なしなら省略可):
+- `artifacts` (REQUIRED — 該当するカテゴリのみ記載。実装内容がない場合は空オブジェクト `{}` を渡す):
   - `apiEndpoints`: API routes created/modified (method, path, purpose)。request/response の詳細は design.md 参照
   - `dbMigrations`: 作成したマイグレーション名とテーブル
   - `models`: 作成/変更した Model / DTO の名前と場所
   - `integrations`: 外部サービスとの接続（該当する場合のみ）
-- `reviewProcess` (REQUIRED — step 4〜6 のレビュー結果を記録する):
+- `reviewProcess` (optional — review-worker が実行された場合のみ記録する。step 4〜6 のレビュー結果):
   - `reworkCount`: やり直し回数（一発でコミットできた場合は `0`）
   - `reviewOutcome`: 最終結果 — `"commit"` または `"escalated"`
   - `findings`: reworkCount > 0 の場合のみ記載。各レビュー試行の記録:

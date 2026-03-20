@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path // empty' | grep -qE 'tasks\\.md$' && echo '[spec-workflow] tasks.md を読みました。タスクを実装する場合は /spec-implement スキルを経由してください。直接コードを書くことは禁止されています。' || true",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -qE '[.]spec-workflow/specs/[^/]+/tasks[.]md$' && echo '[spec-workflow] tasks.md を読みました。タスクを実装する場合は /spec-implement スキルを経由してください。直接コードを書くことは禁止されています。' || true",
             "timeout": 10
           }
         ]

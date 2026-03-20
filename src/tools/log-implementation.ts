@@ -286,7 +286,8 @@ Task: "Implemented logs dashboard with real-time updates"
         description: 'Review quality metrics: rework count, final outcome, and per-attempt findings from review-worker.',
         properties: {
           reworkCount: {
-            type: 'number',
+            type: 'integer',
+            minimum: 0,
             description: 'Number of rework iterations required. 0 = passed on first review.'
           },
           reviewOutcome: {
@@ -300,7 +301,7 @@ Task: "Implemented logs dashboard with real-time updates"
             items: {
               type: 'object',
               properties: {
-                attempt: { type: 'number', description: '1-based attempt number (1 = first review)' },
+                attempt: { type: 'integer', minimum: 1, description: '1-based attempt number (1 = first review)' },
                 categories: {
                   type: 'array',
                   items: { type: 'string' },
@@ -354,6 +355,29 @@ export async function logImplementationHandler(
   }
 
   try {
+    // Validate reviewProcess consistency
+    if (reviewProcess !== undefined) {
+      const { reworkCount, findings } = reviewProcess;
+      if (reworkCount > 0 && (!findings || findings.length === 0)) {
+        return {
+          success: false,
+          message: `reviewProcess.findings is required when reworkCount > 0 (reworkCount=${reworkCount}). ` +
+            'Provide the per-attempt findings array or set reworkCount to 0.',
+          nextSteps: [
+            'Add findings array with one entry per review attempt',
+            'Or set reworkCount to 0 if the task passed on the first review'
+          ]
+        };
+      }
+      if (reworkCount === 0 && findings && findings.length > 0) {
+        return {
+          success: false,
+          message: 'reviewProcess.findings must be empty (or omitted) when reworkCount is 0.',
+          nextSteps: ['Remove findings array, or set reworkCount to the correct count']
+        };
+      }
+    }
+
     // Validate artifacts is provided
     if (!artifacts) {
       return {
