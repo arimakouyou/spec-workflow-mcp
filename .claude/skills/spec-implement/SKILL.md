@@ -14,7 +14,7 @@ Execute tasks systematically from the approved tasks.md using a **TDD-driven wor
 | 禁止 | 理由 |
 |-----|------|
 | **コードを自分で書かない** | 実装は必ず `parallel-worker` に委譲する |
-| **テストを自分で書かない** | テスト作成も `parallel-worker` の責務 |
+| **テストを自分で書かない** | TDD の初期テスト（RED フェーズ）は `parallel-worker` の責務。補完テストの追加は `unit-test-engineer` の責務 |
 | **git commit を自分でしない** | コミットは必ず `review-worker` に委譲する |
 | **エージェント呼び出しを省略しない** | 各ステップのエージェント呼び出しはスキップ不可 |
 

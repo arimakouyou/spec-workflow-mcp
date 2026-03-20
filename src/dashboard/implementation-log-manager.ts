@@ -373,8 +373,7 @@ export class ImplementationLogManager {
 
     if (!entry.artifacts || Object.keys(entry.artifacts).every(key => !entry.artifacts[key as keyof typeof entry.artifacts]?.length)) {
       markdown += `_No artifacts recorded_\n`;
-      return markdown;
-    }
+    } else {
 
     // API Endpoints
     if (entry.artifacts.apiEndpoints && entry.artifacts.apiEndpoints.length > 0) {
@@ -441,6 +440,8 @@ export class ImplementationLogManager {
         markdown += `\n`;
       });
     }
+
+    } // end else (artifacts recorded)
 
     // Review Process
     if (entry.reviewProcess !== undefined) {

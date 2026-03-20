@@ -376,6 +376,51 @@ export async function logImplementationHandler(
           nextSteps: ['Remove findings array, or set reworkCount to the correct count']
         };
       }
+
+      // Validate findings length and attempt number consistency
+      if (findings && findings.length > 0) {
+        const expectedAttempts = reworkCount + 1; // 初回レビュー + 各 rework
+        if (findings.length !== expectedAttempts) {
+          return {
+            success: false,
+            message: `reviewProcess.findings の件数 (${findings.length}) が reworkCount + 1 (${expectedAttempts}) と一致しません。`,
+            nextSteps: [
+              '初回レビューと各 rework に対して 1 件ずつ findings を記録してください',
+              `findings.length が ${expectedAttempts} になるよう reworkCount または findings を修正してください`
+            ]
+          };
+        }
+
+        const attemptNumbers = findings
+          .map((f: any) => (f && typeof f.attempt === 'number' ? f.attempt : undefined))
+          .filter((n: number | undefined): n is number => n !== undefined);
+
+        if (attemptNumbers.length !== findings.length) {
+          return {
+            success: false,
+            message: 'reviewProcess.findings の各エントリに attempt（数値）が必要です。',
+            nextSteps: ['すべての findings エントリに attempt フィールドを追加してください']
+          };
+        }
+
+        const sorted = [...attemptNumbers].sort((a, b) => a - b);
+        const isContiguous =
+          sorted[0] === 1 &&
+          sorted[sorted.length - 1] === expectedAttempts &&
+          new Set(sorted).size === expectedAttempts;
+
+        if (!isContiguous) {
+          return {
+            success: false,
+            message: 'reviewProcess.findings の attempt 番号は 1 から始まる連番でなければなりません。',
+            nextSteps: [
+              'attempt 番号を 1, 2, 3 ... の連番で記録してください',
+              `最大の attempt 番号は reworkCount + 1 = ${expectedAttempts} になるはずです`,
+              '重複・飛び番・欠番がないか確認してください'
+            ]
+          };
+        }
+      }
     }
 
     // Validate artifacts is provided
