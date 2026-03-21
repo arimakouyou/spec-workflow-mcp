@@ -163,7 +163,7 @@ Agent({
 - Every task has `_Leverage` field
 - Every task has `_Requirements` field
 - Every task has `_Prompt` field with: Role, Task, Restrictions, Success
-- `_Prompt` starts with "Implement the task for spec {spec-name}, first run spec-workflow-guide..."
+- `_Prompt` contains Role, Task, Restrictions, Success fields in the format "Role: ... | Task: ... | Restrictions: ... | Success: ..."
 - Tasks are atomic (1-3 files each)
 
 **Cross-reference (read requirements.md and design.md):**

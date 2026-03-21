@@ -228,7 +228,7 @@ Agent({
 
     Checks:
     1. TEMPLATE: Every task has - [ ] marker, file path(s), _Leverage, _Requirements, _Prompt fields
-    2. _Prompt has: Role, Task, Restrictions, Success. Starts with 'Implement the task for spec {spec-name}...'
+    2. _Prompt has: Role, Task, Restrictions, Success fields in the format "Role: ... | Task: ... | Restrictions: ... | Success: ..."
     3. CROSS-REFERENCE: Read requirements.md and design.md —
        every requirement must have at least one implementing task,
        every design component must have at least one creating task,
