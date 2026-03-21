@@ -1,84 +1,84 @@
 ---
 name: knowhow-capture
 description: >
-  ユーザーからのフィードバック・指摘・修正を know-how として `.claude/_docs/know-how/` に蓄積するスキル。
-  記録の実行手順（ドメイン選択・重複チェック・ファイル作成・INDEX更新）を提供する。
-  ユーザーが「覚えておいて」「次回から〜して」「remember」「know-how に追加」と言ったとき、
-  または feedback-loop ルールがフィードバックを検出して記録を指示したときにトリガーする。
-  明示的に /knowhow-capture で呼び出すこともできる。
+  A skill for accumulating user feedback, corrections, and instructions as know-how in `.claude/_docs/know-how/`.
+  Provides step-by-step procedures for recording know-how (domain selection, duplicate check, file creation, INDEX update).
+  Triggers when the user says "remember this", "do this from now on", "remember", or "add to know-how",
+  or when the feedback-loop rule detects feedback and instructs a recording.
+  Can also be explicitly invoked with /knowhow-capture.
 ---
 
 # Know-how Capture
 
-ユーザーとの対話で得られたチーム共有すべき実践知を `.claude/_docs/know-how/` に蓄積し、
-将来のタスクで同じ間違いを繰り返さないようにするスキル。
+A skill for accumulating practical team knowledge gained through interactions with the user into `.claude/_docs/know-how/`,
+so the same mistakes are not repeated in future tasks.
 
-個人的な好みや作業スタイルは組み込み memory システムに記録し、ここには書かない。
+Personal preferences and working styles should be recorded in the built-in memory system, not here.
 
-## 2つの記録パターン
+## Two Recording Patterns
 
-### Pattern A: 明示的記録（ユーザー指示）
+### Pattern A: Explicit Recording (User-Directed)
 
-ユーザーが「覚えておいて」「know-how に追加して」「次回から〜して」と言った場合。
-確認なしで即座に記録する。
+When the user says "remember this", "add to know-how", or "do this from now on".
+Record immediately without asking for confirmation.
 
-**トリガー例:**
-- 「これ覚えておいて」
-- 「know-how に追加して」
-- 「次からはこうして」
-- 「remember this」
+**Trigger examples:**
+- "Remember this"
+- "Add this to know-how"
+- "Do it this way from now on"
+- "remember this"
 
-**動作:** 即座に know-how ファイルを作成し、INDEX.md を更新する。
+**Behavior:** Immediately create the know-how file and update INDEX.md.
 
-### Pattern B: 提案型記録（検出 + 確認）
+### Pattern B: Suggested Recording (Detection + Confirmation)
 
-AI がユーザーからの修正・指摘を検出し、「know-how に記録しますか？」と提案する。
-ユーザーが承認した場合のみ記録する。
+The AI detects a user correction or instruction and proposes "Shall I record this as know-how?".
+Record only if the user approves.
 
-**トリガー条件:**
-- ユーザーが AI の出力・判断を明確に修正した（「そうじゃなくて〜」「違う、〜だよ」）
-- ユーザーが AI のアプローチを否定して別の方法を指示した
-- ユーザーがプロジェクト固有の慣習・ルールを教えてくれた
-- 同一セッション内で同じ種類の指摘を2回以上受けた
+**Trigger conditions:**
+- The user clearly corrected the AI's output or judgment ("That's not right, it should be...", "No, it's...")
+- The user rejected the AI's approach and directed a different method
+- The user shared a project-specific convention or rule
+- The same type of correction was received 2 or more times within the same session
 
-**動作:**
-1. 修正内容を要約して提示する
-2. 「この知識を know-how に記録しますか？」と聞く
-3. ユーザーが承認したら記録する
+**Behavior:**
+1. Summarize the correction and present it
+2. Ask "Shall I record this knowledge as know-how?"
+3. Record if the user approves
 
-**提案のフォーマット:**
+**Suggestion format:**
 
 ```
-[know-how 提案] 以下の知識を記録できます:
-- 要約: {修正内容の1行要約}
-- ドメイン: {testing / workflow / conventions / ...}
-know-how に記録しますか？
+[know-how suggestion] The following knowledge can be recorded:
+- Summary: {one-line summary of the correction}
+- Domain: {testing / workflow / conventions / ...}
+Shall I add this to know-how?
 ```
 
-## 記録の実行手順
+## Step-by-Step Recording Procedure
 
-### Step 1: ドメインの決定
+### Step 1: Determine the Domain
 
-know-how の内容に応じてドメインを選択する。
+Select a domain based on the content of the know-how.
 
-| ドメイン | 内容 |
-|---------|------|
-| testing | テスト設計・構成・実行に関する知識 |
-| workflow | 開発フロー・Git操作・CI/CDに関する知識 |
-| conventions | 命名規則・ディレクトリ構成・コードスタイル |
-| architecture | レイヤー構成・DI・設計判断 |
-| debugging | デバッグ手法・エラー対処・パフォーマンス |
+| Domain | Content |
+|--------|---------|
+| testing | Knowledge about test design, structure, and execution |
+| workflow | Knowledge about development flow, Git operations, CI/CD |
+| conventions | Naming conventions, directory structure, code style |
+| architecture | Layer structure, DI, design decisions |
+| debugging | Debugging techniques, error handling, performance |
 
-既存ドメインに該当しない場合は新しいドメインを作成してよい。
+If the content does not fit an existing domain, a new domain may be created.
 
-### Step 2: 重複チェック
+### Step 2: Duplicate Check
 
-`.claude/_docs/know-how/INDEX.md` を Read し、同じ内容の know-how が既にないか確認する。
-重複がある場合は新規作成ではなく既存ファイルを更新する。
+Read `.claude/_docs/know-how/INDEX.md` and confirm that the same know-how does not already exist.
+If a duplicate exists, update the existing file rather than creating a new one.
 
-### Step 3: ファイル作成
+### Step 3: Create the File
 
-`.claude/_docs/know-how/{domain}/{slug}.md` に以下のフォーマットで作成する。
+Create `.claude/_docs/know-how/{domain}/{slug}.md` using the following format:
 
 ```markdown
 ---
@@ -87,57 +87,57 @@ domain: {domain}
 source: user-feedback
 ---
 
-# {タイトル（簡潔に）}
+# {Title (concise)}
 
-## 要約
+## Summary
 
-{1〜2文で知識の核心を記述}
+{Describe the core of the knowledge in 1-2 sentences}
 
-## 背景
+## Background
 
-{なぜこの知識が必要か、どういう状況で発生したか}
+{Why this knowledge is needed, and in what situation it arose}
 
-## チェックリスト
+## Checklist
 
-- [ ] {実装時に確認すべき項目1}
-- [ ] {実装時に確認すべき項目2}
+- [ ] {Item to verify during implementation 1}
+- [ ] {Item to verify during implementation 2}
 
-## 反例
+## Counter-example
 
-{この知識を無視した場合に何が起きるか}
+{What happens if this knowledge is ignored}
 ```
 
-**制約:**
-- 50行以内を目安とする（超える場合は分割を検討）
-- frontmatter の `created`, `domain`, `source` は必須
+**Constraints:**
+- Aim for 50 lines or fewer (consider splitting if longer)
+- `created`, `domain`, and `source` fields in frontmatter are required
 
-### Step 4: INDEX.md 更新
+### Step 4: Update INDEX.md
 
-`.claude/_docs/know-how/INDEX.md` の該当ドメインテーブルに1行追加する。
-ドメインセクションが存在しない場合は新規セクションを追加する。
+Add one row to the relevant domain table in `.claude/_docs/know-how/INDEX.md`.
+If the domain section does not exist, add a new section.
 
-## パターン判定フローチャート
+## Pattern Decision Flowchart
 
 ```
-ユーザーの発言を検出
+Detect user's statement
   │
-  ├─ 「覚えておいて」「remember」等の明示指示あり？
-  │   └─ YES → Pattern A（即座に記録）
+  ├─ Explicit instruction like "remember this" or "remember"?
+  │   └─ YES → Pattern A (record immediately)
   │
-  ├─ AI の判断を修正・否定した？
-  │   └─ YES → Pattern B（提案して確認）
+  ├─ Did the user correct or reject the AI's judgment?
+  │   └─ YES → Pattern B (suggest and confirm)
   │
-  ├─ プロジェクト固有の慣習を教えてくれた？
-  │   └─ YES → Pattern B（提案して確認）
+  ├─ Did the user share a project-specific convention?
+  │   └─ YES → Pattern B (suggest and confirm)
   │
-  └─ 同じ指摘を2回以上受けた？
-      └─ YES → Pattern B（提案して確認）
+  └─ Same correction received 2 or more times?
+      └─ YES → Pattern B (suggest and confirm)
 ```
 
-## 注意事項
+## Notes
 
-- **memory との棲み分け**: 「チームメンバーも知るべきか？」→ Yes なら know-how、No なら組み込み memory
-- 一時的な状態（現在のブランチ名、進行中のタスク等）は know-how に書かない
-- know-how はあくまで「実践知」であり、確立したルールは `.claude/rules/` に昇格する
-- ユーザーが「ルール化して」と言った場合は know-how → rules への昇格を行う
-- ファイル作成後のステージング・コミットはユーザーの指示があった場合のみ行う
+- **Distinction from memory**: "Should teammates also know this?" → Yes = know-how, No = built-in memory
+- Do not write temporary state (current branch name, tasks in progress, etc.) to know-how
+- Know-how is meant for "practical knowledge"; established rules should be promoted to `.claude/rules/`
+- If the user says "make it a rule", promote the know-how to a rule in `.claude/rules/`
+- Staging and committing files after creation should only be done when the user explicitly requests it

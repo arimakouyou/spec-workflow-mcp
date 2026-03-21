@@ -4,30 +4,30 @@ always_apply: true
 
 # Feedback Loop
 
-## 組み込み memory との棲み分け
+## Distinction from Built-in Memory
 
-- **know-how** (`.claude/_docs/know-how/`): プロジェクト固有の実践知。Git 管理下でチーム共有する。技術的判断・落とし穴・ベストプラクティス。
-- **組み込み memory** (`~/.claude/projects/.../memory/`): 個人の好み・作業スタイル。Git 管理外。
+- **know-how** (`.claude/_docs/know-how/`): Project-specific practical knowledge. Managed under Git and shared with the team. Technical decisions, pitfalls, and best practices.
+- **built-in memory** (`~/.claude/projects/.../memory/`): Personal preferences and working style. Not under Git management.
 
-迷ったら「チームメンバーも知るべきか？」で判断する。Yes → know-how、No → memory。
+When in doubt, ask "Should team members know this?" Yes → know-how, No → memory.
 
-## タスク開始時の参照
+## Referencing at Task Start
 
-タスクに着手する前に `.claude/_docs/know-how/INDEX.md` を確認し、関連する know-how があれば該当ファイルを Read する。
+Before starting a task, check `.claude/_docs/know-how/INDEX.md`, and if there is relevant know-how, Read the corresponding file.
 
-参照フロー:
-1. INDEX.md でドメイン一覧を確認
-2. タスクのキーワード（例: "テスト", "マイグレーション", "キャッシュ"）に一致するドメインを特定
-3. 該当 know-how の「チェックリスト」と「反例」を実装判断に反映
+Reference flow:
+1. Check the domain list in INDEX.md
+2. Identify domains that match the task's keywords (e.g., "testing", "migration", "cache")
+3. Reflect the relevant know-how's "checklists" and "counter-examples" in your implementation decisions
 
-INDEX.md が空、または該当ドメインがない場合はスキップしてよい。
+If INDEX.md is empty or no matching domain exists, you may skip this step.
 
-## フィードバック検出と記録
+## Detecting and Recording Feedback
 
-以下を検出したら `/knowhow-capture` スキルを使用して know-how を記録する:
+When any of the following is detected, use the `/knowhow-capture` skill to record know-how:
 
-- ユーザーが「覚えておいて」「次回から〜して」等と発言した → スキルの Pattern A（即座に記録）
-- ユーザーが AI の判断を修正・否定した → スキルの Pattern B（提案型）
-- 同じ指摘を2回以上受けた → スキルの Pattern B（提案型）
+- The user says something like "remember this" or "from next time, do ~" → Skill Pattern A (record immediately)
+- The user corrects or negates an AI judgment → Skill Pattern B (proposal type)
+- The same feedback has been received two or more times → Skill Pattern B (proposal type)
 
-記録の手順・フォーマット・ルール昇格はすべて `/knowhow-capture` スキルに従う。
+For recording procedures, format, and rule promotion, follow the `/knowhow-capture` skill.

@@ -9,34 +9,34 @@ globs:
 
 # Diesel / diesel-async Best Practices
 
-## プロジェクト構成
+## Project Structure
 
-- `diesel.toml` でスキーマ出力先を設定する (`file = "src/schema.rs"`)
-- `schema.rs` は自動生成ファイルなので手動編集しない
-- モデル定義は `models/` ディレクトリに分離する
-- マイグレーションは `diesel migration generate` で作成する
+- Configure the schema output path in `diesel.toml` (`file = "src/schema.rs"`)
+- Do not manually edit `schema.rs` — it is an auto-generated file
+- Place model definitions in a separate `models/` directory
+- Create migrations with `diesel migration generate`
 
 ```
 src/
 ├── db/
-│   ├── mod.rs          # DB接続・プール初期化
-│   └── repository/     # リポジトリ層
+│   ├── mod.rs          # DB connection and pool initialization
+│   └── repository/     # Repository layer
 │       ├── mod.rs
 │       └── users.rs
 ├── models/
 │   ├── mod.rs
-│   └── user.rs         # Queryable, Insertable 等
-├── schema.rs           # 自動生成 (diesel print-schema)
+│   └── user.rs         # Queryable, Insertable, etc.
+├── schema.rs           # Auto-generated (diesel print-schema)
 └── ...
 ```
 
-## モデル定義
+## Model Definitions
 
-- 読み取り用モデルには `#[derive(Queryable, Selectable)]` を使う
-- 挿入用モデルには `#[derive(Insertable)]` を使う
-- 更新用モデルには `#[derive(AsChangeset)]` を使う
-- `#[diesel(table_name = ...)]` でテーブルを明示する
-- `#[diesel(check_for_backend(Pg))]` でコンパイル時にバックエンド互換性を検証する
+- Use `#[derive(Queryable, Selectable)]` for read models
+- Use `#[derive(Insertable)]` for insert models
+- Use `#[derive(AsChangeset)]` for update models
+- Explicitly specify the table with `#[diesel(table_name = ...)]`
+- Use `#[diesel(check_for_backend(Pg))]` to verify backend compatibility at compile time
 
 ```rust
 #[derive(Debug, Queryable, Selectable)]
@@ -60,20 +60,20 @@ pub struct NewUser<'a> {
 #[diesel(table_name = users)]
 pub struct UpdateUser<'a> {
     pub name: Option<&'a str>,
-    pub email: Option<Option<&'a str>>,  // Option<Option<T>> で NULL 制御
+    pub email: Option<Option<&'a str>>,  // Option<Option<T>> controls NULL behavior
 }
 ```
 
-## クエリ
+## Queries
 
-- `.select(Model::as_select())` を使って型安全にカラムを選択する
-- フィルタは `.filter()` でチェインする
-- ページネーションは `.limit()` + `.offset()` で実装する
-- `get_result()` で INSERT/UPDATE 後の値を取得する (PostgreSQL の RETURNING)
-- 複雑なクエリはリポジトリ層のメソッドとして実装する
+- Use `.select(Model::as_select())` to select columns in a type-safe manner
+- Chain filters with `.filter()`
+- Implement pagination with `.limit()` + `.offset()`
+- Use `get_result()` to retrieve values after INSERT/UPDATE (PostgreSQL RETURNING)
+- Implement complex queries as repository layer methods
 
 ```rust
-// 推奨: as_select() で型安全に
+// Recommended: type-safe selection with as_select()
 let users: Vec<User> = users::table
     .filter(users::name.like(format!("%{query}%")))
     .select(User::as_select())
@@ -93,12 +93,12 @@ diesel::insert_into(users::table)
     .await?;
 ```
 
-## diesel-async 接続プール
+## diesel-async Connection Pool
 
-- deadpool を推奨 (軽量、設定がシンプル)
-- `AsyncDieselConnectionManager` でプールマネージャを作成する
-- プールは `AppState` に格納して Axum の `State` extractor で渡す
-- 接続取得失敗は適切にエラーハンドリングする
+- deadpool is recommended (lightweight, simple configuration)
+- Create a pool manager with `AsyncDieselConnectionManager`
+- Store the pool in `AppState` and pass it via Axum's `State` extractor
+- Handle connection acquisition failures with proper error handling
 
 ```rust
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
@@ -115,12 +115,12 @@ pub fn create_pool(database_url: &str) -> DbPool {
 }
 ```
 
-## トランザクション
+## Transactions
 
-- 複数のDB操作をアトミックに実行する場合は必ずトランザクションを使う
-- diesel-async では `connection.transaction()` に `scope_boxed()` クロージャを渡す
-- エラー発生時は自動ロールバック
-- テスト時は `test_transaction` でロールバック保証する
+- Always use transactions when multiple DB operations must be executed atomically
+- In diesel-async, pass a `scope_boxed()` closure to `connection.transaction()`
+- Errors automatically trigger a rollback
+- Use `test_transaction` in tests to guarantee rollback
 
 ```rust
 conn.transaction::<_, diesel::result::Error, _>(|conn| {
@@ -142,14 +142,14 @@ conn.transaction::<_, diesel::result::Error, _>(|conn| {
 .await?;
 ```
 
-## マイグレーション
+## Migrations
 
-- `diesel migration generate create_users` でマイグレーションを作成する
-- `up.sql` と `down.sql` は必ずペアで作成する
-- `down.sql` は `up.sql` の操作を正確に巻き戻す
-- マイグレーションは冪等であること
-- 本番環境では `diesel migration run` を CI/CD パイプラインで実行する
-- テーブル変更は非破壊的に行う (カラム追加 → データ移行 → カラム削除)
+- Create migrations with `diesel migration generate create_users`
+- Always create `up.sql` and `down.sql` as a pair
+- `down.sql` must precisely reverse the operations in `up.sql`
+- Migrations must be idempotent
+- Run `diesel migration run` in the CI/CD pipeline for production environments
+- Make table changes non-destructively (add column → migrate data → drop column)
 
 ```sql
 -- up.sql
@@ -167,10 +167,10 @@ CREATE INDEX idx_users_email ON users(email);
 DROP TABLE users;
 ```
 
-## パフォーマンス
+## Performance
 
-- N+1 クエリを避ける。関連データは JOIN またはバッチ取得する
-- 必要なカラムのみ `.select()` で指定する
-- 大量データの取得には `.limit()` + `.offset()` を使う
-- バルクインサートは `.values(&vec_of_insertables)` で一括実行する
-- インデックスが効くクエリを書く
+- Avoid N+1 queries. Fetch related data using JOINs or batch queries
+- Specify only the necessary columns with `.select()`
+- Use `.limit()` + `.offset()` when fetching large amounts of data
+- Perform bulk inserts in a single call with `.values(&vec_of_insertables)`
+- Write queries that can make use of indexes

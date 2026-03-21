@@ -6,7 +6,7 @@ paths:
 
 # Quality Check Commands
 
-parallel-worker, review-worker, およびその他のエージェントが品質チェックを実行する際の統一コマンド仕様。全エージェントはこのルールに定義されたコマンドを使用すること。
+Unified command specification for quality checks run by parallel-worker, review-worker, and other agents. All agents must use the commands defined in this rule.
 
 ## rustfmt
 
@@ -14,8 +14,8 @@ parallel-worker, review-worker, およびその他のエージェントが品質
 cargo fmt --all -- --check
 ```
 
-- src と tests の両方を対象とする（片方だけチェックしない）
-- 自動修正時は `--check` を外して実行: `cargo fmt --all`
+- Targets both `src` and `tests` (do not check only one of them)
+- To auto-fix, run without `--check`: `cargo fmt --all`
 
 ## clippy
 
@@ -23,9 +23,9 @@ cargo fmt --all -- --check
 cargo clippy --quiet --all-targets -- -D warnings
 ```
 
-- `--all-targets`: テストコード、ベンチマーク、examples も含めてチェック
-- `-D warnings`: 全警告をエラーとして扱う
-- `--quiet`: 進捗表示を抑制
+- `--all-targets`: Includes test code, benchmarks, and examples in the check
+- `-D warnings`: Treats all warnings as errors
+- `--quiet`: Suppresses progress output
 
 ## test
 
@@ -33,5 +33,5 @@ cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
 ```
 
-- 全テスト（ユニット + 統合）を実行
-- 特定テストのみ実行する場合: `cargo test --test {test_name} -- --nocapture`
+- Runs all tests (unit + integration)
+- To run a specific test only: `cargo test --test {test_name} -- --nocapture`

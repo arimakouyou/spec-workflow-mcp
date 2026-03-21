@@ -5,11 +5,11 @@ description: "Self-review a specification document before requesting user approv
 
 # Spec Review (Subagent)
 
-This skill is designed to run as a **subagent** via the Agent tool.2つのモードがある。
+This skill is designed to run as a **subagent** via the Agent tool. It has two modes.
 
-## Mode: check（デフォルト — Approval 前のレビュー）
+## Mode: check (default — review before Approval)
 
-**ファイルを修正しない。** 問題を検出して一覧を返すだけ。呼び出し元が指摘を見て自分で修正し、再度 check を実行する。内容の追加・変更は行わない（レビュアーが勝手に「発明」しない）。
+**Do not modify the file.** Only detect and return a list of issues. The caller reviews the issues and makes corrections themselves, then runs check again. Do not add or change content (the reviewer must not "invent" content).
 
 ```javascript
 Agent({
@@ -41,15 +41,15 @@ Agent({
 })
 ```
 
-呼び出し元のフロー:
-1. check モードで spec-review を実行
-2. issues が 0 件 → Approval へ進む
-3. issues が 1 件以上 → 呼び出し元が issues を見て design.md/tasks.md を修正
-4. 再度 check モードで確認（issues 0 になるまで繰り返し、最大3回）
+Caller flow:
+1. Run spec-review in check mode
+2. If issues = 0 → proceed to Approval
+3. If issues >= 1 → caller reviews issues and corrects design.md/tasks.md
+4. Run check mode again (repeat until issues = 0, up to 3 times)
 
-## Mode: fix（軽微な自動修正のみ）
+## Mode: fix (minor automated fixes only)
 
-placeholder テキスト削除、フォーマット修正等の**機械的修正のみ**実行する。内容の追加・変更（セクション追加、要件追加、エラーコード追加等）は行わず、issues として報告する。
+Performs **only mechanical fixes** such as removing placeholder text and fixing formatting. Does not add or change content (adding sections, requirements, error codes, etc.) — those are reported as issues.
 
 ```javascript
 Agent({
@@ -62,15 +62,15 @@ Agent({
     Spec name: {spec-name}
     Mode: fix
 
-    Auto-fix の対象（ファイルを直接修正してよい）:
-    - placeholder テキストの削除（[describe...], TODO, TBD）
-    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
-    - 明らかな typo
+    Items eligible for auto-fix (may directly modify the file):
+    - Remove placeholder text ([describe...], TODO, TBD)
+    - Fix markdown formatting (table alignment, heading levels, etc.)
+    - Obvious typos
 
-    Auto-fix の対象外（issues として報告のみ）:
-    - セクションの追加・削除
-    - 内容の追加・変更（要件、設計コンポーネント、エラーコード等）
-    - トレーサビリティの不整合
+    Items NOT eligible for auto-fix (report as issues only):
+    - Adding or removing sections
+    - Adding or changing content (requirements, design components, error codes, etc.)
+    - Traceability inconsistencies
 
     Return a structured report with auto-fixed items and remaining issues.`
 })
@@ -97,23 +97,23 @@ Agent({
 **Template compliance:**
 - Overview with architectural description
 - Steering Document Alignment (tech.md, structure.md)
-- Code Reuse Analysis（下記の専用チェック参照）
+- Code Reuse Analysis (see dedicated check below)
 - Architecture section with diagram
 - Components/Interfaces: Purpose, Interfaces, Dependencies, Reuses
 - Data Models with concrete field definitions
 - Error Handling with specific scenarios
-- Requirements Traceability Matrix（下記の専用チェック参照）
+- Requirements Traceability Matrix (see dedicated check below)
 
-**Code Reuse Analysis（具体パス必須）:**
-- テーブル形式で「再利用対象 / パス / 用途」が記載されているか
-- パスが具体的なファイルパス（`src/middleware/auth.rs` 等）であり、抽象的な記述（「既存ミドルウェアを活用」等）でないか
-- パスが実在するか（コードベースに存在するファイルか）
-- Phase 3 で各タスクの `_Leverage` にそのまま転記できる粒度か
+**Code Reuse Analysis (concrete paths required):**
+- Is the table format listing "Reuse target / Path / Usage" present?
+- Are paths concrete file paths (e.g., `src/middleware/auth.rs`) rather than abstract descriptions (e.g., "leverage existing middleware")?
+- Do the paths actually exist in the codebase?
+- Is the granularity fine enough to be copied directly into each task's `_Leverage` field in Phase 3?
 
 **Requirements Traceability Matrix:**
-- 全要件 ID（REQ-1, REQ-2, ...）がマトリクスに含まれているか
-- 各要件に対応する設計コンポーネントが明記されているか
-- 逆方向: 設計コンポーネントに対応する要件がないもの（要件なき設計）がないか
+- Are all requirement IDs (REQ-1, REQ-2, ...) included in the matrix?
+- Is the corresponding design component listed for each requirement?
+- Reverse check: are there any design components with no backing requirement?
 - Testing Strategy: Unit, Integration, E2E
 
 **Cross-reference (read requirements.md):**
@@ -121,39 +121,39 @@ Agent({
 - No design component without a backing requirement
 - Data models cover all entities from requirements
 
-**DB Schema review（設計承認後の変更を防ぐため厳密に検証）:**
-- 全テーブルにカラム名・型・制約（NOT NULL, UNIQUE, DEFAULT 等）が明記されている
-- 主キー・外部キー・インデックスが定義されている
-- **FK ごとに `ON DELETE` 動作（CASCADE / RESTRICT / SET NULL）が明記されている**（未指定は不可。ビジネスロジックに直結する設計判断のため必ず明示すること）
-- テーブル間のリレーション（1:1, 1:N, N:M）とカーディナリティが明確
-- マイグレーション戦略（カラム追加/削除の順序、データ移行の有無）が記載されている
-- 正規化レベルが適切（不要な冗長性がないか、パフォーマンスのための非正規化は根拠があるか）
-- **NULL 許容カラムの意味が明確**（なぜ NULL を許容するか、DEFAULT 値がある場合はその意味を記載）
-- タイムスタンプカラム（created_at, updated_at）の有無
-- ソフトデリート vs ハードデリートの方針が明記されている（該当する場合）
+**DB Schema review (strictly validated to prevent post-approval changes):**
+- Every table lists column names, types, and constraints (NOT NULL, UNIQUE, DEFAULT, etc.)
+- Primary keys, foreign keys, and indexes are defined
+- **Each FK explicitly specifies `ON DELETE` behavior (CASCADE / RESTRICT / SET NULL)** — leaving it unspecified is not allowed; this is a design decision directly tied to business logic and must always be explicit
+- Relationships between tables (1:1, 1:N, N:M) and cardinality are clear
+- Migration strategy is documented (column add/drop order, data migration if needed)
+- Normalization level is appropriate (no unnecessary redundancy; denormalization for performance must have justification)
+- **The meaning of nullable columns is clear** (why NULL is allowed; if a DEFAULT value exists, its meaning is documented)
+- Timestamp columns (created_at, updated_at) are present
+- Soft-delete vs. hard-delete policy is explicitly stated (where applicable)
 
-**API Design review（設計承認後の変更を防ぐため厳密に検証）:**
-- 全エンドポイントの HTTP メソッド、パス、説明が一覧化されている
-- 各エンドポイントのリクエストボディ/クエリパラメータの型・必須/任意・バリデーションルールが定義されている
-- 各エンドポイントのレスポンス型（成功時 + エラー時）と HTTP ステータスコードが定義されている
-- エラーレスポンスのフォーマットが統一されている（例: `{ "error": { "code": "...", "message": "..." } }`）
-- **エラーコード一覧がテーブル形式で定義されている**（エラーコード名、HTTP Status、発生条件の3列）。実装時に一覧にないエラーコードの追加を防ぐため網羅的に列挙されていること
-- 認証・認可の要否がエンドポイントごとに明記されている
-- ページネーション・フィルタリング・ソートのパラメータ設計（該当する場合）
-- RESTful 規約の準拠（リソース名の複数形、適切な HTTP メソッドの使用）
+**API Design review (strictly validated to prevent post-approval changes):**
+- All endpoints list HTTP method, path, and description
+- Each endpoint defines request body / query parameter types, required/optional status, and validation rules
+- Each endpoint defines response types (success + error) and HTTP status codes
+- Error response format is consistent (e.g., `{ "error": { "code": "...", "message": "..." } }`)
+- **Error codes are defined in a table** (columns: error code name, HTTP Status, trigger condition). Must be exhaustive to prevent undeclared error codes from being added during implementation
+- Authentication/authorization requirements are specified per endpoint
+- Pagination, filtering, and sorting parameter design is documented (where applicable)
+- RESTful conventions are followed (plural resource names, appropriate HTTP methods)
 
-**Data Model review（設計承認後の変更を防ぐため厳密に検証）:**
-- DB Model（Queryable 等）と DTO（リクエスト/レスポンス型）が分離して定義されている
-- DTO のフィールドが API Design のリクエスト/レスポンス定義と一致している
-- Model → DTO の変換で公開すべきでないフィールド（password_hash 等）が除外されている
-- バリデーションルールがリクエスト DTO に定義されている
-- 列挙型（ステータス、ロール等）の値が網羅されている
+**Data Model review (strictly validated to prevent post-approval changes):**
+- DB Model (e.g., Queryable) and DTOs (request/response types) are defined separately
+- DTO fields match the request/response definitions in the API Design
+- Fields that must not be exposed (e.g., password_hash) are excluded in the Model → DTO conversion
+- Validation rules are defined in request DTOs
+- Enum values (status, role, etc.) are exhaustive
 
 **Quality:**
 - No placeholder text
 - Consistent component naming
 - Error scenarios cover realistic failure modes
-- DB Schema / API / Data Model が十分な具体性を持ち、実装者が設計を解釈する余地が最小限であること
+- DB Schema / API / Data Model are concrete enough that implementers have minimal room to interpret the design
 
 ### Tasks (`tasks.md`)
 
@@ -170,33 +170,33 @@ Agent({
 - Every requirement has at least one implementing task
 - Every design component has at least one creating task
 - `_Requirements` IDs match actual requirement IDs
-- `_Leverage` paths are plausible（design.md の Code Reuse Analysis テーブルのパスと一致しているか）
+- `_Leverage` paths are plausible (match paths in the design.md Code Reuse Analysis table)
 - Task ordering respects dependencies (interfaces before implementations, models before services)
 
-**Traceability Matrix 逆記入の検証（design.md を Read）:**
-- design.md の Requirements Traceability Matrix の「対象タスク ID」列が全行埋まっているか
-- 「対象タスク ID」が tasks.md に実在するタスク ID と一致しているか
-- 空欄のコンポーネント行がある場合は tasks.md にタスク追加 + マトリクス更新が必要
+**Traceability Matrix back-fill validation (read design.md):**
+- Are all rows in the Requirements Traceability Matrix in design.md filled in with a "Target Task ID"?
+- Do the "Target Task ID" values match actual task IDs that exist in tasks.md?
+- If any component row is empty, a task must be added to tasks.md and the matrix must be updated
 
-**_TDDSkip と Interface-only task の検証:**
-- `_TDDSkip: true` のタスクが適切か（テスト不可能なタスクにのみ付与されているか）
-  - OK: プロジェクト初期化、Dockerfile、マイグレーション、設定ファイル（単独で完結するタスク）
-  - NG: trait/struct 定義のみのタスク（単独で完結しない → 実装タスクにマージすべき）
-- Interface-only task（`_TestFocus` 全カテゴリ「該当なし」＋ Success が「コンパイルが通る」のみ＋ `_TDDSkip` なし）を検出した場合:
-  - `_TDDSkip: true` を付与するか、最初に `_Leverage` で参照するタスクにマージする
-  - 判定基準: 「そのタスク単独で完結するか」→ Yes なら `_TDDSkip`、No ならマージ
+**`_TDDSkip` and Interface-only task validation:**
+- Is `_TDDSkip: true` applied appropriately (only to tasks that cannot be tested in isolation)?
+  - OK: project initialization, Dockerfile, migrations, config files (tasks that are self-contained)
+  - NG: tasks that only define a trait/struct (not self-contained → should be merged into an implementation task)
+- If an interface-only task is detected (`_TestFocus` all "N/A" + Success is only "compiles" + no `_TDDSkip`):
+  - Either add `_TDDSkip: true`, or merge into the first task that references it via `_Leverage`
+  - Decision rule: "Is this task self-contained?" → Yes: `_TDDSkip`, No: merge
 
-**_TestFocus フォーマット検証:**
-- 全非PhaseReview タスクの `_TestFocus` が4カテゴリ構造（正常系 / 境界値 / 例外処理 / エッジケース）で記述されているか
-- 自由記述（"CRUD success/failure, validation boundaries" 等）になっていないか
-- 該当しないカテゴリが「該当なし」と明記されているか（省略されていないか）
-- 各カテゴリの内容が具体的か（「正常系: 成功パス」のような抽象記述ではなく、「正常系: 全 CRUD 操作の成功パス」のように対象を特定しているか）
+**`_TestFocus` format validation:**
+- Does every non-PhaseReview task's `_TestFocus` use the 4-category structure (Happy Path / Boundary Values / Error Handling / Edge Cases)?
+- Is free-form text being used instead (e.g., "CRUD success/failure, validation boundaries")?
+- Are categories that do not apply explicitly marked as "N/A" (not omitted)?
+- Is each category's content specific (not abstract like "Happy Path: success path" but rather "Happy Path: all CRUD operation success paths")?
 
-**単一責務の検証:**
-- `_Prompt` の Task フィールドが "and" で複数の動作を繋いでいないか
-- Task を1文で説明できるか（複数文が必要 → 分割を検討）
-- Success 基準が独立した複数の条件を含んでいないか（「A compiles and B validates and C works」→ 3タスクに分割）
-- 分割が必要なタスクを検出した場合は分割して tasks.md を修正する
+**Single responsibility validation:**
+- Does the `_Prompt` Task field join multiple behaviors with "and"?
+- Can the task be described in a single sentence? (If multiple sentences are needed → consider splitting)
+- Do the Success criteria contain multiple independent conditions? (e.g., "A compiles and B validates and C works" → split into 3 tasks)
+- If a task needs splitting, split it and update tasks.md
 
 **Quality:**
 - No placeholder text
@@ -205,7 +205,7 @@ Agent({
 
 ## Output Format
 
-### check モード
+### check mode
 
 ```
 ## Spec Review: {spec-name}/{doc-type}.md (check)
@@ -215,17 +215,17 @@ Agent({
 - Cross-references: {PASS / N issues / N/A for requirements}
 - Quality: {PASS / N issues}
 
-### Issues (呼び出し元が修正すること)
-1. [category: Template/CrossRef/Quality] {問題の説明} — location: {セクション名 or 行番号} — suggested fix: {具体的な修正案}
+### Issues (caller must fix)
+1. [category: Template/CrossRef/Quality] {description of issue} — location: {section name or line number} — suggested fix: {concrete suggestion}
 2. ...
 
 ### Items for User Attention
 - [any gaps requiring human judgment, if any]
 
-### Result: {PASS (issues 0) / FAIL (issues N件)}
+### Result: {PASS (issues 0) / FAIL (issues N)}
 ```
 
-### fix モード
+### fix mode
 
 ```
 ## Spec Review: {spec-name}/{doc-type}.md (fix)
@@ -233,9 +233,9 @@ Agent({
 ### Auto-Fixed
 - [list of auto-fixed items with before/after]
 
-### Remaining Issues (呼び出し元が修正すること)
-1. [category] {問題の説明} — location: {セクション名} — suggested fix: {修正案}
+### Remaining Issues (caller must fix)
+1. [category] {description of issue} — location: {section name} — suggested fix: {suggestion}
 2. ...
 
-### Result: {PASS (remaining 0) / FAIL (remaining N件)}
+### Result: {PASS (remaining 0) / FAIL (remaining N)}
 ```

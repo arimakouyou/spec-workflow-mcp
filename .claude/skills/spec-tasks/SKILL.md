@@ -14,7 +14,7 @@ Before doing anything else, verify all prerequisite files exist:
 1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
 
-If ANY file is missing — **STOP immediately.** ユーザーに「{ファイル名} が存在しないためタスク分解を開始できません。先に {スキル名} を実行してください。」と伝えてこのスキルを終了する。
+If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin task breakdown. Please run {skill-name} first." Then exit this skill.
 
 ---
 
@@ -46,21 +46,21 @@ Convert the design into atomic tasks. Each task should touch 1-3 files and be in
 - Requirement references (which requirements the task implements)
 - Logical ordering (dependencies between tasks)
 
-#### 単一責務の判定基準
+#### Single Responsibility Criteria
 
-タスクの粒度は「ファイル数」だけでなく「責務数」で判定する。1タスク = 1責務。
+Task granularity is determined by the number of **responsibilities**, not just the number of files. 1 task = 1 responsibility.
 
-**判定ルール:**
-1. **Task を1文で説明できるか** — "and" で複数の動作を繋ぐ場合は分割を検討
-2. **Success 基準が1つの検証対象に集約されるか** — 独立した複数の Success 条件がある場合はタスク分割
-3. **TDD の1サイクルで完結するか** — RED で書くテストが全て同じモジュール/関数に属する
+**Decision rules:**
+1. **Can the task be described in a single sentence?** — If multiple behaviors are joined with "and", consider splitting
+2. **Do the Success criteria converge on a single verification target?** — If there are multiple independent Success conditions, split the task
+3. **Does it complete within one TDD cycle?** — All tests written in the RED phase belong to the same module/function
 
-**分割が必要な例:**
-- "Create model and implement API endpoint" → `model 作成` + `endpoint 実装`
-- "Implement CRUD with validation and caching" → `CRUD 実装` + `validation 追加` + `caching 追加`
-- "Define DB schema and implement repository" → `migration 作成` + `repository 実装`
+**Examples requiring splitting:**
+- "Create model and implement API endpoint" → `create model` + `implement endpoint`
+- "Implement CRUD with validation and caching" → `implement CRUD` + `add validation` + `add caching`
+- "Define DB schema and implement repository" → `create migration` + `implement repository`
 
-**分割不要な例（1責務に収まる）:**
+**Examples that do NOT require splitting (fit within 1 responsibility):**
 - "Create User model with Queryable/Insertable/AsChangeset derives"
 - "Implement GET /users/{id} endpoint returning UserDto"
 - "Add email format validation to CreateUserRequest"
@@ -77,26 +77,26 @@ Group tasks into phases using `## Phase N: Title` headings. Each phase is a **ve
 
 - **No standalone test tasks.** TDD handles testing automatically in each task's RED phase.
 - **Each task must be independently testable** — it must produce observable behavior that can be verified.
-- **`_TestFocus` field** — unit-test-engineer の必須テスト観点（正常系/境界値/例外処理/エッジケース）の4カテゴリで構造化して記述する。自由記述は禁止。
+- **`_TestFocus` field** — Structured in 4 categories (Happy Path / Boundary Values / Error Handling / Edge Cases) as required by the unit-test-engineer. Free-form text is not allowed.
 
-#### TDD スキップ可能タスク（`_TDDSkip: true`）
+#### Tasks eligible for TDD skip (`_TDDSkip: true`)
 
-実行時の振る舞いがなくテスト不可能なタスクには `_TDDSkip: true` を付与する。該当タスクは parallel-worker が TDD サイクルをスキップし、直接実装 + 品質チェックのみ実行する。
+Tasks with no runtime behavior and nothing to test receive `_TDDSkip: true`. For these tasks, parallel-worker skips the TDD cycle and performs direct implementation + quality checks only.
 
-**`_TDDSkip: true` が適用できるタスク:**
-- プロジェクト初期化（`cargo init`, ディレクトリ構成作成, `Cargo.toml` 依存追加）
-- インフラ/設定ファイル（Dockerfile, docker-compose.yml, CI/CD 設定）
-- DB マイグレーション（`diesel migration generate` による up.sql/down.sql 作成）
-- 環境設定ファイル（`.env.example`, `diesel.toml`, `.cargo/config.toml`）
+**Tasks where `_TDDSkip: true` applies:**
+- Project initialization (`cargo init`, directory structure creation, `Cargo.toml` dependency additions)
+- Infrastructure/config files (Dockerfile, docker-compose.yml, CI/CD configuration)
+- DB migrations (creating up.sql/down.sql via `diesel migration generate`)
+- Environment config files (`.env.example`, `diesel.toml`, `.cargo/config.toml`)
 
-**`_TDDSkip: true` が適用できないタスク（マージが必要）:**
-- Interface-only task（trait/struct/enum 定義のみ） → 最初の実装タスクにマージ
+**Tasks where `_TDDSkip: true` does NOT apply (must be merged):**
+- Interface-only tasks (trait/struct/enum definitions only) → merge into the first implementing task
 
-判定基準: 「そのタスク単独で完結するか」
-- Dockerfile は単独で完結する → `_TDDSkip: true`
-- trait 定義は実装タスクがないと意味がない → マージ
+Decision rule: "Is this task self-contained?"
+- A Dockerfile is self-contained → `_TDDSkip: true`
+- A trait definition is meaningless without an implementing task → merge
 
-`_TDDSkip: true` タスクには `_TestFocus` は不要（省略可）。
+`_TDDSkip: true` tasks do not need a `_TestFocus` field (may be omitted).
 
 ### 4. Generate _Prompt Fields
 
@@ -109,53 +109,53 @@ This is critical for implementation quality. Each task needs a `_Prompt` field w
   - File: Cargo.toml, Dockerfile, docker-compose.yml, .env.example
   - _TDDSkip: true_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: Initialize Cargo project, create Dockerfile and docker-compose.yml for Axum + PostgreSQL + Valkey | Restrictions: .env.example にシークレットを含めない | Success: docker-compose up でコンテナが起動する_
+  - _Prompt: Role: DevOps Engineer | Task: Initialize Cargo project, create Dockerfile and docker-compose.yml for Axum + PostgreSQL + Valkey | Restrictions: Do not include secrets in .env.example | Success: Containers start with docker-compose up_
 
 - [ ] 0.2 Create DB migration for users table
   - File: migrations/YYYYMMDD_create_users/up.sql, down.sql
   - _TDDSkip: true_
   - _Requirements: REQ-1_
-  - _Prompt: Role: Backend Developer | Task: Create users table migration with diesel migration generate | Restrictions: design.md の DB Schema 定義に厳密に従う | Success: diesel migration run が成功する_
+  - _Prompt: Role: Backend Developer | Task: Create users table migration with diesel migration generate | Restrictions: Strictly follow the DB Schema definition in design.md | Success: diesel migration run succeeds_
 
 ## Phase 1: Core Models & Repository
 
 - [ ] 1.1 Create User model with Diesel derives
   - File: src/models/user.rs, src/schema.rs
-  - Queryable, Insertable, AsChangeset を実装
+  - Implement Queryable, Insertable, AsChangeset
   - _Leverage: src/models/mod.rs_
   - _Requirements: REQ-1_
-  - _TestFocus: 正常系: User/NewUser/UpdateUser の生成と各フィールドのアクセス | 境界値: name の最小長(1文字)/最大長(255文字) | 例外処理: 空文字 name、不正な email 形式 | エッジケース: マルチバイト文字 name_
-  - _Prompt: Role: Backend Developer | Task: Create User model with Queryable/Insertable/AsChangeset derives | Restrictions: schema.rs は diesel print-schema で自動生成、手動編集しない | Success: User, NewUser, UpdateUser 構造体が定義され、コンパイルが通る_
+  - _TestFocus: Happy Path: construction and field access for User/NewUser/UpdateUser | Boundary Values: minimum (1 char) and maximum (255 chars) name length | Error Handling: empty string name, invalid email format | Edge Cases: multi-byte character name_
+  - _Prompt: Role: Backend Developer | Task: Create User model with Queryable/Insertable/AsChangeset derives | Restrictions: schema.rs is auto-generated by diesel print-schema — do not edit manually | Success: User, NewUser, UpdateUser structs are defined and the code compiles_
 
 - [ ] 1.2 Implement UserRepository with CRUD operations
   - File: src/db/repository/users.rs
-  - find_by_id, list, create, update, delete を実装
+  - Implement find_by_id, list, create, update, delete
   - _Leverage: src/db/mod.rs, src/models/user.rs_
   - _Requirements: REQ-1_
-  - _TestFocus: 正常系: 全 CRUD 操作の成功パス | 境界値: list の 0件/1件/多数件 | 例外処理: 存在しない ID の find、重複キーの create、DB 接続エラー | エッジケース: 同時更新_
-  - _Prompt: Role: Backend Developer | Task: Implement UserRepository with CRUD operations using diesel-async | Restrictions: 全メソッドは Result<T, AppError> を返す | Success: 全 CRUD メソッドが実装され、テストが通る_
+  - _TestFocus: Happy Path: success paths for all CRUD operations | Boundary Values: list with 0 / 1 / many records | Error Handling: find with nonexistent ID, create with duplicate key, DB connection error | Edge Cases: concurrent updates_
+  - _Prompt: Role: Backend Developer | Task: Implement UserRepository with CRUD operations using diesel-async | Restrictions: All methods must return Result<T, AppError> | Success: All CRUD methods are implemented and tests pass_
 
 - [ ] 1.3 Review and commit Phase 1
   - _PhaseReview: true_
   - _Prompt: Role: Code reviewer | Task: Review all Phase 1 changes, run tests, commit | Success: All tests pass, committed_
 ```
 
-**注意:** Task フィールドは1つの責務に集中させる。"Create model and implement repository" のように "and" で複数責務を繋がない。
+**Note:** The Task field must focus on a single responsibility. Do not join multiple responsibilities with "and" (e.g., "Create model and implement repository").
 
 Also include:
-- `_Leverage`: Existing files/utilities to reuse（design.md の Code Reuse Analysis テーブルから転記）
+- `_Leverage`: Existing files/utilities to reuse (copied from the Code Reuse Analysis table in design.md)
 - `_Requirements`: Which requirements this task fulfills (traceability)
-- `_TestFocus`: 4カテゴリ構造化形式で記述（下記参照）
+- `_TestFocus`: Written in the 4-category structured format (see below)
 
-#### _TestFocus フォーマット
+#### _TestFocus Format
 
-unit-test-engineer の必須テスト観点と整合させるため、以下の4カテゴリで構造化する。自由記述は禁止。
+To align with the unit-test-engineer's required test coverage, use the following 4-category structure. Free-form text is not allowed.
 
 ```
-_TestFocus: 正常系: {具体的なテスト対象} | 境界値: {具体的な境界} | 例外処理: {具体的なエラーケース} | エッジケース: {具体的なケース}
+_TestFocus: Happy Path: {specific test targets} | Boundary Values: {specific boundaries} | Error Handling: {specific error cases} | Edge Cases: {specific cases}
 ```
 
-該当しないカテゴリがある場合は「該当なし」と明記する（省略しない）。
+If a category does not apply, explicitly write "N/A" (do not omit it).
 - Instructions about marking task status in tasks.md and logging implementation with `log-implementation` tool
 
 ### 5. Create the Document
@@ -172,20 +172,20 @@ Task status markers:
 
 ### 6. Update Design Traceability Matrix
 
-tasks.md の作成後、design.md の Requirements Traceability Matrix に「対象タスク ID」を逆記入する。これにより design コンポーネント → タスクの照合が可能になる。
+After creating tasks.md, back-fill the "Target Task ID" column in the Requirements Traceability Matrix in design.md. This enables tracing from design components to tasks.
 
-1. design.md の Traceability Matrix を Read する
-2. 各コンポーネント行に対応するタスク ID を tasks.md から特定する
-3. 「対象タスク ID」列を埋める
-4. **全コンポーネントにタスクが割り当てられているか確認する** — 割り当てのないコンポーネントが見つかった場合はタスクを追加する
+1. Read the Traceability Matrix in design.md
+2. Identify the corresponding task ID from tasks.md for each component row
+3. Fill in the "Target Task ID" column
+4. **Verify that every component has an assigned task** — if any component row is unassigned, add a task and update the matrix
 
 ### 7. Self-Review via Subagent (before approval)
 
-承認前に **2 段階**でドキュメントを検証する。
+Validate the document in **2 stages** before approval.
 
-#### ステップ A: fix（機械的自動修正）
+#### Step A: fix (mechanical auto-fixes)
 
-placeholder・フォーマット・typo を自動修正する。内容の追加・変更は行わない:
+Auto-fix placeholders, formatting, and typos. Do not add or change content:
 
 ```
 Agent({
@@ -196,23 +196,23 @@ Agent({
 
     Document type: tasks
 
-    Auto-fix の対象（ファイルを直接修正してよい）:
-    - placeholder テキストの削除（[describe...], TODO, TBD）
-    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
-    - 明らかな typo
+    Items eligible for auto-fix (may directly modify the file):
+    - Remove placeholder text ([describe...], TODO, TBD)
+    - Fix markdown formatting (table alignment, heading levels, etc.)
+    - Obvious typos
 
-    Auto-fix の対象外（issues として報告のみ）:
-    - タスクの追加・削除・統合
-    - _Prompt、_Leverage、_Requirements 等の内容の変更
-    - トレーサビリティの不整合
+    Items NOT eligible for auto-fix (report as issues only):
+    - Adding, removing, or merging tasks
+    - Changing the content of _Prompt, _Leverage, _Requirements, etc.
+    - Traceability inconsistencies
 
     Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
 })
 ```
 
-#### ステップ B: check（内容検証）
+#### Step B: check (content validation)
 
-fix 完了後、内容の問題を検出する。ファイルは修正しない:
+After fix completes, detect content issues. Do not modify the file:
 
 ```
 Agent({
@@ -233,8 +233,8 @@ Agent({
        every requirement must have at least one implementing task,
        every design component must have at least one creating task,
        _Requirements IDs must match actual requirement IDs
-    4. TRACEABILITY: design.md の Requirements Traceability Matrix の全コンポーネントに対応するタスク ID が記入されているか。
-       空欄のコンポーネントがあれば tasks.md にタスクを追加し、design.md のマトリクスも更新する。
+    4. TRACEABILITY: Verify that the Target Task ID column is filled in for all components in the Requirements Traceability Matrix in design.md.
+       If any component row is empty, add a task to tasks.md and update the matrix in design.md.
     5. Tasks are atomic (1-3 files), in logical dependency order
     6. No placeholder text, descriptions specific enough for AI implementation
     7. PHASE STRUCTURE: Tasks are grouped under ## Phase headings with vertical slices
@@ -247,7 +247,7 @@ Agent({
 })
 ```
 
-check が FAIL の場合は指摘を自分で修正し、check を再実行する（最大 3 回）。PASS になったら承認へ進む。
+If check returns FAIL, fix the issues yourself and re-run check (up to 3 times). Once PASS, proceed to approval.
 
 ### 8. Approval Workflow
 
@@ -261,8 +261,8 @@ Same strict process — verbal approval is never accepted.
 4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
    - If delete fails: STOP, return to polling
 5. **Spec complete**: After successful cleanup, tell the user:
-   > "✅ Spec complete. tasks.md が承認されました。実装を開始するには `/spec-implement` を実行してください。"
-   **ここで必ず停止する。** ユーザーが `/spec-implement` コマンドまたは実装トリガーフレーズ（「implement task X」「start coding」等）を自らタイプするまで、一切の自動起動は禁止。「はい」「進めて」等の確認応答への自動起動も禁止。
+   > "Spec complete. tasks.md has been approved. To begin implementation, run `/spec-implement`."
+   **Stop here.** No automatic startup of any kind until the user personally types `/spec-implement` or an implementation trigger phrase (e.g., "implement task X", "start coding"). Auto-triggering on confirmation responses like "yes" or "go ahead" is also prohibited.
 
 ## Rules
 

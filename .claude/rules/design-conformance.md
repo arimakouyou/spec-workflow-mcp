@@ -4,79 +4,79 @@ always_apply: true
 
 # Design Conformance
 
-承認済み design.md からの逸脱を防止するルール。
+Rules to prevent deviations from the approved design.md.
 
-## 原則
+## Principle
 
-**承認済みの設計は実装フェーズで変更しない。** design.md で定義された DB スキーマ、API 設計、データモデルは実装の「契約」であり、実装者が独断で変更してはならない。
+**Do not change the approved design during the implementation phase.** The DB schema, API design, and data model defined in design.md are a "contract" for the implementation; implementers must not change them unilaterally.
 
-## 実装時の禁止事項
+## Prohibited Actions During Implementation
 
 ### DB Schema
-- design.md に定義されていないテーブル・カラムを追加しない
-- 定義済みのカラム型・制約を変更しない
-- インデックスの追加・削除を勝手に行わない
-- **FK の ON DELETE 動作は design.md の定義通りに実装する**（CASCADE / RESTRICT / SET NULL を勝手に変更・追加しない）
-- NULL 許容/NOT NULL は design.md の定義に従う
+- Do not add tables or columns not defined in design.md
+- Do not change the type or constraints of already-defined columns
+- Do not add or remove indexes without authorization
+- **Implement FK ON DELETE behavior exactly as defined in design.md** (do not change or add CASCADE / RESTRICT / SET NULL without authorization)
+- Follow design.md for NULL / NOT NULL definitions
 
 ### API
-- design.md に定義されていないエンドポイントを追加しない
-- 定義済みの HTTP メソッド・パス・ステータスコードを変更しない
-- リクエスト/レスポンスのフィールドを追加・削除・型変更しない
-- エラーレスポンスのフォーマットを変更しない
-- **エラーコード**: design.md の Error Handling セクションに定義されたエラーコードのみ使用する。実装中に未定義のエラーケースが発生した場合は以下の順で対応する:
-  1. design.md に定義済みのエラーコードで代替できないか検討する（例: `Conflict` が未定義なら `BadRequest("duplicate key")` で代替）
-  2. 代替不可能な場合は escalate してユーザーに確認する
+- Do not add endpoints not defined in design.md
+- Do not change defined HTTP methods, paths, or status codes
+- Do not add, remove, or change the type of request/response fields
+- Do not change the format of error responses
+- **Error codes**: Use only the error codes defined in the Error Handling section of design.md. If an undefined error case arises during implementation, handle it in the following order:
+  1. Consider whether an error code already defined in design.md can serve as a substitute (e.g., if `Conflict` is undefined, substitute with `BadRequest("duplicate key")`)
+  2. If substitution is not possible, escalate and confirm with the user
 
 ### Data Model
-- design.md に定義されていないフィールドを Model / DTO に追加しない
-- DTO ↔ API 定義の不一致を作らない
+- Do not add fields to Model / DTO that are not defined in design.md
+- Do not create mismatches between DTO and API definitions
 
-## 設計変更が必要な場合
+## When a Design Change Is Needed
 
-実装中に設計の問題を発見した場合:
+If a design problem is discovered during implementation:
 
-1. 実装を中断する
-2. 問題点と変更提案を明確に記述する
-3. ユーザーにエスカレーションする（review-worker の `review_action: escalate`）
+1. Stop the implementation
+2. Clearly describe the problem and the proposed change
+3. Escalate to the user (review-worker's `review_action: escalate`)
 
-ユーザーの判断により以下のいずれかに分岐する:
+Based on the user's judgment, proceed with one of the following:
 
-**判定基準（A vs B の選択指針）:**
+**Decision criteria (guidance for choosing A vs B):**
 
-| 指標 | A（実装調整）| B（Phase Reset）|
-|-----|------------|----------------|
-| 変更の影響範囲 | 単一タスクの実装方法のみ | DB スキーマ / API 仕様 / データモデルの定義そのもの |
-| 既存実装への影響 | 他の完了済みタスクに影響しない | 他のタスクのコードを書き直す必要がある |
-| design.md の変更 | 不要（Restrictions の追記のみ） | 必要 |
-| 典型例 | DTO フィールドの使い方の解釈違い、利用する既存コンポーネントの変更 | テーブル定義の変更、レスポンス型の追加/削除、FK の仕様変更 |
+| Indicator | A (Implementation Adjustment) | B (Phase Reset) |
+|-----------|-------------------------------|-----------------|
+| Scope of change | Only the implementation approach of a single task | The DB schema / API spec / data model definitions themselves |
+| Impact on existing implementation | Does not affect other completed tasks | Requires rewriting code for other tasks |
+| Change to design.md | Not required (only appending to Restrictions) | Required |
+| Typical example | Misinterpretation of DTO field usage, change to an existing component in use | Table definition change, addition/removal of response types, FK spec change |
 
-### A. design.md の範囲内で実装を調整する（軽微な場合）
+### A. Adjust Implementation Within the Scope of design.md (Minor Cases)
 
-- `_Prompt` の Restrictions に調整内容を追記し、parallel-worker に rework で差し戻す
-- design.md は変更しない
+- Append the adjustment details to the Restrictions in `_Prompt`, and return to parallel-worker via rework
+- Do not change design.md
 
-### B. design.md の変更が必要（根本的な問題の場合）— Phase Reset
+### B. design.md Change Required (Fundamental Problems) — Phase Reset
 
-**design.md を変更する場合、それまでの実装は全て破棄し Phase 2 からやり直す。** 部分的な修正は許可しない。
+**If design.md must be changed, discard all implementation so far and restart from Phase 2.** Partial fixes are not permitted.
 
-Phase Reset 手順:
-1. **Phase 4 の中断**: 進行中のタスク（`[-]`）を `[ ]` に戻す
-2. **実装コードの破棄**: Phase 4 で実装・コミットされたコードを `git revert` で取り消す
-3. **tasks.md の削除**: `.spec-workflow/specs/{spec-name}/tasks.md` を削除する（Phase 3 の成果物）
-4. **design.md の修正**: Phase 2 に戻り design.md を修正する
-5. **再レビュー**: spec-review (check) で design.md を再検証する
-6. **再承認**: Approval Workflow で design.md の再承認を取得する
-7. **Phase 3 再実行**: `/spec-tasks` で tasks.md を再作成する
-8. **Phase 4 再実行**: `/spec-implement` で実装を最初から再開する
+Phase Reset procedure:
+1. **Suspend Phase 4**: Revert in-progress tasks (`[-]`) to `[ ]`
+2. **Discard implementation code**: Undo code implemented and committed in Phase 4 using `git revert`
+3. **Delete tasks.md**: Delete `.spec-workflow/specs/{spec-name}/tasks.md` (Phase 3 artifact)
+4. **Fix design.md**: Return to Phase 2 and fix design.md
+5. **Re-review**: Re-validate design.md with spec-review (check)
+6. **Re-approval**: Obtain re-approval of design.md via the Approval Workflow
+7. **Re-run Phase 3**: Re-create tasks.md with `/spec-tasks`
+8. **Re-run Phase 4**: Restart implementation from the beginning with `/spec-implement`
 
-**注意:** Phase Reset は大きなコストを伴う。これを避けるために Phase 2 の設計レビュー（DB Schema, API Design, Data Model, Error Handling）を徹底すること。
+**Note:** Phase Reset carries a high cost. To avoid this, conduct thorough design reviews in Phase 2 (DB Schema, API Design, Data Model, Error Handling).
 
-## review-worker での検証
+## Verification in review-worker
 
-review-worker はコードレビュー時に `design.md` を読み込み、以下を照合する:
+When performing a code review, review-worker reads `design.md` and checks the following:
 
-- 実装された DB マイグレーションが design.md のスキーマ定義と一致しているか
-- 実装されたエンドポイントのパス・メソッド・リクエスト/レスポンス型が design.md の API 定義と一致しているか
-- 実装された Model / DTO のフィールドが design.md のデータモデル定義と一致しているか
-- design.md に定義されていない追加物がないか
+- Whether the implemented DB migrations match the schema definitions in design.md
+- Whether the paths, methods, and request/response types of implemented endpoints match the API definitions in design.md
+- Whether the fields of implemented Model / DTO match the data model definitions in design.md
+- Whether there are any additions not defined in design.md

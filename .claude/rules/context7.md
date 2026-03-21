@@ -1,14 +1,17 @@
 ---
-description: Context7 MCPを使用してライブラリやツールの最新情報を取得するルール。ライブラリの使用、外部ツールの設定、エラー対応時に適用。
+description: Rules for using Context7 MCP to retrieve up-to-date information about libraries and tools. Applies when using libraries, configuring external tools, and handling errors.
 ---
 
-# Context7 MCP 活用ルール
+# Context7 MCP Usage Rules
 
-## ライブラリ使用時
-ライブラリやフレームワークのAPIを使用する際は、Context7 MCPで最新のドキュメント・コード例を取得してから実装する。記憶に頼った古い書き方を避け、常に最新の正しい使用法に基づくこと。
+## When Using Libraries
 
-## 外部ツールの設定・構文
-設定ファイル（tsconfig, vite.config, eslint, etc.）やCLIツールの構文を書く際は、Context7 MCPで事前に正しいオプション・書式を検証する。推測で設定を書かない。
+When using APIs from libraries or frameworks, always fetch the latest documentation and code examples via Context7 MCP before implementing. Avoid writing code based on memory of older usage patterns; always base your implementation on the latest correct usage.
 
-## エラー対応時
-ライブラリやツール起因のエラーが発生した場合は、Context7 MCPで正しい使用法を即確認し、公式ドキュメントに基づいて修正する。Stack Overflowの古い回答や記憶に頼った推測での修正を避ける。
+## External Tool Configuration and Syntax
+
+When writing configuration files (tsconfig, vite.config, eslint, etc.) or CLI tool syntax, verify the correct options and format in advance using Context7 MCP. Do not write configurations based on guesswork.
+
+## When Handling Errors
+
+When an error caused by a library or tool occurs, immediately check the correct usage via Context7 MCP and fix it based on the official documentation. Avoid fixes based on outdated Stack Overflow answers or memory-based guesswork.

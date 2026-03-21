@@ -7,25 +7,25 @@ description: "Phase 4 of spec-driven development: implement tasks from an approv
 
 Execute tasks systematically from the approved tasks.md using a **TDD-driven workflow**. Each task follows the cycle: Start → Discover → Read Guidance → **TDD Implementation (parallel-worker)** → **UT Quality Verification** → **Code Review + Commit (review-worker)** → Log → Complete.
 
-## ⛔ オーケストレーター禁止事項（ABSOLUTE RULES）
+## ⛔ Orchestrator Prohibited Actions (ABSOLUTE RULES)
 
-このスキルを実行するあなたは**オーケストレーター**であり、**実装者ではない**。以下を厳守すること:
+You executing this skill are the **orchestrator**, not the **implementer**. Strictly follow these rules:
 
-| 禁止 | 理由 |
-|-----|------|
-| **コードを自分で書かない** | 実装は必ず `parallel-worker` に委譲する |
-| **テストを自分で書かない** | TDD の初期テスト（RED フェーズ）は `parallel-worker` の責務。補完テストの追加は `unit-test-engineer` の責務 |
-| **git commit を自分でしない** | コミットは必ず `review-worker` に委譲する |
-| **エージェント呼び出しを省略しない** | 各ステップのエージェント呼び出しはスキップ不可 |
+| Prohibited | Reason |
+|-----------|--------|
+| **Do not write code yourself** | Implementation must always be delegated to `parallel-worker` |
+| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is `unit-test-engineer`'s responsibility |
+| **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
+| **Do not skip agent calls** | Each step's agent call cannot be skipped |
 
-**どんな理由があっても（「シンプルなタスクだから」「自分でできるから」等）エージェント呼び出しを省略してはならない。**
+**For any reason whatsoever (e.g., "it's a simple task", "I can do it myself"), do not skip agent calls.**
 
-オーケストレーターの唯一の責務:
-1. tasks.md を読んで次のタスクを特定する
-2. エージェントを正しいプロンプトで呼び出す
-3. エージェントの完了報告を受け取り次のエージェントへ引き継ぐ
-4. log-implementation を呼び出す
-5. tasks.md のステータスを更新する
+The orchestrator's sole responsibilities:
+1. Read tasks.md and identify the next task
+2. Call agents with the correct prompts
+3. Receive agent completion reports and hand off to the next agent
+4. Call log-implementation
+5. Update task status in tasks.md
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -37,13 +37,13 @@ Before doing anything else, verify all prerequisite files exist:
 
 If ANY file is missing — **STOP immediately. Do NOT start implementing.**
 
-| 不足ファイル | 対応スキル |
-|------------|----------|
+| Missing File | Required Skill |
+|-------------|---------------|
 | requirements.md | `/spec-requirements` |
 | design.md | `/spec-design` |
 | tasks.md | `/spec-tasks` |
 
-ユーザーに「{ファイル名} が存在しないため実装を開始できません。先に {スキル名} を実行してください。」と伝えてこのスキルを終了する。
+Tell the user: "Cannot start implementation because {filename} does not exist. Please run {skill name} first." Then exit this skill.
 
 ---
 
@@ -94,83 +94,83 @@ Look at the task's `_Prompt` field for structured guidance:
 
 If the task has `_PhaseReview: true_`, **skip the TDD cycle (steps 4-5)** and instead:
 
-#### 3.5.1 テスト実行
+#### 3.5.1 Run Tests
 
 ```bash
 cargo test --quiet
 ```
 
-- **全パス** → 3.5.2 へ
-- **失敗** → 失敗テストのエラー内容を分析し、原因タスクを特定する:
-  - **原因が当該 Phase 内のタスク** → 原因タスクを `[x]` → `[-]` に戻し、PhaseReview タスクも `[-]` → `[ ]` に戻す。原因タスクを step 4 から再実行する。
-  - **原因が先行 Phase のタスク** → ユーザーにエスカレーション（先行 Phase の修正が必要、影響範囲の判断が必要）
+- **All pass** → proceed to 3.5.2
+- **Failures** → analyze the failing test errors and identify the root cause task:
+  - **Root cause is a task within the current Phase** → revert the root cause task from `[x]` to `[-]`, and revert the PhaseReview task from `[-]` to `[ ]`. Re-run the root cause task from step 4.
+  - **Root cause is a task from a prior Phase** → escalate to the user (prior Phase fix is needed, impact scope must be assessed)
 
-#### 3.5.2 コードレビュー（review-worker に委譲）
+#### 3.5.2 Code Review (delegate to review-worker)
 
-当該 Phase で変更された全ファイルを review-worker に渡す:
+Pass all files changed in the current Phase to review-worker:
 
 ```javascript
 Agent({
   subagent_type: "review-worker",
   description: "Phase review: review all phase changes",
-  prompt: `Phase レビューとして、当該 Phase で変更された全ファイルをレビューしてください。
+  prompt: `As a phase review, please review all files changed in the current Phase.
 
     Project path: {project-path}
     Spec name: {spec-name}
     Phase: {phase-number}
     Changed files: {all files changed in this phase}
 
-    全観点（A〜F）でレビューし、review_action を commit / rework / escalate で報告してください。
-    コミットメッセージは Phase の成果物を要約する形式にしてください。`
+    Review across all aspects (A–F) and report review_action as commit / rework / escalate.
+    The commit message should summarize the Phase's deliverables.`
 })
 ```
 
-- **review_action: commit** → 3.5.3 へ
-- **review_action: rework** → 通常の rework フローに従う（指摘の原因タスクを特定し、そのタスクの parallel-worker に差し戻し）
-- **review_action: escalate** → 通常の escalate フローに従う
+- **review_action: commit** → proceed to 3.5.3
+- **review_action: rework** → follow the normal rework flow (identify the root cause task and send it back to that task's parallel-worker)
+- **review_action: escalate** → follow the normal escalate flow
 
-#### 3.5.3 完了
+#### 3.5.3 Complete
 
-review-worker がコミット済み。step 7 (Log) へ進む。
+review-worker has committed. Proceed to step 7 (Log).
 
 ### 3.6 TDD Skip Tasks
 
-If the task has `_TDDSkip: true_`（プロジェクト初期化、Dockerfile、マイグレーション等のテスト不可能タスク）, **TDD サイクル（step 4）と UT 品質検証（step 5）をスキップ**し、以下を実行:
+If the task has `_TDDSkip: true_` (tasks that cannot be tested such as project initialization, Dockerfile, migrations, etc.), **skip the TDD cycle (step 4) and UT quality verification (step 5)** and instead:
 
-1. parallel-worker に TDD なしの直接実装を指示する（prompt に `_TDDSkip: true のため TDD サイクルをスキップし、直接実装 + 品質チェックのみ実行してください` を追加）
-2. parallel-worker の完了後、step 5（UT）と step 5.5（code-simplifier）をスキップして step 6（review-worker）へ進む
-3. review-worker は通常通り全観点でレビュー（ただしカテゴリ E: テスト最終確認はスキップ）
+1. Instruct parallel-worker to implement directly without TDD (add `_TDDSkip: true, so skip the TDD cycle and perform direct implementation + quality checks only` to the prompt)
+2. After parallel-worker completes, skip step 5 (UT) and step 5.5 (code-simplifier) and proceed to step 6 (review-worker)
+3. review-worker reviews across all aspects as usual (but skip category E: final test verification)
 
-### 3.7 Worktree の準備
+### 3.7 Prepare Worktree
 
-タスクごとに git worktree を用意する。これにより parallel-worker と review-worker が独立したワーキングディレクトリで安全に作業でき、オーケストレーターのメインブランチに影響を与えない。
+Prepare a git worktree for each task. This allows parallel-worker and review-worker to work safely in independent working directories without affecting the orchestrator's main branch.
 
 ```bash
 WORKTREE_PATH=".worktrees/{spec-name}/{task-id}"
 BRANCH="impl/{spec-name}/{task-id}"
 
-# 既存の worktree を確認（rework サイクルでの再利用）
+# Check for existing worktree (reuse during rework cycle)
 if git worktree list | grep -q "$WORKTREE_PATH"; then
-  echo "既存の worktree を再利用: $WORKTREE_PATH (branch: $BRANCH)"
+  echo "Reusing existing worktree: $WORKTREE_PATH (branch: $BRANCH)"
 else
   git worktree add "$WORKTREE_PATH" -b "$BRANCH"
-  echo "新規 worktree を作成: $WORKTREE_PATH (branch: $BRANCH)"
+  echo "Created new worktree: $WORKTREE_PATH (branch: $BRANCH)"
 fi
 ```
 
-`WORKTREE_PATH` と `BRANCH` を変数として保持し、step 4 および step 6 のエージェントプロンプトに渡す。
+Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prompts in steps 4 and 6.
 
-### 4. TDD Implementation (parallel-worker) 【エージェント呼び出し必須】
+### 4. TDD Implementation (parallel-worker) [AGENT CALL REQUIRED]
 
-> ⛔ **自分でコードを書かない。必ず `parallel-worker` エージェントを呼び出すこと。**
+> ⛔ **Do not write code yourself. Always call the `parallel-worker` agent.**
 
-`parallel-worker` エージェントに TDD サイクル全体（Red → Green → Refactor + 品質チェック）を委譲する。parallel-worker は実装のみ行い、**git commit はしない**（review-worker の責務）。
+Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
 
 ```javascript
 Agent({
   subagent_type: "parallel-worker",
   description: "TDD: Red-Green-Refactor implementation",
-  prompt: `以下のタスクを TDD（Red→Green→Refactor）で実装してください。
+  prompt: `Implement the following task using TDD (Red→Green→Refactor).
 
     Project path: {project-path}
     Spec name: {spec-name}
@@ -184,125 +184,125 @@ Agent({
     Leverage files: {_Leverage file paths from task}
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
 
-    **重要**: 実装は必ず `cd {WORKTREE_PATH}` してから開始すること。メインリポジトリ直下での変更は禁止。
+    **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
 
-    手順:
-    1. RED: 失敗するテストを書く（/spec-impl-test-write スキル参照）
-    2. テスト実行で全テストが失敗することを確認
-    3. GREEN: テストを通す最小限のコードを書く（/spec-impl-code スキル参照）
-    4. テスト実行で全テストが通ることを確認（失敗時は最大3回リトライ）
-    5. REFACTOR: コードを整理する（/spec-impl-review スキル参照）
-    6. テスト実行でリファクタリング後も全テストが通ることを確認
-    7. 品質チェック（rustfmt + clippy + cargo test）を実行
+    Steps:
+    1. RED: Write failing tests (see /spec-impl-test-write skill)
+    2. Confirm all tests fail by running them
+    3. GREEN: Write the minimum code to make the tests pass (see /spec-impl-code skill)
+    4. Confirm all tests pass by running them (retry up to 3 times on failure)
+    5. REFACTOR: Clean up the code (see /spec-impl-review skill)
+    6. Confirm all tests still pass after refactoring
+    7. Run quality checks (rustfmt + clippy + cargo test)
 
-    完了報告に以下を含めること:
+    Include the following in the completion report:
     - tests: pass|fail
     - rustfmt: pass|fail
     - clippy: pass|fail
-    - test_file_paths: テストファイルのリスト
-    - implementation_file_paths: 実装ファイルのリスト
-    - changed_files: 変更された全ファイルのリスト`
+    - test_file_paths: list of test files
+    - implementation_file_paths: list of implementation files
+    - changed_files: list of all changed files`
 })
 ```
 
 Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**.
 
-parallel-worker の `status` に応じて分岐:
+Branch based on parallel-worker's `status`:
 
-- **status: completed** → step 5 へ進む
-- **status: retry_exhausted** → parallel-worker がリトライ上限に達して停止した。以下をユーザーに報告:
-  - どのフェーズ（RED/GREEN/REFACTOR/quality_check）で失敗したか
-  - 最後のエラー内容
-  - 途中まで作成されたファイル
+- **status: completed** → proceed to step 5
+- **status: retry_exhausted** → parallel-worker has stopped after exhausting retries. Report the following to the user:
+  - Which phase (RED/GREEN/REFACTOR/quality_check) failed
+  - The last error message
+  - Files partially created
 
-  ユーザーの判断: 手動修正して再開 / タスクをスキップして次へ / 設計を見直す
+  User decision: fix manually and resume / skip the task and move on / revisit the design
 
-  **再開フロー（ユーザーの選択後）:**
+  **Resume flow (after user decision):**
 
-  | 選択 | 手順 |
-  |------|------|
-  | **手動修正して再開** | ユーザーが `{WORKTREE_PATH}` 内を手動修正した後、step 5（UT）から再開する。rework カウンターはリセットしない（通算カウントを引き継ぐ） |
-  | **タスクをスキップ** | tasks.md の該当タスク行に `<!-- BLOCKED: {理由} -->` をコメントとして追記し、`[-]` を `[ ]` に戻す。次の `[ ]` タスクに進む |
-  | **設計を見直す** | `review_action: escalate` と同じフローに従う（design.md の範囲内で調整するか、Phase Reset かをユーザーが判断） |
+  | Choice | Steps |
+  |--------|-------|
+  | **Fix manually and resume** | After the user manually fixes files inside `{WORKTREE_PATH}`, resume from step 5 (UT). Do not reset the rework counter (carry over the cumulative count) |
+  | **Skip the task** | Append `<!-- BLOCKED: {reason} -->` as a comment to the relevant task row in tasks.md, revert `[-]` to `[ ]`, and proceed to the next `[ ]` task |
+  | **Revisit the design** | Follow the same flow as `review_action: escalate` (user decides whether to adjust within the design.md scope or do a Phase Reset) |
 
-### 5. Unit Test Quality Verification 【エージェント呼び出し必須】
+### 5. Unit Test Quality Verification [AGENT CALL REQUIRED]
 
-> ⛔ **自分でテストを追加しない。必ず `unit-test-engineer` エージェントを呼び出すこと。**
+> ⛔ **Do not add tests yourself. Always call the `unit-test-engineer` agent.**
 
-TDD サイクルで書いたテストの品質を検証し、不足しているテスト観点を補完する。TDD は「テストを先に書いて実装を進める開発手法」であり、このステップは「実装されたコードの品質を検証する行為」として独立している。
+Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
-`unit-test-engineer` エージェントに実装ファイルを渡し、必須テスト観点（正常系・境界値・例外処理・エッジケース）の網羅性を確認させる。
+Pass the implementation files to the `unit-test-engineer` agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
 
 ```javascript
 Agent({
   subagent_type: "unit-test-engineer",
   description: "UT: Verify test quality",
-  prompt: `以下の実装ファイルに対して、ユニットテストの品質を検証してください。
+  prompt: `Verify the unit test quality for the following implementation files.
 
-    実装ファイル: {implementation_file_paths from step 4}
-    既存テストファイル: {test_file_paths from step 4}
+    Implementation files: {implementation_file_paths from step 4}
+    Existing test files: {test_file_paths from step 4}
 
-    必須テスト観点（正常系・境界値・例外処理・エッジケース）に照らして、
-    不足しているテストケースがあれば追加してください。
-    既存テストと重複しないよう注意すること。
+    Check against required test perspectives (happy path, boundary values, exception handling, edge cases)
+    and add any missing test cases.
+    Be careful not to duplicate existing tests.
 
-    完了報告に以下を必ず含めること:
-    - ut_action: added（テスト追加あり）| verified_sufficient（追加なし、既に十分）
-    - added_tests: 追加したテスト関数名のリスト（added の場合）
-    - added_to_files: 変更したテストファイルのリスト（added の場合）
-    - coverage_summary: 正常系: N件, 境界値: N件(+M added), 例外処理: N件(+M added), エッジケース: N件(+M added)`
+    The completion report must include:
+    - ut_action: added (tests were added) | verified_sufficient (no additions needed, already sufficient)
+    - added_tests: list of added test function names (if added)
+    - added_to_files: list of modified test files (if added)
+    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)`
 })
 ```
 
 Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**.
 
-- `ut_action: added` → テストを実行して全パスを確認し、追加情報を step 5.5 に伝達
-- `ut_action: verified_sufficient` → そのまま step 5.5 へ
+- `ut_action: added` → run the tests, confirm all pass, and pass the additional info to step 5.5
+- `ut_action: verified_sufficient` → proceed directly to step 5.5
 
-### 5.5. Code Simplification (code-simplifier) 【エージェント呼び出し必須】
+### 5.5. Code Simplification (code-simplifier) [AGENT CALL REQUIRED]
 
-> ⛔ **自分でコードを整理しない。必ず `code-simplifier` エージェントを呼び出すこと。**
+> ⛔ **Do not clean up code yourself. Always call the `code-simplifier` agent.**
 
-TDD と UT 検証が完了した後、機能を保持したままコードの明瞭性・保守性を向上させる。
-`code-simplifier` の出力は後続の step 6（review-worker）が包括的にレビューするため、専用レビューステップを追加しない。
+After TDD and UT verification are complete, improve code clarity and maintainability while preserving functionality.
+The output of `code-simplifier` is comprehensively reviewed by the subsequent step 6 (review-worker), so no dedicated review step is added.
 
 ```javascript
 Agent({
   subagent_type: "code-simplifier",
   description: "Simplify: improve clarity without changing behavior",
-  prompt: `以下の実装ファイルを、機能を保持したまま簡潔化・洗練してください。
+  prompt: `Simplify and refine the following implementation files while preserving functionality.
 
     Worktree path: {WORKTREE_PATH}
     Implementation files: {implementation_file_paths from step 4}
     Test files: {test_file_paths from step 4 + added_to_files from step 5}
 
-    **重要**: 作業は必ず cd {WORKTREE_PATH} してから行うこと。
+    **Important**: Always run cd {WORKTREE_PATH} before starting work.
 
-    完了後、cargo test を実行してすべてのテストがパスすることを確認してください。
-    完了報告に以下を含めること:
-    - simplify_result: simplified（変更あり）| no_change（変更なし）
-    - changed_files: 変更したファイルのリスト（simplified の場合）
+    After completing, run cargo test to confirm all tests pass.
+    The completion report must include:
+    - simplify_result: simplified (changes made) | no_change (no changes)
+    - changed_files: list of changed files (if simplified)
     - test_result: pass | fail`
 })
 ```
 
 Capture from the result: **simplify_result**, **changed_files** (if simplified), **test_result**.
 
-- `test_result: pass` → step 6 へ（`changed_files` を伝達）
-- `test_result: fail` → `changed_files` に含まれるファイルのみを `git restore {changed_files}` で巻き戻し、step 6 へ（`simplify_result: reverted` として記録）
-- `simplify_result: no_change` → そのまま step 6 へ
+- `test_result: pass` → proceed to step 6 (pass `changed_files`)
+- `test_result: fail` → roll back only the files in `changed_files` using `git restore {changed_files}`, then proceed to step 6 (record as `simplify_result: reverted`)
+- `simplify_result: no_change` → proceed directly to step 6
 
-### 6. Code Review + Commit (review-worker) 【エージェント呼び出し必須】
+### 6. Code Review + Commit (review-worker) [AGENT CALL REQUIRED]
 
-> ⛔ **自分でコミットしない。必ず `review-worker` エージェントを呼び出すこと。**
+> ⛔ **Do not commit yourself. Always call the `review-worker` agent.**
 
-`review-worker` エージェントにコードレビューとコミットを委譲する。実装（parallel-worker）とレビュー（review-worker）の責務を分離することで、品質を担保する。
+Delegate code review and commit to the `review-worker` agent. Separating implementation (parallel-worker) and review (review-worker) responsibilities ensures quality.
 
 ```javascript
 Agent({
   subagent_type: "review-worker",
   description: "Review and commit",
-  prompt: `以下の変更をレビューし、品質基準を満たしていればコミットしてください。
+  prompt: `Review the following changes and commit if they meet quality standards.
 
     Project path: {project-path}
     Spec name: {spec-name}
@@ -312,45 +312,45 @@ Agent({
     Changed files: {changed_files from step 4 + added_to_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
-    **重要**: レビュー・コミットは必ず `cd {WORKTREE_PATH}` してから行うこと。
+    **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
 
-    UT 品質検証結果（step 5）:
+    UT quality verification results (step 5):
     - ut_action: {ut_action from step 5}
     - added_tests: {added_tests from step 5}
     - coverage_summary: {coverage_summary from step 5}
 
-    簡潔化結果（step 5.5）:
-    - simplify_result: {simplify_result from step 5.5}（simplified / no_change / reverted のいずれか）
-    - changed_files: {changed_files from step 5.5（simplified の場合のみ）}
+    Simplification results (step 5.5):
+    - simplify_result: {simplify_result from step 5.5} (one of: simplified / no_change / reverted)
+    - changed_files: {changed_files from step 5.5 (only if simplified)}
 
-    注意:
-    - added_tests に含まれるテストは unit-test-engineer が品質検証済みです。
-      カテゴリ E（テスト最終確認）でこれらのテストに対して「不足」の指摘を出さないでください。
-      ただし、スタイル・命名・機密情報の混入等の観点は通常通りチェックしてください。
-    - simplify_result: simplified のファイルは code-simplifier が機能保持・テスト通過を確認済みです。
-      カテゴリ A（スタイル）では簡潔化後のコードを最終形として評価してください。
+    Notes:
+    - Tests listed in added_tests have already been quality-verified by unit-test-engineer.
+      In category E (final test verification), do not flag these tests as "insufficient".
+      However, style, naming, and sensitive data checks should be performed as usual.
+    - Files with simplify_result: simplified have been confirmed by code-simplifier to preserve functionality and pass tests.
+      In category A (style), evaluate the simplified code as the final form.
 
-    全観点（A:スタイル, B:設計, C:セキュリティ, D:仕様照合, E:テスト, F:設計適合）でレビューし、
-    review_action を commit / rework / escalate のいずれかで報告してください。`
+    Review across all aspects (A:style, B:design, C:security, D:spec compliance, E:tests, F:design conformance)
+    and report review_action as one of: commit / rework / escalate.`
 })
 ```
 
-review-worker の `review_action` に応じてオーケストレーターが分岐する:
+The orchestrator branches based on review-worker's `review_action`:
 
-#### review_action: commit（全観点 pass）
-→ step 7 へ進む
+#### review_action: commit (all aspects pass)
+→ proceed to step 7
 
-#### review_action: rework（B:設計 / C:セキュリティ / E:テスト の指摘）
+#### review_action: rework (findings in B:design / C:security / E:tests)
 
-review-worker の `findings` を含めて parallel-worker に差し戻す:
+Send back to parallel-worker with the review-worker's `findings`:
 
-**worktree の扱い**: rework サイクルでは step 3.7 で作成した**同一 worktree を再利用**する。新規 worktree は作成しない。step 3.7 の `git worktree list` チェックがこれを保証する。
+**Worktree handling**: In a rework cycle, **reuse the same worktree** created in step 3.7. Do not create a new worktree. The `git worktree list` check in step 3.7 ensures this.
 
 ```javascript
 Agent({
   subagent_type: "parallel-worker",
   description: "Rework: fix review findings ({N}/3)",
-  prompt: `レビューで以下の指摘がありました。修正してください。
+  prompt: `The review found the following issues. Please fix them.
 
     Project path: {project-path}
     Spec name: {spec-name}
@@ -358,47 +358,47 @@ Agent({
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
 
-    **重要**: 修正は必ず `cd {WORKTREE_PATH}` してから行うこと。
+    **Important**: Always run `cd {WORKTREE_PATH}` before making fixes.
 
-    rework_attempt: {N} / 3（最大3回）
+    rework_attempt: {N} / 3 (maximum 3 times)
 
-    指摘内容:
+    Findings:
     {findings from review-worker}
 
-    注意: これは {N} 回目の差し戻しです。最大3回で、3回で解決しない場合はユーザーにエスカレーションされます。
-    全指摘を一括で修正してください。最終回（3/3）の場合は大規模変更を避け、確実にレビューを通過する最小修正を選んでください。
+    Note: This is rework attempt {N}. The maximum is 3; if unresolved after 3 attempts, the issue will be escalated to the user.
+    Fix all findings at once. On the final attempt (3/3), avoid large-scale changes and choose the minimum fix that will pass review.
 
-    修正後、品質チェック（rustfmt + clippy + cargo test）を実行して全パスを確認してください。
-    完了報告に changed_files を含めること。`
+    After fixing, run quality checks (rustfmt + clippy + cargo test) to confirm all pass.
+    Include changed_files in the completion report.`
 })
 ```
 
-オーケストレーターは rework_attempt のカウンタを管理する。修正後、再度 step 5（UT 品質検証）→ step 6（レビュー）を実行する。**差し戻し → 再レビューのサイクルは最大 3 回**。3 回で解決しない場合は残存指摘を添えてユーザーに報告する。
+The orchestrator manages the rework_attempt counter. After the fix, re-run step 5 (UT quality verification) → step 6 (review). **The rework → re-review cycle has a maximum of 3 times**. If unresolved after 3 times, report to the user with the remaining findings.
 
-**カウンターのスコープ:**
-- カウンターは**タスクごと**（task-id 単位）にリセットされる
-- `_PhaseReview: true` のタスクも同様に最大 3 回まで差し戻し可能
-- PhaseReview でのレビュー差し戻し時は、原因タスクを特定して修正するが、その修正も rework カウンターを消費する（PhaseReview の rework_attempt として記録）
-- `retry_exhausted` の手動修正後に再開した場合、カウンターはリセットせずに引き継ぐ
+**Counter scope:**
+- The counter resets **per task** (per task-id)
+- Tasks with `_PhaseReview: true` also allow up to 3 reworks
+- When a review rework occurs during PhaseReview, identify the root cause task and fix it, but that fix also consumes the rework counter (recorded as the PhaseReview's rework_attempt)
+- After resuming from a manual fix following `retry_exhausted`, carry over the counter without resetting it
 
-#### review_action: escalate（D:仕様不一致、F:設計適合違反）
+#### review_action: escalate (D:spec mismatch, F:design conformance violation)
 
-承認済み design.md との不一致、または仕様の解釈違いが検出された。ユーザーに review-worker の `findings` を提示し、判断を仰ぐ。
+A mismatch with the approved design.md or a specification interpretation discrepancy has been detected. Present review-worker's `findings` to the user and ask for a decision.
 
-**重要: design.md は実装フェーズで変更しない。** 設計変更が必要な場合はそれまでの実装を破棄し、Phase 2（spec-design）からやり直す。したがって escalate の対応は「design.md の範囲内で実装を調整する」に限定される。
+**Important: Do not modify design.md during the implementation phase.** If design changes are needed, discard all implementation so far and redo from Phase 2 (spec-design). Therefore, escalate responses are limited to "adjust the implementation within the scope of design.md".
 
-**対応フロー:**
+**Response flow:**
 
-1. ユーザーに findings を提示し、**design.md の範囲内でどう調整すべきか**を確認する
-2. ユーザーの回答を当該タスクの `_Prompt` の Restrictions に追記する
+1. Present findings to the user and confirm **how to adjust within the scope of design.md**
+2. Append the user's response to the `_Prompt`'s Restrictions for the relevant task:
    ```
-   _Prompt 追記例:
-   Restrictions: ... | [escalate対応] review-worker指摘: UserDetailDtoではなくUserDtoを使用すること。last_login_atはdesign.mdに未定義のため含めない
+   Example addition to _Prompt:
+   Restrictions: ... | [escalate response] review-worker finding: Use UserDto instead of UserDetailDto. last_login_at is not defined in design.md and must not be included
    ```
-3. parallel-worker に rework として差し戻す（escalate → rework に切り替え）
-4. 修正後、再度 step 5（UT）→ step 6（レビュー）を実行
+3. Send back to parallel-worker as a rework (switch from escalate to rework)
+4. After the fix, re-run step 5 (UT) → step 6 (review)
 
-rework と同じサイクル上限（最大3回）が適用される。3回で解決しない場合は、設計自体に問題がある可能性が高いため、ユーザーに Phase 2 からのやり直しを提案する。
+The same cycle limit as rework (maximum 3 times) applies. If unresolved after 3 times, it is likely that the design itself has a problem, so propose redoing from Phase 2 to the user.
 
 ### 7. Log Implementation (MANDATORY)
 
@@ -411,15 +411,15 @@ Required fields:
 - `filesModified`: List of files you edited
 - `filesCreated`: List of new files — **include test files**
 - `statistics`: `{ linesAdded: number, linesRemoved: number }`
-- `artifacts` (REQUIRED — 該当するカテゴリのみ記載。実装内容がない場合は空オブジェクト `{}` を渡す):
-  - `apiEndpoints`: API routes created/modified (method, path, purpose)。request/response の詳細は design.md 参照
-  - `dbMigrations`: 作成したマイグレーション名とテーブル
-  - `models`: 作成/変更した Model / DTO の名前と場所
-  - `integrations`: 外部サービスとの接続（該当する場合のみ）
-- `reviewProcess` (optional — review-worker が実行された場合のみ記録する。step 4〜6 のレビュー結果):
-  - `reworkCount`: やり直し回数（一発でコミットできた場合は `0`）
-  - `reviewOutcome`: 最終結果 — `"commit"` または `"escalated"`
-  - `findings`: reworkCount > 0 の場合のみ記載。各レビュー試行の記録:
+- `artifacts` (REQUIRED — include only applicable categories. Pass an empty object `{}` if the implementation has no applicable content):
+  - `apiEndpoints`: API routes created/modified (method, path, purpose). For request/response details, refer to design.md
+  - `dbMigrations`: Migration names and tables created
+  - `models`: Names and locations of Models / DTOs created or modified
+  - `integrations`: Connections to external services (only if applicable)
+- `reviewProcess` (optional — only record if review-worker was executed. Review results from steps 4–6):
+  - `reworkCount`: Number of reworks (use `0` if committed on the first attempt)
+  - `reviewOutcome`: Final result — `"commit"` or `"escalated"`
+  - `findings`: Only include if reworkCount > 0. Record of each review attempt:
     ```json
     "reviewProcess": {
       "reworkCount": 2,
@@ -427,34 +427,34 @@ Required fields:
       "findings": [
         {
           "attempt": 1,
-          "categories": ["B:設計", "C:セキュリティ"],
-          "summary": "UserRepo が AppError を使っていない。SQL クエリに生文字列連結あり",
+          "categories": ["B:design", "C:security"],
+          "summary": "UserRepo not using AppError. Raw string concatenation in SQL query",
           "action": "rework"
         },
         {
           "attempt": 2,
-          "categories": ["B:設計"],
-          "summary": "repository メソッドの戻り値型が design.md と不一致",
+          "categories": ["B:design"],
+          "summary": "Repository method return type does not match design.md",
           "action": "rework"
         },
         {
           "attempt": 3,
           "categories": [],
-          "summary": "全観点パス",
+          "summary": "All aspects passed",
           "action": "commit"
         }
       ]
     }
     ```
-  - reworkCount が 0 の場合（一発パス）は `findings` を省略してよい:
+  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted:
     ```json
     "reviewProcess": { "reworkCount": 0, "reviewOutcome": "commit" }
     ```
 
-**log-implementation が失敗した場合:**
-- タスクを `[x]` にしてはならない（ログなし完了は不完全）
-- エラー内容をユーザーに報告し、手動でログを記録するか再試行するかを確認する
-- MCP ツール自体が利用不可の場合: `.spec-workflow/specs/{spec-name}/Implementation Logs/` ディレクトリに手動でマークダウンファイルを作成することで代替可能
+**If log-implementation fails:**
+- Do not mark the task as `[x]` (completion without a log is incomplete)
+- Report the error to the user and confirm whether to record the log manually or retry
+- If the MCP tool itself is unavailable: Creating a markdown file manually in the `.spec-workflow/specs/{spec-name}/Implementation Logs/` directory is an acceptable alternative
 
 ### 8. Complete the Task
 
@@ -462,15 +462,15 @@ Only after `log-implementation` returns success:
 - Verify all success criteria from the `_Prompt` are met
 - Edit tasks.md: Change `[-]` to `[x]`
 
-#### Worktree のマージとクリーンアップ
+#### Worktree Merge and Cleanup
 
-review-worker がコミットした後、worktree ブランチをメインブランチに統合してクリーンアップする:
+After review-worker commits, integrate the worktree branch into the main branch and clean up:
 
 ```bash
-# メインブランチで worktree のコミットをマージ
-git merge --no-ff "$BRANCH" -m "merge: {task-id} の実装を統合"
+# Merge the worktree commits into the main branch
+git merge --no-ff "$BRANCH" -m "merge: integrate implementation of {task-id}"
 
-# worktree の削除
+# Remove the worktree
 git worktree remove "$WORKTREE_PATH"
 git branch -d "$BRANCH"
 ```
@@ -483,15 +483,15 @@ Use the `spec-status` MCP tool at any time to check overall progress, task count
 
 ## Rules
 
-### ⛔ オーケストレーター禁止ルール（最優先）
-- **コードを書かない** — 実装は parallel-worker のみ
-- **テストを書かない** — テストも parallel-worker のみ
-- **git commit しない** — コミットは review-worker のみ
-- **エージェント呼び出しを省略しない** — 「シンプルだから」「自分でできるから」は理由にならない
-- **step 4/5/6 のエージェント呼び出しは必須** — 例外なし
+### ⛔ Orchestrator Prohibited Rules (Highest Priority)
+- **Do not write code** — implementation is for parallel-worker only
+- **Do not write tests** — tests are also for parallel-worker only
+- **Do not run git commit** — commits are for review-worker only
+- **Do not skip agent calls** — "it's simple" or "I can do it myself" are not valid reasons
+- **Agent calls for steps 4/5/6 are required** — no exceptions
 
-### 通常ルール
-- **ホワイトボードは使用しない** — ホワイトボードは wave-harness 等の複数ワーカーを並列実行するワークフロー専用。spec-implement はタスクを逐次・1 ワーカーで処理するため、parallel-worker / review-worker に `Whiteboard path` を渡さない。
+### General Rules
+- **Do not use a whiteboard** — the whiteboard is exclusively for workflows that run multiple workers in parallel (e.g., wave-harness). Because spec-implement processes tasks sequentially with one worker at a time, do not pass `Whiteboard path` to parallel-worker / review-worker.
 - Feature names use kebab-case
 - One task in-progress at a time
 - Always search implementation logs before coding (step 2)

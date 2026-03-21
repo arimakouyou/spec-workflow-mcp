@@ -1,50 +1,50 @@
 ---
 name: tdd-skills-rust
 description: >
-  tdd-skills の Rust 固有版。t-wada さんの教えに基づく TDD 原則の Rust 実装パターンを提供する。
-  Red-Green-Refactor サイクル、Rust のテスト機能（#[test], mockall, rstest）によるテスト実装、
-  trait ベースのテストダブル設計、境界値テストの設計を含む。
-  Rust プロジェクトでのテスト実装、テスト設計、TDD 実践時に使用。
+  Rust-specific version of tdd-skills. Provides TDD principles and Rust implementation patterns based on t-wada's teachings.
+  Covers the Red-Green-Refactor cycle, test implementation using Rust testing features (#[test], mockall, rstest),
+  trait-based test double design, and boundary value test design.
+  Use when implementing tests, designing tests, or practicing TDD in Rust projects.
 ---
 
 # TDD Skills (Rust)
 
-> 基本原則は言語非依存版の `/tdd-skills` を参照。本スキルは Rust 固有の実装パターンに特化する。
+> For foundational principles, see the language-agnostic `/tdd-skills`. This skill focuses on Rust-specific implementation patterns.
 
-t-wadaさん（和田卓人氏）の教えに基づくTDD原則と実践方法を、Rust の言語機能に沿って提供する。
+Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with Rust language features.
 
-## 事前確認: Know-how 参照
+## Pre-check: Know-how Reference
 
-`feedback-loop` rule の Know-how INDEX から testing 等の関連 know-how を Read する。
-チェックリスト・反例をテスト設計に反映すること。
+Read relevant know-how such as testing from the Know-how INDEX under the `feedback-loop` rule.
+Incorporate checklists and counter-examples into your test design.
 
-## TDDの本質
+## The Essence of TDD
 
-TDDは「プログラミング手法」であり、「テストを書く技法」ではない。
+TDD is a "programming technique," not a "technique for writing tests."
 
-> 「TDDは不安を退屈に変える技術である」 - t-wada
+> "TDD is the art of turning anxiety into boredom." - t-wada
 
-## Red-Green-Refactor サイクル
+## Red-Green-Refactor Cycle
 
 ```
-Red:      失敗するテストを書く
+Red:      Write a failing test
   ↓
-Green:    最小限のコードで通す
+Green:    Make it pass with minimal code
   ↓
-Refactor: リファクタリング
+Refactor: Refactor
   ↓
-Red:      次のテスト...
+Red:      Next test...
 ```
 
-### Green 戦略（3つ）
+### Green Strategies (3 Types)
 
-1. **仮実装（Fake It）**: まず定数を返す（最も安全）
-2. **三角測量（Triangulation）**: 複数のテストから一般化
-3. **明白な実装（Obvious Implementation）**: 明白な時は直接実装
+1. **Fake It**: Return a constant first (safest)
+2. **Triangulation**: Generalize from multiple tests
+3. **Obvious Implementation**: Implement directly when the solution is clear
 
-詳細: [references/green-strategies.md](references/green-strategies.md)
+Details: [references/green-strategies.md](references/green-strategies.md)
 
-## テスト構造（Given-When-Then）
+## Test Structure (Given-When-Then)
 
 ```rust
 #[cfg(test)]
@@ -71,58 +71,58 @@ mod tests {
 }
 ```
 
-## テスト命名規則
+## Test Naming Conventions
 
-| パターン | 例 |
+| Pattern | Example |
 |----------|-----|
-| `{動作}_when_{条件}` | `returns_empty_when_no_users` |
-| `{動作}_with_{入力}` | `calculates_total_with_multiple_items` |
-| `fails_when_{条件}` | `fails_when_invalid_id` |
+| `{action}_when_{condition}` | `returns_empty_when_no_users` |
+| `{action}_with_{input}` | `calculates_total_with_multiple_items` |
+| `fails_when_{condition}` | `fails_when_invalid_id` |
 
-Rust ではテスト関数名が `test_` プレフィックス不要（`#[test]` アトリビュートで識別）。
-ただし慣習的に付ける場合は統一する。
+In Rust, test functions do not require a `test_` prefix (identified by the `#[test]` attribute).
+However, if used by convention, apply it consistently.
 
-## テストの種類
+## Test Types
 
-| 種類 | 対象 | テストダブル | 速度 |
+| Type | Target | Test Doubles | Speed |
 |------|------|-------------|------|
-| ユニット | Domain, UseCase | trait ベースの mock/fake | 高速 |
-| 統合 | API, Repository | テスト用 DB + トランザクション | 低速 |
+| Unit | Domain, UseCase | trait-based mock/fake | Fast |
+| Integration | API, Repository | Test DB + transaction | Slow |
 
-## テストダブル
+## Test Doubles
 
-| 種類 | 用途 | Rust での実現 |
+| Type | Purpose | Rust Implementation |
 |------|------|-------------|
-| Stub | 決まった値を返す | trait 実装 or `mockall` の `returning()` |
-| Mock | 呼び出し検証 | `mockall` の `expect_*()` |
-| Fake | 簡易実装 | `HashMap` ベースの InMemoryRepository |
+| Stub | Return fixed values | trait impl or `mockall`'s `returning()` |
+| Mock | Verify calls | `mockall`'s `expect_*()` |
+| Fake | Lightweight implementation | `HashMap`-based InMemoryRepository |
 
-詳細: [references/test-doubles.md](references/test-doubles.md)
+Details: [references/test-doubles.md](references/test-doubles.md)
 
-## F.I.R.S.T 原則
+## F.I.R.S.T Principles
 
-- **F**ast: 高速
-- **I**ndependent: 独立
-- **R**epeatable: 再現可能
-- **S**elf-Validating: 自己検証
-- **T**imely: プロダクションコードの前に書く
+- **F**ast: Fast
+- **I**ndependent: Independent
+- **R**epeatable: Repeatable
+- **S**elf-Validating: Self-validating
+- **T**imely: Write before production code
 
-## トラブルシューティング
+## Troubleshooting
 
-| 問題 | 解決策 |
+| Problem | Solution |
 |------|--------|
-| mock の型が合わない | `#[automock]` を trait に付与、`Box<dyn Trait>` で注入 |
-| async テストが動かない | `#[tokio::test]` を使用 |
-| テスト間でデータが干渉 | `test_transaction` でロールバック |
-| コンパイルが遅い | `#[cfg(test)]` でテスト用コードを分離 |
+| Mock type mismatch | Apply `#[automock]` to the trait, inject via `Box<dyn Trait>` |
+| async tests not running | Use `#[tokio::test]` |
+| Data interference between tests | Use `test_transaction` to rollback |
+| Slow compilation | Isolate test-only code with `#[cfg(test)]` |
 
-## 詳細リファレンス
+## Detailed References
 
-| ドキュメント | 内容 |
+| Document | Contents |
 |------------|------|
-| [green-strategies.md](references/green-strategies.md) | Green 戦略の詳細と実践例 |
-| [test-design.md](references/test-design.md) | 境界値分析・同値分割 |
-| [test-patterns.md](references/test-patterns.md) | Fixture, パラメータ化テスト |
-| [test-doubles.md](references/test-doubles.md) | テストダブルの種類と使い分け |
-| [tdd-and-design.md](references/tdd-and-design.md) | TDD が設計にもたらす効果 |
-| [advanced-techniques.md](references/advanced-techniques.md) | レガシーコード対応、アンチパターン |
+| [green-strategies.md](references/green-strategies.md) | Green strategy details and practical examples |
+| [test-design.md](references/test-design.md) | Boundary value analysis and equivalence partitioning |
+| [test-patterns.md](references/test-patterns.md) | Fixtures and parameterized tests |
+| [test-doubles.md](references/test-doubles.md) | Types of test doubles and when to use them |
+| [tdd-and-design.md](references/tdd-and-design.md) | The effect of TDD on design |
+| [advanced-techniques.md](references/advanced-techniques.md) | Legacy code handling and anti-patterns |
