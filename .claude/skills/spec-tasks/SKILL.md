@@ -231,7 +231,7 @@ Same strict process — verbal approval is never accepted.
    - If delete fails: STOP, return to polling
 5. **Spec complete**: After successful cleanup, tell the user:
    > "✅ Spec complete. tasks.md が承認されました。実装を開始するには `/spec-implement` を実行してください。"
-   **ここで必ず停止する。ユーザーの明示的な指示なく `/spec-implement` を自動呼び出ししてはならない。**
+   **ここで必ず停止する。** ユーザーが `/spec-implement` コマンドまたは実装トリガーフレーズ（「implement task X」「start coding」等）を自らタイプするまで、一切の自動起動は禁止。「はい」「進めて」等の確認応答への自動起動も禁止。
 
 ## Rules
 

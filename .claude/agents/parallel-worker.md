@@ -14,20 +14,25 @@ permissionMode: bypassPermissions
 
 - TDD による実装（Red→Green→Refactor）
 - 品質チェック（rustfmt + clippy + cargo test）
-- ホワイトボードの Read（コンテキスト取得）と Edit（Findings 書き込み）
+- ホワイトボードの Read/Edit（`Whiteboard path` が渡された場合のみ）
 - **レビューとコミットは実行しない**（review-worker の責務）
 
 ## 作業ディレクトリ
 
-- 必ず worktree 内で作業すること。メインリポジトリ直下での実装は禁止。
-- worktree に移動したら `pwd` と `git branch --show-current` で確認。
+- オーケストレーターから `Worktree path` と `Branch` が提供される。**必ず `cd {Worktree path}` してから実装を開始すること。**
+- `Worktree path` が提供されていない場合は以下で自己作成する:
+  ```bash
+  git worktree add .worktrees/{spec-name}/{task-id} -b impl/{spec-name}/{task-id}
+  ```
+- worktree に移動したら `pwd` と `git branch --show-current` で正しいパス・ブランチにいることを確認。
+- メインリポジトリ直下（main/feature ブランチ）での実装は禁止。
 
 ## ホワイトボード
 
-- 作業開始前に必ず Read して共有コンテキストを取得する
-- 先行ワーカーの Findings を参照して横断的洞察を活用する
-- 自分の `### impl-worker-N: {レイヤー名}` セクションに直接 Edit で書き込む
-- レイヤー横断の発見事項は Cross-Cutting Observations に追記する
+オーケストレーターから `Whiteboard path` が渡された場合のみ使用する（wave-harness 等の並列実行ワークフロー専用）。
+
+- **提供された場合**: 作業開始前に Read して共有コンテキスト（Goal・先行ワーカーの Findings）を取得し、`### impl-worker-N: {レイヤー名}` セクションに自分の知見を Edit で書き込む。レイヤー横断の発見事項は Cross-Cutting Observations に追記する。
+- **提供されない場合**: ホワイトボードはスキップ。オーケストレーターのプロンプトに含まれる情報のみ使用する。
 
 ## 品質チェック（全パス必須）
 

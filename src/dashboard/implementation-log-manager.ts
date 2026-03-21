@@ -110,6 +110,15 @@ export class ImplementationLogManager {
         return null;
       };
 
+      // Flush currentItem into artifacts before resetting currentArtifactType
+      const flushCurrentItem = () => {
+        if (currentArtifactType && Object.keys(currentItem).length > 0) {
+          if (!artifacts[currentArtifactType]) artifacts[currentArtifactType] = [];
+          (artifacts[currentArtifactType] as any).push(currentItem);
+          currentItem = {};
+        }
+      };
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
@@ -141,26 +150,26 @@ export class ImplementationLogManager {
 
         // Parse sections (## headers)
         if (line.startsWith('## Files Modified')) {
+          flushCurrentItem();
           currentSection = 'filesModified';
           currentArtifactType = null;
         } else if (line.startsWith('## Files Created')) {
+          flushCurrentItem();
           currentSection = 'filesCreated';
           currentArtifactType = null;
         } else if (line.startsWith('## Artifacts')) {
+          flushCurrentItem();
           currentSection = 'artifacts';
           currentArtifactType = null;
         } else if (line.startsWith('## Review Process')) {
+          flushCurrentItem();
           currentSection = 'reviewProcess';
           currentArtifactType = null;
         }
         // Parse artifact subsections (### headers)
         else if (line.startsWith('### ')) {
           // Save previous item before switching artifact type
-          if (Object.keys(currentItem).length > 0 && currentArtifactType) {
-            if (!artifacts[currentArtifactType]) artifacts[currentArtifactType] = [];
-            (artifacts[currentArtifactType] as any).push(currentItem);
-            currentItem = {};
-          }
+          flushCurrentItem();
 
           const sectionName = line.slice(4).toLowerCase();
           if (sectionName.includes('api endpoint')) {
@@ -234,10 +243,7 @@ export class ImplementationLogManager {
       }
 
       // Save last artifact item
-      if (Object.keys(currentItem).length > 0 && currentArtifactType) {
-        if (!artifacts[currentArtifactType]) artifacts[currentArtifactType] = [];
-        (artifacts[currentArtifactType] as any).push(currentItem);
-      }
+      flushCurrentItem();
 
       if (!taskId || !idValue) {
         return null;
