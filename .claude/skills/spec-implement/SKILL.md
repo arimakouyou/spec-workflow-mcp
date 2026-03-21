@@ -138,7 +138,7 @@ review-worker がコミット済み。step 7 (Log) へ進む。
 If the task has `_TDDSkip: true_`（プロジェクト初期化、Dockerfile、マイグレーション等のテスト不可能タスク）, **TDD サイクル（step 4）と UT 品質検証（step 5）をスキップ**し、以下を実行:
 
 1. parallel-worker に TDD なしの直接実装を指示する（prompt に `_TDDSkip: true のため TDD サイクルをスキップし、直接実装 + 品質チェックのみ実行してください` を追加）
-2. parallel-worker の完了後、step 5（UT）をスキップして step 6（review-worker）へ進む
+2. parallel-worker の完了後、step 5（UT）と step 5.5（code-simplifier）をスキップして step 6（review-worker）へ進む
 3. review-worker は通常通り全観点でレビュー（ただしカテゴリ E: テスト最終確認はスキップ）
 
 ### 3.7 Worktree の準備
@@ -256,8 +256,41 @@ Agent({
 
 Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**.
 
-- `ut_action: added` → テストを実行して全パスを確認し、追加情報を step 6 に伝達
-- `ut_action: verified_sufficient` → そのまま step 6 へ
+- `ut_action: added` → テストを実行して全パスを確認し、追加情報を step 5.5 に伝達
+- `ut_action: verified_sufficient` → そのまま step 5.5 へ
+
+### 5.5. Code Simplification (code-simplifier) 【エージェント呼び出し必須】
+
+> ⛔ **自分でコードを整理しない。必ず `code-simplifier` エージェントを呼び出すこと。**
+
+TDD と UT 検証が完了した後、機能を保持したままコードの明瞭性・保守性を向上させる。
+`code-simplifier` の出力は後続の step 6（review-worker）が包括的にレビューするため、専用レビューステップを追加しない。
+
+```javascript
+Agent({
+  subagent_type: "code-simplifier",
+  description: "Simplify: improve clarity without changing behavior",
+  prompt: `以下の実装ファイルを、機能を保持したまま簡潔化・洗練してください。
+
+    Worktree path: {WORKTREE_PATH}
+    Implementation files: {implementation_file_paths from step 4}
+    Test files: {test_file_paths from step 4 + added_to_files from step 5}
+
+    **重要**: 作業は必ず cd {WORKTREE_PATH} してから行うこと。
+
+    完了後、cargo test を実行してすべてのテストがパスすることを確認してください。
+    完了報告に以下を含めること:
+    - simplify_result: simplified（変更あり）| no_change（変更なし）
+    - changed_files: 変更したファイルのリスト（simplified の場合）
+    - test_result: pass | fail`
+})
+```
+
+Capture from the result: **simplify_result**, **changed_files** (if simplified), **test_result**.
+
+- `test_result: pass` → step 6 へ（`changed_files` を伝達）
+- `test_result: fail` → 簡潔化を `git checkout -- .` で取り消し、step 6 へ（`simplify_result: reverted` として記録）
+- `simplify_result: no_change` → そのまま step 6 へ
 
 ### 6. Code Review + Commit (review-worker) 【エージェント呼び出し必須】
 
@@ -276,7 +309,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
-    Changed files: {changed_files from step 4 + added_to_files from step 5}
+    Changed files: {changed_files from step 4 + added_to_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
     **重要**: レビュー・コミットは必ず `cd {WORKTREE_PATH}` してから行うこと。
@@ -286,9 +319,16 @@ Agent({
     - added_tests: {added_tests from step 5}
     - coverage_summary: {coverage_summary from step 5}
 
-    注意: added_tests に含まれるテストは unit-test-engineer が品質検証済みです。
-    カテゴリ E（テスト最終確認）でこれらのテストに対して「不足」の指摘を出さないでください。
-    ただし、スタイル・命名・機密情報の混入等の観点は通常通りチェックしてください。
+    簡潔化結果（step 5.5）:
+    - simplify_result: {simplify_result from step 5.5}（simplified / no_change / reverted のいずれか）
+    - changed_files: {changed_files from step 5.5（simplified の場合のみ）}
+
+    注意:
+    - added_tests に含まれるテストは unit-test-engineer が品質検証済みです。
+      カテゴリ E（テスト最終確認）でこれらのテストに対して「不足」の指摘を出さないでください。
+      ただし、スタイル・命名・機密情報の混入等の観点は通常通りチェックしてください。
+    - simplify_result: simplified のファイルは code-simplifier が機能保持・テスト通過を確認済みです。
+      カテゴリ A（スタイル）では簡潔化後のコードを最終形として評価してください。
 
     全観点（A:スタイル, B:設計, C:セキュリティ, D:仕様照合, E:テスト, F:設計適合）でレビューし、
     review_action を commit / rework / escalate のいずれかで報告してください。`
