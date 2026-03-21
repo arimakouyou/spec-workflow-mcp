@@ -48,11 +48,11 @@ Write the file to:
 
 ### 5. Self-Review via Subagent (before approval)
 
-承認前に **2 段階**でドキュメントを検証する。
+Validate the document in **2 stages** before requesting approval.
 
-#### ステップ A: fix（機械的自動修正）
+#### Step A: fix (automated mechanical corrections)
 
-placeholder・フォーマット・typo を自動修正する。内容の追加・変更は行わない:
+Auto-fix placeholders, formatting, and typos. Do not add or change content:
 
 ```
 Agent({
@@ -63,22 +63,22 @@ Agent({
 
     Document type: requirements
 
-    Auto-fix の対象（ファイルを直接修正してよい）:
-    - placeholder テキストの削除（[describe...], TODO, TBD）
-    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
-    - 明らかな typo
+    Auto-fix targets (you may directly modify the file):
+    - Remove placeholder text ([describe...], TODO, TBD)
+    - Fix markdown formatting (table alignment, heading levels, etc.)
+    - Fix obvious typos
 
-    Auto-fix の対象外（issues として報告のみ）:
-    - セクションの追加・削除
-    - 内容の追加・変更（要件、Acceptance Criteria 等）
+    Not auto-fix targets (report as issues only):
+    - Adding or removing sections
+    - Adding or changing content (requirements, Acceptance Criteria, etc.)
 
     Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
 })
 ```
 
-#### ステップ B: check（内容検証）
+#### Step B: check (content validation)
 
-fix 完了後、内容の問題を検出する。ファイルは修正しない:
+After fix is complete, detect content issues. Do not modify the file:
 
 ```
 Agent({
@@ -101,7 +101,7 @@ Agent({
 })
 ```
 
-check が FAIL の場合は指摘を自分で修正し、check を再実行する（最大 3 回）。PASS になったら承認へ進む。
+If check returns FAIL, fix the issues yourself and re-run check (up to 3 times). Once PASS, proceed to approval.
 
 ### 6. Approval Workflow
 

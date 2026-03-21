@@ -4,64 +4,64 @@ always_apply: true
 
 # Security Coding Standards
 
-コードレビューおよび実装時に適用するセキュリティ基準。OWASP Top 10 を基盤とし、認証・認可を含む。
+Security standards to apply during code reviews and implementation. Based on OWASP Top 10, including authentication and authorization.
 
-## A1: インジェクション
+## A1: Injection
 
-- SQL: ORM のクエリビルダ（Diesel 等）経由でクエリを構築する。生 SQL に外部入力を文字列結合で埋め込まない
-- コマンドインジェクション: `Command::new()` や `exec` 系にユーザー入力を直接渡さない。引数は個別に `.arg()` で渡す
-- パステンプレート: ファイルパスにユーザー入力を含める場合はディレクトリトラバーサル（`../`）を検証する
+- SQL: Build queries through an ORM query builder (e.g., Diesel). Do not embed external input into raw SQL via string concatenation
+- Command injection: Do not pass user input directly to `Command::new()` or `exec`-style calls. Pass arguments individually using `.arg()`
+- Path traversal: When including user input in file paths, validate against directory traversal (`../`)
 
-## A2: 認証の不備
+## A2: Broken Authentication
 
-- 認証が必要なエンドポイントには認証ミドルウェアを適用する（`route_layer` 等）
-- パスワードは平文で保存しない。bcrypt / argon2 等のハッシュ関数を使用する
-- セッショントークン / JWT は暗号論的に安全な乱数で生成する
-- トークンの有効期限を設定し、期限切れトークンを拒否する
+- Apply authentication middleware to endpoints that require authentication (e.g., `route_layer`)
+- Do not store passwords in plain text. Use hash functions such as bcrypt / argon2
+- Generate session tokens / JWT using cryptographically secure random values
+- Set token expiration and reject expired tokens
 
-## A3: 認可の不備
+## A3: Broken Access Control
 
-- リソースアクセスには所有者チェックを実装する（自分のデータのみ参照・更新可）
-- IDOR（Insecure Direct Object Reference）: パスパラメータの ID だけでアクセスを許可しない。認証ユーザーとの関連を検証する
-- ロールベースの認可が必要な場合は、ミドルウェアまたはガード関数で一元管理する
-- 管理者用エンドポイントは一般ユーザーからアクセス不可であることを検証する
+- Implement owner checks for resource access (users may only view/update their own data)
+- IDOR (Insecure Direct Object Reference): Do not grant access based solely on the ID in path parameters. Validate the association with the authenticated user
+- When role-based authorization is needed, centralize it in middleware or guard functions
+- Verify that admin-only endpoints are inaccessible to regular users
 
-## A4: 機密データ露出
+## A4: Sensitive Data Exposure
 
-- レスポンスにパスワードハッシュ、内部 ID、スタックトレース、DB エラー詳細を含めない
-- DTO でレスポンス型を明示し、Model を直接返さない
-- ログに機密情報（パスワード、トークン、個人情報）を出力しない
-- エラーレスポンスは本番環境で内部実装を推測できない汎用メッセージにする
+- Do not include password hashes, internal IDs, stack traces, or DB error details in responses
+- Explicitly define response types using DTOs; do not return Model objects directly
+- Do not output sensitive information (passwords, tokens, personal data) to logs
+- In production, use generic error messages that do not allow clients to infer internal implementation details
 
-## A5: 入力バリデーション
+## A5: Input Validation
 
-- リクエストボディ、パスパラメータ、クエリパラメータの全入力をバリデーションする
-- 文字列長の上限を設定する（DoS 防止）
-- 型変換エラー（文字列→数値等）は 400 Bad Request で返す
-- メール、URL、日付等のフォーマットバリデーションは専用ライブラリを使う
+- Validate all input from request bodies, path parameters, and query parameters
+- Set upper limits on string length (to prevent DoS)
+- Return 400 Bad Request for type conversion errors (e.g., string → number)
+- Use dedicated libraries for format validation of email addresses, URLs, dates, etc.
 
-## A6: セキュリティヘッダ・CORS
+## A6: Security Headers and CORS
 
-- CORS は許可オリジンを明示的に設定する（`CorsLayer::permissive()` は開発時のみ）
-- Content-Type を検証し、期待しない形式のリクエストを拒否する
+- Configure allowed origins explicitly for CORS (`CorsLayer::permissive()` is for development only)
+- Validate Content-Type and reject requests with unexpected formats
 
 ## A7: Mass Assignment
 
-- DTO → Model 変換で、クライアントが送信できないフィールド（`id`, `created_at`, `role` 等）が更新されないようにする
-- `AsChangeset` 使用時は更新対象フィールドを明示する
+- When converting DTO → Model, ensure that fields the client should not be able to update (`id`, `created_at`, `role`, etc.) are not modified
+- When using `AsChangeset`, explicitly specify the fields to be updated
 
-## A8: レート制限
+## A8: Rate Limiting
 
-- 公開エンドポイント（ログイン、登録、パスワードリセット）にはレート制限を設計する
-- ブルートフォース攻撃対策として、連続失敗時のロックアウトを検討する
+- Design rate limiting for public endpoints (login, registration, password reset)
+- Consider lockout after repeated failures as a brute-force protection measure
 
-## A9: 依存関係の脆弱性
+## A9: Dependency Vulnerabilities
 
-- `cargo audit` で既知の脆弱性を定期的にチェックする
-- 不要な依存は削除する
+- Regularly check for known vulnerabilities using `cargo audit`
+- Remove unused dependencies
 
-## A10: ログとモニタリング
+## A10: Logging and Monitoring
 
-- 認証失敗、認可失敗、バリデーションエラーはログに記録する
-- ログには十分なコンテキスト（リクエスト ID、ユーザー ID）を含める
-- ただし機密情報はマスクする（A4 参照）
+- Log authentication failures, authorization failures, and validation errors
+- Include sufficient context in logs (request ID, user ID)
+- However, mask sensitive information (see A4)

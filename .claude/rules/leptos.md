@@ -7,15 +7,15 @@ globs:
 
 # Leptos Best Practices
 
-Leptos フルスタック構成を使用する場合、このルールが `project-architecture.md` より優先される。
-Diesel, Valkey, Axum のコードはすべて `#[cfg(feature = "ssr")]` で囲む。
+When using a Leptos full-stack configuration, this rule takes precedence over `project-architecture.md`.
+All Diesel, Valkey, and Axum code must be wrapped in `#[cfg(feature = "ssr")]`.
 
-## プロジェクト構成
+## Project Structure
 
-- フルスタック構成では `ssr` / `hydrate` / `csr` の feature flag でコンパイル対象を分離する
-- サーバー専用コード (Diesel, Valkey, Axum) は `#[cfg(feature = "ssr")]` で囲む
-- `cargo-leptos` をビルドツールとして使用する
-- rust-analyzer の設定で `ssr` feature を有効化する
+- In a full-stack configuration, separate compilation targets using `ssr` / `hydrate` / `csr` feature flags
+- Wrap server-only code (Diesel, Valkey, Axum) with `#[cfg(feature = "ssr")]`
+- Use `cargo-leptos` as the build tool
+- Enable the `ssr` feature in rust-analyzer settings
 
 ```toml
 [lib]
@@ -37,42 +37,42 @@ ssr = [
 ]
 ```
 
-## ディレクトリ構成 (フルスタック)
+## Directory Structure (Full-Stack)
 
 ```
 src/
-├── lib.rs               # クレートルート、feature flag で分岐
-├── app.rs               # Leptos App コンポーネント (Router, Routes 定義)
-├── main.rs              # エントリポイント (feature flag で SSR/CSR 分岐)
-├── server/              # #[cfg(feature = "ssr")] 以下すべて
-│   ├── mod.rs           # Axum サーバ起動
-│   ├── app_state.rs     # AppState 定義 (DbPool, Valkey, Config)
+├── lib.rs               # Crate root, branching by feature flag
+├── app.rs               # Leptos App component (Router and Routes definitions)
+├── main.rs              # Entry point (SSR/CSR branching by feature flag)
+├── server/              # Everything under #[cfg(feature = "ssr")]
+│   ├── mod.rs           # Axum server startup
+│   ├── app_state.rs     # AppState definition (DbPool, Valkey, Config)
 │   ├── db/
-│   │   ├── mod.rs       # DB プール初期化
-│   │   └── repository/  # リポジトリ層
+│   │   ├── mod.rs       # DB pool initialization
+│   │   └── repository/  # Repository layer
 │   ├── cache/
-│   │   ├── mod.rs       # Valkey 接続初期化
+│   │   ├── mod.rs       # Valkey connection initialization
 │   │   └── keys.rs
 │   └── middleware/
 │       └── auth.rs
-├── pages/               # ページコンポーネント (ルートに対応)
-├── components/          # 再利用可能な UI コンポーネント
-├── models/              # Diesel モデル (cfg(feature = "ssr"))
-├── dto/                 # 共有型 (server/client 両方で使用)
-├── server_fns/          # #[server] 関数
-├── schema.rs            # Diesel 自動生成 (cfg(feature = "ssr"))
-└── error_template.rs    # エラー表示コンポーネント
+├── pages/               # Page components (corresponding to routes)
+├── components/          # Reusable UI components
+├── models/              # Diesel models (cfg(feature = "ssr"))
+├── dto/                 # Shared types (used by both server and client)
+├── server_fns/          # #[server] functions
+├── schema.rs            # Diesel auto-generated (cfg(feature = "ssr"))
+└── error_template.rs    # Error display component
 style/
 ├── main.css
 migrations/
 └── ...
 ```
 
-## Axum 連携 (SSR)
+## Axum Integration (SSR)
 
-- `leptos_axum` の `LeptosRoutes` trait で Leptos ルートを Axum Router に統合する
-- server function のエンドポイントは `/api/{*fn_name}` で受ける
-- `provide_context` で DB プール等を Leptos のコンテキストに注入する
+- Use `leptos_axum`'s `LeptosRoutes` trait to integrate Leptos routes into the Axum Router
+- Receive server function endpoints at `/api/{*fn_name}`
+- Inject the DB pool and other resources into Leptos context with `provide_context`
 
 ```rust
 #[cfg(feature = "ssr")]
@@ -95,7 +95,7 @@ async fn main() {
 }
 ```
 
-## feature flag による分離
+## Separation by Feature Flag
 
 ```rust
 // src/lib.rs
@@ -115,25 +115,25 @@ pub mod models;
 pub mod schema;
 ```
 
-## コンポーネント
+## Components
 
-- `#[component]` マクロで定義する。コンポーネント名は `UpperCamelCase`
-- props は関数引数として定義し、`#[prop]` アトリビュートでオプション・デフォルト値を制御する
-- コンポーネントは小さく、単一責任に保つ
-- 再利用可能なコンポーネントは `components/` ディレクトリにまとめる
+- Define components with the `#[component]` macro. Component names must be `UpperCamelCase`
+- Define props as function arguments and control optional values and defaults with the `#[prop]` attribute
+- Keep components small and single-responsibility
+- Place reusable components in the `components/` directory
 
 ```rust
 #[component]
 fn UserCard(
-    /// ユーザー名
+    /// User name
     name: String,
-    /// メールアドレス (省略可)
+    /// Email address (optional)
     #[prop(optional)]
     email: Option<String>,
-    /// アバターサイズ
+    /// Avatar size
     #[prop(default = 48)]
     avatar_size: u32,
-    /// クリックハンドラ
+    /// Click handler
     #[prop(into)]
     on_click: Callback<()>,
 ) -> impl IntoView {
@@ -146,40 +146,40 @@ fn UserCard(
 }
 ```
 
-## シグナルとリアクティブシステム
+## Signals and the Reactive System
 
-- `signal()` で読み取り/書き込みシグナルのペアを作成する
-- 派生状態はクロージャ (`move || ...`) で表現する。不要な `signal` を増やさない
-- 高コストな派生計算には `Memo` を使う (依存値が変わらなければ再計算しない)
-- グローバル状態は `provide_context` / `use_context` で共有する
-- `RwSignal` は読み書きを1つにまとめたい場合に使う
+- Create read/write signal pairs with `signal()`
+- Express derived state as closures (`move || ...`). Avoid creating unnecessary signals
+- Use `Memo` for expensive derived computations (avoids recomputation when dependencies have not changed)
+- Share global state with `provide_context` / `use_context`
+- Use `RwSignal` when you want to combine reading and writing into a single value
 
 ```rust
 let (count, set_count) = signal(0);
 
-// 派生状態: signal ではなくクロージャで
+// Derived state: use a closure, not a signal
 let is_even = move || count.get() % 2 == 0;
 let double_count = move || count.get() * 2;
 
-// 高コストな計算は Memo で
+// Use Memo for expensive computations
 let expensive = Memo::new(move |_| heavy_computation(count.get()));
 ```
 
-## 条件分岐とリスト描画
+## Conditional Rendering and List Rendering
 
-- 条件分岐は `move || if ... { ... } else { ... }` で。異なる型は `.into_any()` で統一する
-- リスト描画はキー付きの `For` コンポーネントを使う
-- 静的リストのみ `Vec<impl IntoView>` を直接使う
+- Use `move || if ... { ... } else { ... }` for conditional rendering. Unify different types with `.into_any()`
+- Use the keyed `For` component for list rendering
+- Only use `Vec<impl IntoView>` directly for static lists
 
 ```rust
-// 条件分岐
+// Conditional rendering
 {move || if is_loading.get() {
     view! { <p>"Loading..."</p> }.into_any()
 } else {
     view! { <UserList users=users.get()/> }.into_any()
 }}
 
-// リスト描画
+// List rendering
 <For
     each=move || items.get()
     key=|item| item.id
@@ -191,11 +191,11 @@ let expensive = Memo::new(move |_| heavy_computation(count.get()));
 
 ## Server Functions
 
-- `#[server]` マクロでサーバー専用関数を定義する
-- 戻り値は `Result<T, ServerFnError>` とする
-- DB アクセス、認証、外部 API 呼び出しなどはすべて server function で行う
-- server function 内で `use_context` を使い DB プールなどを取得する
-- カスタムエラー型を定義して `FromServerFnError` を実装する
+- Define server-only functions with the `#[server]` macro
+- Use `Result<T, ServerFnError>` as the return type
+- Perform all DB access, authentication, and external API calls inside server functions
+- Use `use_context` inside server functions to obtain the DB pool and other resources
+- Define a custom error type and implement `FromServerFnError`
 
 ```rust
 #[server]
@@ -211,11 +211,11 @@ pub async fn get_user(id: i64) -> Result<UserDto, ServerFnError> {
 }
 ```
 
-## リソースと非同期データ
+## Resources and Async Data
 
-- `Resource` でサーバーデータを取得し、`Suspense` でローディング状態を表示する
-- `Resource::new` の第1引数 (source) でリアクティブな依存を宣言する
-- `Transition` は既存コンテンツを表示しながらバックグラウンドでリロードする
+- Fetch server data with `Resource` and display loading states with `Suspense`
+- Declare reactive dependencies in the first argument (source) of `Resource::new`
+- Use `Transition` to reload data in the background while displaying existing content
 
 ```rust
 let user_resource = Resource::new(
@@ -234,11 +234,11 @@ view! {
 }
 ```
 
-## フォームとアクション
+## Forms and Actions
 
-- `ServerAction` + `ActionForm` でプログレッシブエンハンスメント対応のフォームを作る
-- JS が無効でもフォームは動作する
-- `action.value()` で最新の結果を取得、`action.pending()` でローディング状態を取得する
+- Use `ServerAction` + `ActionForm` to create progressively enhanced forms
+- Forms must work even when JavaScript is disabled
+- Use `action.value()` to get the latest result and `action.pending()` to get the loading state
 
 ```rust
 let create_user = ServerAction::<CreateUser>::new();
@@ -254,12 +254,12 @@ view! {
 }
 ```
 
-## ルーティング
+## Routing
 
-- `leptos_router` でクライアントサイドルーティングを設定する
-- `<Routes>` + `<Route>` でルート定義する
-- パスパラメータは `path!("/users/:id")` で定義し、`use_params` で取得する
-- SSR モードは `ssr=SsrMode::OutOfOrder` (デフォルト)、`PartiallyBlocked`、`Async` から選択する
+- Configure client-side routing with `leptos_router`
+- Define routes with `<Routes>` + `<Route>`
+- Define path parameters with `path!("/users/:id")` and retrieve them with `use_params`
+- Choose an SSR mode from `ssr=SsrMode::OutOfOrder` (default), `PartiallyBlocked`, or `Async`
 
 ```rust
 view! {
@@ -279,21 +279,21 @@ view! {
 }
 ```
 
-## エラーハンドリング
+## Error Handling
 
-- `ErrorBoundary` コンポーネントで子コンポーネントのエラーをキャッチする
-- server function のエラーは `Result` で伝播し、UI 側で `match` する
-- ユーザー向けエラーメッセージとログ用の詳細エラーを分離する
+- Use the `ErrorBoundary` component to catch errors from child components
+- Propagate server function errors via `Result` and handle them on the UI side with `match`
+- Separate user-facing error messages from detailed internal error logs
 
-## スタイリング
+## Styling
 
-- `class:name=signal` でクラスの動的な切り替えを行う
-- `style:property=signal` でインラインスタイルを動的に設定する
-- CSS ファイルは `Cargo.toml` の `[package.metadata.leptos]` で `style-file` を指定する
+- Toggle classes dynamically with `class:name=signal`
+- Set inline styles dynamically with `style:property=signal`
+- Specify CSS files via `style-file` in `[package.metadata.leptos]` in `Cargo.toml`
 
-## パフォーマンス
+## Performance
 
-- シグナルの粒度を細かくする。大きな構造体を丸ごとシグナルにしない
-- `Memo` で不要な再計算を防ぐ
-- `For` コンポーネントで key を正しく設定してリスト再描画を最小化する
-- `Suspense` で非同期データの読み込みを分離し、描画ブロックを減らす
+- Keep signal granularity fine. Avoid wrapping large structs in a single signal
+- Use `Memo` to prevent unnecessary recomputation
+- Set keys correctly on the `For` component to minimize list re-rendering
+- Use `Suspense` to isolate async data loading and reduce rendering blocks

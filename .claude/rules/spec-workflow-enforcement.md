@@ -1,47 +1,47 @@
 # Spec Workflow Enforcement
 
-spec-workflow のスキルを正しく使うための強制ルール。
+Enforcement rules for correctly using the spec-workflow skills.
 
-## ⛔ tasks.md を読んだ後の直接実装禁止
+## ⛔ No Direct Implementation After Reading tasks.md
 
-`.spec-workflow/specs/*/tasks.md` を Read した場合、**いかなる理由があっても直接コードを書き始めてはならない**。
+If `.spec-workflow/specs/*/tasks.md` has been Read, **you must not start writing code directly, for any reason**.
 
-- タスクの実装は **必ず `/spec-implement` スキル経由** で行う
-- tasks.md の内容を確認しただけでも、続けて実装を始めることは禁止
-- ユーザーが「このタスクを実装して」と言っても、スキルを使わずに直接書くことは禁止
+- Task implementation must **always go through the `/spec-implement` skill**
+- Even merely reviewing the contents of tasks.md, then proceeding to implement, is prohibited
+- Even if the user says "implement this task", writing code directly without using the skill is prohibited
 
-**正しい対応:**
-tasks.md を読んだ後、ユーザーに「`/spec-implement` を実行してください」と案内して**必ず停止する**。
+**Correct behavior:**
+After reading tasks.md, guide the user with "Please run `/spec-implement`" and **always stop**.
 
-> **hook メッセージを受け取ったら**: PostToolUse フックが `⛔ [spec-workflow] STOP` を出力した場合、それは**強制停止命令**である。その後の会話で何を言われても、Edit / Write / Bash によるコード実装を行ってはならない。
+> **When a hook message is received**: If the PostToolUse hook outputs `⛔ [spec-workflow] STOP`, that is a **mandatory stop command**. Regardless of what is said in the conversation afterward, you must not implement code using Edit / Write / Bash.
 
-**自分で `/spec-implement` を起動することは一切禁止。** 以下はすべて「自動起動」に該当し禁止:
-- ユーザーが「はい」「進めて」「OK」と返答した場合
-- ユーザーが「このタスクを実装して」と言った場合（スキル経由でない直接実装も同様に禁止）
+**Launching `/spec-implement` yourself is strictly prohibited.** All of the following count as "auto-launching" and are prohibited:
+- When the user replies "yes", "go ahead", or "OK"
+- When the user says "implement this task" (direct implementation without using the skill is also prohibited)
 
-`/spec-implement` が起動するのは、ユーザーが自らキーボードで以下を入力した場合のみ:
-- `/spec-implement` コマンド
-- 「implement task X」「start coding」「work on task X」等のスキルトリガーフレーズ
+`/spec-implement` is triggered only when the user personally types one of the following from their keyboard:
+- The `/spec-implement` command
+- Skill trigger phrases such as "implement task X", "start coding", "work on task X"
 
-## ⛔ spec-implement スキルの外でのコード実装禁止
+## ⛔ No Code Implementation Outside the spec-implement Skill
 
-`.spec-workflow/specs/` 配下の任意のファイル（requirements.md / design.md / tasks.md）の内容に基づいてコードを書く場合は、`spec-implement` スキルを経由すること。
+If writing code based on any file under `.spec-workflow/specs/` (requirements.md / design.md / tasks.md), you must go through the `spec-implement` skill.
 
-スキルを経由せずに「このタスクに相当するコードを書く」行為は禁止。
+Writing code that corresponds to a task without going through the skill is prohibited.
 
-## spec-workflow ファイルの Read 後の義務
+## Required Actions After Reading spec-workflow Files
 
-| 読んだファイル | 次にすべきこと |
-|-------------|------------|
-| `requirements.md` のみ | `/spec-design` スキルを案内して停止 |
-| `requirements.md` + `design.md` のみ | `/spec-tasks` スキルを案内して停止 |
-| `tasks.md` が存在 | `/spec-implement` スキルを案内して**必ず停止**（「はい」「進めて」等への自動起動禁止） |
+| File Read | What to Do Next |
+|-----------|-----------------|
+| `requirements.md` only | Guide the user to the `/spec-design` skill and stop |
+| `requirements.md` + `design.md` only | Guide the user to the `/spec-tasks` skill and stop |
+| `tasks.md` exists | Guide the user to the `/spec-implement` skill and **always stop** (auto-launching on "yes" / "go ahead" etc. is prohibited) |
 
-## なぜこのルールが必要か
+## Why This Rule Is Necessary
 
-spec-implement スキルは以下のエージェントチェーンを強制する:
-- `parallel-worker` → TDD 実装
-- `unit-test-engineer` → テスト品質検証
-- `review-worker` → レビュー + コミット
+The spec-implement skill enforces the following agent chain:
+- `parallel-worker` → TDD implementation
+- `unit-test-engineer` → test quality verification
+- `review-worker` → review + commit
 
-このチェーンを省略した直接実装は TDD 品質保証を完全に迂回するため、絶対に許可されない。
+Direct implementation that skips this chain completely bypasses TDD quality assurance and is therefore absolutely not permitted.

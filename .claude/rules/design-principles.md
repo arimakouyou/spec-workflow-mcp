@@ -4,50 +4,50 @@ always_apply: true
 
 # Design Principles
 
-コードレビューおよび実装時に適用する設計原則。
+Design principles to apply during code reviews and implementation.
 
-## 責務分離
+## Separation of Concerns
 
-- 1つの関数・構造体・モジュールは1つの責務に集中する
-- handler にビジネスロジックを書かない。handler は「入力の受付 → サービス/リポジトリ呼び出し → レスポンス構築」に徹する
-- バリデーション、データ変換、ビジネスルールはそれぞれ適切なレイヤーに配置する
-- 「この関数は何をするか」を1文で説明できない場合は分割を検討する
+- Each function, struct, or module should focus on a single responsibility
+- Do not write business logic in handlers. Handlers should be limited to "accepting input → calling services/repositories → building responses"
+- Place validation, data transformation, and business rules in their appropriate layers
+- If you cannot explain "what this function does" in one sentence, consider splitting it
 
-## 依存方向
+## Direction of Dependencies
 
-- 上位レイヤーが下位レイヤーに依存する（handler → service/repository → model）
-- 逆方向の依存（model が handler を参照する等）は禁止
-- 循環依存を作らない
-- 外部サービスへの依存は trait で抽象化し、具象型への直接依存を避ける
+- Higher layers depend on lower layers (handler → service/repository → model)
+- Reverse dependencies (e.g., model referencing handler) are prohibited
+- Do not create circular dependencies
+- Abstract dependencies on external services using traits; avoid direct dependencies on concrete types
 
-## 公開 API の最小化
+## Minimizing the Public API
 
-- 不要な `pub` を付けない。モジュール外からアクセスする必要がないものは非公開にする
-- 内部実装の詳細（ヘルパー関数、中間型）を公開しない
-- `pub(crate)` で可視性を必要最小限に絞る
+- Do not add unnecessary `pub`. Keep things private if they do not need to be accessed from outside the module
+- Do not expose internal implementation details (helper functions, intermediate types)
+- Use `pub(crate)` to limit visibility to the minimum necessary
 
-## エラーハンドリングの一貫性
+## Consistent Error Handling
 
-- プロジェクト共通のエラー型（`AppError` 等）を使い、各レイヤーのエラーを `From` で変換する
-- `unwrap()` / `expect()` はテストコードまたは初期化時の不変条件のみ許可。ビジネスロジックでは `?` 演算子を使う
-- エラーメッセージは「何が起きたか」「何が期待されていたか」を含める
-- ユーザー向けエラーと内部ログ用エラーを分離する（内部詳細をクライアントに返さない）
+- Use the project-wide shared error type (e.g., `AppError`) and convert errors from each layer using `From`
+- `unwrap()` / `expect()` are only permitted in test code or as invariants during initialization. Use the `?` operator in business logic
+- Error messages should include "what happened" and "what was expected"
+- Separate user-facing errors from internal log errors (do not return internal details to the client)
 
-## 命名の妥当性
+## Naming Appropriateness
 
-- 型名・関数名・変数名が意図を正確に表現しているか
-- 略語を避け、検索可能な名前を使う（`usr` → `user`, `ctx` は慣習的に許容）
-- bool 変数・関数は `is_`, `has_`, `can_` 等の接頭辞で意図を明示する
-- 否定形の命名を避ける（`is_not_empty` → `is_empty` の反転で表現）
+- Type names, function names, and variable names should accurately express their intent
+- Avoid abbreviations; use searchable names (`usr` → `user`; `ctx` is conventionally acceptable)
+- Prefix bool variables and functions with `is_`, `has_`, `can_`, etc. to make intent explicit
+- Avoid negative naming (`is_not_empty` → express as the negation of `is_empty`)
 
-## DRY（Don't Repeat Yourself）
+## DRY (Don't Repeat Yourself)
 
-- 同じロジックが2箇所以上に存在する場合は共通化を検討する
-- ただし、偶然の一致（たまたま同じコード）を無理に共通化しない。「変更理由が同じか」で判断する
-- 共通化は関数抽出、trait 抽出、ジェネリクスの順で検討し、最もシンプルな方法を選ぶ
+- If the same logic appears in two or more places, consider consolidating it
+- However, do not force consolidation for coincidental similarity (code that happens to look the same). Judge by "do they change for the same reason?"
+- Consider consolidation in this order: function extraction, trait extraction, generics — and choose the simplest approach
 
-## YAGNI（You Aren't Gonna Need It）
+## YAGNI (You Aren't Gonna Need It)
 
-- 現時点で必要ない機能・抽象化・設定項目を先回りして実装しない
-- 「将来使うかも」は実装の理由にならない。必要になった時点で追加する
-- 過度な汎用化よりも、具体的で理解しやすい実装を優先する
+- Do not preemptively implement features, abstractions, or configuration options that are not currently needed
+- "Might be used in the future" is not a reason to implement something. Add it when it becomes necessary
+- Prioritize concrete, understandable implementations over excessive generalization

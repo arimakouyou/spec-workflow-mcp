@@ -7,7 +7,7 @@ description: "Phase 2 of spec-driven development: create a technical design docu
 
 Create a technical design document that defines **how** to build the feature. This phase follows approved requirements and precedes task breakdown.
 
-設計ドキュメントは **2段階（Wave）** で作成する。Wave 1 でアーキテクチャの方向性をユーザーと合わせてから、Wave 2 で詳細を記述することで、方向性のズレによる手戻りを防ぐ。
+The design document is created in **two stages (Waves)**. Wave 1 aligns the architectural direction with the user before Wave 2 fills in the details, preventing rework caused by misaligned direction.
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -15,7 +15,7 @@ Before doing anything else, verify the prerequisite file exists:
 
 1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 
-If missing — **STOP immediately.** ユーザーに「requirements.md が存在しないため設計を開始できません。先に `/spec-requirements` を実行してください。」と伝えてこのスキルを終了する。
+If missing — **STOP immediately.** Tell the user: "Cannot start design because requirements.md does not exist. Please run `/spec-requirements` first." Then exit this skill.
 
 ---
 
@@ -29,11 +29,11 @@ The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`)
 
 ### 1. Load Resources
 
-**テンプレート** — カスタムを優先してフォールバック:
+**Template** — prefer custom, fall back to default:
 1. `.spec-workflow/user-templates/design-template.md` (custom)
 2. `.spec-workflow/templates/design-template.md` (default)
 
-**Steering ドキュメント** — 存在する場合は読み込む:
+**Steering documents** — load if they exist:
 ```
 .spec-workflow/steering/product.md
 .spec-workflow/steering/tech.md
@@ -42,166 +42,166 @@ The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`)
 
 ### 2. Analyze and Research
 
-- 承認済み要件を読む: `.spec-workflow/specs/{spec-name}/requirements.md`
-- コードベースを調査して既存パターン・再利用可能コンポーネントを把握する
-- web search が使える場合は技術選択のベストプラクティスを調査する
-- 全要件に対応する設計ソリューションが揃うことを確認する
+- Read the approved requirements: `.spec-workflow/specs/{spec-name}/requirements.md`
+- Explore the codebase to understand existing patterns and reusable components
+- If web search is available, research best practices for technology choices
+- Confirm that design solutions exist for all requirements
 
 ---
 
-## Wave 1: アーキテクチャスケルトン
+## Wave 1: Architecture Skeleton
 
-**目的**: 詳細に入る前にアーキテクチャの方向性をユーザーと合わせる。
+**Goal**: Align the architectural direction with the user before diving into details.
 
-### 3. Wave 1 ドキュメント作成
+### 3. Create Wave 1 Document
 
-以下のセクションのみ記述して `.spec-workflow/specs/{spec-name}/design.md` を作成する。
-詳細セクション（API 仕様・エラーハンドリング・トレーサビリティ等）は `(Wave 2 で記述)` のプレースホルダーにとどめる。
+Write only the sections listed below and create `.spec-workflow/specs/{spec-name}/design.md`.
+Leave the detail sections (API spec, error handling, traceability, etc.) as `(to be written in Wave 2)` placeholders.
 
-**Wave 1 で記述するセクション:**
+**Sections to write in Wave 1:**
 
-1. **Overview** — 機能の概要とシステム内での位置づけ
-2. **Architecture** — アーキテクチャ図（mermaid）+ 採用パターンの根拠
-3. **Component List** — コンポーネント名と1行の役割説明のみ（詳細は Wave 2）
-4. **DB Schema** — テーブル定義・カラム・制約（実装の根幹となる重要な意思決定）
-5. **Key Design Decisions** — 採用した技術・パターンとその理由（却下した代替案も記載）
+1. **Overview** — Summary of the feature and its place in the system
+2. **Architecture** — Architecture diagram (mermaid) + rationale for the chosen pattern
+3. **Component List** — Component names with a one-line description of each role only (details in Wave 2)
+4. **DB Schema** — Table definitions, columns, and constraints (critical decisions that form the implementation foundation)
+5. **Key Design Decisions** — Technologies and patterns chosen and why (include rejected alternatives)
 
-**Wave 1 のプレースホルダー例:**
+**Wave 1 placeholder examples:**
 ```markdown
 ## Components and Interfaces
-(Wave 2 で記述)
+(to be written in Wave 2)
 
 ## Data Models
-(Wave 2 で記述)
+(to be written in Wave 2)
 
 ## API Design
-(Wave 2 で記述)
+(to be written in Wave 2)
 
 ## Error Handling
-(Wave 2 で記述)
+(to be written in Wave 2)
 
 ## Requirements Traceability Matrix
-(Wave 2 で記述)
+(to be written in Wave 2)
 
 ## Code Reuse Analysis
-(Wave 2 で記述)
+(to be written in Wave 2)
 ```
 
-### 4. アーキテクチャ確認（ユーザーへの提示）
+### 4. Architecture Confirmation (Present to User)
 
-Wave 1 のドキュメントを作成したら、**正式な承認ツールを使わずに**以下をユーザーに提示する:
+After creating the Wave 1 document, present the following to the user **without using the formal approval tool**:
 
 ```
-## アーキテクチャ確認
+## Architecture Confirmation
 
-Wave 1 のスケルトンを作成しました。詳細の記述（Wave 2）に進む前に、以下の方向性をご確認ください。
+The Wave 1 skeleton is ready. Please review the direction below before proceeding to Wave 2 (detailed writing).
 
-**設計の概要**
-{Overview の要約 2〜3文}
+**Design Overview**
+{2–3 sentence summary of the Overview}
 
-**採用アーキテクチャ**
-{アーキテクチャ図または構成の概要}
+**Chosen Architecture**
+{Architecture diagram or configuration summary}
 
-**主要コンポーネント**
-{コンポーネント一覧}
+**Key Components**
+{Component list}
 
-**DBスキーマの主要テーブル**
-{テーブル一覧}
+**Main DB Schema Tables**
+{Table list}
 
-**重要な設計判断**
-{Key Design Decisions の要約}
+**Key Design Decisions**
+{Summary of Key Design Decisions}
 
 ---
-方向性に問題がなければ「続けて」、修正が必要な場合は具体的な指示をお願いします。
+If the direction looks good, reply "continue". If changes are needed, please provide specific instructions.
 ```
 
-ユーザーのフィードバックに応じて分岐:
+Branch based on user feedback:
 
-- **「続けて」/ 承認**: Wave 2 へ進む
-- **修正指示**: design.md の Wave 1 セクションを修正して、再度確認を提示する。合意が取れたら Wave 2 へ進む
+- **"continue" / approval**: Proceed to Wave 2
+- **Revision instructions**: Update the Wave 1 sections in design.md and present the confirmation again. Once agreed, proceed to Wave 2
 
 ---
 
-## Wave 2: 詳細記述
+## Wave 2: Detailed Writing
 
-**目的**: 確定したアーキテクチャを基に全詳細を記述し、正式承認を得る。
+**Goal**: Fill in all details based on the finalized architecture and obtain formal approval.
 
-### 5. Wave 2 ドキュメント補完
+### 5. Complete Wave 2 Document
 
-Wave 1 で `(Wave 2 で記述)` としたセクションを全て埋める。
+Fill in all sections left as `(to be written in Wave 2)` from Wave 1.
 
 #### Components and Interfaces
 
-各コンポーネントを以下の形式で記述:
+Describe each component in this format:
 ```markdown
 ### ComponentName
-- **Purpose:** [このコンポーネントが担う責務]
-- **Interfaces:** [公開メソッド/API シグネチャ]
-- **Dependencies:** [依存するコンポーネント/外部サービス]
-- **Reuses:** [活用する既存コード（具体パス）]
+- **Purpose:** [Responsibility this component owns]
+- **Interfaces:** [Public method / API signatures]
+- **Dependencies:** [Components / external services depended on]
+- **Reuses:** [Existing code to leverage (with concrete paths)]
 ```
 
 #### Data Models
 
-全エンティティを型定義またはスキーマ形式で記述する。
+Describe all entities in type definition or schema format.
 
-#### API Design（該当する場合）
+#### API Design (if applicable)
 
-エンドポイントごとに以下を記述:
-- HTTP メソッド・パス・説明
-- リクエスト/レスポンス型（フィールド・型・必須/任意）
-- エラーレスポンス
+For each endpoint, describe:
+- HTTP method, path, and description
+- Request / response types (fields, types, required / optional)
+- Error responses
 
-#### Code Reuse Analysis フォーマット
+#### Code Reuse Analysis Format
 
-コードベースを grep/glob で調査し、再利用すべき既存コードを**具体的なファイルパス**で列挙する。Phase 3 で `_Leverage` フィールドに転記されるため、抽象的な記述（「既存の認証ミドルウェアを使う」等）は不可。
-
-```markdown
-| 再利用対象 | パス | 用途 |
-|-----------|------|------|
-| 認証ミドルウェア | `src/middleware/auth.rs` | エンドポイント保護 |
-| AppError | `src/error.rs` | エラーレスポンス統一 |
-| TestContext | `tests/integration/helpers/context.rs` | テストセットアップ |
-```
-
-#### Requirements Traceability Matrix フォーマット
-
-要件→設計コンポーネントのマッピング。**コンポーネントは1行1つ**で列挙する（`+` で結合しない）。「対象タスク ID」列は Phase 3 (spec-tasks) 完了後に逆記入する。
+Search the codebase with grep/glob and list existing code to reuse with **concrete file paths**. Because these are copied into the `_Leverage` field in Phase 3, abstract descriptions (e.g., "use the existing auth middleware") are not acceptable.
 
 ```markdown
-| Requirement ID | 設計コンポーネント | 対象タスク ID | 備考 |
-|---------------|-------------------|-------------|------|
-| REQ-1 | UserHandler | (Phase 3 後に記入) | CRUD エンドポイント |
-| REQ-1 | UserRepository | (Phase 3 後に記入) | DB アクセス |
-| REQ-2 | AuthMiddleware | (Phase 3 後に記入) | 認証チェック |
+| Reuse Target | Path | Purpose |
+|-------------|------|---------|
+| Auth middleware | `src/middleware/auth.rs` | Protect endpoints |
+| AppError | `src/error.rs` | Unified error responses |
+| TestContext | `tests/integration/helpers/context.rs` | Test setup |
 ```
 
-#### Error Handling フォーマット
+#### Requirements Traceability Matrix Format
 
-全エラーコードをテーブル形式で列挙する。実装時にこの一覧外のエラーコードを追加することは design-conformance ルールで禁止されるため、想定される全エラーケースを網羅的に定義すること。
+Mapping of requirements to design components. **List one component per row** (do not join with `+`). The "Target Task ID" column is filled in retrospectively after Phase 3 (spec-tasks) is complete.
+
+```markdown
+| Requirement ID | Design Component | Target Task ID | Notes |
+|---------------|-----------------|---------------|-------|
+| REQ-1 | UserHandler | (fill in after Phase 3) | CRUD endpoints |
+| REQ-1 | UserRepository | (fill in after Phase 3) | DB access |
+| REQ-2 | AuthMiddleware | (fill in after Phase 3) | Auth check |
+```
+
+#### Error Handling Format
+
+List all error codes in table format. Because the design-conformance rule prohibits adding error codes outside this list during implementation, define all anticipated error cases exhaustively.
 
 ```markdown
 ## Error Handling
 
-エラーレスポンスフォーマット: `{ "error": { "code": "...", "message": "..." } }`
+Error response format: `{ "error": { "code": "...", "message": "..." } }`
 
-| エラーコード | HTTP Status | 発生条件 |
-|-------------|-------------|---------|
-| NotFound | 404 | リソースが存在しない |
-| BadRequest | 400 | バリデーション失敗、不正な入力 |
-| Unauthorized | 401 | 認証失敗、トークン無効/期限切れ |
-| Forbidden | 403 | 認可失敗、権限不足 |
-| Conflict | 409 | 重複キー、楽観的ロック競合 |
-| Internal | 500 | 予期しない内部エラー |
+| Error Code | HTTP Status | Trigger Condition |
+|-----------|-------------|------------------|
+| NotFound | 404 | Resource does not exist |
+| BadRequest | 400 | Validation failure, invalid input |
+| Unauthorized | 401 | Auth failure, invalid / expired token |
+| Forbidden | 403 | Authorization failure, insufficient permissions |
+| Conflict | 409 | Duplicate key, optimistic lock conflict |
+| Internal | 500 | Unexpected internal error |
 ```
 
 ### 6. Self-Review via Subagent (before approval)
 
-Wave 2 完了後、**2 段階**でレビューしてから正式承認を依頼する。
+After Wave 2 is complete, review in **2 steps** before requesting formal approval.
 
-#### ステップ A: fix（機械的自動修正）
+#### Step A: fix (automated mechanical corrections)
 
-placeholder・フォーマット・typo を自動修正する。内容の追加・変更は行わない:
+Auto-fix placeholders, formatting, and typos. Do not add or change content:
 
 ```
 Agent({
@@ -212,23 +212,23 @@ Agent({
 
     Document type: design
 
-    Auto-fix の対象（ファイルを直接修正してよい）:
-    - placeholder テキストの削除（[describe...], TODO, TBD, '(Wave 2 で記述)' 等）
-    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
-    - 明らかな typo
+    Auto-fix targets (you may edit the file directly):
+    - Remove placeholder text ([describe...], TODO, TBD, '(to be written in Wave 2)', etc.)
+    - Fix markdown formatting (table alignment, heading levels, etc.)
+    - Obvious typos
 
-    Auto-fix の対象外（issues として報告のみ）:
-    - セクションの追加・削除
-    - 内容の追加・変更（設計コンポーネント、エラーコード、DB スキーマ等）
-    - トレーサビリティの不整合
+    Do NOT auto-fix (report as issues only):
+    - Adding or removing sections
+    - Adding or changing content (design components, error codes, DB schema, etc.)
+    - Traceability inconsistencies
 
     Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
 })
 ```
 
-#### ステップ B: check（内容検証）
+#### Step B: check (content validation)
 
-fix 完了後、内容の問題を検出する。ファイルは修正しない:
+After fix is complete, detect content problems. Do not modify the file:
 
 ```
 Agent({
@@ -242,7 +242,7 @@ Agent({
     Requirements: {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Checks:
-    1. TEMPLATE: Every section from the template must exist with real content (no placeholders or '(Wave 2 で記述)' remaining)
+    1. TEMPLATE: Every section from the template must exist with real content (no placeholders or '(to be written in Wave 2)' remaining)
     2. CROSS-REFERENCE: Read requirements.md — every requirement must have a corresponding design solution.
        No design component should exist without a backing requirement.
     3. Must include: Overview, Architecture diagram, Component details (Purpose/Interfaces/Dependencies/Reuses),
@@ -255,28 +255,28 @@ Agent({
 })
 ```
 
-check が FAIL の場合は指摘を自分で修正し、check を再実行する（最大 3 回）。PASS になったら承認へ進む。
+If check returns FAIL, fix the issues yourself and re-run check (up to 3 times). Once PASS, proceed to approval.
 
 ### 7. Approval Workflow
 
-正式な承認 — 口頭承認は受け付けない。
+Formal approval — verbal approval is not accepted.
 
-1. **Request approval**: `approvals` ツール、`action: 'request'`、filePath のみ（content を含めない）
-2. **Poll status**: `approvals` ツール、`action: 'status'`、status が変わるまでポーリング
+1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content)
+2. **Poll status**: `approvals` tool, `action: 'status'`, poll until status changes
 3. **Handle result**:
-   - **needs-revision**: レビューコメントを読んでドキュメントを更新、サブエージェントレビューを再実行、NEW な承認リクエストを送信
-   - **approved**: クリーンアップへ
-4. **Cleanup**: `approvals` ツール、`action: 'delete'` — 必ず成功させる
-   - delete 失敗時: STOP、ポーリングに戻る
-5. **Next phase**: クリーンアップ成功後、Phase 3 (Tasks) へ進む。`/spec-tasks` スキルを使用。
+   - **needs-revision**: Read the review comments, update the document, re-run the subagent review, submit a NEW approval request
+   - **approved**: Proceed to cleanup
+4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
+   - If delete fails: STOP, return to polling
+5. **Next phase**: After successful cleanup, proceed to Phase 3 (Tasks). Use the `/spec-tasks` skill.
 
 ## Rules
 
 - Feature names use kebab-case
 - One spec at a time
-- **Wave 1 完了前に Wave 2 を開始しない** — ユーザーの確認が必須
-- **Wave 1 の口頭確認は許可** — 正式承認ツール不要
-- **Wave 2 完了後の正式承認は必須** — 口頭承認は不可
+- **Do not start Wave 2 before Wave 1 is complete** — user confirmation is required
+- **Verbal confirmation is allowed for Wave 1** — formal approval tool not required
+- **Formal approval is required after Wave 2** — verbal approval is not accepted
 - Approval requests: filePath only, never content
 - Never proceed if approval delete fails
 - Must have approved status AND successful cleanup before moving to tasks

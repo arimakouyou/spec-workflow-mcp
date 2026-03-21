@@ -4,57 +4,57 @@ paths:
   - "**/Cargo.toml"
 ---
 
-# プロジェクトアーキテクチャ (Axum + Diesel + Valkey)
+# Project Architecture (Axum + Diesel + Valkey)
 
-このルールは REST API バックエンド構成の基本アーキテクチャを定義する。
-Leptos フルスタック構成の場合は `leptos.md` のルールが優先される。
+This rule defines the base architecture for a REST API backend configuration.
+When using a Leptos full-stack configuration, the rules in `leptos.md` take precedence.
 
-## ディレクトリ構成
+## Directory Structure
 
 ```
 src/
-├── main.rs              # エントリポイント、サーバ起動
-├── config.rs            # 環境変数・設定読み込み
-├── app_state.rs         # AppState 定義
-├── error.rs             # AppError 定義 (IntoResponse 実装)
+├── main.rs              # Entry point, server startup
+├── config.rs            # Environment variable and configuration loading
+├── app_state.rs         # AppState definition
+├── error.rs             # AppError definition (IntoResponse implementation)
 ├── db/
-│   ├── mod.rs           # DB プール初期化
-│   └── repository/      # リポジトリ層 (DBアクセスを抽象化)
+│   ├── mod.rs           # DB pool initialization
+│   └── repository/      # Repository layer (abstracts DB access)
 │       ├── mod.rs
 │       └── users.rs
 ├── cache/
-│   ├── mod.rs           # Valkey 接続初期化
-│   └── keys.rs          # キー生成ヘルパー
+│   ├── mod.rs           # Valkey connection initialization
+│   └── keys.rs          # Key generation helpers
 ├── models/
 │   ├── mod.rs
-│   └── user.rs          # Diesel モデル (Queryable, Insertable 等)
+│   └── user.rs          # Diesel models (Queryable, Insertable, etc.)
 ├── handlers/
 │   ├── mod.rs
-│   └── users.rs         # Axum ハンドラ
+│   └── users.rs         # Axum handlers
 ├── routes/
-│   ├── mod.rs           # ルーター構成
+│   ├── mod.rs           # Router configuration
 │   └── users.rs
 ├── middleware/
 │   ├── mod.rs
-│   └── auth.rs          # 認証ミドルウェア
-├── schema.rs            # Diesel 自動生成
+│   └── auth.rs          # Authentication middleware
+├── schema.rs            # Diesel auto-generated
 └── dto/
     ├── mod.rs
-    └── user.rs           # リクエスト/レスポンス型 (Serialize, Deserialize)
+    └── user.rs           # Request/response types (Serialize, Deserialize)
 migrations/
     └── ...
 ```
 
-## レイヤー構成
+## Layer Structure
 
 ```
 Handler (Axum) → Repository (Diesel/Valkey) → Database/Cache
 ```
 
-- **Handler**: HTTP リクエストの受付、バリデーション、レスポンス構築
-- **Repository**: データアクセスロジック。DB クエリとキャッシュ操作をカプセル化
-- **Model**: Diesel のテーブルマッピング
-- **DTO**: API のリクエスト/レスポンス型 (Model とは分離する)
+- **Handler**: Receives HTTP requests, performs validation, builds responses
+- **Repository**: Data access logic. Encapsulates DB queries and cache operations
+- **Model**: Diesel table mappings
+- **DTO**: API request/response types (kept separate from Model)
 
 ## AppState
 
@@ -73,7 +73,7 @@ pub struct AppState {
 }
 ```
 
-## エラー型の統一
+## Unified Error Type
 
 ```rust
 use axum::http::StatusCode;
@@ -93,7 +93,7 @@ impl From<deadpool::managed::PoolError<deadpool_diesel::postgres::Manager>> for 
 impl IntoResponse for AppError { /* ... */ }
 ```
 
-## 依存関係のガイドライン
+## Dependency Guidelines
 
 ```toml
 [dependencies]
@@ -112,23 +112,23 @@ anyhow = "1"
 dotenvy = "0.15"
 ```
 
-## 設定管理
+## Configuration Management
 
-- 環境変数から読み込む (`dotenvy` + `std::env`)
-- `DATABASE_URL`, `VALKEY_URL`, `HOST`, `PORT` 等を `AppConfig` にまとめる
-- シークレット (DB パスワード等) はコードにハードコードしない
-- 環境ごとの設定は環境変数で切り替える
+- Load from environment variables (`dotenvy` + `std::env`)
+- Consolidate `DATABASE_URL`, `VALKEY_URL`, `HOST`, `PORT`, etc. into `AppConfig`
+- Do not hardcode secrets (DB passwords, etc.) in code
+- Switch configuration per environment using environment variables
 
-## ログ・トレーシング
+## Logging and Tracing
 
-- `tracing` + `tracing-subscriber` を使う
-- `tower_http::trace::TraceLayer` でリクエストログを出力する
-- `RUST_LOG` 環境変数でログレベルを制御する
-- 構造化ログを使う (`tracing::info!(user_id = %id, "User created")`)
+- Use `tracing` + `tracing-subscriber`
+- Output request logs with `tower_http::trace::TraceLayer`
+- Control the log level with the `RUST_LOG` environment variable
+- Use structured logging (`tracing::info!(user_id = %id, "User created")`)
 
-## テスト戦略
+## Testing Strategy
 
-- 単体テスト: リポジトリ層を直接テスト (テスト用 DB + トランザクションロールバック)
-- 統合テスト: Axum アプリ全体を `tower::ServiceExt` でテスト
-- テスト用の `AppState` を構築するヘルパー関数を用意する
-- テスト用 DB は `test_transaction` でロールバックする
+- Unit tests: Test the repository layer directly (test DB + transaction rollback)
+- Integration tests: Test the full Axum app with `tower::ServiceExt`
+- Provide a helper function to construct `AppState` for tests
+- Use `test_transaction` to roll back the test DB

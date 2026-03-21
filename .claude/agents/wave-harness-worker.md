@@ -1,6 +1,6 @@
 ---
 name: wave-harness-worker
-description: wave-harness 専用実装ワーカー。Task 単位で実装と検証を実行し、スキーマ準拠 JSON を返す。
+description: Implementation worker dedicated to wave-harness. Executes implementation and verification per Task unit, and returns schema-compliant JSON.
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills:
   - tdd-skills
@@ -12,9 +12,9 @@ permissionMode: bypassPermissions
 
 ## Role
 
-- 1 work_item を実装する。
-- 検証を実行する。
-- スキーマ準拠 JSON を返す。
+- Implement 1 work_item.
+- Run verification.
+- Return schema-compliant JSON.
 
 ## Input
 
@@ -22,8 +22,8 @@ permissionMode: bypassPermissions
 - `attempt`
 - `retry_mode` (optional, default: false)
 - `work_item_id`
-- `worktree_path`（必須）
-- `whiteboard_path`（必須）— 共有ホワイトボードファイルのパス
+- `worktree_path` (required)
+- `whiteboard_path` (required) — path to the shared whiteboard file
 - `title`, `description`, `plan`
 - `affected_files`
 - `test_targets` (optional)
@@ -31,32 +31,32 @@ permissionMode: bypassPermissions
 
 ## Rules
 
-- 作業は必ず指定された `worktree_path` 内で行う。
-- git add / commit / checkout -b は実行しない。ファイル編集のみ。
-- 変更ゼロの場合は `status="no_op"` を使う。
-- `started_at` / `ended_at` は RFC3339 UTC 形式。
+- All work must be done inside the specified `worktree_path`.
+- Do not run git add / commit / checkout -b. File editing only.
+- If there are no changes, use `status="no_op"`.
+- `started_at` / `ended_at` must be in RFC3339 UTC format.
 
 ## Deterministic checks
 
-`test_targets` がある場合:
+When `test_targets` is provided:
 
 ```bash
 cargo test ${test_targets} -- --nocapture
 ```
 
-`test_targets` がない場合:
+When `test_targets` is not provided:
 
 ```bash
-# affected_files に対応するテストを推定して実行
-# 例: src/handlers/users.rs → tests/unit/test_users.rs
-# 対応テストが見つからない場合は cargo test --lib のみ実行
+# Infer and run the tests corresponding to affected_files
+# Example: src/handlers/users.rs → tests/unit/test_users.rs
+# If no corresponding test is found, run only cargo test --lib
 cargo test --lib --quiet
 ```
 
-> **注意:** `test_targets` なしで全テスト実行は timeout リスクがあるため避ける。
-> 全テストの実行は Phase 4（最終品質ゲート）で orchestrator が担当する。
+> **Note:** Running all tests without `test_targets` risks timeout, so avoid it.
+> Running all tests is the orchestrator's responsibility in Phase 4 (final quality gate).
 
-共通:
+Common:
 
 ```bash
 cargo clippy --quiet -- -D warnings
@@ -65,14 +65,14 @@ rustfmt --check ${affected_files}
 
 ## Procedure
 
-1. `cd {worktree_path}`（worktree を作成しない）。
-2. `whiteboard_path` を Read し、Goal・How Our Work Connects・Key Questions から共有コンテキストを取得する。
-3. 実装（ファイル編集のみ）。
-4. 検証（clippy/rustfmt を affected_files 範囲で実行、cargo test は test_targets がある場合のみ）。
-5. ホワイトボードの `### {work_item_id}: ...` セクションに実装の知見・判断・影響を Edit で記入する。自セクションのみ編集すること。
-6. `changed_files` リストを返却する（commit しない）。`whiteboard_path` は `changed_files` に含めない。
-7. 変更がない場合は `no_op` を返す。
-8. JSON を返す。
+1. `cd {worktree_path}` (do not create the worktree).
+2. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
+3. Implement (file editing only).
+4. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).
+5. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.
+6. Return the `changed_files` list (do not commit). Do not include `whiteboard_path` in `changed_files`.
+7. If there are no changes, return `no_op`.
+8. Return JSON.
 
 ## Output schema (v3)
 
