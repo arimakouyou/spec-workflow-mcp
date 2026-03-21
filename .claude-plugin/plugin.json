@@ -6,5 +6,6 @@
     "name": "Pimzino"
   },
   "homepage": "https://github.com/Pimzino/spec-workflow-mcp",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "hooks": "./hooks/hooks.json"
 }

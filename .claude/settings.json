@@ -33,16 +33,6 @@
             "statusMessage": "Running rustfmt + clippy..."
           }
         ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/tasks-read-guard.sh",
-            "timeout": 10
-          }
-        ]
       }
     ]
   }
