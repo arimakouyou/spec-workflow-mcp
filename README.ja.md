@@ -56,7 +56,9 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 | プラグイン | 説明 |
 |--------|-------------|
 | `spec-workflow-mcp` | MCP サーバー + スキル/エージェント/ルール/フック |
-| `spec-workflow-mcp-with-dashboard` | 上記に加えてダッシュボードの自動起動 |
+| `spec-workflow-mcp-with-dashboard` | MCP サーバーのみ（軽量版、スキル/エージェント/ルール/フックなし） |
+
+> **注意**: `spec-workflow-mcp-with-dashboard` バリアントは MCP サーバーのみを含む最小構成です。ダッシュボードを使用するには、`npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard` で別途起動してください。
 
 > **プラグインに含まれるもの：**
 > - 仕様駆動開発ワークフロー用の MCP サーバー

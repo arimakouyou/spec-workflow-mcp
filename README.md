@@ -58,7 +58,9 @@ Two plugin variants are available:
 | Plugin | Description |
 |--------|-------------|
 | `spec-workflow-mcp` | MCP server + skills/agents/rules/hooks |
-| `spec-workflow-mcp-with-dashboard` | Same as above + auto-started dashboard |
+| `spec-workflow-mcp-with-dashboard` | MCP server only (lightweight, no skills/agents/rules/hooks) |
+
+> **Note**: The `spec-workflow-mcp-with-dashboard` variant is a minimal configuration containing only the MCP server. To use the dashboard, start it separately with `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard`.
 
 > **What the plugin includes:**
 > - MCP server for spec-driven development workflow
