@@ -85,7 +85,7 @@ Initial release of Spec Workflow MCP Extension:
 
 If you find this extension helpful, consider supporting the development:
 
-[☕ Buy Me a Coffee](https://buymeacoffee.com/pimzino)
+[☕ Buy Me a Coffee](https://buymeacoffee.com/arimakouyou)
 
 ## License
 

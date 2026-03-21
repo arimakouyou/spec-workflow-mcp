@@ -7,16 +7,16 @@
 ### 基本的な使用方法
 
 ```bash
-npx -y @pimzino/spec-workflow-mcp@latest [project-path] [options]
+npx -y @arimakouyou/spec-workflow-mcp@latest [project-path] [options]
 ```
 
 ### 利用可能なオプション
 
 | オプション | 説明 | 例 |
 |--------|-------------|---------|
-| `--help` | 包括的な使用情報を表示 | `npx -y @pimzino/spec-workflow-mcp@latest --help` |
-| `--dashboard` | ダッシュボード専用モードで実行（デフォルトポート：5000） | `npx -y @pimzino/spec-workflow-mcp@latest --dashboard` |
-| `--port <number>` | カスタムダッシュボードポートを指定（1024-65535） | `npx -y @pimzino/spec-workflow-mcp@latest --dashboard --port 8080` |
+| `--help` | 包括的な使用情報を表示 | `npx -y @arimakouyou/spec-workflow-mcp@latest --help` |
+| `--dashboard` | ダッシュボード専用モードで実行（デフォルトポート：5000） | `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard` |
+| `--port <number>` | カスタムダッシュボードポートを指定（1024-65535） | `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard --port 8080` |
 
 ### 重要な注意事項
 
@@ -31,19 +31,19 @@ npx -y @pimzino/spec-workflow-mcp@latest [project-path] [options]
 1. **ダッシュボードを起動する**（最初に一度だけ実行）：
 ```bash
 # デフォルトポート5000を使用
-npx -y @pimzino/spec-workflow-mcp@latest --dashboard
+npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
 ```
 
 2. **MCPサーバーを起動する**（プロジェクトごとに1つ、別々のターミナルで）：
 ```bash
 # プロジェクト1
-npx -y @pimzino/spec-workflow-mcp@latest ~/projects/app1
+npx -y @arimakouyou/spec-workflow-mcp@latest ~/projects/app1
 
 # プロジェクト2
-npx -y @pimzino/spec-workflow-mcp@latest ~/projects/app2
+npx -y @arimakouyou/spec-workflow-mcp@latest ~/projects/app2
 
 # プロジェクト3
-npx -y @pimzino/spec-workflow-mcp@latest ~/projects/app3
+npx -y @arimakouyou/spec-workflow-mcp@latest ~/projects/app3
 ```
 
 すべてのプロジェクトが http://localhost:5000 のダッシュボードに表示されます
@@ -54,7 +54,7 @@ npx -y @pimzino/spec-workflow-mcp@latest ~/projects/app3
 
 ```bash
 # ポート8080でダッシュボードを起動
-npx -y @pimzino/spec-workflow-mcp@latest --dashboard --port 8080
+npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard --port 8080
 ```
 
 ## 環境変数
@@ -78,13 +78,13 @@ npx -y @pimzino/spec-workflow-mcp@latest --dashboard --port 8080
 
 ```bash
 # 絶対パス
-SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @pimzino/spec-workflow-mcp@latest /workspace
+SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workflow-mcp@latest /workspace
 
 # 相対パス（現在の作業ディレクトリに対して解決されます）
-SPEC_WORKFLOW_HOME=./.spec-workflow-mcp npx -y @pimzino/spec-workflow-mcp@latest .
+SPEC_WORKFLOW_HOME=./.spec-workflow-mcp npx -y @arimakouyou/spec-workflow-mcp@latest .
 
 # ダッシュボードモード用
-SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @pimzino/spec-workflow-mcp@latest --dashboard
+SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
 ```
 
 **サンドボックス環境（例：Codex CLI）：**
@@ -92,7 +92,7 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @pimzino/spec-workflow-m
 Codex CLIの`sandbox_mode=workspace-write`などのサンドボックス環境で実行する場合は、`SPEC_WORKFLOW_HOME`をワークスペース内の書き込み可能な場所に設定します：
 
 ```bash
-SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @pimzino/spec-workflow-mcp@latest /workspace
+SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workflow-mcp@latest /workspace
 ```
 
 ## ダッシュボードセッション管理
@@ -218,10 +218,10 @@ lang = "en"
 3. 設定を使用します：
 ```bash
 # 自動的に.spec-workflow/config.tomlを使用
-npx -y @pimzino/spec-workflow-mcp@latest
+npx -y @arimakouyou/spec-workflow-mcp@latest
 
 # または明示的に指定
-npx -y @pimzino/spec-workflow-mcp@latest --config .spec-workflow/config.toml
+npx -y @arimakouyou/spec-workflow-mcp@latest --config .spec-workflow/config.toml
 ```
 
 ## 設定の優先順位
@@ -242,7 +242,7 @@ port = 3000
 
 ```bash
 # コマンドライン引数が設定ファイルをオーバーライド
-npx -y @pimzino/spec-workflow-mcp@latest --config config.toml --port 4000
+npx -y @arimakouyou/spec-workflow-mcp@latest --config config.toml --port 4000
 # 結果：port = 4000（CLIが優先）
 ```
 
@@ -263,7 +263,7 @@ verboseLogging = true
 
 使用方法：
 ```bash
-npx -y @pimzino/spec-workflow-mcp@latest --config dev-config.toml
+npx -y @arimakouyou/spec-workflow-mcp@latest --config dev-config.toml
 ```
 
 ### 本番設定
@@ -281,7 +281,7 @@ verboseLogging = false
 
 使用方法：
 ```bash
-npx -y @pimzino/spec-workflow-mcp@latest --config prod-config.toml
+npx -y @arimakouyou/spec-workflow-mcp@latest --config prod-config.toml
 ```
 
 ## ポート設定
@@ -344,7 +344,7 @@ project-b/
 ~/configs/spec-workflow-base.toml
 
 # プロジェクト固有のオーバーライド
-npx -y @pimzino/spec-workflow-mcp@latest \
+npx -y @arimakouyou/spec-workflow-mcp@latest \
   --config ~/configs/spec-workflow-base.toml \
   --port 3000 \
   /path/to/project-a

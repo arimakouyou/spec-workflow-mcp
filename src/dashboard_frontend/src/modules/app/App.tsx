@@ -93,7 +93,7 @@ function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
               </button>
 
               <a
-                href="https://buymeacoffee.com/pimzino"
+                href="https://buymeacoffee.com/arimakouyou"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 text-sm font-medium rounded-md transition-colors"
@@ -165,7 +165,7 @@ function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 
                 <div className="pt-2">
                   <a
-                    href="https://buymeacoffee.com/pimzino"
+                    href="https://buymeacoffee.com/arimakouyou"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full inline-flex items-center justify-center px-4 py-3 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 text-sm font-medium rounded-md transition-colors"
@@ -278,7 +278,7 @@ function AppInner() {
                     Start MCP servers to see projects here.
                   </p>
                   <div className="text-sm text-[var(--text-muted)]">
-                    Run: <code className="px-2 py-1 bg-[var(--surface-inset)] rounded-md">npx @pimzino/spec-workflow-mcp /path/to/project</code>
+                    Run: <code className="px-2 py-1 bg-[var(--surface-inset)] rounded-md">npx @arimakouyou/spec-workflow-mcp /path/to/project</code>
                   </div>
                 </div>
               </div>
