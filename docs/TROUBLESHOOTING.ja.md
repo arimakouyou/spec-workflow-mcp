@@ -7,7 +7,7 @@ Spec Workflow MCPに関する一般的な問題を解決するためのガイド
 ### インストールの確認
 ```bash
 # npmパッケージがアクセス可能か確認
-npx -y @pimzino/spec-workflow-mcp@latest --help
+npx -y @arimakouyou/spec-workflow-mcp@latest --help
 
 # 正しいディレクトリで実行しているか確認
 pwd  # Windowsでは 'cd'
@@ -19,10 +19,10 @@ ls -la .spec-workflow  # Windowsでは 'dir .spec-workflow'
 ### サービスの確認
 ```bash
 # MCPサーバーのテスト
-npx -y @pimzino/spec-workflow-mcp@latest /path/to/project
+npx -y @arimakouyou/spec-workflow-mcp@latest /path/to/project
 
 # ダッシュボードのテスト
-npx -y @pimzino/spec-workflow-mcp@latest /path/to/project --dashboard
+npx -y @arimakouyou/spec-workflow-mcp@latest /path/to/project --dashboard
 
 # ポートの可用性を確認
 netstat -an | grep 3000  # macOS/Linux
@@ -35,7 +35,7 @@ netstat -an | findstr :3000  # Windows
 
 ### NPMパッケージが見つからない
 
-**エラー**: `npm ERR! 404 Not Found - @pimzino/spec-workflow-mcp@latest`
+**エラー**: `npm ERR! 404 Not Found - @arimakouyou/spec-workflow-mcp@latest`
 
 **解決策**:
 1. インターネット接続を確認
@@ -45,11 +45,11 @@ netstat -an | findstr :3000  # Windows
    ```
 3. バージョンタグなしで試す:
    ```bash
-   npx @pimzino/spec-workflow-mcp /path/to/project
+   npx @arimakouyou/spec-workflow-mcp /path/to/project
    ```
 4. 最初にグローバルインストール:
    ```bash
-   npm install -g @pimzino/spec-workflow-mcp
+   npm install -g @arimakouyou/spec-workflow-mcp
    spec-workflow-mcp /path/to/project
    ```
 
@@ -69,7 +69,7 @@ netstat -an | findstr :3000  # Windows
    ```
 3. -yフラグ付きでnpxを使用:
    ```bash
-   npx -y @pimzino/spec-workflow-mcp@latest
+   npx -y @arimakouyou/spec-workflow-mcp@latest
    ```
 
 ## MCPサーバーの問題
@@ -94,7 +94,7 @@ netstat -an | findstr :3000  # Windows
    ```
 4. 絶対パスで試す:
    ```bash
-   npx -y @pimzino/spec-workflow-mcp@latest $(pwd)
+   npx -y @arimakouyou/spec-workflow-mcp@latest $(pwd)
    ```
 
 ### MCPがAIツールに接続できない
@@ -109,7 +109,7 @@ netstat -an | findstr :3000  # Windows
      "mcpServers": {
        "spec-workflow": {
          "command": "npx",
-         "args": ["-y", "@pimzino/spec-workflow-mcp@latest", "/absolute/path/to/project"]
+         "args": ["-y", "@arimakouyou/spec-workflow-mcp@latest", "/absolute/path/to/project"]
        }
      }
    }
@@ -119,7 +119,7 @@ netstat -an | findstr :3000  # Windows
    ```bash
    claude mcp list  # spec-workflowがリストされているか確認
    claude mcp remove spec-workflow  # 存在する場合は削除
-   claude mcp add spec-workflow npx @pimzino/spec-workflow-mcp@latest -- /path/to/project
+   claude mcp add spec-workflow npx @arimakouyou/spec-workflow-mcp@latest -- /path/to/project
    ```
 
 3. **パスの問題**: パスが絶対パスで存在することを確認:
@@ -145,7 +145,7 @@ netstat -an | findstr :3000  # Windows
 **解決策**:
 1. ダッシュボードが起動されているか確認:
    ```bash
-   npx -y @pimzino/spec-workflow-mcp@latest /path --dashboard
+   npx -y @arimakouyou/spec-workflow-mcp@latest /path --dashboard
    ```
 2. ブラウザでURLを確認（ポートに注意）:
    ```
@@ -162,7 +162,7 @@ netstat -an | findstr :3000  # Windows
 **解決策**:
 1. 別のポートを使用:
    ```bash
-   npx -y @pimzino/spec-workflow-mcp@latest /path --dashboard --port 3456
+   npx -y @arimakouyou/spec-workflow-mcp@latest /path --dashboard --port 3456
    ```
 2. ポートを使用しているプロセスを見つけて終了:
    ```bash
@@ -176,7 +176,7 @@ netstat -an | findstr :3000  # Windows
    ```
 3. エフェメラルポートを使用（--portフラグを省略）:
    ```bash
-   npx -y @pimzino/spec-workflow-mcp@latest /path --dashboard
+   npx -y @arimakouyou/spec-workflow-mcp@latest /path --dashboard
    ```
 
 ### WebSocket接続が失敗する
@@ -216,9 +216,9 @@ netstat -an | findstr :3000  # Windows
    ```bash
    # 両方を別々に実行
    # ターミナル1: ダッシュボードを起動
-   npx -y @pimzino/spec-workflow-mcp@latest --dashboard
+   npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
    # ターミナル2: MCPサーバーを起動
-   npx -y @pimzino/spec-workflow-mcp@latest /path
+   npx -y @arimakouyou/spec-workflow-mcp@latest /path
    ```
 2. 承認ディレクトリが存在するか確認:
    ```bash
@@ -300,8 +300,8 @@ netstat -an | findstr :3000  # Windows
 3. 特定のエラーについて拡張機能ログを確認
 4. 拡張機能を再インストールしてみる:
    ```bash
-   code --uninstall-extension Pimzino.spec-workflow-mcp
-   code --install-extension Pimzino.spec-workflow-mcp
+   code --uninstall-extension arimakouyou.spec-workflow-mcp
+   code --install-extension arimakouyou.spec-workflow-mcp
    ```
 
 ## 設定の問題
@@ -339,10 +339,10 @@ netstat -an | findstr :3000  # Windows
 1. 引数の順序を確認:
    ```bash
    # 正しい
-   npx -y @pimzino/spec-workflow-mcp@latest /path --dashboard --port 3000
+   npx -y @arimakouyou/spec-workflow-mcp@latest /path --dashboard --port 3000
 
    # 間違い
-   npx -y @pimzino/spec-workflow-mcp@latest --dashboard /path --port 3000
+   npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard /path --port 3000
    ```
 2. フラグの値が有効であることを確認:
    - ポート: 1024-65535
@@ -398,8 +398,8 @@ netstat -an | findstr :3000  # Windows
    ```
 2. ローカルインストールを使用:
    ```bash
-   npm install @pimzino/spec-workflow-mcp
-   node node_modules/@pimzino/spec-workflow-mcp/dist/index.js /path
+   npm install @arimakouyou/spec-workflow-mcp
+   node node_modules/@arimakouyou/spec-workflow-mcp/dist/index.js /path
    ```
 
 ### ファイアウォールが接続をブロック
@@ -420,10 +420,10 @@ netstat -an | findstr :3000  # Windows
 **解決策**:
 ```bash
 # スラッシュを使用
-npx -y @pimzino/spec-workflow-mcp@latest C:/Users/name/project
+npx -y @arimakouyou/spec-workflow-mcp@latest C:/Users/name/project
 
 # またはエスケープされたバックスラッシュ
-npx -y @pimzino/spec-workflow-mcp@latest "C:\\Users\\name\\project"
+npx -y @arimakouyou/spec-workflow-mcp@latest "C:\\Users\\name\\project"
 ```
 
 #### PowerShell実行ポリシー
@@ -491,7 +491,7 @@ sudo yum groupinstall "Development Tools"
 
 ### サポートチャンネル
 
-1. **GitHub Issues**: [イシューを作成](https://github.com/Pimzino/spec-workflow-mcp/issues)
+1. **GitHub Issues**: [イシューを作成](https://github.com/arimakouyou/spec-workflow-mcp/issues)
 2. **ドキュメント**: `/docs`内の他のガイドを確認
 3. **コミュニティ**: ディスカッションとQ&A
 
@@ -505,7 +505,7 @@ export DEBUG=spec-workflow:*  # macOS/Linux
 set DEBUG=spec-workflow:*  # Windows
 
 # デバッグ出力で実行
-npx -y @pimzino/spec-workflow-mcp@latest /path --debug
+npx -y @arimakouyou/spec-workflow-mcp@latest /path --debug
 ```
 
 ## 予防のヒント

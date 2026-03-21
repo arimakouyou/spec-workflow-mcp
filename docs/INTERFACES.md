@@ -22,20 +22,20 @@ The web dashboard is a real-time web application that provides visual access to 
 #### Standalone Dashboard
 ```bash
 # Uses ephemeral port
-npx -y @pimzino/spec-workflow-mcp@latest /path/to/project --dashboard
+npx -y @arimakouyou/spec-workflow-mcp@latest /path/to/project --dashboard
 
 # Custom port
-npx -y @pimzino/spec-workflow-mcp@latest /path/to/project --dashboard --port 3000
+npx -y @arimakouyou/spec-workflow-mcp@latest /path/to/project --dashboard --port 3000
 ```
 
 #### With MCP Server
 ```bash
 # Run MCP server and dashboard separately (recommended)
 # Terminal 1: Start dashboard
-npx -y @pimzino/spec-workflow-mcp@latest --dashboard
+npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
 
 # Terminal 2: Start MCP server
-npx -y @pimzino/spec-workflow-mcp@latest /path/to/project
+npx -y @arimakouyou/spec-workflow-mcp@latest /path/to/project
 ```
 
 ### Dashboard Features
@@ -209,7 +209,7 @@ Install from VSCode Marketplace:
 
 Or via command line:
 ```bash
-code --install-extension Pimzino.spec-workflow-mcp
+code --install-extension arimakouyou.spec-workflow-mcp
 ```
 
 ### Extension Features
@@ -503,10 +503,10 @@ Inherits VSCode accessibility:
 Configure in multiple terminals:
 ```bash
 # Terminal 1: MCP Server
-npx -y @pimzino/spec-workflow-mcp@latest /project
+npx -y @arimakouyou/spec-workflow-mcp@latest /project
 
 # Terminal 2: Dashboard
-npx -y @pimzino/spec-workflow-mcp@latest /project --dashboard --port 3000
+npx -y @arimakouyou/spec-workflow-mcp@latest /project --dashboard --port 3000
 ```
 
 ### Extension Multi-Root Workspaces

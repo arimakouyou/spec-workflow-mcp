@@ -3,8 +3,8 @@
   "version": "2.2.6",
   "description": "MCP server with auto-started dashboard for structured spec-driven development.",
   "author": {
-    "name": "Pimzino"
+    "name": "arimakouyou"
   },
-  "homepage": "https://github.com/Pimzino/spec-workflow-mcp",
+  "homepage": "https://github.com/arimakouyou/spec-workflow-mcp",
   "license": "GPL-3.0"
 }

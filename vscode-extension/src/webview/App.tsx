@@ -847,7 +847,7 @@ Review the existing steering documents (if any) and help me improve or complete 
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => vscodeApi.openExternalUrl('https://buymeacoffee.com/pimzino')}
+                onClick={() => vscodeApi.openExternalUrl('https://buymeacoffee.com/arimakouyou')}
                 title={t('header.support')}
                 className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
               >

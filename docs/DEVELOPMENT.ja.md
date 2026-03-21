@@ -22,7 +22,7 @@
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/Pimzino/spec-workflow-mcp.git
+git clone https://github.com/arimakouyou/spec-workflow-mcp.git
 cd spec-workflow-mcp
 ```
 
