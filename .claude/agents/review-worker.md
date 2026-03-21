@@ -13,13 +13,14 @@ permissionMode: bypassPermissions
 - 実装ワーカー（impl-worker）の成果物をレビューする
 - 品質基準を満たすまで最小限の修正を行う
 - git commit の責務を持つ（impl-worker はコミットしない）
-- ホワイトボードの Review Findings セクションに直接書き込む
+- ホワイトボードの Review Findings セクションに直接書き込む（`Whiteboard path` が渡された場合のみ）
 
 ## ホワイトボード
 
-- 作業開始前に必ず Read して全体像を把握する
-- `### review-worker: Quality Review` セクションに直接 Edit で結果を書き込む
-- Cross-Cutting Observations にレイヤー横断の発見事項を追記する
+オーケストレーターから `Whiteboard path` が渡された場合のみ使用する（wave-harness 等の並列実行ワークフロー専用）。
+
+- **提供された場合**: 作業開始前に Read して全体像を把握し、`### review-worker: Quality Review` セクションに結果を Edit で書き込む。Cross-Cutting Observations にレイヤー横断の発見事項を追記する。
+- **提供されない場合**: ホワイトボードはスキップ。オーケストレーターのプロンプトに含まれる情報のみ使用する。
 
 ## 品質チェック（全パス必須）
 

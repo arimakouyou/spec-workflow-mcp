@@ -7,7 +7,16 @@ description: "Phase 3 of spec-driven development: break an approved design into 
 
 Break the approved design into atomic, implementable tasks. This phase converts architecture decisions into a concrete action plan.
 
-## Prerequisites
+## Prerequisites Check (MANDATORY — DO NOT SKIP)
+
+Before doing anything else, verify all prerequisite files exist:
+
+1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
+2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
+
+If ANY file is missing — **STOP immediately.** ユーザーに「{ファイル名} が存在しないためタスク分解を開始できません。先に {スキル名} を実行してください。」と伝えてこのスキルを終了する。
+
+---
 
 Design must be approved and cleaned up (Phases 1-2 complete). If not, use `/spec-design` first.
 
@@ -220,7 +229,9 @@ Same strict process — verbal approval is never accepted.
    - **approved**: Move to cleanup
 4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
    - If delete fails: STOP, return to polling
-5. **Spec complete**: After successful cleanup, tell the user: "Spec complete. Ready to implement?" Then use `/spec-implement` to begin.
+5. **Spec complete**: After successful cleanup, tell the user:
+   > "✅ Spec complete. tasks.md が承認されました。実装を開始するには `/spec-implement` を実行してください。"
+   **ここで必ず停止する。** ユーザーが `/spec-implement` コマンドまたは実装トリガーフレーズ（「implement task X」「start coding」等）を自らタイプするまで、一切の自動起動は禁止。「はい」「進めて」等の確認応答への自動起動も禁止。
 
 ## Rules
 

@@ -67,6 +67,7 @@ export class ImplementationLogManager {
       let currentSection = '';
       let currentArtifactType: keyof ImplementationLogEntry['artifacts'] | null = null;
       let currentItem: any = {};
+      let reviewProcessJson = '';
 
       // Helper function to normalize markdown keys to camelCase
       const normalizeKey = (key: string): string => {
@@ -109,6 +110,15 @@ export class ImplementationLogManager {
         return null;
       };
 
+      // Flush currentItem into artifacts before resetting currentArtifactType
+      const flushCurrentItem = () => {
+        if (currentArtifactType && Object.keys(currentItem).length > 0) {
+          if (!artifacts[currentArtifactType]) artifacts[currentArtifactType] = [];
+          (artifacts[currentArtifactType] as any).push(currentItem);
+          currentItem = {};
+        }
+      };
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
@@ -140,23 +150,26 @@ export class ImplementationLogManager {
 
         // Parse sections (## headers)
         if (line.startsWith('## Files Modified')) {
+          flushCurrentItem();
           currentSection = 'filesModified';
           currentArtifactType = null;
         } else if (line.startsWith('## Files Created')) {
+          flushCurrentItem();
           currentSection = 'filesCreated';
           currentArtifactType = null;
         } else if (line.startsWith('## Artifacts')) {
+          flushCurrentItem();
           currentSection = 'artifacts';
+          currentArtifactType = null;
+        } else if (line.startsWith('## Review Process')) {
+          flushCurrentItem();
+          currentSection = 'reviewProcess';
           currentArtifactType = null;
         }
         // Parse artifact subsections (### headers)
         else if (line.startsWith('### ')) {
           // Save previous item before switching artifact type
-          if (Object.keys(currentItem).length > 0 && currentArtifactType) {
-            if (!artifacts[currentArtifactType]) artifacts[currentArtifactType] = [];
-            (artifacts[currentArtifactType] as any).push(currentItem);
-            currentItem = {};
-          }
+          flushCurrentItem();
 
           const sectionName = line.slice(4).toLowerCase();
           if (sectionName.includes('api endpoint')) {
@@ -205,6 +218,10 @@ export class ImplementationLogManager {
             filesCreated.push(fileName);
           }
         }
+        // Collect Review Process JSON block
+        else if (currentSection === 'reviewProcess' && !line.startsWith('```') && line.trim() !== '') {
+          reviewProcessJson += line + '\n';
+        }
         // Parse artifact key-value details
         else if (currentArtifactType && line.startsWith('- **')) {
           const kv = parseKeyValue(line);
@@ -226,13 +243,19 @@ export class ImplementationLogManager {
       }
 
       // Save last artifact item
-      if (Object.keys(currentItem).length > 0 && currentArtifactType) {
-        if (!artifacts[currentArtifactType]) artifacts[currentArtifactType] = [];
-        (artifacts[currentArtifactType] as any).push(currentItem);
-      }
+      flushCurrentItem();
 
       if (!taskId || !idValue) {
         return null;
+      }
+
+      let reviewProcess: ImplementationLogEntry['reviewProcess'];
+      if (reviewProcessJson.trim()) {
+        try {
+          reviewProcess = JSON.parse(reviewProcessJson.trim());
+        } catch {
+          // Ignore malformed JSON — reviewProcess remains undefined
+        }
       }
 
       const entry: ImplementationLogEntry = {
@@ -247,7 +270,8 @@ export class ImplementationLogManager {
           linesRemoved,
           filesChanged
         },
-        artifacts
+        artifacts,
+        ...(reviewProcess !== undefined && { reviewProcess })
       };
 
       return entry;
@@ -355,8 +379,7 @@ export class ImplementationLogManager {
 
     if (!entry.artifacts || Object.keys(entry.artifacts).every(key => !entry.artifacts[key as keyof typeof entry.artifacts]?.length)) {
       markdown += `_No artifacts recorded_\n`;
-      return markdown;
-    }
+    } else {
 
     // API Endpoints
     if (entry.artifacts.apiEndpoints && entry.artifacts.apiEndpoints.length > 0) {
@@ -422,6 +445,16 @@ export class ImplementationLogManager {
         markdown += `- **Data Flow:** ${intg.dataFlow}\n`;
         markdown += `\n`;
       });
+    }
+
+    } // end else (artifacts recorded)
+
+    // Review Process
+    if (entry.reviewProcess !== undefined) {
+      markdown += `---\n\n## Review Process\n\n`;
+      markdown += '```json\n';
+      markdown += JSON.stringify(entry.reviewProcess, null, 2);
+      markdown += '\n```\n';
     }
 
     return markdown;

@@ -163,6 +163,16 @@ export interface ImplementationLogEntry {
       dataFlow: string;         // How data flows
     }>;
   };
+  reviewProcess?: {
+    reworkCount: number;        // 0 = passed on first review, N = number of reworks required
+    reviewOutcome: 'commit' | 'escalated';  // Final review outcome
+    findings?: Array<{
+      attempt: number;          // 1-based: 1 = first review, 2 = review after first rework, etc.
+      categories: string[];     // Violated categories: A:スタイル, B:設計, C:セキュリティ, D:仕様照合, E:テスト, F:設計適合
+      summary: string;          // Brief description of what was found
+      action: 'commit' | 'rework' | 'escalate';  // review-worker's decision
+    }>;
+  };
 }
 
 export interface ImplementationLog {

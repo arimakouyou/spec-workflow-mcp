@@ -280,6 +280,45 @@ Task: "Implemented logs dashboard with real-time updates"
             items: { type: 'object' }
           }
         }
+      },
+      reviewProcess: {
+        type: 'object',
+        description: 'Review quality metrics: rework count, final outcome, and per-attempt findings from review-worker.',
+        properties: {
+          reworkCount: {
+            type: 'integer',
+            minimum: 0,
+            description: 'Number of rework iterations required. 0 = passed on first review.'
+          },
+          reviewOutcome: {
+            type: 'string',
+            enum: ['commit', 'escalated'],
+            description: 'Final review outcome: commit = merged cleanly, escalated = required user intervention.'
+          },
+          findings: {
+            type: 'array',
+            description: 'Per-attempt review findings (omit if reworkCount is 0).',
+            items: {
+              type: 'object',
+              properties: {
+                attempt: { type: 'integer', minimum: 1, description: '1-based attempt number (1 = first review)' },
+                categories: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Violated review categories (e.g. ["B:設計", "C:セキュリティ"])'
+                },
+                summary: { type: 'string', description: 'Brief description of what was found' },
+                action: {
+                  type: 'string',
+                  enum: ['commit', 'rework', 'escalate'],
+                  description: "review-worker's decision for this attempt"
+                }
+              },
+              required: ['attempt', 'categories', 'summary', 'action']
+            }
+          }
+        },
+        required: ['reworkCount', 'reviewOutcome']
       }
     },
     required: ['specName', 'taskId', 'summary', 'filesModified', 'filesCreated', 'statistics', 'artifacts']
@@ -301,7 +340,8 @@ export async function logImplementationHandler(
     filesModified = [],
     filesCreated = [],
     statistics,
-    artifacts
+    artifacts,
+    reviewProcess
   } = args;
   
   // Use context projectPath as default, allow override via args
@@ -315,6 +355,74 @@ export async function logImplementationHandler(
   }
 
   try {
+    // Validate reviewProcess consistency
+    if (reviewProcess !== undefined) {
+      const { reworkCount, findings } = reviewProcess;
+      if (reworkCount > 0 && (!findings || findings.length === 0)) {
+        return {
+          success: false,
+          message: `reviewProcess.findings is required when reworkCount > 0 (reworkCount=${reworkCount}). ` +
+            'Provide the per-attempt findings array or set reworkCount to 0.',
+          nextSteps: [
+            'Add findings array with one entry per review attempt',
+            'Or set reworkCount to 0 if the task passed on the first review'
+          ]
+        };
+      }
+      if (reworkCount === 0 && findings && findings.length > 0) {
+        return {
+          success: false,
+          message: 'reviewProcess.findings must be empty (or omitted) when reworkCount is 0.',
+          nextSteps: ['Remove findings array, or set reworkCount to the correct count']
+        };
+      }
+
+      // Validate findings length and attempt number consistency
+      if (findings && findings.length > 0) {
+        const expectedAttempts = reworkCount + 1; // 初回レビュー + 各 rework
+        if (findings.length !== expectedAttempts) {
+          return {
+            success: false,
+            message: `reviewProcess.findings の件数 (${findings.length}) が reworkCount + 1 (${expectedAttempts}) と一致しません。`,
+            nextSteps: [
+              '初回レビューと各 rework に対して 1 件ずつ findings を記録してください',
+              `findings.length が ${expectedAttempts} になるよう reworkCount または findings を修正してください`
+            ]
+          };
+        }
+
+        const attemptNumbers = findings
+          .map((f: any) => (f && typeof f.attempt === 'number' ? f.attempt : undefined))
+          .filter((n: number | undefined): n is number => n !== undefined);
+
+        if (attemptNumbers.length !== findings.length) {
+          return {
+            success: false,
+            message: 'reviewProcess.findings の各エントリに attempt（数値）が必要です。',
+            nextSteps: ['すべての findings エントリに attempt フィールドを追加してください']
+          };
+        }
+
+        const sorted = [...attemptNumbers].sort((a, b) => a - b);
+        const isContiguous =
+          sorted[0] === 1 &&
+          sorted[sorted.length - 1] === expectedAttempts &&
+          new Set(sorted).size === expectedAttempts;
+
+        if (!isContiguous) {
+          return {
+            success: false,
+            message: 'reviewProcess.findings の attempt 番号は 1 から始まる連番でなければなりません。',
+            nextSteps: [
+              'attempt 番号を 1, 2, 3 ... の連番で記録してください',
+              `最大の attempt 番号は reworkCount + 1 = ${expectedAttempts} になるはずです`,
+              '重複・飛び番・欠番がないか確認してください'
+            ]
+          };
+        }
+      }
+    }
+
     // Validate artifacts is provided
     if (!artifacts) {
       return {
@@ -376,7 +484,8 @@ export async function logImplementationHandler(
         linesRemoved: statistics.linesRemoved || 0,
         filesChanged: (filesModified?.length || 0) + (filesCreated?.length || 0)
       },
-      artifacts
+      artifacts,
+      ...(reviewProcess !== undefined && { reviewProcess })
     };
 
     const createdEntry = await logManager.addLogEntry(logEntry);
