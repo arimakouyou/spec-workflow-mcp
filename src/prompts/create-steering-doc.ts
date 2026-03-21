@@ -28,7 +28,9 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
   }
 
   const validDocTypes = ['product', 'tech', 'structure'];
-  if (!validDocTypes.includes(docType)) {
+  // ダッシュボードのプレビュー用サンプルコンテキストではバリデーションをスキップ
+  const isPreviewContext = context.projectPath === '{{projectPath}}';
+  if (!isPreviewContext && !validDocTypes.includes(docType)) {
     throw new Error(`docType must be one of: ${validDocTypes.join(', ')}`);
   }
 

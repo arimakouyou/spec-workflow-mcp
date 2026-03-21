@@ -10,13 +10,23 @@ const prompt: Prompt = {
 };
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
-  // Call the steering-guide tool to get the full guide
-  const toolResponse = await steeringGuideHandler({}, context);
-  
-  // Extract the guide content from the tool response
-  const guide = toolResponse.data?.guide || '';
-  const dashboardUrl = toolResponse.data?.dashboardUrl;
-  const nextSteps = toolResponse.nextSteps || [];
+  let guide = '';
+  let dashboardUrl: string | undefined;
+  let nextSteps: string[] = [];
+  try {
+    const toolResponse = await steeringGuideHandler({}, context);
+    guide = toolResponse.data?.guide || '';
+    dashboardUrl = toolResponse.data?.dashboardUrl;
+    nextSteps = toolResponse.nextSteps || [];
+  } catch (error: unknown) {
+    if (context.projectPath === '{{projectPath}}') {
+      // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
+      guide = '(ステアリングガイドはプロジェクトコンテキストで生成されます)';
+    } else {
+      // 本番コンテキストではエラーを上位レイヤーに伝播させる
+      throw error;
+    }
+  }
 
   const messages: PromptMessage[] = [
     {
