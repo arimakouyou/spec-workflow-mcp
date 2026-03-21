@@ -9,11 +9,7 @@
   },
   "files": [
     "dist/**/*",
-    ".claude/skills/**/*",
-    ".claude/rules/**/*",
-    ".claude/agents/**/*",
-    ".claude/commands/**/*",
-    ".claude/_docs/**/*",
+    ".claude-plugin/**/*",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
