@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Claude Code Plugin Distribution** - Skills, agents, rules, and hooks are now distributed as a Claude Code plugin via `.claude-plugin/` directory:
+  - Install with a single command: `claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp`
+  - Two variants available: `spec-workflow-mcp` (standard) and `spec-workflow-mcp-with-dashboard` (with auto-started dashboard)
+  - MCP server, skills, agents, rules, and hooks are all configured automatically on plugin installation
+  - Plugin hooks use portable `${CLAUDE_PLUGIN_ROOT}` path references
+  - Marketplace listing added for plugin discovery (`marketplace.json`)
+
+### Changed
+- **Package Scope Rebranding** - Renamed package scope from `@pimzino` to `@arimakouyou` across all files:
+  - npm package: `@arimakouyou/spec-workflow-mcp`
+  - GitHub repository: `github.com/arimakouyou/spec-workflow-mcp`
+  - VSCode extension publisher: `arimakouyou`
+  - All documentation, configuration, and support links updated
+
+### Removed
+- **`setup-claude-skills` MCP Tool** - Removed the manual skill setup tool. Skills are now distributed via the plugin system and loaded automatically.
+- **`.claude/` Configuration Directory** - Moved skills, agents, and rules from `.claude/` to `.claude-plugin/` for plugin-based distribution. The `.claude/settings.json` read hook has been removed.
+
 ## [2.2.6] - 2026-03-07
 
 ### Changed

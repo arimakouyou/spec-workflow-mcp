@@ -59,6 +59,42 @@ Only use a custom port if port 5000 is unavailable:
 npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard --port 8080
 ```
 
+## Claude Code Plugin Installation
+
+When installed as a Claude Code plugin, configuration is handled automatically. The plugin system loads skills, agents, rules, hooks, and MCP server configuration from `.claude-plugin/`.
+
+### Installing the Plugin
+
+```bash
+claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
+```
+
+### Plugin Variants
+
+| Variant | MCP Server | Skills/Agents/Rules | Hooks | Auto Dashboard |
+|---------|:----------:|:-------------------:|:-----:|:--------------:|
+| `spec-workflow-mcp` | Yes | Yes | Yes | No |
+| `spec-workflow-mcp-with-dashboard` | Yes | Yes | No | Yes |
+
+### Plugin Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `.claude-plugin/plugin.json` | Plugin manifest (name, version, author, hooks reference) |
+| `.claude-plugin/.mcp.json` | MCP server launch configuration |
+| `.claude-plugin/hooks/hooks.json` | Hook definitions (e.g., PostToolUse read guards) |
+| `.claude-plugin/marketplace.json` | Marketplace listing for plugin discovery |
+
+### How the Plugin Works
+
+1. **MCP Server**: Automatically started via npx using the configuration in `.mcp.json`
+2. **Skills**: Loaded from `.claude-plugin/skills/` — provides spec-driven workflow commands (spec-requirements, spec-design, spec-tasks, spec-implement, spec-review, etc.)
+3. **Agents**: Loaded from `.claude-plugin/agents/` — specialized sub-agents for code review, testing, etc.
+4. **Rules**: Loaded from `.claude-plugin/rules/` — project conventions and quality standards
+5. **Hooks**: Defined in `.claude-plugin/hooks/hooks.json` — automated guards (e.g., task read validation)
+
+> **Note**: When using the plugin, you do not need to manually configure MCP in your client settings. The plugin handles everything.
+
 ## Environment Variables
 
 ### SPEC_WORKFLOW_HOME

@@ -20,7 +20,14 @@
 
 ## 🚀 Quick Start
 
-### For AI Assistant Integration
+### For Claude Code Users (Plugin)
+```bash
+claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
+```
+
+This installs the MCP server, skills, agents, rules, and hooks automatically.
+
+### For Other AI Assistant Integration (Manual MCP Configuration)
 ```json
 {
   "mcpServers": {
@@ -294,10 +301,11 @@ This project implements a **pure Model Context Protocol (MCP) server** that:
 
 ### Key Files & Implementation
 - **MCP Tools**: `src/tools/*.ts` - 13 tools for workflow management
-- **Templates**: `src/markdown/templates/*.md` - Static document structures  
+- **Templates**: `src/markdown/templates/*.md` - Static document structures
 - **Approval System**: `src/dashboard/approval-storage.ts` - Human-only review
 - **Context Loading**: `src/core/*.ts` - File-based context structuring
 - **Web Dashboard**: `src/dashboard_frontend/` - React-based approval UI
+- **Plugin Distribution**: `.claude-plugin/` - Skills, agents, rules, and hooks for Claude Code
 
 ### Performance Characteristics
 - **Memory Usage**: 50KB templates + 10-100KB per spec context

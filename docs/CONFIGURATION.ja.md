@@ -57,6 +57,42 @@ npx -y @arimakouyou/spec-workflow-mcp@latest ~/projects/app3
 npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard --port 8080
 ```
 
+## Claude Code プラグインインストール
+
+Claude Code プラグインとしてインストールする場合、設定は自動的に処理されます。プラグインシステムは `.claude-plugin/` からスキル、エージェント、ルール、フック、MCP サーバー設定を読み込みます。
+
+### プラグインのインストール
+
+```bash
+claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
+```
+
+### プラグインバリアント
+
+| バリアント | MCP サーバー | スキル/エージェント/ルール | フック | ダッシュボード自動起動 |
+|---------|:----------:|:-------------------:|:-----:|:--------------:|
+| `spec-workflow-mcp` | あり | あり | あり | なし |
+| `spec-workflow-mcp-with-dashboard` | あり | あり | なし | あり |
+
+### プラグイン設定ファイル
+
+| ファイル | 用途 |
+|------|---------|
+| `.claude-plugin/plugin.json` | プラグインマニフェスト（名前、バージョン、作者、フック参照） |
+| `.claude-plugin/.mcp.json` | MCP サーバー起動設定 |
+| `.claude-plugin/hooks/hooks.json` | フック定義（PostToolUse の読み取りガードなど） |
+| `.claude-plugin/marketplace.json` | プラグイン検出用のマーケットプレイスリスティング |
+
+### プラグインの動作原理
+
+1. **MCP サーバー**: `.mcp.json` の設定を使って npx 経由で自動起動
+2. **スキル**: `.claude-plugin/skills/` から読み込み — 仕様駆動ワークフローコマンド（spec-requirements、spec-design、spec-tasks、spec-implement、spec-review など）を提供
+3. **エージェント**: `.claude-plugin/agents/` から読み込み — コードレビュー、テストなどの専門サブエージェント
+4. **ルール**: `.claude-plugin/rules/` から読み込み — プロジェクト規約と品質基準
+5. **フック**: `.claude-plugin/hooks/hooks.json` で定義 — 自動ガード（タスク読み取り検証など）
+
+> **注意**: プラグインを使用する場合、クライアント設定で手動で MCP を設定する必要はありません。プラグインがすべてを処理します。
+
 ## 環境変数
 
 ### SPEC_WORKFLOW_HOME

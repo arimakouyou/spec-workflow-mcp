@@ -43,7 +43,29 @@
 
 ## 🚀 クイックスタート
 
-### ステップ1: AIツールに追加する
+### 方法1: Claude Code プラグイン（Claude Code ユーザーに推奨）
+
+Claude Code プラグインとして直接インストールできます。スキル、エージェント、ルール、フック、MCP サーバーがすべて自動で設定されます：
+
+```bash
+claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
+```
+
+2つのプラグインバリアントが利用可能です：
+
+| プラグイン | 説明 |
+|--------|-------------|
+| `spec-workflow-mcp` | MCP サーバー + スキル/エージェント/ルール/フック |
+| `spec-workflow-mcp-with-dashboard` | 上記に加えてダッシュボードの自動起動 |
+
+> **プラグインに含まれるもの：**
+> - 仕様駆動開発ワークフロー用の MCP サーバー
+> - スキル：spec-requirements、spec-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
+> - エージェント：code-simplifier、review-worker、unit-test-engineer、parallel-worker など
+> - ルール：プロジェクトアーキテクチャ、品質チェック、セキュリティ、設計原則など
+> - フック：タスク読み取りガードの自動化
+
+### 方法2: 手動 MCP 設定
 
 MCP設定に追加します（以下のクライアント固有のセットアップを参照）：
 
@@ -274,6 +296,8 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workfl
 
 ## 📁 プロジェクト構造
 
+### 作業ディレクトリ（プロジェクトごと）
+
 ```
 your-project/
   .spec-workflow/
@@ -284,6 +308,43 @@ your-project/
     templates/
     user-templates/
     config.example.toml
+```
+
+### プラグイン構造（`.claude-plugin/` で配布）
+
+```
+.claude-plugin/
+  plugin.json              # プラグインマニフェスト
+  marketplace.json         # マーケットプレイスリスティング
+  .mcp.json                # MCP サーバー設定
+  hooks/
+    hooks.json             # フック定義（PostToolUse など）
+    tasks-read-guard.sh    # タスク読み取りガードスクリプト
+  skills/                  # 仕様駆動ワークフロースキル
+    spec-requirements/     # 要件作成
+    spec-design/           # 設計ドキュメント作成
+    spec-tasks/            # タスク分割
+    spec-implement/        # 実装ワークフロー
+    spec-review/           # コードレビュー
+    integration-test/      # 統合テスト
+    tdd-skills/            # TDD ワークフロー
+    tdd-skills-rust/       # Rust 特化 TDD
+    knowhow-capture/       # ナレッジキャプチャ
+  agents/                  # 専門サブエージェント
+    code-simplifier.md     # コード簡素化
+    review-worker.md       # レビュー自動化
+    unit-test-engineer.md  # ユニットテスト生成
+    parallel-worker.md     # 並列タスク実行
+    integ-test-worker.md   # 統合テストワーカー
+    integ-test-auditor.md  # 統合テスト監査
+  rules/                   # プロジェクトルールと規約
+    quality-checks.md      # 品質チェック
+    security.md            # セキュリティガイドライン
+    design-principles.md   # 設計原則
+    ...
+  with-dashboard/          # ダッシュボードバリアント
+    plugin.json
+    .mcp.json
 ```
 
 ## 🛠️ 開発
