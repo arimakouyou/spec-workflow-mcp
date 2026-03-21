@@ -185,8 +185,8 @@ Main loop: monitor until all tasks are complete.
 cargo test --test integration_{domain} -- --nocapture
 
 # Code quality
-rustfmt tests/integration/test_{domain}.rs
-cargo clippy --tests --quiet
+cargo fmt --all -- --check
+cargo clippy --quiet --all-targets -- -D warnings
 ```
 
 If verification fails, Command fixes it directly.

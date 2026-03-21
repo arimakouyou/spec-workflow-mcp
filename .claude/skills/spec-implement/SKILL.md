@@ -43,7 +43,7 @@ If ANY file is missing — **STOP immediately. Do NOT start implementing.**
 | design.md | `/spec-design` |
 | tasks.md | `/spec-tasks` |
 
-Tell the user: "Cannot start implementation because {filename} does not exist. Please run {skill name} first." Then exit this skill.
+Tell the user: "Cannot start implementation because {filename} does not exist. Please run {skill-name} first." Then exit this skill.
 
 ---
 
@@ -289,7 +289,7 @@ Agent({
 Capture from the result: **simplify_result**, **changed_files** (if simplified), **test_result**.
 
 - `test_result: pass` → proceed to step 6 (pass `changed_files`)
-- `test_result: fail` → roll back only the files in `changed_files` using `git restore {changed_files}`, then proceed to step 6 (record as `simplify_result: reverted`)
+- `test_result: fail` → roll back only the files in `changed_files` using `git restore -- {changed_files}`, then proceed to step 6 (record as `simplify_result: reverted`)
 - `simplify_result: no_change` → proceed directly to step 6
 
 ### 6. Code Review + Commit (review-worker) [AGENT CALL REQUIRED]
