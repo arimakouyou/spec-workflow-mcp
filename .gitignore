@@ -142,6 +142,7 @@ CLAUDE.md
 !.claude/agents/
 !.claude/commands/
 !.claude/rules/
+!.claude/hooks/
 !.claude/_docs/
 !.claude/settings.json
 .serena
