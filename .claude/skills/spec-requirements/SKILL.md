@@ -84,7 +84,7 @@ fix 完了後、内容の問題を検出する。ファイルは修正しない:
 Agent({
   subagent_type: "general-purpose",
   description: "Review requirements spec (check)",
-  prompt: "You are a spec document reviewer. Review and fix the document at:
+  prompt: "You are a spec document reviewer. Review the document (do NOT modify the file) at:
     {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Document type: requirements

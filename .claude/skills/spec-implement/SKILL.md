@@ -222,7 +222,7 @@ parallel-worker の `status` に応じて分岐:
   | 選択 | 手順 |
   |------|------|
   | **手動修正して再開** | ユーザーが `{WORKTREE_PATH}` 内を手動修正した後、step 5（UT）から再開する。rework カウンターはリセットしない（通算カウントを引き継ぐ） |
-  | **タスクをスキップ** | tasks.md の `[-]` を `[!]`（ブロック状態）に変更し、理由をコメントで追記する。次の `[ ]` タスクに進む |
+  | **タスクをスキップ** | tasks.md の該当タスク行に `<!-- BLOCKED: {理由} -->` をコメントとして追記し、`[-]` を `[ ]` に戻す。次の `[ ]` タスクに進む |
   | **設計を見直す** | `review_action: escalate` と同じフローに従う（design.md の範囲内で調整するか、Phase Reset かをユーザーが判断） |
 
 ### 5. Unit Test Quality Verification 【エージェント呼び出し必須】
@@ -289,7 +289,7 @@ Agent({
 Capture from the result: **simplify_result**, **changed_files** (if simplified), **test_result**.
 
 - `test_result: pass` → step 6 へ（`changed_files` を伝達）
-- `test_result: fail` → 簡潔化を `git checkout -- .` で取り消し、step 6 へ（`simplify_result: reverted` として記録）
+- `test_result: fail` → `changed_files` に含まれるファイルのみを `git restore {changed_files}` で巻き戻し、step 6 へ（`simplify_result: reverted` として記録）
 - `simplify_result: no_change` → そのまま step 6 へ
 
 ### 6. Code Review + Commit (review-worker) 【エージェント呼び出し必須】

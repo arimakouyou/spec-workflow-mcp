@@ -218,7 +218,7 @@ fix 完了後、内容の問題を検出する。ファイルは修正しない:
 Agent({
   subagent_type: "general-purpose",
   description: "Review tasks spec (check)",
-  prompt: "You are a spec document reviewer. Review and fix the document at:
+  prompt: "You are a spec document reviewer. Review the document (do NOT modify the file) at:
     {project-path}/.spec-workflow/specs/{spec-name}/tasks.md
 
     Document type: tasks

@@ -2,7 +2,7 @@
 # spec-workflow: tasks.md 読了後のガードレール
 # PostToolUse(Read) フックから呼び出される
 
-FILE_PATH=$(jq -r '.tool_input.file_path // empty')
+FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null || echo '')
 
 if echo "$FILE_PATH" | grep -qE '[.]spec-workflow/specs/[^/]+/tasks[.]md$'; then
   echo "⛔ [spec-workflow] STOP — tasks.md を読みました。"
