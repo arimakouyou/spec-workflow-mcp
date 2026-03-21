@@ -36,7 +36,7 @@ Use the whiteboard only when `Whiteboard path` is provided by the orchestrator (
 
 ## Quality Checks (all must pass)
 
-Use the unified commands defined in `.claude/rules/quality-checks.md`.
+Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
 
 ```bash
 cargo fmt --all -- --check

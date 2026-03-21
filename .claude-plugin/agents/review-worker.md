@@ -24,7 +24,7 @@ Use the whiteboard only when `Whiteboard path` is provided by the orchestrator (
 
 ## Quality Checks (all must pass)
 
-Use the unified commands defined in `.claude/rules/quality-checks.md`.
+Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
 
 ```bash
 cargo fmt --all -- --check
@@ -40,7 +40,7 @@ Inspect the diff with `git diff` and check all of the following aspects in order
 
 ### A. Style and Conventions
 
-Refer to `.claude/rules/rust-style.md` and the relevant framework rules.
+Refer to `.claude-plugin/rules/rust-style.md` and the relevant framework rules.
 
 - Compliance with project rules
 - Validity of naming (whether types, functions, and variables accurately express their intent)
@@ -48,7 +48,7 @@ Refer to `.claude/rules/rust-style.md` and the relevant framework rules.
 
 ### B. Design and Structure
 
-Refer to `.claude/rules/design-principles.md`. Pay particular attention to the following:
+Refer to `.claude-plugin/rules/design-principles.md`. Pay particular attention to the following:
 
 - **Separation of concerns**: Does each function/struct have a single responsibility? Is business logic leaking into handlers?
 - **Consistency of error handling**: Missing conversions to the common error type, inappropriate use of `unwrap()`, and information content of error messages
@@ -58,7 +58,7 @@ Refer to `.claude/rules/design-principles.md`. Pay particular attention to the f
 
 ### C. Security (OWASP Top 10 + Authentication/Authorization)
 
-Refer to `.claude/rules/security.md`. Check the following against the diff:
+Refer to `.claude-plugin/rules/security.md`. Check the following against the diff:
 
 | # | Aspect | What to check |
 |---|--------|--------------|
@@ -88,7 +88,7 @@ Although unit-test-engineer has already ensured test quality, perform a final ch
 
 ### F. Design Conformance
 
-Refer to `.claude/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
+Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
 
 - **DB Schema**: Does the migration's table definition (column names, types, constraints, indexes) match design.md?
 - **API**: Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
