@@ -97,6 +97,15 @@ spec-workflow-mcp/
 │   ├── utils/             # ユーティリティ関数
 │   └── types/             # TypeScript型定義
 ├── dist/                   # コンパイルされたJavaScript
+├── .claude-plugin/        # Claude Code プラグイン配布
+│   ├── plugin.json        # プラグインマニフェスト
+│   ├── marketplace.json   # マーケットプレイスリスティング
+│   ├── .mcp.json          # MCPサーバー設定
+│   ├── hooks/             # プラグインフック
+│   ├── skills/            # ワークフロースキル（spec-requirements、spec-design など）
+│   ├── agents/            # 専門サブエージェント
+│   ├── rules/             # プロジェクトルールと規約
+│   └── with-dashboard/    # ダッシュボードバリアント
 ├── dashboard/             # Webダッシュボードファイル
 │   ├── index.html         # ダッシュボードUI
 │   ├── styles.css         # ダッシュボードスタイル

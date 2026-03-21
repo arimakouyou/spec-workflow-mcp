@@ -97,6 +97,15 @@ spec-workflow-mcp/
 │   ├── utils/             # Utility functions
 │   └── types/             # TypeScript type definitions
 ├── dist/                   # Compiled JavaScript
+├── .claude-plugin/        # Claude Code plugin distribution
+│   ├── plugin.json        # Plugin manifest
+│   ├── marketplace.json   # Marketplace listing
+│   ├── .mcp.json          # MCP server configuration
+│   ├── hooks/             # Plugin hooks
+│   ├── skills/            # Workflow skills (spec-requirements, spec-design, etc.)
+│   ├── agents/            # Specialized sub-agents
+│   ├── rules/             # Project rules and conventions
+│   └── with-dashboard/    # Dashboard variant plugin
 ├── dashboard/             # Web dashboard files
 │   ├── index.html         # Dashboard UI
 │   ├── styles.css         # Dashboard styles

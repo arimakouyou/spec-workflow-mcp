@@ -45,7 +45,31 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 
 ## 🚀 Quick Start
 
-### Step 1: Add to your AI tool
+### Option 1: Claude Code Plugin (Recommended for Claude Code users)
+
+Install directly as a Claude Code plugin — skills, agents, rules, hooks, and MCP server are all configured automatically:
+
+```bash
+claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
+```
+
+Two plugin variants are available:
+
+| Plugin | Description |
+|--------|-------------|
+| `spec-workflow-mcp` | MCP server + skills/agents/rules/hooks |
+| `spec-workflow-mcp-with-dashboard` | MCP server only (lightweight, no skills/agents/rules/hooks) |
+
+> **Note**: The `spec-workflow-mcp-with-dashboard` variant is a minimal configuration containing only the MCP server. To use the dashboard, start it separately with `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard`.
+
+> **What the plugin includes:**
+> - MCP server for spec-driven development workflow
+> - Skills: spec-requirements, spec-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
+> - Agents: code-simplifier, review-worker, unit-test-engineer, parallel-worker, etc.
+> - Rules: project architecture, quality checks, security, design principles, etc.
+> - Hooks: automated task read guards
+
+### Option 2: Manual MCP Configuration
 
 Add to your MCP configuration (see client-specific setup below):
 
@@ -331,6 +355,8 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workfl
 
 ## 📁 Project Structure
 
+### Working Directory (per project)
+
 ```
 your-project/
   .spec-workflow/
@@ -341,6 +367,43 @@ your-project/
     templates/
     user-templates/
     config.example.toml
+```
+
+### Plugin Structure (distributed via `.claude-plugin/`)
+
+```
+.claude-plugin/
+  plugin.json              # Plugin manifest
+  marketplace.json         # Marketplace listing
+  .mcp.json                # MCP server configuration
+  hooks/
+    hooks.json             # Hook definitions (PostToolUse, etc.)
+    tasks-read-guard.sh    # Task read guard script
+  skills/                  # Spec-driven workflow skills
+    spec-requirements/     # Requirements creation
+    spec-design/           # Design document creation
+    spec-tasks/            # Task breakdown
+    spec-implement/        # Implementation workflow
+    spec-review/           # Code review
+    integration-test/      # Integration testing
+    tdd-skills/            # TDD workflow
+    tdd-skills-rust/       # Rust-specific TDD
+    knowhow-capture/       # Knowledge capture
+  agents/                  # Specialized sub-agents
+    code-simplifier.md     # Code simplification
+    review-worker.md       # Review automation
+    unit-test-engineer.md  # Unit test generation
+    parallel-worker.md     # Parallel task execution
+    integ-test-worker.md   # Integration test worker
+    integ-test-auditor.md  # Integration test auditor
+  rules/                   # Project rules and conventions
+    quality-checks.md      # Quality enforcement
+    security.md            # Security guidelines
+    design-principles.md   # Design principles
+    ...
+  with-dashboard/          # Dashboard variant plugin
+    plugin.json
+    .mcp.json
 ```
 
 ## 🛠️ Development
