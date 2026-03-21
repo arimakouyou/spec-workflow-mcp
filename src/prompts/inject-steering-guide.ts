@@ -10,7 +10,6 @@ const prompt: Prompt = {
 };
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
-  // ツールハンドラを呼び出してガイドを取得（ダッシュボードのプレビューではサンプルコンテキストのため失敗する可能性がある）
   let guide = '';
   let dashboardUrl: string | undefined;
   let nextSteps: string[] = [];
@@ -19,8 +18,15 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
     guide = toolResponse.data?.guide || '';
     dashboardUrl = toolResponse.data?.dashboardUrl;
     nextSteps = toolResponse.nextSteps || [];
-  } catch {
-    guide = '(ステアリングガイドはプロジェクトコンテキストで生成されます)';
+  } catch (error: unknown) {
+    if (context.projectPath === '{{projectPath}}') {
+      // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
+      guide = '(ステアリングガイドはプロジェクトコンテキストで生成されます)';
+    } else {
+      // 本番コンテキストではエラー内容を表面化
+      const message = error instanceof Error ? error.message : String(error);
+      guide = `(ステアリングガイドの生成中にエラーが発生しました: ${message})`;
+    }
   }
 
   const messages: PromptMessage[] = [

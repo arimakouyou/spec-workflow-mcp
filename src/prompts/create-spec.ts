@@ -33,8 +33,9 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
   }
 
   const validDocTypes = ['requirements', 'design', 'tasks'];
-  // テンプレート変数パターン（ダッシュボードのプレビュー用）はバリデーションをスキップ
-  if (!validDocTypes.includes(documentType) && !documentType.startsWith('{{')) {
+  // ダッシュボードのプレビュー用サンプルコンテキストではバリデーションをスキップ
+  const isPreviewContext = context.projectPath === '{{projectPath}}';
+  if (!isPreviewContext && !validDocTypes.includes(documentType)) {
     throw new Error(`documentType must be one of: ${validDocTypes.join(', ')}`);
   }
 
