@@ -23,9 +23,8 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
       // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
       guide = '(ワークフローガイドはプロジェクトコンテキストで生成されます)';
     } else {
-      // 本番コンテキストではエラー内容を表面化
-      const message = error instanceof Error ? error.message : String(error);
-      guide = `(ワークフローガイドの生成中にエラーが発生しました: ${message})`;
+      // 本番コンテキストではエラーを上位レイヤーに伝播させる
+      throw error;
     }
   }
 
