@@ -48,12 +48,42 @@ Write the file to:
 
 ### 5. Self-Review via Subagent (before approval)
 
-Spawn a subagent to review the document before requesting approval. This keeps review details out of your main context. The subagent checks only — apply any fixes yourself after receiving the report:
+承認前に **2 段階**でドキュメントを検証する。
+
+#### ステップ A: fix（機械的自動修正）
+
+placeholder・フォーマット・typo を自動修正する。内容の追加・変更は行わない:
 
 ```
 Agent({
   subagent_type: "general-purpose",
-  description: "Review requirements spec",
+  description: "Fix requirements spec (auto-fix)",
+  prompt: "You are a spec document reviewer. Auto-fix minor issues in the document at:
+    {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+
+    Document type: requirements
+
+    Auto-fix の対象（ファイルを直接修正してよい）:
+    - placeholder テキストの削除（[describe...], TODO, TBD）
+    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
+    - 明らかな typo
+
+    Auto-fix の対象外（issues として報告のみ）:
+    - セクションの追加・削除
+    - 内容の追加・変更（要件、Acceptance Criteria 等）
+
+    Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
+})
+```
+
+#### ステップ B: check（内容検証）
+
+fix 完了後、内容の問題を検出する。ファイルは修正しない:
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  description: "Review requirements spec (check)",
   prompt: "You are a spec document reviewer. Review and fix the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
@@ -71,7 +101,7 @@ Agent({
 })
 ```
 
-Wait for the subagent to complete, then proceed to approval.
+check が FAIL の場合は指摘を自分で修正し、check を再実行する（最大 3 回）。PASS になったら承認へ進む。
 
 ### 6. Approval Workflow
 

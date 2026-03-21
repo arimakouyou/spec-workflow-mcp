@@ -197,12 +197,43 @@ Wave 1 で `(Wave 2 で記述)` としたセクションを全て埋める。
 
 ### 6. Self-Review via Subagent (before approval)
 
-Wave 2 完了後、サブエージェントでレビューしてから正式承認を依頼する:
+Wave 2 完了後、**2 段階**でレビューしてから正式承認を依頼する。
+
+#### ステップ A: fix（機械的自動修正）
+
+placeholder・フォーマット・typo を自動修正する。内容の追加・変更は行わない:
 
 ```
 Agent({
   subagent_type: "general-purpose",
-  description: "Review design spec",
+  description: "Fix design spec (auto-fix)",
+  prompt: "You are a spec document reviewer. Auto-fix minor issues in the document at:
+    {project-path}/.spec-workflow/specs/{spec-name}/design.md
+
+    Document type: design
+
+    Auto-fix の対象（ファイルを直接修正してよい）:
+    - placeholder テキストの削除（[describe...], TODO, TBD, '(Wave 2 で記述)' 等）
+    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
+    - 明らかな typo
+
+    Auto-fix の対象外（issues として報告のみ）:
+    - セクションの追加・削除
+    - 内容の追加・変更（設計コンポーネント、エラーコード、DB スキーマ等）
+    - トレーサビリティの不整合
+
+    Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
+})
+```
+
+#### ステップ B: check（内容検証）
+
+fix 完了後、内容の問題を検出する。ファイルは修正しない:
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  description: "Review design spec (check)",
   prompt: "You are a spec document reviewer. Review and fix the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/design.md
 
@@ -224,7 +255,7 @@ Agent({
 })
 ```
 
-サブエージェントの完了を待ち、指摘があれば修正してから承認へ進む。
+check が FAIL の場合は指摘を自分で修正し、check を再実行する（最大 3 回）。PASS になったら承認へ進む。
 
 ### 7. Approval Workflow
 

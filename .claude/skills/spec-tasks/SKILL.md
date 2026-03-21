@@ -181,12 +181,43 @@ tasks.md の作成後、design.md の Requirements Traceability Matrix に「対
 
 ### 7. Self-Review via Subagent (before approval)
 
-Spawn a subagent to review and fix the document before requesting approval:
+承認前に **2 段階**でドキュメントを検証する。
+
+#### ステップ A: fix（機械的自動修正）
+
+placeholder・フォーマット・typo を自動修正する。内容の追加・変更は行わない:
 
 ```
 Agent({
   subagent_type: "general-purpose",
-  description: "Review tasks spec",
+  description: "Fix tasks spec (auto-fix)",
+  prompt: "You are a spec document reviewer. Auto-fix minor issues in the document at:
+    {project-path}/.spec-workflow/specs/{spec-name}/tasks.md
+
+    Document type: tasks
+
+    Auto-fix の対象（ファイルを直接修正してよい）:
+    - placeholder テキストの削除（[describe...], TODO, TBD）
+    - マークダウンフォーマットの修正（テーブル整形、見出しレベル等）
+    - 明らかな typo
+
+    Auto-fix の対象外（issues として報告のみ）:
+    - タスクの追加・削除・統合
+    - _Prompt、_Leverage、_Requirements 等の内容の変更
+    - トレーサビリティの不整合
+
+    Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
+})
+```
+
+#### ステップ B: check（内容検証）
+
+fix 完了後、内容の問題を検出する。ファイルは修正しない:
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  description: "Review tasks spec (check)",
   prompt: "You are a spec document reviewer. Review and fix the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/tasks.md
 
@@ -216,7 +247,7 @@ Agent({
 })
 ```
 
-Wait for the subagent to complete, then proceed to approval.
+check が FAIL の場合は指摘を自分で修正し、check を再実行する（最大 3 回）。PASS になったら承認へ進む。
 
 ### 8. Approval Workflow
 
