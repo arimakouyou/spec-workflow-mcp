@@ -182,7 +182,7 @@ Main loop: monitor until all tasks are complete.
 
 ```bash
 # Run across all test files
-cargo test --test integration_{domain} -- --nocapture
+cargo test --test test_{domain} -- --nocapture
 
 # Code quality
 cargo fmt --all -- --check
