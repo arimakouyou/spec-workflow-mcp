@@ -416,8 +416,20 @@ Agent({
     - Files with simplify_result: simplified have been confirmed by code-simplifier to preserve functionality and pass tests.
       In category A (style), evaluate the simplified code as the final form.
 
-    Review across all aspects (A:style, B:design, C:security, D:spec compliance, E:tests, F:design conformance)
-    and report review_action as one of: commit / rework / escalate.`
+    ## Review Checklist (各カテゴリの具体的な確認項目)
+    以下の各質問に対して、具体的な回答を observations に記録すること:
+
+    **A: Style** — 命名は意図を正確に表現しているか? プロジェクト既存コードとスタイルは一貫しているか?
+    **B: Design** — unwrap() を不適切に使用していないか? 各関数は単一責任か? 依存方向は正しいか?
+    **C: Security** — 外部入力はバリデーションされているか? レスポンスに内部情報が漏洩していないか? SQL はクエリビルダー経由か?
+    **D: Spec** — _Prompt の Success 基準を1つずつ確認し、各基準の充足/不足を明示すること
+    **E: Tests** — テストは実装と同期しているか? 値の検証（is_ok() だけでなく具体値の確認）があるか?
+    **F: Design Conformance** — design.md に未定義のフィールド/エンドポイントが追加されていないか?
+
+    ⚠️ 各カテゴリの observations を完了レポートに必ず含めること。
+    「問題なし」の場合でも、何を確認して問題なしと判断したかを記載する。
+    review_action が commit であっても observations と auto_fixed は必須。
+    report review_action as one of: commit / rework / escalate.`
 })
 ```
 
@@ -532,9 +544,31 @@ Required fields:
       ]
     }
     ```
-  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted:
+  - `observations` (REQUIRED — review-worker のレビュー観察ログ。commit 時も含め常に記録):
     ```json
-    "reviewProcess": { "reworkCount": 0, "reviewOutcome": "commit" }
+    "observations": {
+      "style": "checked-ok: 命名規則準拠、create_user/UserDto 等",
+      "design": "checked-ok: AppError 変換あり、unwrap() なし",
+      "security": "checked-ok: クエリビルダー使用、入力バリデーションあり",
+      "spec_compliance": "checked-ok: Success 基準3項目すべて充足",
+      "test_quality": "checked-ok: 値の具体的検証あり、境界値テストあり",
+      "design_conformance": "checked-ok: design.md 定義外の追加なし"
+    }
+    ```
+  - `autoFixed`: 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
+    ```json
+    "autoFixed": [
+      { "category": "A:style", "file": "src/handler.rs:45", "description": "unwrap() を map_err() に修正" }
+    ]
+    ```
+  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted, but `observations` and `autoFixed` are always required:
+    ```json
+    "reviewProcess": {
+      "reworkCount": 0,
+      "reviewOutcome": "commit",
+      "observations": { "style": "checked-ok: ...", "design": "checked-ok: ...", ... },
+      "autoFixed": []
+    }
     ```
 
 **If log-implementation fails:**
