@@ -40,7 +40,7 @@ cargo test --quiet
 
 When the project uses `cargo-leptos` (detected by `[package.metadata.leptos]` in `Cargo.toml`), the following additional checks are **required** after the standard checks above.
 
-### cargo-leptos build
+### cargo-leptos build (preferred)
 
 ```bash
 cargo leptos build
@@ -50,27 +50,37 @@ cargo leptos build
 - Catches WASM compilation errors that `cargo build` / `cargo test` alone cannot detect (they only compile for the host target)
 - Must pass before any commit
 
-### WASM-specific clippy (optional, when cargo-leptos is unavailable)
+### WASM-specific clippy (required fallback when cargo-leptos is unavailable)
 
 ```bash
 cargo clippy --target wasm32-unknown-unknown --no-default-features --features hydrate --quiet -- -D warnings
 ```
 
-- Use this as a fallback when `cargo-leptos` is not installed
+- **Required** when `cargo-leptos` is not installed — WASM verification must not be skipped
 - `--features hydrate`: Compiles only the client-side code path
 - Detects WASM-incompatible API usage (e.g., `std::fs`, `std::net`, `tokio::spawn`)
 
-### Detection rule for agents
+### Detection and availability check for agents
 
-Before running quality checks, agents must check for a Leptos full-stack configuration:
+Before running quality checks, agents must check for a Leptos full-stack configuration and tool availability:
 
 ```bash
+# Step 1: Detect Leptos project
 grep -q 'package.metadata.leptos' Cargo.toml 2>/dev/null
+
+# Step 2: If Leptos detected, check cargo-leptos availability
+cargo leptos --version 2>/dev/null
 ```
 
-If detected, include the `cargo leptos build` step in the quality check sequence. The full check order becomes:
+| Leptos detected | cargo-leptos available | Action |
+|-----------------|----------------------|--------|
+| No | — | Skip WASM checks |
+| Yes | Yes | Run `cargo leptos build` |
+| Yes | No | Run WASM-specific clippy as required fallback |
+
+The full check order becomes:
 
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --quiet --all-targets -- -D warnings`
 3. `cargo test --quiet`
-4. `cargo leptos build` (Leptos projects only)
+4. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)

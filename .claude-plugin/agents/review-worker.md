@@ -34,13 +34,19 @@ cargo test --quiet
 
 ### Leptos Full-Stack Projects
 
-If `Cargo.toml` contains `[package.metadata.leptos]`, also run:
+If `Cargo.toml` contains `[package.metadata.leptos]`, WASM frontend build verification is **required**:
 
 ```bash
-cargo leptos build
+# Check cargo-leptos availability
+if cargo leptos --version 2>/dev/null; then
+  cargo leptos build
+else
+  # Fallback: WASM-specific clippy
+  cargo clippy --target wasm32-unknown-unknown --no-default-features --features hydrate --quiet -- -D warnings
+fi
 ```
 
-This verifies WASM frontend compilation. Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
+Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
 
 On failure, apply minimal fixes and run all checks again.
 

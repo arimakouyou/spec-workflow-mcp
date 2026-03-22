@@ -79,13 +79,22 @@ Agent({
     変更ファイル: {changed-files}
 
     ★重要: 最新のセキュリティ情報に基づいてレビューすること★
-    レビュー開始前に、以下の情報を WebSearch で取得してください:
+    レビュー開始前に、以下の情報を取得してください:
+
+    【WebSearch が利用可能な場合】
     1. 使用しているフレームワーク・ライブラリの最新セキュリティアドバイザリ
        - 検索例: "{framework名} security advisory {current year}"
        - 検索例: "{framework名} CVE {current year}"
     2. 認証・認可に関する最新のベストプラクティス
        - 検索例: "authentication best practices {current year}"
        - 検索例: "JWT security vulnerabilities {current year}"
+
+    【WebSearch が利用できない場合のオフラインフォールバック】
+    1. `cargo audit` を実行して既知の脆弱性を検出（RustSec Advisory DB ベース）
+    2. Cargo.toml の依存クレートバージョンを確認し、明らかに古いバージョンを検出
+    3. 自身の学習データに基づくセキュリティベストプラクティスでレビュー
+    4. レポートに「オフラインレビュー: WebSearch 未使用」と明記
+
     取得した情報をレビューの判断基準に反映させること。
 
     レビュー観点:
@@ -119,22 +128,31 @@ Agent({
     プロジェクトパス: {project-path}
     変更ファイル: {changed-files}
 
-    ★重要: 最新の脆弱性情報を実際に検索してからレビューすること★
-    レビュー開始前に、以下の手順を必ず実行してください:
+    ★重要: 最新の脆弱性情報に基づいてレビューすること★
+    レビュー開始前に、以下の手順を実行してください:
 
     手順1: プロジェクトの依存クレートを特定
     - Cargo.toml を読み、依存クレート名とバージョンを一覧化する
 
-    手順2: 各依存クレートの最新 CVE を WebSearch で検索
-    - 検索例: "{crate名} CVE" (例: "axum CVE", "diesel CVE", "tokio CVE")
-    - 検索例: "{crate名} security advisory {current year}"
-    - 検索例: "RustSec advisory {crate名}"
-    - RustSec Advisory Database (https://rustsec.org/advisories/) も参照
+    手順2: 依存クレートの脆弱性を確認
+    【WebSearch が利用可能な場合】
+    - 各クレートの最新 CVE を検索:
+      - 検索例: "{crate名} CVE" (例: "axum CVE", "diesel CVE", "tokio CVE")
+      - 検索例: "{crate名} security advisory {current year}"
+      - 検索例: "RustSec advisory {crate名}"
+      - RustSec Advisory Database (https://rustsec.org/advisories/) も参照
     - 見つかった CVE について、使用中のバージョンが影響を受けるか確認
+    【WebSearch が利用できない場合のオフラインフォールバック】
+    - `cargo audit` を実行して RustSec Advisory DB から既知の脆弱性を検出
+    - Cargo.toml のバージョンを確認し、明らかに古いバージョンをフラグ
+    - レポートに「オフラインレビュー: WebSearch 未使用、cargo audit ベース」と明記
 
     手順3: OWASP の最新動向を確認
+    【WebSearch が利用可能な場合】
     - 検索例: "OWASP TOP 10 latest update"
     - 検索例: "OWASP {使用フレームワーク} cheat sheet"
+    【WebSearch が利用できない場合】
+    - 自身の学習データに基づく OWASP TOP 10 知識でレビュー
 
     手順4: 上記の情報を踏まえてコードをレビュー
 
@@ -254,13 +272,13 @@ Agent({
 #### 2.2 レポートファイルの保存
 
 ```
-.spec-workflow/specs/{spec-name}/reviews/phase-{N}-review.md
+.spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md
 ```
 
 レポートフォーマット:
 
 ```markdown
-# Phase {N} Expert Team Review
+# Phase {phase-number} Expert Team Review
 
 **Date**: {date}
 **Spec**: {spec-name}
