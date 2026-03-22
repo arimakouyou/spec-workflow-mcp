@@ -173,6 +173,31 @@ findings:
 - The send-back → re-review cycle is limited to a **maximum of 3 times**
 - If not resolved after 3 cycles, escalate to the user with the remaining findings attached
 
+## Phase Review Context (PhaseReview tasks only)
+
+Phase Review（PhaseReview タスク）のコンテキストで呼び出された場合、通常の品質チェック・コードレビューに加えて、オーケストレーターから渡された **統合検証結果** を確認する。
+
+### 統合検証結果の確認
+
+オーケストレーターのプロンプトに含まれる統合検証結果（ビルド / 統合テスト / スモークテスト）を確認する:
+
+| 統合検証結果 | アクション |
+|-------------|----------|
+| 全ステップ PASS | 通常のレビューフローを続行 |
+| いずれかが FAIL | `review_action: rework` を返す。findings に統合検証の失敗内容を含める |
+| 一部 SKIP（FAIL なし） | 通常のレビューフローを続行。SKIP された検証項目をレポートの Notes に記載 |
+
+### 完了レポートへの追加
+
+Phase Review の場合、完了レポートに以下のキーを追加する:
+
+```
+- integration_verification:
+    - build: pass|fail|skip
+    - integration_tests: pass|fail|skip
+    - smoke_test: pass|fail|skip
+```
+
 ## Commit
 
 Commit only when all aspects have passed. Do not commit while any findings remain.

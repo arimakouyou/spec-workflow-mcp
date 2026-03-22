@@ -56,11 +56,24 @@ Tasks must be approved and cleaned up (Phases 1-3 complete). If not, use `/spec-
 
 ## Task Cycle
 
-Repeat for each task:
+Repeat for each wave:
 
-### 1. Start the Task
+### 1. Start the Wave
 
-Edit `.spec-workflow/specs/{spec-name}/tasks.md` and change the task marker from `[ ]` to `[-]`. Only one task should be in-progress at a time.
+Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves based on `_DependsOn:` dependencies:
+
+1. Parse tasks.md to identify Phase structure and `_DependsOn:` metadata
+2. Compute execution waves using topological sort — tasks with no unresolved dependencies form a wave
+3. The **next pending wave** is the first wave (in Phase order) containing at least one `[ ]` task
+
+**Single-task wave**: If the wave contains only one task, process it as before (sequential flow).
+
+**Multi-task wave**: If the wave contains multiple tasks, process them in parallel:
+- Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
+- Prepare worktrees for all tasks (step 3.7)
+- Launch parallel-workers simultaneously (step 4)
+
+**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed sequentially as before (backward compatible).
 
 ### 2. Discover Existing Work
 
@@ -104,6 +117,44 @@ cargo test --quiet
 - **Failures** → analyze the failing test errors and identify the root cause task:
   - **Root cause is a task within the current Phase** → revert the root cause task from `[x]` to `[-]`, and revert the PhaseReview task from `[-]` to `[ ]`. Re-run the root cause task from step 4.
   - **Root cause is a task from a prior Phase** → escalate to the user (prior Phase fix is needed, impact scope must be assessed)
+
+#### 3.5.1.5 Integration Verification (統合検証)
+
+ユニットテスト通過後、Phase の成果物が統合レベルで動作することを検証する。
+コマンド定義は `quality-checks.md` の「Integration Verification」セクションを参照。
+
+**Step A: プロジェクトタイプ検出**
+
+| 検出条件 | タイプ |
+|----------|--------|
+| `Cargo.toml` に `[package.metadata.leptos]` | Leptos フルスタック |
+| `Cargo.toml` に `axum` / `actix-web` / `rocket` 依存 | Rust API |
+| `package.json` 存在 | Node.js |
+| いずれにも該当しない | Generic（ビルドのみ検証） |
+
+**Step B: ビルド検証（必須）**
+
+成果物のビルドが成功することを確認する。コマンドはプロジェクトタイプに応じて `quality-checks.md` を参照。
+
+**Step C: 統合テスト実行（テストが存在する場合のみ）**
+
+`tests/integration*` ディレクトリまたは同等のテストファイルが存在する場合に実行。存在しない場合は SKIP。
+
+**Step D: スモークテスト（API プロジェクトのみ）**
+
+サーバを一時起動し、ヘルスチェックエンドポイントへの疎通を確認する。外部依存（DB等）で起動不可の場合は SKIP + ログ記録。
+
+**結果判定:**
+
+| 結果 | アクション |
+|------|----------|
+| PASS | 3.5.2 Expert Team Review に進む |
+| FAIL (ビルド) | ビルドエラーを分析、根本原因タスクを特定。Phase 内タスク → `[x]` を `[-]` に戻して差し戻し、PhaseReview を `[ ]` に戻す。根本原因タスクの step 4 から再実行 |
+| FAIL (統合テスト) | 失敗テストを分析、根本原因タスク特定。Phase 内タスク → 差し戻し、前 Phase → ユーザーエスカレート |
+| FAIL (スモーク) | 起動ログを分析し根本原因特定、差し戻し |
+| SKIP (環境依存) | ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
+
+統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
 #### 3.5.2 Expert Team Review (multi-perspective review)
 
@@ -172,9 +223,11 @@ If the task has `_TDDSkip: true_` (tasks that cannot be tested such as project i
 2. After parallel-worker completes, skip step 5 (UT) and step 5.5 (code-simplifier) and proceed to step 6 (review-worker)
 3. review-worker reviews across all aspects as usual (but skip category E: final test verification)
 
-### 3.7 Prepare Worktree
+### 3.7 Prepare Worktrees
 
-Prepare a git worktree for each task. This allows parallel-worker and review-worker to work safely in independent working directories without affecting the orchestrator's main branch.
+Prepare a git worktree for each task in the wave. This allows parallel-worker and review-worker to work safely in independent working directories without affecting the orchestrator's main branch.
+
+**For multi-task waves**: Create worktrees for ALL tasks in the wave before launching any parallel-workers.
 
 ```bash
 WORKTREE_PATH=".worktrees/{spec-name}/{task-id}"
@@ -196,6 +249,8 @@ Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prom
 > ⛔ **Do not write code yourself. Always call the `parallel-worker` agent.**
 
 Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
+
+**Wave parallel execution**: For multi-task waves, launch ALL parallel-worker agents **simultaneously** in a single message with multiple Agent tool calls. Each agent works in its own isolated worktree. Wait for all agents to complete before proceeding to step 5.
 
 ```javascript
 Agent({
@@ -506,7 +561,114 @@ git worktree remove "$WORKTREE_PATH"
 git branch -d "$BRANCH"
 ```
 
-Then move to the next pending task and repeat.
+Then move to the next pending wave and repeat.
+
+### 9. Final E2E Gate (全Phase完了後)
+
+全 Phase の実装が完了した後（最後の PhaseReview タスクが `[x]` になった後）、最終的な E2E ゲートを実行する。
+これは個別 Phase の統合検証（3.5.1.5）とは異なり、**全成果物を統合した最終確認**である。
+
+#### 9.1 トリガー条件
+
+tasks.md 内の全タスク（PhaseReview 含む）が `[x]` になった時点で自動的に開始する。
+
+#### 9.2 検証ステップ
+
+コマンド定義は `quality-checks.md` の「Integration Verification」セクションを参照。
+
+**Step 1: フルビルド検証**
+
+プロジェクト全体のクリーンビルドが成功することを確認する。
+
+```bash
+# Rust
+cargo build
+
+# Leptos
+cargo leptos build
+
+# Node.js
+npm run build
+```
+
+**Step 2: 全テスト実行**
+
+ユニットテスト + 統合テストの全件を実行する。
+
+```bash
+# Rust
+cargo test --quiet
+
+# Node.js
+npm test
+```
+
+**Step 3: 統合テスト実行**
+
+統合テストが存在する場合、明示的に統合テストのみを実行する。
+
+```bash
+# Rust
+cargo test --test 'integration*' --quiet
+
+# Node.js
+npm run test:integration
+```
+
+**Step 4: フルスモークテスト（API プロジェクトのみ）**
+
+Phase Review のスモークテスト（Step D）と同様の手順だが、ヘルスチェックに加えて、
+design.md に定義された主要エンドポイントのレスポンス確認も行う。
+
+- ヘルスチェック: `/health`, `/api/health`, `/healthz` への GET リクエスト
+- 主要エンドポイント: design.md の API 定義から GET エンドポイントを抽出し、ステータスコードを確認
+  - 認証が必要なエンドポイントは 401 が返ることを確認（認証なしで 200 が返る場合はセキュリティ問題）
+  - 認証不要なエンドポイントは 200 または 404（データなし）が返ることを確認
+
+#### 9.3 結果判定
+
+| 結果 | アクション |
+|------|----------|
+| **PASS** | 全検証クリア → 実装完了をユーザーに報告。`spec-status` ツールで最終ステータスを表示 |
+| **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
+| **SKIP (環境依存)** | ユーザーに手動検証を依頼。SKIP した検証項目と理由を明示的にリストし、ユーザーが自分で確認できるコマンドを提示する |
+
+#### 9.4 最終レポート
+
+Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-gate.md` に保存する。
+
+```markdown
+# Final E2E Gate Report
+
+## Spec: {spec-name}
+## Date: {date}
+
+## Results
+| Step | Result | Details |
+|------|--------|---------|
+| Build | PASS/FAIL/SKIP | {details} |
+| All Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
+| Integration Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
+| Smoke Test | PASS/FAIL/SKIP | {details} |
+
+## Verdict: PASS / FAIL / PARTIAL (SKIP あり)
+
+## Notes
+{SKIP の理由、手動検証が必要な項目等}
+```
+
+#### Wave Failure Handling
+
+When processing a multi-task wave, if any task results in `retry_exhausted`:
+1. **Continue executing** remaining tasks in the wave — do not abort the entire wave
+2. After all tasks in the wave complete/fail, report a summary to the user:
+   - Succeeded: [task-ids]
+   - Failed: [task-ids with reasons]
+3. Tasks in subsequent waves that depend on a failed task (via `_DependsOn:`):
+   - Mark as `BLOCKED` with comment: `<!-- BLOCKED: dependency {failed-task-id} failed -->`
+   - Skip these tasks in subsequent waves
+4. Tasks in subsequent waves with **no dependency** on failed tasks:
+   - Continue execution normally in the next wave
 
 ## Monitoring Progress
 
@@ -522,9 +684,9 @@ Use the `spec-status` MCP tool at any time to check overall progress, task count
 - **Agent calls for steps 4/5/6 are required** — no exceptions
 
 ### General Rules
-- **Do not use a whiteboard** — the whiteboard is exclusively for workflows that run multiple workers in parallel (e.g., wave-harness). Because spec-implement processes tasks sequentially with one worker at a time, do not pass `Whiteboard path` to parallel-worker / review-worker.
+- **Do not use a whiteboard** — the whiteboard is exclusively for workflows that run multiple workers in parallel (e.g., wave-harness). Wave-based parallel execution in spec-implement uses independent worktrees instead. Do not pass `Whiteboard path` to parallel-worker / review-worker.
 - Feature names use kebab-case
-- One task in-progress at a time
+- One **wave** in-progress at a time (multiple tasks within a wave may be in-progress simultaneously)
 - Always search implementation logs before coding (step 2)
 - Follow TDD: tests first (RED), then implementation (GREEN), then refactor (REFACTOR)
 - **Implementation (parallel-worker) and review (review-worker) are separate agents** — parallel-worker does not commit, review-worker does not implement

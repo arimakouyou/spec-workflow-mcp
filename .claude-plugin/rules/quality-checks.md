@@ -84,3 +84,99 @@ The full check order becomes:
 2. `cargo clippy --quiet --all-targets -- -D warnings`
 3. `cargo test --quiet`
 4. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
+
+## Integration Verification (Phase Review / Final E2E Gate)
+
+Phase Review (3.5.1.5) および全Phase完了後の Final E2E Gate (セクション9) で実行する統合レベルの検証。
+タスク単位の品質チェック（rustfmt, clippy, cargo test）とは独立したステップとして実行する。
+
+### プロジェクトタイプ検出
+
+以下の順で検出し、最初にマッチしたタイプを採用する:
+
+```bash
+# 1. Leptos フルスタック検出
+grep -q 'package.metadata.leptos' Cargo.toml 2>/dev/null && echo "leptos"
+
+# 2. Rust API 検出（axum, actix-web, rocket 等）
+grep -qE '(axum|actix-web|rocket)' Cargo.toml 2>/dev/null && echo "rust-api"
+
+# 3. Node.js 検出
+test -f package.json && echo "nodejs"
+
+# 4. いずれにも該当しない
+echo "generic"
+```
+
+### Step B: ビルド検証（全プロジェクト共通・必須）
+
+成果物のビルドが成功することを確認する。ビルド失敗は即座に FAIL とする。
+
+| タイプ | コマンド | 備考 |
+|--------|---------|------|
+| Leptos | `cargo leptos build` | SSR + WASM 両方をビルド |
+| Rust API | `cargo build` | リリースビルドは不要（デバッグビルドで十分） |
+| Node.js | `npm run build` | `build` スクリプトが package.json に存在する場合のみ |
+| Generic | `cargo build` or `npm run build` | 検出可能なビルドコマンドを実行 |
+
+### Step C: 統合テスト実行（テストが存在する場合のみ）
+
+統合テストファイルが存在する場合にのみ実行する。存在しない場合は SKIP（FAIL ではない）。
+
+```bash
+# Rust: 統合テストの存在確認
+ls tests/integration* tests/**/integration* 2>/dev/null
+
+# Node.js: 統合テストスクリプトまたはファイルの存在確認
+grep -q '"test:integration"' package.json 2>/dev/null || \
+  ls tests/integration* test/integration* __tests__/integration* 2>/dev/null
+```
+
+| タイプ | コマンド |
+|--------|---------|
+| Rust | `cargo test --test 'integration*' --quiet` |
+| Node.js（スクリプトあり） | `npm run test:integration` |
+| Node.js（ファイルのみ） | `npm test -- --testPathPattern=integration` |
+
+### Step D: スモークテスト（API プロジェクトのみ）
+
+API サーバを一時的に起動し、ヘルスチェックエンドポイントへの疎通を確認する。
+
+```bash
+# バックグラウンドでサーバ起動（最大30秒で強制終了）
+timeout 30 cargo run &
+SERVER_PID=$!
+sleep 5
+
+# ヘルスチェック（/health と /api/health を順に試行）
+HEALTH_STATUS="000"
+for ENDPOINT in "/health" "/api/health" "/healthz"; do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT:-3000}${ENDPOINT}" 2>/dev/null)
+  if [ "$STATUS" = "200" ]; then
+    HEALTH_STATUS="200"
+    break
+  fi
+done
+
+# クリーンアップ
+kill $SERVER_PID 2>/dev/null
+wait $SERVER_PID 2>/dev/null
+```
+
+**スモークテストの SKIP 条件**（FAIL ではなく SKIP として扱う）:
+- ヘルスチェックエンドポイントが定義されていない（設計書に記載なし）
+- 外部依存（DB、キャッシュ等）が必要でローカル起動できない
+- サーバ起動コマンドが不明（Cargo.toml に `[[bin]]` セクションがない等）
+- Node.js プロジェクトで `start` スクリプトが存在しない
+
+SKIP 時は必ずログに理由を記録し、Expert Team Review で補完する。
+
+### 統合検証の結果判定
+
+| 結果 | 条件 | アクション |
+|------|------|----------|
+| **PASS** | ビルド成功 + 統合テスト全パス（or SKIP）+ スモーク OK（or SKIP） | 次ステップに進む |
+| **FAIL (ビルド)** | ビルド失敗 | ビルドエラーを分析し、根本原因タスクを特定して差し戻し |
+| **FAIL (統合テスト)** | 統合テスト失敗 | 失敗テストのエラーを分析。Phase内タスク → 差し戻し、前Phase → ユーザーエスカレート |
+| **FAIL (スモーク)** | ヘルスチェック失敗（SKIP条件に該当しない場合） | 起動ログを分析し根本原因を特定して差し戻し |
+| **SKIP** | 環境依存で実行不可 | ログに SKIP 理由を記録し、次ステップに進む。Expert Team Review で補完 |
