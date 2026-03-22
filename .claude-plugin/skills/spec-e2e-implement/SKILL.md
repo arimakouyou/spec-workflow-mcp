@@ -14,6 +14,7 @@ argument-hint: "<spec-name> [--scope it|e2e|all] [--spec-id IT-1,E2E-1]"
 1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
 3. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
+4. Check `.spec-workflow/specs/{spec-name}/tasks.md` exists
 
 If ANY file is missing — **STOP immediately.** Inform the user which file is missing and which skill to run.
 
@@ -22,6 +23,7 @@ If ANY file is missing — **STOP immediately.** Inform the user which file is m
 | requirements.md | `/spec-requirements` |
 | design.md | `/spec-design` |
 | test-design.md | `/spec-test-design` |
+| tasks.md | `/spec-tasks` |
 
 ## Arguments
 

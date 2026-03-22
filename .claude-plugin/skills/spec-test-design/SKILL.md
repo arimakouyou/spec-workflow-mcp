@@ -33,9 +33,10 @@ The same **spec name** used in previous phases (kebab-case, e.g., `user-authenti
 
 ### 1. Load Resources
 
-**Template** — prefer custom, fall back to default:
+**Template** — prefer custom, fall back to default; if neither exists, use the structure defined in this skill:
 1. `.spec-workflow/user-templates/test-design-template.md` (custom)
-2. `.spec-workflow/templates/test-design-template.md` (default)
+2. `.spec-workflow/templates/test-design-template.md` (default; may not exist in all environments)
+3. If both files are missing, do **not** fail; instead, construct `test-design.md` directly following the sections and guidance described below.
 
 **Steering documents** — load if they exist:
 ```
