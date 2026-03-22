@@ -32,6 +32,22 @@ cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
 ```
 
+### Leptos Full-Stack Projects
+
+If `Cargo.toml` contains `[package.metadata.leptos]`, WASM frontend build verification is **required**:
+
+```bash
+# Check cargo-leptos availability
+if cargo leptos --version 2>/dev/null; then
+  cargo leptos build
+else
+  # Fallback: WASM-specific clippy
+  cargo clippy --target wasm32-unknown-unknown --no-default-features --features hydrate --quiet -- -D warnings
+fi
+```
+
+Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
+
 On failure, apply minimal fixes and run all checks again.
 
 ## Code Review
@@ -86,6 +102,21 @@ Although unit-test-engineer has already ensured test quality, perform a final ch
 - Is there any hardcoded sensitive information in the test data (e.g., production DB connection strings)?
 - Are there any tests skipped with `#[ignore]`?
 
+### E2. TDD Process Verification
+
+Verify that the implementation followed the Red-Green-Refactor cycle, not just "wrote implementation then added tests afterwards." Check for the following signs of TDD non-compliance:
+
+| # | Check | Sign of violation |
+|---|-------|-------------------|
+| E2-1 | **Tests exist for new behavior** | New public functions/endpoints without corresponding test cases |
+| E2-2 | **Tests are behavior-driven, not implementation-driven** | Tests that mirror internal structure (testing private methods, asserting on internal state) rather than observable behavior |
+| E2-3 | **Tests assert meaningful outcomes** | Tests that only assert `is_ok()` / `is_some()` / `!is_empty()` without checking actual values — a sign of after-the-fact "coverage padding" |
+| E2-4 | **Edge cases and error paths are tested** | Only happy-path tests exist; no boundary values, no error condition tests — suggests tests were written to pass, not to drive design |
+| E2-5 | **Test-to-implementation ratio is reasonable** | A large implementation with only 1-2 trivial tests, or tests that cover less than the core logic paths |
+| E2-6 | **No placeholder or empty tests** | `#[cfg(test)]` blocks contain only commented-out tests, `todo!()` panics, or empty test functions with no assertions |
+
+**Action on violation**: Severity is **Moderate** (same as B/C). Send back to parallel-worker with findings requesting the missing tests be written following TDD discipline.
+
 ### F. Design Conformance
 
 Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
@@ -106,7 +137,7 @@ Branch processing based on the severity of findings. review-worker is a **review
 | Severity | Relevant aspects | Action |
 |----------|----------------|--------|
 | **Minor** | A (Style and conventions) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues |
-| **Moderate** | B (Design), C (Security), E (Tests) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction |
+| **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction |
 | **Critical** | D (Spec non-conformance), F (Design conformance violation) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer |
 
 ### Report Format for Sending Back
@@ -116,7 +147,7 @@ When sending back to parallel-worker, return a findings report containing the fo
 ```
 review_action: rework
 findings:
-  - category: B|C|E
+  - category: B|C|E|E2
     severity: medium
     file: <target file>
     line: <line number or range>
@@ -167,6 +198,7 @@ git commit -m "<scope>: <summary of changes>"
     - security: pass|fail
     - spec_compliance: pass|fail
     - test_quality: pass|fail
+    - tdd_compliance: pass|fail
     - design_conformance: pass|fail
 - findings: <list of findings (only for rework/escalate)>
 - commit: <hash (only for commit)>

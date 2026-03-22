@@ -38,6 +38,43 @@ Check for a custom template first, then fall back to the default:
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
 
+### 2.5 Detect New Project
+
+新規プロジェクトかどうかを検出し、Git 初期化タスクの追加要否を判断する。
+
+```bash
+# Git リポジトリが存在するか確認
+git -C "{project-path}" rev-parse --is-inside-work-tree 2>/dev/null
+echo $?
+```
+
+**結果に応じた分岐（終了コード優先）:**
+
+| 終了コード | `--is-inside-work-tree` の出力 | 判定 | アクション |
+|-----------|-------------------------------|------|-----------|
+| `0` | `true` | 既存リポジトリ（作業ツリーあり） | Git 初期化タスク不要。Phase 0 に含めない |
+| `0` | `false` | 既存リポジトリ（bare repo または `.git` ディレクトリ直下） | Git 初期化タスク不要。必要であれば、bare から通常リポジトリへの移行タスクを別途検討 |
+| `128` | （任意） | 新規プロジェクト（Git未初期化） | Phase 0 の先頭に Git 初期化タスクを追加 |
+| `127` | （任意） | git コマンドが見つからない | ユーザーにエラー報告: 「git がインストールされていません。git をインストールしてから再実行してください。」タスク生成を中断 |
+| その他 | （任意） | パス不正・権限エラー等 | ユーザーにエラー報告: 「プロジェクトパスの確認中にエラーが発生しました（exit code: {N}）。パスとアクセス権限を確認してください。」タスク生成を中断 |
+
+新規プロジェクト（exit code 128）の場合、Phase 0 の先頭（他のすべてのタスクの前）に以下のタスクを自動追加する:
+
+```markdown
+## Phase 0: Project Setup
+
+- [ ] 0.0 Initialize Git repository
+  - File: .gitignore
+  - _TDDSkip: true_
+  - _Requirements: REQ-0_
+  - _Prompt: Role: DevOps Engineer | Task: Initialize a Git repository, create an appropriate .gitignore for the project type (Rust: target/, *.swp, .env etc.), and make the initial commit | Restrictions: Do not include secrets or build artifacts in the initial commit. The .gitignore must cover the project's language/framework (e.g., /target for Rust, node_modules for Node.js). Do not configure remote repository (user will do this manually) | Success: `git log` shows the initial commit, `.gitignore` exists and covers the project type_
+```
+
+**注意:**
+- Git 初期化タスクは常に Phase 0 の最初のタスク（0.0）とする
+- 後続のタスク番号は 0.1 から始める
+- 既存リポジトリの場合、タスク番号は従来通り 0.1 から始まる
+
 ### 3. Create Tasks
 
 Convert the design into atomic tasks. Each task should touch 1-3 files and be independently implementable. Include:

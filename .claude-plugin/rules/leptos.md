@@ -291,6 +291,26 @@ view! {
 - Set inline styles dynamically with `style:property=signal`
 - Specify CSS files via `style-file` in `[package.metadata.leptos]` in `Cargo.toml`
 
+## Build Verification
+
+In a Leptos full-stack project, `cargo build` and `cargo test` only compile for the **host target** (SSR). WASM frontend code is not compiled or verified by these commands. You **must** run:
+
+```bash
+cargo leptos build
+```
+
+This command builds both SSR and WASM targets. Common WASM-only compilation errors include:
+- Using `std::fs`, `std::net`, or other APIs unavailable in `wasm32-unknown-unknown`
+- Calling `tokio::spawn` or other runtime-specific code outside `#[cfg(feature = "ssr")]`
+- Missing `#[cfg(feature = "ssr")]` guards on server-only dependencies
+
+### TDD with Leptos
+
+- `cargo test` runs tests for the SSR target only. This is sufficient for server functions and repository logic
+- Component rendering tests use `leptos::mount_to` in `#[cfg(test)]` blocks
+- After Green phase in TDD, always run `cargo leptos build` to verify WASM compilation before proceeding to Refactor
+- WASM compilation failure after Green is a signal that `#[cfg(feature = "ssr")]` guards are missing
+
 ## Performance
 
 - Keep signal granularity fine. Avoid wrapping large structs in a single signal
