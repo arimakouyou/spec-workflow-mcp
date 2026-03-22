@@ -44,17 +44,20 @@ Check for a custom template first, then fall back to the default:
 
 ```bash
 # Git リポジトリが存在するか確認
-git -C "${projectPath}" rev-parse --is-inside-work-tree 2>/dev/null
+git -C "{project-path}" rev-parse --is-inside-work-tree 2>/dev/null
+echo $?
 ```
 
 **結果に応じた分岐:**
 
-| 結果 | 判定 | アクション |
-|------|------|-----------|
-| `true` | 既存リポジトリ | Git 初期化タスク不要。Phase 0 に含めない |
-| コマンド失敗（exit code 128） | 新規プロジェクト | Phase 0 の先頭に Git 初期化タスクを追加 |
+| 終了コード | 判定 | アクション |
+|-----------|------|-----------|
+| `0`（出力: `true`） | 既存リポジトリ | Git 初期化タスク不要。Phase 0 に含めない |
+| `128` | 新規プロジェクト（Git未初期化） | Phase 0 の先頭に Git 初期化タスクを追加 |
+| `127` | git コマンドが見つからない | ユーザーにエラー報告: 「git がインストールされていません。git をインストールしてから再実行してください。」タスク生成を中断 |
+| その他 | パス不正・権限エラー等 | ユーザーにエラー報告: 「プロジェクトパスの確認中にエラーが発生しました（exit code: {N}）。パスとアクセス権限を確認してください。」タスク生成を中断 |
 
-新規プロジェクトの場合、Phase 0 の先頭（他のすべてのタスクの前）に以下のタスクを自動追加する:
+新規プロジェクト（exit code 128）の場合、Phase 0 の先頭（他のすべてのタスクの前）に以下のタスクを自動追加する:
 
 ```markdown
 ## Phase 0: Project Setup
@@ -62,7 +65,7 @@ git -C "${projectPath}" rev-parse --is-inside-work-tree 2>/dev/null
 - [ ] 0.0 Initialize Git repository
   - File: .gitignore
   - _TDDSkip: true_
-  - _Requirements: N/A_
+  - _Requirements: REQ-0_
   - _Prompt: Role: DevOps Engineer | Task: Initialize a Git repository, create an appropriate .gitignore for the project type (Rust: target/, *.swp, .env etc.), and make the initial commit | Restrictions: Do not include secrets or build artifacts in the initial commit. The .gitignore must cover the project's language/framework (e.g., /target for Rust, node_modules for Node.js). Do not configure remote repository (user will do this manually) | Success: `git log` shows the initial commit, `.gitignore` exists and covers the project type_
 ```
 

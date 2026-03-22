@@ -149,7 +149,7 @@ Agent({
     Phase: {phase-number}
     Changed files: {all files changed in this phase}
 
-    Expert team review has already been completed (see reviews/phase-{N}-review.md).
+    Expert team review has already been completed (see .spec-workflow/specs/{spec-name}/reviews/phase-{N}-review.md).
     Focus on final quality checks (rustfmt, clippy, tests) and commit.
     Review across all aspects (A–F) and report review_action as commit / rework / escalate.
     The commit message should summarize the Phase's deliverables.`

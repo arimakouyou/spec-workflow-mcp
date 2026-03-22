@@ -38,7 +38,7 @@ cargo test --quiet
 
 ## Leptos Full-Stack (WASM Frontend) Build Verification
 
-When the project uses `cargo-leptos` (detected by `[package.metadata.leptos]` in `Cargo.toml` or the presence of a `Cargo.toml` with `crate-type = ["cdylib", "rlib"]`), the following additional checks are **required** after the standard checks above.
+When the project uses `cargo-leptos` (detected by `[package.metadata.leptos]` in `Cargo.toml`), the following additional checks are **required** after the standard checks above.
 
 ### cargo-leptos build
 
