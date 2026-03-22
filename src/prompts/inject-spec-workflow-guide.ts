@@ -46,7 +46,7 @@ ${nextSteps.map(step => `- ${step}`).join('\n')}
 
 **Important Instructions:**
 1. This guide has been injected into your context for immediate reference
-2. Follow the workflow sequence exactly: Requirements → Design → Tasks → Implementation
+2. Follow the workflow sequence exactly: Requirements → Design → Test Design → Tasks → Implementation
 3. Use the MCP tools mentioned in the guide to execute each phase
 4. Always request approval between phases using the approvals tool
 5. Never proceed to the next phase without successful approval cleanup

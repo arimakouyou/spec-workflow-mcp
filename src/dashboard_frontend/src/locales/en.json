@@ -443,6 +443,11 @@
       "rejectFailed": "Failed to reject \"{{title}}\"",
       "revisionRequested": "Revisions requested for \"{{title}}\"",
       "revisionFailed": "Failed to request revisions for \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Re-review: This document was revised based on your previous feedback",
+      "bannerDescription": "The diff view shows what changed since your last review.",
+      "previousComments": "Previous Review Comments"
     }
   },
   "logsPage": {

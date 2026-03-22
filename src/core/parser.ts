@@ -42,6 +42,7 @@ export class SpecParser {
       // Read all phase files
       const requirements = await this.getPhaseStatus(specPath, 'requirements.md');
       const design = await this.getPhaseStatus(specPath, 'design.md');
+      const testDesign = await this.getPhaseStatus(specPath, 'test-design.md');
       const tasks = await this.getPhaseStatus(specPath, 'tasks.md');
       
       // Parse task progress using unified parser
@@ -62,6 +63,7 @@ export class SpecParser {
         phases: {
           requirements,
           design,
+          testDesign,
           tasks,
           implementation: {
             exists: taskProgress ? taskProgress.completed > 0 : false

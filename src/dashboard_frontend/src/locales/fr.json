@@ -441,6 +441,11 @@
       "rejectFailed": "Échec du rejet de \"{{title}}\"",
       "revisionRequested": "Révisions demandées pour \"{{title}}\"",
       "revisionFailed": "Échec de la demande de révisions pour \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Re-examen : Ce document a été révisé suite à vos commentaires précédents",
+      "bannerDescription": "La vue des différences montre les modifications depuis votre dernier examen.",
+      "previousComments": "Commentaires de l'examen précédent"
     }
   },
   "logsPage": {

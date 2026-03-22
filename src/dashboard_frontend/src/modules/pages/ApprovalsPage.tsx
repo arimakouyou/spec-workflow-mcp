@@ -42,6 +42,10 @@ function ApprovalItem({ a, selectionMode, isSelected, selectedCount, onToggleSel
   const [snapshots, setSnapshots] = useState<DocumentSnapshot[]>([]);
   const [snapshotsLoading, setSnapshotsLoading] = useState<boolean>(false);
   const [selectedSnapshotVersion, setSelectedSnapshotVersion] = useState<number>(-1);
+
+  // Re-review state
+  const [isReReview, setIsReReview] = useState<boolean>(false);
+  const [previousComments, setPreviousComments] = useState<ApprovalComment[]>([]);
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [diffLoading, setDiffLoading] = useState<boolean>(false);
 
@@ -97,9 +101,26 @@ function ApprovalItem({ a, selectionMode, isSelected, selectedCount, onToggleSel
       .then((snaps) => {
         if (active) {
           setSnapshots(snaps);
-          // Set initial selected version to the last snapshot (most recent before current)
-          if (snaps.length > 0) {
-            setSelectedSnapshotVersion(snaps[snaps.length - 1].version);
+
+          // Re-review detection: check for revision_requested snapshots from a different approval
+          const revisionSnapshots = snaps.filter(
+            s => s.trigger === 'revision_requested' && s.approvalId !== a.id
+          );
+
+          if (revisionSnapshots.length > 0) {
+            // Re-review: default to diff view from the latest revision_requested snapshot
+            const latestRevision = revisionSnapshots[revisionSnapshots.length - 1];
+            setSelectedSnapshotVersion(latestRevision.version);
+            setViewMode('diff');
+            setPreviousComments(latestRevision.comments || []);
+            setIsReReview(true);
+          } else {
+            // Normal review: select the most recent snapshot
+            if (snaps.length > 0) {
+              setSelectedSnapshotVersion(snaps[snaps.length - 1].version);
+            }
+            setIsReReview(false);
+            setPreviousComments([]);
           }
         }
       })
@@ -402,6 +423,23 @@ function ApprovalItem({ a, selectionMode, isSelected, selectedCount, onToggleSel
       {open && (
         <div className="border-t border-[var(--border-default)] p-2 sm:p-3 md:p-4 lg:p-6 min-w-0 max-w-full overflow-x-hidden relative">
 
+          {/* Re-review Banner */}
+          {isReReview && (
+            <div className="mb-4 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  {t('approvalsPage.reReview.banner')}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  {t('approvalsPage.reReview.bannerDescription')}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* View Controls */}
           <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* View Mode Tabs */}
@@ -505,6 +543,35 @@ function ApprovalItem({ a, selectionMode, isSelected, selectedCount, onToggleSel
           {/* Content Display */}
           {viewMode === 'diff' ? (
             <div>
+              {/* Previous Review Comments */}
+              {isReReview && previousComments.length > 0 && (
+                <div className="mb-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-200">
+                      {t('approvalsPage.reReview.previousComments')}
+                    </h4>
+                    <span className="text-xs text-orange-600 dark:text-orange-400">
+                      ({previousComments.length})
+                    </span>
+                  </div>
+                  <ul className="space-y-2">
+                    {previousComments.map((c, i) => (
+                      <li key={i} className="text-sm text-orange-900 dark:text-orange-100 pl-3 border-l-2 border-orange-300 dark:border-orange-700">
+                        {c.type === 'selection' && c.selectedText && (
+                          <span className="block text-xs text-orange-600 dark:text-orange-400 italic mb-1">
+                            &ldquo;{c.selectedText.substring(0, 80)}{c.selectedText.length > 80 ? '...' : ''}&rdquo;
+                          </span>
+                        )}
+                        {c.comment}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {diffLoading && (
                 <div className="flex items-center justify-center py-8">
                   <svg className="animate-spin w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24">

@@ -45,6 +45,23 @@ export function validateTasksMarkdown(content: string): ValidationResult {
     }
   }
 
+  // 依存関係バリデーション用: 各タスクのID、依存先、行番号、Phase情報を収集
+  const taskDependencyInfo: Array<{
+    taskId: string;
+    dependsOnIds: string[];
+    lineNum: number;
+    phase: string | undefined;
+  }> = [];
+
+  // Phase見出しの行番号とPhase名を収集
+  const phaseHeadingLines: { line: number; name: string }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const phaseMatch = lines[i].match(/^##\s+(Phase\s+\d+\s*:.+)/i);
+    if (phaseMatch) {
+      phaseHeadingLines.push({ line: i, name: phaseMatch[1].trim() });
+    }
+  }
+
   // Process each checkbox task
   for (let idx = 0; idx < checkboxIndices.length; idx++) {
     const lineIndex = checkboxIndices[idx];
@@ -120,6 +137,8 @@ export function validateTasksMarkdown(content: string): ValidationResult {
     let hasRequirements = false;
     let hasLeverage = false;
     let hasPrompt = false;
+    let hasDependsOn = false;
+    let dependsOnIds: string[] = [];
     let hasFiles = false;
     let promptHasClosingUnderscore = false;
     let promptSections: string[] = [];
@@ -160,6 +179,27 @@ export function validateTasksMarkdown(content: string): ValidationResult {
               field: 'leverage',
               message: 'Leverage field missing underscore delimiters',
               suggestion: 'Use "_Leverage: ..._" format for proper parsing',
+              severity: 'warning'
+            });
+          }
+        }
+      }
+
+      // Check for _DependsOn:_ format
+      if (trimmedLine.includes('DependsOn:')) {
+        hasDependsOn = true;
+        const depMatch = trimmedLine.match(/_DependsOn:\s*([^_]+?)_/);
+        if (depMatch) {
+          dependsOnIds = depMatch[1].split(',').map(d => d.trim()).filter(d => d);
+        }
+        if (!trimmedLine.match(/_DependsOn:\s*[^_]+_/)) {
+          if (trimmedLine.match(/DependsOn:\s*\S/) && !trimmedLine.includes('_DependsOn:')) {
+            warnings.push({
+              line: lineIdx + 1,
+              taskId,
+              field: 'dependsOn',
+              message: 'DependsOn field missing underscore delimiters',
+              suggestion: 'Use "_DependsOn: 1.1, 1.2_" format for proper parsing',
               severity: 'warning'
             });
           }
@@ -277,9 +317,122 @@ export function validateTasksMarkdown(content: string): ValidationResult {
       });
     }
 
+    // 依存関係情報を収集
+    if (taskId && dependsOnIds.length > 0) {
+      // タスクが属する Phase を特定
+      let taskPhase: string | undefined;
+      for (let p = phaseHeadingLines.length - 1; p >= 0; p--) {
+        if (lineIndex > phaseHeadingLines[p].line) {
+          taskPhase = phaseHeadingLines[p].name;
+          break;
+        }
+      }
+      taskDependencyInfo.push({ taskId, dependsOnIds, lineNum, phase: taskPhase });
+    }
+
     // Track if task is valid (only errors affect validity, not warnings)
     if (taskValid) {
       validTaskCount++;
+    }
+  }
+
+  // --- 依存関係バリデーション ---
+
+  // 全タスクIDを収集
+  const allTaskIds = new Set<string>();
+  // タスクID → Phase のマッピング
+  const taskPhaseMap = new Map<string, string>();
+  for (let idx = 0; idx < checkboxIndices.length; idx++) {
+    const lineIndex = checkboxIndices[idx];
+    const line = lines[lineIndex];
+    const checkboxMatch = line.match(/^\s*-\s+\[([ x\-])\]\s+(.+)/);
+    if (checkboxMatch) {
+      const taskIdMatch = checkboxMatch[2].match(/^(\d+(?:\.\d+)*)\s*\.?\s+/);
+      if (taskIdMatch) {
+        const tid = taskIdMatch[1];
+        allTaskIds.add(tid);
+        // Phase 帰属
+        for (let p = phaseHeadingLines.length - 1; p >= 0; p--) {
+          if (lineIndex > phaseHeadingLines[p].line) {
+            taskPhaseMap.set(tid, phaseHeadingLines[p].name);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  for (const dep of taskDependencyInfo) {
+    for (const refId of dep.dependsOnIds) {
+      // 自己参照チェック
+      if (refId === dep.taskId) {
+        errors.push({
+          line: dep.lineNum,
+          taskId: dep.taskId,
+          field: 'dependsOn',
+          message: `Self-dependency detected: task ${dep.taskId} depends on itself`,
+          severity: 'error'
+        });
+        continue;
+      }
+      // 参照先タスクID存在チェック
+      if (!allTaskIds.has(refId)) {
+        errors.push({
+          line: dep.lineNum,
+          taskId: dep.taskId,
+          field: 'dependsOn',
+          message: `Dependency references non-existent task ID: ${refId}`,
+          severity: 'error'
+        });
+      }
+    }
+  }
+
+  // 循環依存検出 (DFS)
+  if (taskDependencyInfo.length > 0) {
+    const depMap = new Map<string, string[]>();
+    for (const dep of taskDependencyInfo) {
+      depMap.set(dep.taskId, dep.dependsOnIds);
+    }
+    const lineMap = new Map<string, number>();
+    for (const dep of taskDependencyInfo) {
+      lineMap.set(dep.taskId, dep.lineNum);
+    }
+
+    const visiting = new Set<string>();
+    const visited = new Set<string>();
+
+    function detectCycle(taskId: string, path: string[]): boolean {
+      if (visiting.has(taskId)) {
+        const cycleStart = path.indexOf(taskId);
+        const cyclePath = [...path.slice(cycleStart), taskId];
+        errors.push({
+          line: lineMap.get(cyclePath[0]) || 0,
+          taskId: cyclePath[0],
+          field: 'dependsOn',
+          message: `Circular dependency detected: ${cyclePath.join(' → ')}`,
+          severity: 'error'
+        });
+        return true;
+      }
+      if (visited.has(taskId)) return false;
+
+      visiting.add(taskId);
+      const deps = depMap.get(taskId) || [];
+      for (const d of deps) {
+        if (depMap.has(d) || visiting.has(d)) {
+          detectCycle(d, [...path, taskId]);
+        }
+      }
+      visiting.delete(taskId);
+      visited.add(taskId);
+      return false;
+    }
+
+    for (const dep of taskDependencyInfo) {
+      if (!visited.has(dep.taskId)) {
+        detectCycle(dep.taskId, []);
+      }
     }
   }
 

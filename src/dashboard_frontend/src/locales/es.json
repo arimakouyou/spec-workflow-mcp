@@ -441,6 +441,11 @@
       "rejectFailed": "Error al rechazar \"{{title}}\"",
       "revisionRequested": "Revisiones solicitadas para \"{{title}}\"",
       "revisionFailed": "Error al solicitar revisiones para \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Re-revisión: Este documento fue revisado según sus comentarios anteriores",
+      "bannerDescription": "La vista de diferencias muestra los cambios desde su última revisión.",
+      "previousComments": "Comentarios de la revisión anterior"
     }
   },
   "logsPage": {

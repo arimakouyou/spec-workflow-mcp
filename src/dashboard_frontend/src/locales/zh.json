@@ -441,6 +441,11 @@
       "rejectFailed": "拒绝 \"{{title}}\" 失败",
       "revisionRequested": "已请求修订 \"{{title}}\"",
       "revisionFailed": "请求修订 \"{{title}}\" 失败"
+    },
+    "reReview": {
+      "banner": "重新审查：此文档已根据您之前的反馈进行了修订",
+      "bannerDescription": "差异视图显示了自上次审查以来的更改。",
+      "previousComments": "上次审查评论"
     }
   },
   "logsPage": {

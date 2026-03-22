@@ -441,6 +441,11 @@
       "rejectFailed": "Impossibile rifiutare \"{{title}}\"",
       "revisionRequested": "Revisioni richieste per \"{{title}}\"",
       "revisionFailed": "Impossibile richiedere revisioni per \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Ri-revisione: Questo documento è stato rivisto in base al tuo feedback precedente",
+      "bannerDescription": "La vista delle differenze mostra le modifiche dalla tua ultima revisione.",
+      "previousComments": "Commenti della revisione precedente"
     }
   },
   "logsPage": {

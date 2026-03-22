@@ -124,6 +124,7 @@ export interface ParsedTask {
   testFocus?: string;                  // RED phase test guidance
   isPhaseReview?: boolean;             // Whether this is a phase review task
   phase?: string;                      // Owning phase name (e.g., "Phase 1: Core Domain Layer")
+  dependsOn?: string[];               // 依存先タスクID（例: ["1.1", "1.2"]）
 
   // For backward compatibility
   completed: boolean;                  // true if status === 'completed'
@@ -226,6 +227,7 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
     const files: string[] = [];
     const purposes: string[] = [];
     const implementationDetails: string[] = [];
+    const dependsOn: string[] = [];
     let prompt: string | undefined;
     let testFocus: string | undefined;
     let isPhaseReview = false;
@@ -292,6 +294,11 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
         const prMatch = contentLine.match(/_PhaseReview:\s*([^_]+?)_/);
         if (prMatch) {
           isPhaseReview = prMatch[1].trim().toLowerCase() === 'true';
+        }
+      } else if (contentLine.includes('_DependsOn:') && !contentLine.includes('_Prompt:')) {
+        const depMatch = contentLine.match(/_DependsOn:\s*([^_]+?)_/);
+        if (depMatch) {
+          dependsOn.push(...depMatch[1].split(',').map(d => d.trim()).filter(d => d));
         }
       } else if (contentLine.match(/Files?:/)) {
         const fileMatch = contentLine.match(/Files?:\s*(.+)$/);
@@ -360,7 +367,8 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
       ...(promptStructured && { promptStructured }),
       ...(testFocus && { testFocus }),
       ...(isPhaseReview && { isPhaseReview }),
-      ...(taskPhase && { phase: taskPhase })
+      ...(taskPhase && { phase: taskPhase }),
+      ...(dependsOn.length > 0 && { dependsOn })
     };
     tasks.push(task);
 
@@ -460,9 +468,9 @@ export function getTaskById(tasks: ParsedTask[], taskId: string): ParsedTask | u
 /**
  * Export for backward compatibility with existing code
  */
-export function parseTaskProgress(content: string): { 
-  total: number; 
-  completed: number; 
+export function parseTaskProgress(content: string): {
+  total: number;
+  completed: number;
   pending: number;
 } {
   const result = parseTasksFromMarkdown(content);
@@ -471,4 +479,102 @@ export function parseTaskProgress(content: string): {
     completed: result.summary.completed,
     pending: result.summary.pending
   };
+}
+
+// --- Wave-based parallel execution ---
+
+export interface ExecutionWave {
+  waveIndex: number;
+  taskIds: string[];
+}
+
+/**
+ * Phase内のタスクから依存関係に基づく実行Waveを計算する
+ * トポロジカルソートにより、依存関係のないタスクを同一Waveにグループ化
+ */
+export function computeExecutionWaves(
+  tasks: ParsedTask[],
+  phase: PhaseInfo
+): ExecutionWave[] {
+  // Phase内の実行可能タスク（ヘッダーとPhaseReview除く）
+  const phaseTasks = tasks.filter(t =>
+    phase.taskIds.includes(t.id) && !t.isHeader && !t.isPhaseReview
+  );
+
+  if (phaseTasks.length === 0) {
+    // PhaseReviewのみの場合
+    if (phase.reviewTaskId) {
+      return [{ waveIndex: 0, taskIds: [phase.reviewTaskId] }];
+    }
+    return [];
+  }
+
+  // 依存マップ構築
+  const deps = new Map<string, string[]>();
+  for (const task of phaseTasks) {
+    deps.set(task.id, task.dependsOn || []);
+  }
+
+  const completed = new Set<string>();
+  // 既に完了したタスクを初期セットに追加（途中再開対応）
+  for (const task of phaseTasks) {
+    if (task.status === 'completed') {
+      completed.add(task.id);
+    }
+  }
+
+  const waves: ExecutionWave[] = [];
+  let remaining = phaseTasks.filter(t => t.status !== 'completed');
+  let waveIndex = 0;
+
+  while (remaining.length > 0) {
+    // 全依存が completed に含まれるタスクを抽出
+    const ready = remaining.filter(t => {
+      const taskDeps = deps.get(t.id) || [];
+      return taskDeps.every(d => completed.has(d));
+    });
+
+    if (ready.length === 0) {
+      // 循環依存により進行不可（バリデーションで事前検出すべき）
+      break;
+    }
+
+    waves.push({ waveIndex, taskIds: ready.map(t => t.id) });
+    ready.forEach(t => completed.add(t.id));
+    remaining = remaining.filter(t => !completed.has(t.id));
+    waveIndex++;
+  }
+
+  // PhaseReview は常に最終 Wave
+  if (phase.reviewTaskId) {
+    waves.push({ waveIndex, taskIds: [phase.reviewTaskId] });
+  }
+
+  return waves;
+}
+
+/**
+ * 次に実行可能な Wave を返す
+ * 各 Phase を順に走査し、pending タスクを含む最初の Wave を返す
+ */
+export function findNextPendingWave(
+  tasks: ParsedTask[],
+  phases: PhaseInfo[]
+): { phase: PhaseInfo; wave: ExecutionWave } | null {
+  for (const phase of phases) {
+    const waves = computeExecutionWaves(tasks, phase);
+    for (const wave of waves) {
+      const pendingInWave = wave.taskIds.filter(id => {
+        const task = tasks.find(t => t.id === id);
+        return task && task.status === 'pending';
+      });
+      if (pendingInWave.length > 0) {
+        return {
+          phase,
+          wave: { ...wave, taskIds: pendingInWave }
+        };
+      }
+    }
+  }
+  return null;
 }

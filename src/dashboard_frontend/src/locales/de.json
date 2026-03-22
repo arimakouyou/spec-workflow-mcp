@@ -441,6 +441,11 @@
       "rejectFailed": "Ablehnung von \"{{title}}\" fehlgeschlagen",
       "revisionRequested": "Überarbeitung für \"{{title}}\" angefordert",
       "revisionFailed": "Anforderung der Überarbeitung für \"{{title}}\" fehlgeschlagen"
+    },
+    "reReview": {
+      "banner": "Erneute Überprüfung: Dieses Dokument wurde basierend auf Ihrem vorherigen Feedback überarbeitet",
+      "bannerDescription": "Die Diff-Ansicht zeigt die Änderungen seit Ihrer letzten Überprüfung.",
+      "previousComments": "Kommentare der vorherigen Überprüfung"
     }
   },
   "logsPage": {

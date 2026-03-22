@@ -16,6 +16,7 @@
   - Define service contract and implement concrete service using FeatureModel
   - Add error handling with existing error utilities
   - Purpose: Provide business logic layer for feature operations
+  - _DependsOn: 1.1_
   - _Leverage: src/services/IBaseService.ts, src/services/BaseService.ts, src/utils/errorHandler.ts, src/models/FeatureModel.ts_
   - _Requirements: 3.1, 3.2_
   - _TestFocus: Service contract compliance, error propagation, business logic edge cases, dependency injection_
@@ -25,6 +26,7 @@
   - File: src/utils/di.ts
   - Register FeatureService in DI container with proper lifetime configuration
   - Purpose: Enable service injection throughout application
+  - _DependsOn: 1.1, 1.2_
   - _Leverage: existing DI configuration in src/utils/di.ts_
   - _Requirements: 3.1_
   - _TestFocus: Service resolution, dependency chain, lifetime management_

@@ -597,11 +597,13 @@ export class ApprovalStorage extends EventEmitter {
       };
     }
 
-    // Check for duplicate initial snapshots
+    // Check for duplicate initial snapshots (per approval, not per file)
     if (trigger === 'initial') {
-      const existingInitial = metadata.snapshots.find(s => s.trigger === 'initial');
+      const existingInitial = metadata.snapshots.find(
+        s => s.trigger === 'initial' && s.approvalId === approvalId
+      );
       if (existingInitial) {
-        console.error(`Initial snapshot already exists for ${approval.filePath}, skipping creation`);
+        console.error(`Initial snapshot already exists for approval ${approvalId}, skipping creation`);
         return;
       }
     }
