@@ -84,6 +84,8 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 
 **No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed as a single multi-task wave in **parallel**. Mark them from `[ ]` to `[-]` together, following the same multi-task wave rules described above.
 
+**Multi-task wave の per-task 処理**: wave 内の各タスクは、steps 3-8（worktree 作成 → parallel-worker → UT検証 → review-worker → log → merge/cleanup → mark `[x]`）を**タスクごとに独立して**実行する。各タスクは専用の worktree/branch で作業し、完了時に個別にマージする。wave 内の全タスクが完了（または失敗）した後に次の wave に進む。
+
 ### 2. Discover Existing Work
 
 Before writing any code, search implementation logs to understand what's already been built. This prevents duplicate endpoints, reimplemented components, and broken integrations.

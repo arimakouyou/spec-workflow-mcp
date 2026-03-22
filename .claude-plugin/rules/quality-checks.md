@@ -127,8 +127,8 @@ fi
 統合テストファイルが存在する場合にのみ実行する。存在しない場合は SKIP（FAIL ではない）。
 
 ```bash
-# Rust: 統合テストの存在確認（find を使用し globstar 依存を回避）
-find tests -type f -name 'integration*' -print -quit 2>/dev/null
+# Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ は除外）
+find tests -type f -name '*.rs' -not -path 'tests/e2e/*' -print -quit 2>/dev/null
 
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 grep -q '"test:integration"' package.json 2>/dev/null || \

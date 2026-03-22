@@ -6,7 +6,7 @@ export const specWorkflowGuideTool: Tool = {
   description: `Load essential spec workflow instructions to guide feature development from idea to implementation.
 
 # Instructions
-Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. Its important that you follow this workflow exactly to avoid errors.
+Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. It's important that you follow this workflow exactly to avoid errors.
 
 NOTE: Do NOT call this tool when the user requests setup-claude-skills. That tool is a standalone file-copy operation and does not require loading the workflow guide.`,
   inputSchema: {
@@ -113,6 +113,7 @@ Follow this workflow exactly to avoid errors.
 ├── specs/{spec-name}/
 │   ├── requirements.md
 │   ├── design.md
+│   ├── test-design.md
 │   ├── tasks.md
 │   └── Implementation Logs/
 └── steering/            # Optional: product.md, tech.md, structure.md
