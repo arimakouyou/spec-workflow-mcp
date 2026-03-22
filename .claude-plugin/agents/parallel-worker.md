@@ -44,6 +44,16 @@ cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
 ```
 
+### Leptos Full-Stack Projects
+
+If `Cargo.toml` contains `[package.metadata.leptos]`, also run:
+
+```bash
+cargo leptos build
+```
+
+This verifies WASM frontend compilation. Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
+
 ## Retry Policy
 
 Apply a uniform limit to all phases. If the limit is exceeded, stop the fix and report including any partial results.
