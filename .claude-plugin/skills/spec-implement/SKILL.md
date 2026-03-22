@@ -1,9 +1,9 @@
 ---
 name: spec-implement
-description: "Phase 4 of spec-driven development: implement tasks from an approved tasks.md document using TDD (Red-Green-Refactor). ONLY use this skill when ALL THREE spec documents exist: requirements.md, design.md, AND tasks.md. Use this skill when the user explicitly requests to start implementation, code a specific task ID, or continue implementation of an existing spec. Triggers on: 'implement task', 'start coding', 'work on task 3', 'implement spec X', 'continue implementation', '/spec-implement'. DO NOT trigger on general 'implement X' requests unless spec documents exist."
+description: "Phase 5 of spec-driven development: implement tasks from an approved tasks.md document using TDD (Red-Green-Refactor). ONLY use this skill when ALL FOUR spec documents exist: requirements.md, design.md, test-design.md, AND tasks.md. Use this skill when the user explicitly requests to start implementation, code a specific task ID, or continue implementation of an existing spec. Triggers on: 'implement task', 'start coding', 'work on task 3', 'implement spec X', 'continue implementation', '/spec-implement'. DO NOT trigger on general 'implement X' requests unless spec documents exist."
 ---
 
-# Spec Implementation (Phase 4) — TDD Orchestrator
+# Spec Implementation (Phase 5) — TDD Orchestrator
 
 Execute tasks systematically from the approved tasks.md using a **TDD-driven workflow**. Each task follows the cycle: Start → Discover → Read Guidance → **TDD Implementation (parallel-worker)** → **UT Quality Verification** → **Code Review + Commit (review-worker)** → Log → Complete.
 
@@ -33,7 +33,8 @@ Before doing anything else, verify all prerequisite files exist:
 
 1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
-3. Check `.spec-workflow/specs/{spec-name}/tasks.md` exists
+3. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
+4. Check `.spec-workflow/specs/{spec-name}/tasks.md` exists
 
 If ANY file is missing — **STOP immediately. Do NOT start implementing.**
 
@@ -41,13 +42,14 @@ If ANY file is missing — **STOP immediately. Do NOT start implementing.**
 |-------------|---------------|
 | requirements.md | `/spec-requirements` |
 | design.md | `/spec-design` |
+| test-design.md | `/spec-test-design` |
 | tasks.md | `/spec-tasks` |
 
 Tell the user: "Cannot start implementation because {filename} does not exist. Please run {skill-name} first." Then exit this skill.
 
 ---
 
-Tasks must be approved and cleaned up (Phases 1-3 complete). If not, use `/spec-tasks` first.
+Tasks must be approved and cleaned up (Phases 1-4 complete). If not, use `/spec-tasks` first.
 
 ## Inputs
 
@@ -72,6 +74,10 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 - Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers simultaneously (step 4)
+
+> Note: multi-task wave では、複数タスクが同時に `[-]`（進行中）になることは **意図された正常な動作** です。これは `implement-task` プロンプト等の「Only one task should be in-progress at a time」ガイダンスの明示的な例外です。
+
+**Wave 計算時の PhaseReview 除外**: `_PhaseReview: true` のタスクは wave 計算から常に除外する。PhaseReview はフェーズ内の全通常タスク完了後に単独で処理する。
 
 **No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed sequentially as before (backward compatible).
 
@@ -187,20 +193,41 @@ Phase 完了時は、コミット前に専門家チームによる多角的コ�
 
 #### 3.5.3 Code Review + Commit (delegate to review-worker)
 
-Expert Team Review で PASS 後、review-worker にコミットを委譲する:
+Expert Team Review で PASS 後、PhaseReview 専用の Worktree を作成し、review-worker にコミットを委譲する:
+
+```bash
+# PhaseReview 専用 Worktree を作成
+WORKTREE_PATH=".worktrees/{spec-name}/phase-review-{phase-number}"
+BRANCH="review/{spec-name}/phase-{phase-number}"
+
+if git worktree list | grep -q "$WORKTREE_PATH"; then
+  echo "Reusing existing worktree: $WORKTREE_PATH"
+else
+  git worktree add "$WORKTREE_PATH" -b "$BRANCH"
+  echo "Created new worktree: $WORKTREE_PATH (branch: $BRANCH)"
+fi
+```
 
 ```javascript
 Agent({
   subagent_type: "review-worker",
   description: "Phase review: final commit",
-  prompt: `As a phase review, please perform a final review and commit all files changed in the current Phase.
+  prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
+    Expert team review has already been completed, but you MUST perform your own independent review.
+    Previous review results are reference only — your job is to find problems, not confirm prior approval.
+
+    As a phase review, please perform a final review and commit all files changed in the current Phase.
 
     Project path: {project-path}
     Spec name: {spec-name}
     Phase: {phase-number}
+    Worktree path: {WORKTREE_PATH}
+    Branch: {BRANCH}
     Changed files: {all files changed in this phase}
 
-    Expert team review has already been completed (see .spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md).
+    **Important**: Always run \`cd {WORKTREE_PATH}\` before reviewing and committing.
+
+    Expert team review report: .spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md (reference only).
     Focus on final quality checks (rustfmt, clippy, tests) and commit.
     Review across all aspects (A–F) and report review_action as commit / rework / escalate.
     The commit message should summarize the Phase's deliverables.`
@@ -213,7 +240,18 @@ Agent({
 
 #### 3.5.4 Complete
 
-review-worker has committed. Proceed to step 7 (Log).
+review-worker has committed. Merge the PhaseReview worktree and clean up:
+
+```bash
+# Merge PhaseReview worktree branch
+git merge --no-ff "$BRANCH" -m "merge: integrate phase-{phase-number} review"
+
+# Remove the worktree
+git worktree remove "$WORKTREE_PATH"
+git branch -d "$BRANCH"
+```
+
+Proceed to step 7 (Log).
 
 ### 3.6 TDD Skip Tasks
 
@@ -269,6 +307,7 @@ Agent({
     Test focus areas: {_TestFocus content from task, if available}
     Leverage files: {_Leverage file paths from task}
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
+    Test design doc path: {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
 
     **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
 
@@ -325,12 +364,17 @@ Agent({
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
+    Worktree path: {WORKTREE_PATH}
     Implementation files: {implementation_file_paths from step 4}
     Existing test files: {test_file_paths from step 4}
+    Test focus areas: {_TestFocus content from task, if available}
+
+    **Important**: Always run \`cd {WORKTREE_PATH}\` before starting work. All file paths are relative to the worktree.
 
     Check against required test perspectives (happy path, boundary values, exception handling, edge cases)
     and add any missing test cases.
     Be careful not to duplicate existing tests.
+    If Test focus areas are specified, prioritize those verification points.
 
     The completion report must include:
     - ut_action: added (tests were added) | verified_sufficient (no additions needed, already sufficient)
@@ -388,7 +432,13 @@ Delegate code review and commit to the `review-worker` agent. Separating impleme
 Agent({
   subagent_type: "review-worker",
   description: "Review and commit",
-  prompt: `Review the following changes and commit if they meet quality standards.
+  prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
+    This code has passed through parallel-worker (TDD), unit-test-engineer, and code-simplifier.
+    However, you MUST NOT assume it is correct because previous steps reported success.
+    Previous results are provided as reference ONLY — your independent, critical review is mandatory.
+    Treat this as if you are seeing the code for the first time. Your job is to find problems, not confirm success.
+
+    Review the following changes and commit if they meet quality standards.
 
     Project path: {project-path}
     Spec name: {spec-name}
@@ -400,6 +450,7 @@ Agent({
 
     **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
 
+    Previous step results (reference only — do not let these bias your review):
     UT quality verification results (step 5):
     - ut_action: {ut_action from step 5}
     - added_tests: {added_tests from step 5}
@@ -544,7 +595,7 @@ Required fields:
       ]
     }
     ```
-  - `observations` (REQUIRED — review-worker のレビュー観察ログ。commit 時も含め常に記録):
+  - `observations` (optional — review-worker のレビュー観察ログ。tool schema には未定義の拡張フィールド。review-worker の完了レポートの `observations` キーに対応):
     ```json
     "observations": {
       "style": "checked-ok: 命名規則準拠、create_user/UserDto 等",
@@ -555,13 +606,13 @@ Required fields:
       "design_conformance": "checked-ok: design.md 定義外の追加なし"
     }
     ```
-  - `autoFixed`: 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
+  - `autoFixed` (optional — tool schema には未定義の拡張フィールド。review-worker の完了レポートの `auto_fixed` キーに対応): 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
     ```json
     "autoFixed": [
       { "category": "A:style", "file": "src/handler.rs:45", "description": "unwrap() を map_err() に修正" }
     ]
     ```
-  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted, but `observations` and `autoFixed` are always required:
+  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted. `observations` and `autoFixed` are optional extension fields (not in tool schema) but recommended for traceability:
     ```json
     "reviewProcess": {
       "reworkCount": 0,
@@ -659,6 +710,33 @@ design.md に定義された主要エンドポイントのレスポンス確認�
   - 認証が必要なエンドポイントは 401 が返ることを確認（認証なしで 200 が返る場合はセキュリティ問題）
   - 認証不要なエンドポイントは 200 または 404（データなし）が返ることを確認
 
+**Step 5: E2E テスト実行（コンテナベース — test-design.md 仕様準拠）**
+
+test-design.md の E2E 仕様に基づくテストが存在する場合に実行する（`/spec-e2e-implement` で作成されたテスト）。
+
+```bash
+# テスト用コンテナ起動
+if [ -f docker-compose.test.yml ]; then
+  docker-compose -f docker-compose.test.yml up -d
+  # ヘルスチェック待機（最大60秒）
+fi
+```
+
+| ランナー | 検出条件 | コマンド |
+|---------|----------|---------|
+| Playwright | `playwright.config.ts` 存在 | `npx playwright test` |
+| Rust E2E | `tests/e2e/` ディレクトリ存在 | `cargo test --test 'e2e*' --quiet` |
+| Node.js E2E | `package.json` に `test:e2e` | `npm run test:e2e` |
+
+```bash
+# テスト用コンテナ停止・クリーンアップ
+if [ -f docker-compose.test.yml ]; then
+  docker-compose -f docker-compose.test.yml down -v
+fi
+```
+
+E2E テストが存在しない場合は SKIP（`/spec-e2e-implement` 未実行と判断）。
+
 #### 9.3 結果判定
 
 | 結果 | アクション |
@@ -684,6 +762,7 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 | All Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
 | Integration Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
 | Smoke Test | PASS/FAIL/SKIP | {details} |
+| E2E Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
 
 ## Verdict: PASS / FAIL / PARTIAL (SKIP あり)
 
@@ -699,7 +778,7 @@ When processing a multi-task wave, if any task results in `retry_exhausted`:
    - Succeeded: [task-ids]
    - Failed: [task-ids with reasons]
 3. Tasks in subsequent waves that depend on a failed task (via `_DependsOn:`):
-   - Mark as `BLOCKED` with comment: `<!-- BLOCKED: dependency {failed-task-id} failed -->`
+   - Add `<!-- BLOCKED: dependency {failed-task-id} failed -->` comment to the task line and ensure its checkbox state is `- [ ]` (do not change the checkbox token itself)
    - Skip these tasks in subsequent waves
 4. Tasks in subsequent waves with **no dependency** on failed tasks:
    - Continue execution normally in the next wave

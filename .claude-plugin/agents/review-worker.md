@@ -17,10 +17,12 @@ permissionMode: bypassPermissions
 
 ## Whiteboard
 
-Use the whiteboard only when `Whiteboard path` is provided by the orchestrator (exclusive to parallel execution workflows such as wave-harness).
+Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the orchestrator (exclusive to parallel execution workflows such as wave-harness).
 
 - **When provided**: Read it before starting work to understand the overall picture, then Edit the results into the `### review-worker: Quality Review` section. Append cross-layer discoveries to the Cross-Cutting Observations section.
-- **When not provided**: Skip the whiteboard. Use only the information contained in the orchestrator's prompt.
+- **When not provided**: Skip the whiteboard entirely. **Do not create, read, or write any whiteboard files.** Use only the information contained in the orchestrator's prompt.
+
+> **Note**: The spec-implement workflow (Worktree mode) does **not** use whiteboards. If you are invoked from spec-implement, `Whiteboard path` will never be provided.
 
 ## Quality Checks (all must pass)
 
@@ -110,6 +112,7 @@ Although unit-test-engineer has already ensured test quality, perform a final ch
 - Do the test names accurately express what is being verified?
 - Is there any hardcoded sensitive information in the test data (e.g., production DB connection strings)?
 - Are there any tests skipped with `#[ignore]`?
+- **test-design.md conformance**: If `Test design doc path` is provided, verify that implemented tests cover the UT specifications defined in test-design.md for the target component. Report any missing test cases as findings
 
 ### E2. TDD Process Verification
 
@@ -223,10 +226,10 @@ Phase Review（PhaseReview タスク）のコンテキストで呼び出され�
 Phase Review の場合、完了レポートに以下のキーを追加する:
 
 ```
-- integration_verification:
+- integration-verification:
     - build: pass|fail|skip
-    - integration_tests: pass|fail|skip
-    - smoke_test: pass|fail|skip
+    - integration-tests: pass|fail|skip
+    - smoke-test: pass|fail|skip
 ```
 
 ## Commit
@@ -267,6 +270,6 @@ git commit -m "<scope>: <summary of changes>"
 ## Agent Teams Rules
 
 - Use **TaskGet** to check the details of the task assigned to you
-- After completion, mark the task as `completed` with **TaskUpdate**
+- **Do not update task status to `completed`** — status management is the sole responsibility of the orchestrator (spec-implement Step 8). Only report your review results
 - Report results to the leader via **SendMessage**
-- On error, do not set status to `completed` with TaskUpdate; report the error via SendMessage
+- On error, report the error via SendMessage (do not update task status)
