@@ -153,6 +153,15 @@ export function validateTasksMarkdown(content: string): ValidationResult {
       // _Prompt: は複数行にわたるため、開始と終了を追跡する
       if (trimmedLine.includes('_Prompt:')) {
         inPromptBlock = true;
+        // 単一行の _Prompt: ... _ の場合はすぐにリセット
+        if (trimmedLine.match(/_Prompt:\s*.+_$/)) {
+          inPromptBlock = false;
+        }
+      } else if (inPromptBlock) {
+        // _Prompt: ブロックの終了を検出（新しいメタデータフィールドの出現で終了）
+        if (trimmedLine.match(/^_[A-Z][a-zA-Z]+:/) || trimmedLine.match(/^Files?:/i)) {
+          inPromptBlock = false;
+        }
       }
 
       // Check for _Requirements:_ format（_Prompt: ブロック内はスキップ）
@@ -345,6 +354,8 @@ export function validateTasksMarkdown(content: string): ValidationResult {
 
   // 全タスクIDを収集
   const allTaskIds = new Set<string>();
+  // PhaseReview タスクIDを収集
+  const phaseReviewTaskIds = new Set<string>();
   // タスクID → Phase のマッピング
   const taskPhaseMap = new Map<string, string>();
   for (let idx = 0; idx < checkboxIndices.length; idx++) {
@@ -356,6 +367,14 @@ export function validateTasksMarkdown(content: string): ValidationResult {
       if (taskIdMatch) {
         const tid = taskIdMatch[1];
         allTaskIds.add(tid);
+        // PhaseReview 判定
+        const endLine = idx < checkboxIndices.length - 1 ? checkboxIndices[idx + 1] : lines.length;
+        for (let j = lineIndex + 1; j < endLine; j++) {
+          if (lines[j].trim().includes('_PhaseReview:')) {
+            phaseReviewTaskIds.add(tid);
+            break;
+          }
+        }
         // Phase 帰属
         for (let p = phaseHeadingLines.length - 1; p >= 0; p--) {
           if (lineIndex > phaseHeadingLines[p].line) {
@@ -387,6 +406,17 @@ export function validateTasksMarkdown(content: string): ValidationResult {
           taskId: dep.taskId,
           field: 'dependsOn',
           message: `Dependency references non-existent task ID: ${refId}`,
+          severity: 'error'
+        });
+        continue;
+      }
+      // PhaseReview タスクへの依存チェック
+      if (phaseReviewTaskIds.has(refId)) {
+        errors.push({
+          line: dep.lineNum,
+          taskId: dep.taskId,
+          field: 'dependsOn',
+          message: `Dependency references a PhaseReview task: ${refId}. PhaseReview tasks are excluded from wave computation and cannot be depended on.`,
           severity: 'error'
         });
         continue;

@@ -545,8 +545,8 @@ export function computeExecutionWaves(
     waveIndex++;
   }
 
-  // PhaseReview は常に最終 Wave
-  if (phase.reviewTaskId) {
+  // PhaseReview は常に最終 Wave（ただし全タスクがスケジュール済みの場合のみ）
+  if (phase.reviewTaskId && remaining.length === 0) {
     waves.push({ waveIndex, taskIds: [phase.reviewTaskId] });
   }
 
