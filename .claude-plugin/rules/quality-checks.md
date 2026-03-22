@@ -119,8 +119,8 @@ fi
 |--------|---------|------|
 | Leptos | `cargo leptos build` | SSR + WASM 両方をビルド |
 | Rust API | `cargo build` | リリースビルドは不要（デバッグビルドで十分） |
-| Node.js | `npm run build` | `build` スクリプトが package.json に存在する場合のみ |
-| Generic | `cargo build` or `npm run build` | 検出可能なビルドコマンドを実行 |
+| Node.js | `npm run build` | `build` スクリプトが package.json に存在する場合のみ。存在しない場合は SKIP（FAIL ではない）とし、ログに「build スクリプトなし」と記録 |
+| Generic | `cargo build` or `npm run build` | 検出可能なビルドコマンドを実行。該当コマンドがない場合は SKIP とする |
 
 ### Step C: 統合テスト実行（テストが存在する場合のみ）
 
@@ -165,12 +165,16 @@ docker-compose down
 if [ -f Cargo.toml ]; then
   START_CMD="cargo run"
 elif [ -f package.json ]; then
-  # package.json に dev スクリプトがあれば優先的に使用し、なければ npm start を利用
+  # package.json に dev スクリプトがあれば優先的に使用し、なければ start スクリプトを確認
   if command -v node >/dev/null 2>&1 && \
      node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.dev ? 0 : 1)" >/dev/null 2>&1; then
     START_CMD="npm run dev"
-  else
+  elif command -v node >/dev/null 2>&1 && \
+       node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.start ? 0 : 1)" >/dev/null 2>&1; then
     START_CMD="npm start"
+  else
+    echo "Step D: Node.js プロジェクトで start / dev スクリプトが存在しないため、スモークテストをスキップします。" >&2
+    exit 0
   fi
 else
   echo "Step D: 対応するプロジェクトタイプ（Rust/Node.js）が見つからないため、スモークテストをスキップします。" >&2

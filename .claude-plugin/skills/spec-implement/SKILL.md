@@ -230,9 +230,15 @@ Agent({
 
     **Important**: Always run \`cd {WORKTREE_PATH}\` before reviewing and committing.
 
+    Integration Verification Results (from step 3.5.1.5):
+    - Build: {integration-verification.build}
+    - Integration Tests: {integration-verification.integration-tests}
+    - Smoke Test: {integration-verification.smoke-test}
+
     Expert team review report: .spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md (reference only).
     Focus on final quality checks (rustfmt, clippy, tests) and commit.
     Review across all aspects (A–F) and report review_action as commit / rework / escalate.
+    Include integration-verification results in your completion report.
     The commit message should summarize the Phase's deliverables.`
 })
 ```
@@ -738,7 +744,7 @@ if [ -f docker-compose.test.yml ]; then
 fi
 ```
 
-E2E テストが存在しない場合は SKIP（`/spec-e2e-implement` 未実行と判断）。
+E2E テストが存在しない（上記の検出条件をいずれも満たさない）場合は SKIP として扱う。
 
 #### 9.3 結果判定
 
