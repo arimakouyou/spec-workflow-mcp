@@ -6,7 +6,7 @@ export const specWorkflowGuideTool: Tool = {
   description: `Load essential spec workflow instructions to guide feature development from idea to implementation.
 
 # Instructions
-Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Requirements → Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. Its important that you follow this workflow exactly to avoid errors.
+Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. Its important that you follow this workflow exactly to avoid errors.
 
 NOTE: Do NOT call this tool when the user requests setup-claude-skills. That tool is a standalone file-copy operation and does not require loading the workflow guide.`,
   inputSchema: {
@@ -35,7 +35,7 @@ export async function specWorkflowGuideHandler(args: any, context: ToolContext):
       dashboardAvailable: !!context.dashboardUrl
     },
     nextSteps: [
-      'Follow sequence: Requirements → Design → Tasks → Implementation',
+      'Follow sequence: Requirements → Design → Test Design → Tasks → Implementation',
       'Load templates with get-template-context first',
       'Request approval after each document',
       'Use MCP tools only',
@@ -49,7 +49,7 @@ function getSpecWorkflowGuide(): string {
 
 ## Overview
 
-Guide users through spec-driven development: Requirements -> Design -> Tasks -> Implementation.
+Guide users through spec-driven development: Requirements -> Design -> Test Design -> Tasks -> Implementation.
 Feature names use kebab-case (e.g., user-authentication). Create ONE spec at a time.
 Follow this workflow exactly to avoid errors.
 
@@ -67,15 +67,22 @@ Follow this workflow exactly to avoid errors.
 - Create: \`.spec-workflow/specs/{spec-name}/design.md\`
 - Approval: same workflow as Phase 1
 
-### Phase 3: Tasks — Break into atomic steps
+### Phase 3: Test Design — Define HOW to test it
+- Load template: check \`user-templates/\` first, then \`templates/test-design-template.md\`
+- Derive UT specs from design.md components, IT specs from component interactions, E2E specs from requirements.md user stories
+- Create: \`.spec-workflow/specs/{spec-name}/test-design.md\`
+- Approval: same workflow as Phase 1
+
+### Phase 4: Tasks — Break into atomic steps
 - Load template: check \`user-templates/\` first, then \`templates/tasks-template.md\`
 - Convert design into atomic tasks (1-3 files each)
 - Generate _Prompt field for each task (Role, Task, Restrictions, _Leverage, _Requirements, Success)
+- Derive _TestFocus from test-design.md UT specifications
 - Create: \`.spec-workflow/specs/{spec-name}/tasks.md\`
 - Approval: same workflow as Phase 1
 - After cleanup: "Spec complete. Ready to implement?"
 
-### Phase 4: Implementation — Execute tasks
+### Phase 5: Implementation — Execute tasks
 - For each task: mark [-] -> implement -> log-implementation (MANDATORY) -> mark [x]
 - Search implementation logs BEFORE coding to discover existing work
 - Task status: \`[ ]\` pending, \`[-]\` in-progress, \`[x]\` completed
