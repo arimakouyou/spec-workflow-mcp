@@ -65,7 +65,10 @@ Repeat for each wave:
 Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves based on `_DependsOn:` dependencies:
 
 1. Parse tasks.md to identify Phase structure and `_DependsOn:` metadata
-2. Compute execution waves using topological sort — tasks with no unresolved dependencies form a wave
+2. Compute execution waves using topological sort — tasks with no unresolved dependencies form a wave. During this computation, explicitly detect dependency cycles (cases where the `_DependsOn:` graph is not a DAG).
+   - If any cycle is detected, **STOP execution immediately**. Do not start any wave.
+   - Inform the user that `.spec-workflow/specs/{spec-name}/tasks.md` contains cyclic `_DependsOn:` references. Clearly request that they open `tasks.md`, fix the `_DependsOn:` graph so that it becomes acyclic (DAG), and then rerun `/spec-implement`.
+   - Do not attempt to auto-resolve, ignore, or partially execute around cyclic dependencies; always escalate to the user for manual correction.
 3. The **next pending wave** is the first wave (in Phase order) containing at least one `[ ]` task
 
 **Single-task wave**: If the wave contains only one task, process it as before (sequential flow).
@@ -79,7 +82,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 
 **Wave 計算時の PhaseReview 除外**: `_PhaseReview: true` のタスクは wave 計算から常に除外する。PhaseReview はフェーズ内の全通常タスク完了後に単独で処理する。
 
-**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed sequentially as before (backward compatible).
+**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed as a single multi-task wave in **parallel**. Mark them from `[ ]` to `[-]` together, following the same multi-task wave rules described above.
 
 ### 2. Discover Existing Work
 
@@ -606,19 +609,19 @@ Required fields:
       "design_conformance": "checked-ok: design.md 定義外の追加なし"
     }
     ```
-  - `autoFixed` (optional — tool schema には未定義の拡張フィールド。review-worker の完了レポートの `auto_fixed` キーに対応): 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
+  - `auto_fixed` (optional — tool schema には未定義の拡張フィールド。review-worker の完了レポートの `auto_fixed` キーをそのまま記録する): 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
     ```json
-    "autoFixed": [
+    "auto_fixed": [
       { "category": "A:style", "file": "src/handler.rs:45", "description": "unwrap() を map_err() に修正" }
     ]
     ```
-  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted. `observations` and `autoFixed` are optional extension fields (not in tool schema) but recommended for traceability:
+  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted. `observations` and `auto_fixed` are optional extension fields (not in tool schema) but recommended for traceability. オーケストレーターは review-worker から受け取った完了レポートの `auto_fixed` 配列をそのまま記録すること:
     ```json
     "reviewProcess": {
       "reworkCount": 0,
       "reviewOutcome": "commit",
       "observations": { "style": "checked-ok: ...", "design": "checked-ok: ...", ... },
-      "autoFixed": []
+      "auto_fixed": []
     }
     ```
 
@@ -694,7 +697,7 @@ npm test
 
 ```bash
 # Rust
-cargo test --test 'integration*' --quiet
+cargo test --tests --quiet
 
 # Node.js
 npm run test:integration
@@ -725,7 +728,7 @@ fi
 | ランナー | 検出条件 | コマンド |
 |---------|----------|---------|
 | Playwright | `playwright.config.ts` 存在 | `npx playwright test` |
-| Rust E2E | `tests/e2e/` ディレクトリ存在 | `cargo test --test 'e2e*' --quiet` |
+| Rust E2E | `tests/e2e/` ディレクトリ存在 | `cargo test --tests --quiet` |
 | Node.js E2E | `package.json` に `test:e2e` | `npm run test:e2e` |
 
 ```bash
