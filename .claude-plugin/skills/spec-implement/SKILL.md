@@ -105,31 +105,62 @@ cargo test --quiet
   - **Root cause is a task within the current Phase** → revert the root cause task from `[x]` to `[-]`, and revert the PhaseReview task from `[-]` to `[ ]`. Re-run the root cause task from step 4.
   - **Root cause is a task from a prior Phase** → escalate to the user (prior Phase fix is needed, impact scope must be assessed)
 
-#### 3.5.2 Code Review (delegate to review-worker)
+#### 3.5.2 Expert Team Review (multi-perspective review)
 
-Pass all files changed in the current Phase to review-worker:
+Phase 完了時は、コミット前に専門家チームによる多角的コードレビューを実施する。詳細は `/phase-review-team` スキルを参照。
+
+**チーム編成（5名を並列起動）:**
+
+| Role | Perspective |
+|------|-------------|
+| 実装担当 | 仕様書にある機能を網羅しているか、仕様を逸脱していないか |
+| セキュリティ担当1 | 認証、認可、データ漏洩 |
+| セキュリティ担当2 | OWASP TOP 10、最新の CVE |
+| パフォーマンス担当 | ボトルネック、計算量、リソース効率 |
+| 品質・保守性担当 | テストカバレッジ、読みやすさ、命名規則、DRY 原則 |
+
+**手順:**
+
+1. 5名の専門家を Agent tool で **並列** 起動（プロンプト詳細は `/phase-review-team` スキルを参照）
+2. 各担当は独立して調査し、具体的な問題箇所と改善案を報告
+3. リーダー（オーケストレーター）は各報告を統合し、優先度付き最終レポートを作成
+4. レポートを `.spec-workflow/specs/{spec-name}/reviews/phase-{N}-review.md` に保存
+
+**Verdict に基づく分岐:**
+
+| Verdict | Condition | Action |
+|---------|-----------|--------|
+| **PASS** | P0 = 0, P1 = 0 | 3.5.3 に進む（review-worker にコミットを委譲） |
+| **NEEDS_REWORK** | P0 = 0, P1 > 0 | P1 の発見事項を parallel-worker に差し戻し。修正後、変更箇所のみ再レビュー（最大2回） |
+| **BLOCK** | P0 > 0 | ユーザーにエスカレート |
+
+#### 3.5.3 Code Review + Commit (delegate to review-worker)
+
+Expert Team Review で PASS 後、review-worker にコミットを委譲する:
 
 ```javascript
 Agent({
   subagent_type: "review-worker",
-  description: "Phase review: review all phase changes",
-  prompt: `As a phase review, please review all files changed in the current Phase.
+  description: "Phase review: final commit",
+  prompt: `As a phase review, please perform a final review and commit all files changed in the current Phase.
 
     Project path: {project-path}
     Spec name: {spec-name}
     Phase: {phase-number}
     Changed files: {all files changed in this phase}
 
+    Expert team review has already been completed (see reviews/phase-{N}-review.md).
+    Focus on final quality checks (rustfmt, clippy, tests) and commit.
     Review across all aspects (A–F) and report review_action as commit / rework / escalate.
     The commit message should summarize the Phase's deliverables.`
 })
 ```
 
-- **review_action: commit** → proceed to 3.5.3
+- **review_action: commit** → proceed to 3.5.4
 - **review_action: rework** → follow the normal rework flow (identify the root cause task and send it back to that task's parallel-worker)
 - **review_action: escalate** → follow the normal escalate flow
 
-#### 3.5.3 Complete
+#### 3.5.4 Complete
 
 review-worker has committed. Proceed to step 7 (Log).
 
