@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "스펙 문서" },
-    "tooltips": { "viewRendered": "렌더된 문서 보기", "viewSource": "소스 마크다운 보기" },
-    "empty": { "docNotCreated": "이 {{doc}} 문서는 아직 생성되지 않았습니다." }
+    "header": {
+      "title": "스펙 문서"
+    },
+    "tooltips": {
+      "viewRendered": "렌더된 문서 보기",
+      "viewSource": "소스 마크다운 보기"
+    },
+    "empty": {
+      "docNotCreated": "이 {{doc}} 문서는 아직 생성되지 않았습니다."
+    }
   },
   "language": {
     "select": "언어 선택"
@@ -166,9 +173,15 @@
       "task": "태스크",
       "groupBadge": "태스크 그룹"
     },
-    "files": { "label": "파일:" },
-    "implementation": { "label": "구현:" },
-    "labels": { "spec": "스펙:" },
+    "files": {
+      "label": "파일:"
+    },
+    "implementation": {
+      "label": "구현:"
+    },
+    "labels": {
+      "spec": "스펙:"
+    },
     "noSpecsFound": {
       "title": "스펙을 찾을 수 없음",
       "noMatch": "\"{{query}}\"와 일치하는 스펙이 없습니다",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "요구사항",
       "design": "설계",
+      "test-design": "테스트 설계",
       "tasks": "태스크"
     },
     "table": {
@@ -441,6 +455,11 @@
       "rejectFailed": "\"{{title}}\" 거부에 실패했습니다",
       "revisionRequested": "\"{{title}}\"에 대한 수정이 요청되었습니다",
       "revisionFailed": "\"{{title}}\" 수정 요청에 실패했습니다"
+    },
+    "reReview": {
+      "banner": "재검토: 이전 피드백을 바탕으로 문서가 수정되었습니다",
+      "bannerDescription": "차이점 보기에서 마지막 검토 이후 변경 사항을 확인할 수 있습니다.",
+      "previousComments": "이전 검토 댓글"
     }
   },
   "logsPage": {

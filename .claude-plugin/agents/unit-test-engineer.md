@@ -19,6 +19,7 @@ Act as a specialist in the following areas:
 
 # Purpose
 - Implement test code
+- When `Test design doc path` is provided, verify coverage against test-design.md UT specifications and add any missing test cases defined there
 
 # Constraints
 - Tests must verify the preconditions, postconditions, and invariants of methods

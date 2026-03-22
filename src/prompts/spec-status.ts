@@ -57,10 +57,12 @@ ${specName ?
 
 **Workflow Stages:**
 1. **Planning**: Requirements document created and approved
-2. **Design**: Design document created and approved  
-3. **Implementation**: Tasks defined and implementation in progress
-4. **Review**: Implementation complete, awaiting final approval
-5. **Complete**: All tasks complete and approved
+2. **Design**: Design document created and approved
+3. **Test Design**: Test design document (UT/IT/E2E specifications) created and approved
+4. **Task Breakdown**: Tasks defined based on design and test design
+5. **Implementation**: Tasks implementation in progress
+6. **Review**: Implementation complete, awaiting final approval
+7. **Complete**: All tasks complete and approved
 
 ${detailed ? `**Detailed Information Includes:**
 - Individual task breakdown with completion status

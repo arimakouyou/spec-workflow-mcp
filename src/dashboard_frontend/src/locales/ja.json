@@ -71,9 +71,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "仕様ドキュメント" },
-    "tooltips": { "viewRendered": "レンダリング表示", "viewSource": "ソース(Markdown)を表示" },
-    "empty": { "docNotCreated": "この {{doc}} ドキュメントはまだ作成されていません。" }
+    "header": {
+      "title": "仕様ドキュメント"
+    },
+    "tooltips": {
+      "viewRendered": "レンダリング表示",
+      "viewSource": "ソース(Markdown)を表示"
+    },
+    "empty": {
+      "docNotCreated": "この {{doc}} ドキュメントはまだ作成されていません。"
+    }
   },
   "language": {
     "select": "言語を選択"
@@ -127,9 +134,15 @@
       "task": "タスク",
       "groupBadge": "タスクグループ"
     },
-    "files": { "label": "ファイル:" },
-    "implementation": { "label": "実装:" },
-    "labels": { "spec": "仕様:" },
+    "files": {
+      "label": "ファイル:"
+    },
+    "implementation": {
+      "label": "実装:"
+    },
+    "labels": {
+      "spec": "仕様:"
+    },
     "taskDetails": "タスクの詳細",
     "status": "ステータス",
     "noTasksFound": "タスクが見つかりません",
@@ -220,6 +233,7 @@
     "documents": {
       "requirements": "要件",
       "design": "設計",
+      "test-design": "テスト設計",
       "tasks": "タスク"
     },
     "table": {
@@ -442,6 +456,11 @@
       "rejectFailed": "「{{title}}」の却下に失敗しました",
       "revisionRequested": "「{{title}}」の修正が要求されました",
       "revisionFailed": "「{{title}}」の修正要求に失敗しました"
+    },
+    "reReview": {
+      "banner": "再レビュー：前回のフィードバックに基づいて修正されました",
+      "bannerDescription": "差分ビューで前回レビュー時点からの変更を確認できます。",
+      "previousComments": "前回のレビューコメント"
     }
   },
   "logsPage": {

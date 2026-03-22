@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "规范文档" },
-    "tooltips": { "viewRendered": "查看渲染文档", "viewSource": "查看源 Markdown" },
-    "empty": { "docNotCreated": "该 {{doc}} 文档尚未创建。" }
+    "header": {
+      "title": "规范文档"
+    },
+    "tooltips": {
+      "viewRendered": "查看渲染文档",
+      "viewSource": "查看源 Markdown"
+    },
+    "empty": {
+      "docNotCreated": "该 {{doc}} 文档尚未创建。"
+    }
   },
   "language": {
     "select": "选择语言"
@@ -126,9 +133,15 @@
       "task": "任务",
       "groupBadge": "任务组"
     },
-    "files": { "label": "文件:" },
-    "implementation": { "label": "实现:" },
-    "labels": { "spec": "规范:" },
+    "files": {
+      "label": "文件:"
+    },
+    "implementation": {
+      "label": "实现:"
+    },
+    "labels": {
+      "spec": "规范:"
+    },
     "taskDetails": "任务详情",
     "status": "状态",
     "noTasksFound": "未找到任务",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "需求",
       "design": "设计",
+      "test-design": "测试设计",
       "tasks": "任务"
     },
     "table": {
@@ -441,6 +455,11 @@
       "rejectFailed": "拒绝 \"{{title}}\" 失败",
       "revisionRequested": "已请求修订 \"{{title}}\"",
       "revisionFailed": "请求修订 \"{{title}}\" 失败"
+    },
+    "reReview": {
+      "banner": "重新审查：此文档已根据您之前的反馈进行了修订",
+      "bannerDescription": "差异视图显示了自上次审查以来的更改。",
+      "previousComments": "上次审查评论"
     }
   },
   "logsPage": {

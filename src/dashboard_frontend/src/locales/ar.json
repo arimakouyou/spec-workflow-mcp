@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "وثائق المواصفة" },
-    "tooltips": { "viewRendered": "عرض الوثيقة المعروضة", "viewSource": "عرض مصدر الماركداون" },
-    "empty": { "docNotCreated": "لم يتم إنشاء وثيقة {{doc}} هذه بعد." }
+    "header": {
+      "title": "وثائق المواصفة"
+    },
+    "tooltips": {
+      "viewRendered": "عرض الوثيقة المعروضة",
+      "viewSource": "عرض مصدر الماركداون"
+    },
+    "empty": {
+      "docNotCreated": "لم يتم إنشاء وثيقة {{doc}} هذه بعد."
+    }
   },
   "language": {
     "select": "اختر اللغة"
@@ -166,9 +173,15 @@
       "task": "المهمة",
       "groupBadge": "مجموعة المهام"
     },
-    "files": { "label": "الملفات:" },
-    "implementation": { "label": "التنفيذ:" },
-    "labels": { "spec": "المواصفة:" },
+    "files": {
+      "label": "الملفات:"
+    },
+    "implementation": {
+      "label": "التنفيذ:"
+    },
+    "labels": {
+      "spec": "المواصفة:"
+    },
     "noSpecsFound": {
       "title": "لم توجد مواصفات",
       "noMatch": "لا توجد مواصفات تطابق \"{{query}}\"",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "المتطلبات",
       "design": "التصميم",
+      "test-design": "تصميم الاختبارات",
       "tasks": "المهام"
     },
     "table": {
@@ -441,6 +455,11 @@
       "rejectFailed": "فشل في رفض \"{{title}}\"",
       "revisionRequested": "تم طلب مراجعات لـ \"{{title}}\"",
       "revisionFailed": "فشل في طلب مراجعات لـ \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "إعادة المراجعة: تم تعديل هذا المستند بناءً على ملاحظاتك السابقة",
+      "bannerDescription": "يعرض عرض الفروقات التغييرات منذ مراجعتك الأخيرة.",
+      "previousComments": "تعليقات المراجعة السابقة"
     }
   },
   "logsPage": {

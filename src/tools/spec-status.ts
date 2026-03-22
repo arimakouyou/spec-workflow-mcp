@@ -70,6 +70,9 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
     } else if (!spec.phases.design.exists) {
       currentPhase = 'design';
       overallStatus = 'design-needed';
+    } else if (!spec.phases.testDesign.exists) {
+      currentPhase = 'test-design';
+      overallStatus = 'test-design-needed';
     } else if (!spec.phases.tasks.exists) {
       currentPhase = 'tasks';
       overallStatus = 'tasks-needed';
@@ -97,6 +100,11 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
         lastModified: spec.phases.design.lastModified
       },
       {
+        name: 'Test Design',
+        status: spec.phases.testDesign.exists ? (spec.phases.testDesign.approved ? 'approved' : 'created') : 'missing',
+        lastModified: spec.phases.testDesign.lastModified
+      },
+      {
         name: 'Tasks',
         status: spec.phases.tasks.exists ? (spec.phases.tasks.approved ? 'approved' : 'created') : 'missing',
         lastModified: spec.phases.tasks.lastModified
@@ -119,6 +127,11 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
       case 'design':
         nextSteps.push('Read template: .spec-workflow/templates/design-template-v*.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/design.md');
+        nextSteps.push('Request approval');
+        break;
+      case 'test-design':
+        nextSteps.push('Read template: .spec-workflow/templates/test-design-template.md');
+        nextSteps.push('Create: .spec-workflow/specs/{name}/test-design.md');
         nextSteps.push('Request approval');
         break;
       case 'tasks':

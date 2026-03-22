@@ -17,10 +17,12 @@ permissionMode: bypassPermissions
 
 ## Whiteboard
 
-Use the whiteboard only when `Whiteboard path` is provided by the orchestrator (exclusive to parallel execution workflows such as wave-harness).
+Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the orchestrator (exclusive to parallel execution workflows such as wave-harness).
 
 - **When provided**: Read it before starting work to understand the overall picture, then Edit the results into the `### review-worker: Quality Review` section. Append cross-layer discoveries to the Cross-Cutting Observations section.
-- **When not provided**: Skip the whiteboard. Use only the information contained in the orchestrator's prompt.
+- **When not provided**: Skip the whiteboard entirely. **Do not create, read, or write any whiteboard files.** Use only the information contained in the orchestrator's prompt.
+
+> **Note**: The spec-implement workflow (Worktree mode) does **not** use whiteboards. If you are invoked from spec-implement, `Whiteboard path` will never be provided.
 
 ## Quality Checks (all must pass)
 
@@ -53,6 +55,15 @@ On failure, apply minimal fixes and run all checks again.
 ## Code Review
 
 Inspect the diff with `git diff` and check all of the following aspects in order.
+
+### ⚠️ Anti-Bias Protocol (確証バイアス防止)
+
+このコードは parallel-worker (TDD)、unit-test-engineer、code-simplifier の3段階を通過している。しかし、「既に良いはず」という前提でレビューしてはならない。
+
+- **前提**: コードには問題がある。あなたの仕事はそれを見つけること
+- **禁止**: 「3段階通過しているから大丈夫」「TDD で書かれているから品質は高い」という推論
+- **義務**: 各カテゴリ (A-F) で最低1つの具体的な確認ポイントを observations に記録すること。問題がなくても「何を確認して問題なしと判断したか」を明示する
+- **再確認**: レビュー結果が「全パス、問題なし」になった場合、もう一度 diff を読み直し見落としがないか確認する
 
 ### A. Style and Conventions
 
@@ -101,6 +112,7 @@ Although unit-test-engineer has already ensured test quality, perform a final ch
 - Do the test names accurately express what is being verified?
 - Is there any hardcoded sensitive information in the test data (e.g., production DB connection strings)?
 - Are there any tests skipped with `#[ignore]`?
+- **test-design.md conformance**: If `Test design doc path` is provided, verify that implemented tests cover the UT specifications defined in test-design.md for the target component. Report any missing test cases as findings
 
 ### E2. TDD Process Verification
 
@@ -140,6 +152,28 @@ Branch processing based on the severity of findings. review-worker is a **review
 | **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction |
 | **Critical** | D (Spec non-conformance), F (Design conformance violation) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer |
 
+### Review Observation Log (レビュー観察ログ)
+
+レビュー中に確認したすべての事項を記録する。自動修正した Minor 含め、レビューの透明性を確保するために **必須**。
+
+各カテゴリ (A-F) について、以下のいずれかを記録する:
+- **finding**: 問題を発見した（severity + 詳細）
+- **auto-fixed**: Minor 問題を自動修正した（何を修正したか記録）
+- **checked-ok**: 確認したが問題なし（**何を確認したか具体的に記載**）
+
+⛔ 「問題なし」だけの記録は不十分。具体的に何を確認したかを記載すること。
+
+例:
+```
+observations:
+  - A: checked-ok — 命名規則を確認、`create_user` / `UserDto` 等の命名はプロジェクト規約に準拠
+  - B: auto-fixed — `unwrap()` を `map_err()` に修正 (src/handler.rs:45)
+  - C: checked-ok — SQL はクエリビルダー経由、外部入力のバリデーションあり、レスポンスに内部IDなし
+  - D: checked-ok — Success 基準3項目: (1) ユーザー作成API ✓ (2) バリデーション ✓ (3) 重複チェック ✓
+  - E: checked-ok — テストが実装と同期、具体値の検証あり（is_ok()だけでない）
+  - F: checked-ok — design.md 定義外のフィールド/エンドポイント追加なし
+```
+
 ### Report Format for Sending Back
 
 When sending back to parallel-worker, return a findings report containing the following:
@@ -173,6 +207,31 @@ findings:
 - The send-back → re-review cycle is limited to a **maximum of 3 times**
 - If not resolved after 3 cycles, escalate to the user with the remaining findings attached
 
+## Phase Review Context (PhaseReview tasks only)
+
+Phase Review（PhaseReview タスク）のコンテキストで呼び出された場合、通常の品質チェック・コードレビューに加えて、オーケストレーターから渡された **統合検証結果** を確認する。
+
+### 統合検証結果の確認
+
+オーケストレーターのプロンプトに含まれる統合検証結果（ビルド / 統合テスト / スモークテスト）を確認する:
+
+| 統合検証結果 | アクション |
+|-------------|----------|
+| 全ステップ `pass` | 通常のレビューフローを続行 |
+| いずれかが `fail` | `review_action: rework` を返す。findings に統合検証の失敗内容を含める |
+| 一部 `skip`（`fail` なし） | 通常のレビューフローを続行。`skip` された検証項目をレポートの Notes に記載 |
+
+### 完了レポートへの追加
+
+Phase Review の場合、完了レポートに以下のキーを追加する:
+
+```
+- integration-verification:
+    - build: pass|fail|skip
+    - integration-tests: pass|fail|skip
+    - smoke-test: pass|fail|skip
+```
+
 ## Commit
 
 Commit only when all aspects have passed. Do not commit while any findings remain.
@@ -200,7 +259,14 @@ git commit -m "<scope>: <summary of changes>"
     - test_quality: pass|fail
     - tdd_compliance: pass|fail
     - design_conformance: pass|fail
-- findings: <list of findings (only for rework/escalate)>
+- observations: <レビュー観察ログ — 全カテゴリ (A-F) の確認結果を review_action に関係なく常に記録>
+- auto_fixed: <自動修正した Minor 問題のリスト (0件でも空リスト [] として記載)>
+- observations_summary: "<N> 項目確認、<M> 件 auto-fixed、<K> 件 finding"
+- integration-verification: <PhaseReview 時のみ必須。各ステップの結果を記載>
+    - build: pass|fail|skip
+    - integration-tests: pass|fail|skip
+    - smoke-test: pass|fail|skip
+- findings: <list of findings (rework/escalate の場合のみ)>
 - commit: <hash (only for commit)>
 - changed_files: <list>
 ```
@@ -208,6 +274,6 @@ git commit -m "<scope>: <summary of changes>"
 ## Agent Teams Rules
 
 - Use **TaskGet** to check the details of the task assigned to you
-- After completion, mark the task as `completed` with **TaskUpdate**
+- **Do not update task status to `completed`** — status management is the sole responsibility of the orchestrator (spec-implement Step 8). Only report your review results
 - Report results to the leader via **SendMessage**
-- On error, do not set status to `completed` with TaskUpdate; report the error via SendMessage
+- On error, report the error via SendMessage (do not update task status)

@@ -71,9 +71,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "Spec Documents" },
-    "tooltips": { "viewRendered": "View rendered document", "viewSource": "View source markdown" },
-    "empty": { "docNotCreated": "This {{doc}} document hasn't been created yet." }
+    "header": {
+      "title": "Spec Documents"
+    },
+    "tooltips": {
+      "viewRendered": "View rendered document",
+      "viewSource": "View source markdown"
+    },
+    "empty": {
+      "docNotCreated": "This {{doc}} document hasn't been created yet."
+    }
   },
   "language": {
     "select": "Select language"
@@ -167,9 +174,15 @@
       "task": "Task",
       "groupBadge": "Task Group"
     },
-    "files": { "label": "Files:" },
-    "implementation": { "label": "Implementation:" },
-    "labels": { "spec": "Spec:" },
+    "files": {
+      "label": "Files:"
+    },
+    "implementation": {
+      "label": "Implementation:"
+    },
+    "labels": {
+      "spec": "Spec:"
+    },
     "noSpecsFound": {
       "title": "No specs found",
       "noMatch": "No specs match \"{{query}}\"",
@@ -220,6 +233,7 @@
     "documents": {
       "requirements": "Requirements",
       "design": "Design",
+      "test-design": "Test Design",
       "tasks": "Tasks"
     },
     "table": {
@@ -443,6 +457,11 @@
       "rejectFailed": "Failed to reject \"{{title}}\"",
       "revisionRequested": "Revisions requested for \"{{title}}\"",
       "revisionFailed": "Failed to request revisions for \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Re-review: This document was revised based on your previous feedback",
+      "bannerDescription": "The diff view shows what changed since your last review.",
+      "previousComments": "Previous Review Comments"
     }
   },
   "logsPage": {
