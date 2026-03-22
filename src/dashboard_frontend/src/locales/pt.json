@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "Documentos de Especificação" },
-    "tooltips": { "viewRendered": "Ver documento renderizado", "viewSource": "Ver markdown fonte" },
-    "empty": { "docNotCreated": "Este documento {{doc}} ainda não foi criado." }
+    "header": {
+      "title": "Documentos de Especificação"
+    },
+    "tooltips": {
+      "viewRendered": "Ver documento renderizado",
+      "viewSource": "Ver markdown fonte"
+    },
+    "empty": {
+      "docNotCreated": "Este documento {{doc}} ainda não foi criado."
+    }
   },
   "language": {
     "select": "Selecionar idioma"
@@ -166,9 +173,15 @@
       "task": "Tarefa",
       "groupBadge": "Grupo de Tarefas"
     },
-    "files": { "label": "Arquivos:" },
-    "implementation": { "label": "Implementação:" },
-    "labels": { "spec": "Especificação:" },
+    "files": {
+      "label": "Arquivos:"
+    },
+    "implementation": {
+      "label": "Implementação:"
+    },
+    "labels": {
+      "spec": "Especificação:"
+    },
     "noSpecsFound": {
       "title": "Nenhuma especificação encontrada",
       "noMatch": "Nenhuma especificação corresponde a \"{{query}}\"",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "Requisitos",
       "design": "Design",
+      "test-design": "Design de testes",
       "tasks": "Tarefas"
     },
     "table": {

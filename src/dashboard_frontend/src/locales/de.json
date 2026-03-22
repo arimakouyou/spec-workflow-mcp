@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "Spezifikationsdokumente" },
-    "tooltips": { "viewRendered": "Gerenderte Dokument anzeigen", "viewSource": "Quell-Markdown anzeigen" },
-    "empty": { "docNotCreated": "Dieses {{doc}}-Dokument wurde noch nicht erstellt." }
+    "header": {
+      "title": "Spezifikationsdokumente"
+    },
+    "tooltips": {
+      "viewRendered": "Gerenderte Dokument anzeigen",
+      "viewSource": "Quell-Markdown anzeigen"
+    },
+    "empty": {
+      "docNotCreated": "Dieses {{doc}}-Dokument wurde noch nicht erstellt."
+    }
   },
   "language": {
     "select": "Sprache auswählen"
@@ -166,9 +173,15 @@
       "task": "Aufgabe",
       "groupBadge": "Aufgabengruppe"
     },
-    "files": { "label": "Dateien:" },
-    "implementation": { "label": "Implementierung:" },
-    "labels": { "spec": "Spezifikation:" },
+    "files": {
+      "label": "Dateien:"
+    },
+    "implementation": {
+      "label": "Implementierung:"
+    },
+    "labels": {
+      "spec": "Spezifikation:"
+    },
     "noSpecsFound": {
       "title": "Keine Spezifikationen gefunden",
       "noMatch": "Keine Spezifikationen passen zu \"{{query}}\"",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "Anforderungen",
       "design": "Design",
+      "test-design": "Testdesign",
       "tasks": "Aufgaben"
     },
     "table": {

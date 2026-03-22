@@ -564,6 +564,11 @@ export function findNextPendingWave(
   for (const phase of phases) {
     const waves = computeExecutionWaves(tasks, phase);
     for (const wave of waves) {
+      const waveTaskStatuses = wave.taskIds.map(id => {
+        const task = tasks.find(t => t.id === id);
+        return task?.status;
+      });
+
       const pendingInWave = wave.taskIds.filter(id => {
         const task = tasks.find(t => t.id === id);
         return task && task.status === 'pending';
@@ -573,6 +578,13 @@ export function findNextPendingWave(
           phase,
           wave: { ...wave, taskIds: pendingInWave }
         };
+      }
+
+      // この wave に未完了タスク（in-progress等）がある場合、次の wave に進まない
+      // 依存先が完了するまで待機する
+      const hasIncomplete = waveTaskStatuses.some(s => s !== 'completed');
+      if (hasIncomplete) {
+        return null;
       }
     }
   }

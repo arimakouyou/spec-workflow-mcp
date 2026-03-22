@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "Documents de Spécification" },
-    "tooltips": { "viewRendered": "Voir le document rendu", "viewSource": "Voir le markdown source" },
-    "empty": { "docNotCreated": "Ce document {{doc}} n'a pas encore été créé." }
+    "header": {
+      "title": "Documents de Spécification"
+    },
+    "tooltips": {
+      "viewRendered": "Voir le document rendu",
+      "viewSource": "Voir le markdown source"
+    },
+    "empty": {
+      "docNotCreated": "Ce document {{doc}} n'a pas encore été créé."
+    }
   },
   "language": {
     "select": "Sélectionner la langue"
@@ -166,9 +173,15 @@
       "task": "Tâche",
       "groupBadge": "Groupe de Tâches"
     },
-    "files": { "label": "Fichiers :" },
-    "implementation": { "label": "Implémentation :" },
-    "labels": { "spec": "Spécification :" },
+    "files": {
+      "label": "Fichiers :"
+    },
+    "implementation": {
+      "label": "Implémentation :"
+    },
+    "labels": {
+      "spec": "Spécification :"
+    },
     "noSpecsFound": {
       "title": "Aucune spécification trouvée",
       "noMatch": "Aucune spécification ne correspond à \"{{query}}\"",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "Exigences",
       "design": "Conception",
+      "test-design": "Conception des tests",
       "tasks": "Tâches"
     },
     "table": {

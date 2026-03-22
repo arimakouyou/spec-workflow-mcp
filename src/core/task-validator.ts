@@ -137,11 +137,11 @@ export function validateTasksMarkdown(content: string): ValidationResult {
     let hasRequirements = false;
     let hasLeverage = false;
     let hasPrompt = false;
-    let hasDependsOn = false;
     let dependsOnIds: string[] = [];
     let hasFiles = false;
     let promptHasClosingUnderscore = false;
     let promptSections: string[] = [];
+    let inPromptBlock = false;
 
     for (let lineIdx = lineIndex + 1; lineIdx < endLine; lineIdx++) {
       const contentLine = lines[lineIdx];
@@ -149,8 +149,14 @@ export function validateTasksMarkdown(content: string): ValidationResult {
 
       if (!trimmedLine) continue;
 
-      // Check for _Requirements:_ format
-      if (trimmedLine.includes('Requirements:')) {
+      // _Prompt: ブロック内のメタデータ検出を抑制
+      // _Prompt: は複数行にわたるため、開始と終了を追跡する
+      if (trimmedLine.includes('_Prompt:')) {
+        inPromptBlock = true;
+      }
+
+      // Check for _Requirements:_ format（_Prompt: ブロック内はスキップ）
+      if (trimmedLine.includes('Requirements:') && !inPromptBlock) {
         hasRequirements = true;
         // Check for proper underscore delimiters
         if (!trimmedLine.match(/_Requirements:\s*[^_]+_/)) {
@@ -167,8 +173,8 @@ export function validateTasksMarkdown(content: string): ValidationResult {
         }
       }
 
-      // Check for _Leverage:_ format
-      if (trimmedLine.includes('Leverage:')) {
+      // Check for _Leverage:_ format（_Prompt: ブロック内はスキップ）
+      if (trimmedLine.includes('Leverage:') && !inPromptBlock) {
         hasLeverage = true;
         // Check for proper underscore delimiters
         if (!trimmedLine.match(/_Leverage:\s*[^_]+_/)) {
@@ -185,9 +191,8 @@ export function validateTasksMarkdown(content: string): ValidationResult {
         }
       }
 
-      // Check for _DependsOn:_ format
-      if (trimmedLine.includes('DependsOn:')) {
-        hasDependsOn = true;
+      // Check for _DependsOn:_ format（_Prompt: ブロック内はスキップ）
+      if (trimmedLine.includes('DependsOn:') && !inPromptBlock) {
         const depMatch = trimmedLine.match(/_DependsOn:\s*([^_]+?)_/);
         if (depMatch) {
           dependsOnIds = depMatch[1].split(',').map(d => d.trim()).filter(d => d);
@@ -382,6 +387,19 @@ export function validateTasksMarkdown(content: string): ValidationResult {
           taskId: dep.taskId,
           field: 'dependsOn',
           message: `Dependency references non-existent task ID: ${refId}`,
+          severity: 'error'
+        });
+        continue;
+      }
+      // クロスフェーズ依存チェック
+      const depPhase = taskPhaseMap.get(dep.taskId);
+      const refPhase = taskPhaseMap.get(refId);
+      if (depPhase && refPhase && depPhase !== refPhase) {
+        errors.push({
+          line: dep.lineNum,
+          taskId: dep.taskId,
+          field: 'dependsOn',
+          message: `Cross-phase dependency detected: task ${dep.taskId} (${depPhase}) depends on ${refId} (${refPhase}). _DependsOn: must reference tasks within the same Phase.`,
           severity: 'error'
         });
       }
