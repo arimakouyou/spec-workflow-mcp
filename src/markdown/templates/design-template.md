@@ -81,16 +81,46 @@ graph TD
    - **Handling:** [How to handle]
    - **User Impact:** [What user sees]
 
+## Container Architecture
+
+### Application Container
+- **Base Image:** [例: rust:1.82-slim, node:22-alpine]
+- **Build Strategy:** [multi-stage build / single stage]
+- **Exposed Ports:** [例: 3000 (API), 3001 (frontend)]
+
+### Service Dependencies
+
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------|
+| [DB] | [例: postgres:16-alpine] | [例: 5432] | [Primary database] |
+| [Cache] | [例: valkey/valkey:8-alpine] | [例: 6379] | [Cache/Session] |
+
+### docker-compose Structure
+[開発用 docker-compose.yml の構成概要。サービス間のネットワーク、ボリューム、環境変数]
+
+### Test Container Strategy
+
+| Service | Strategy | Notes |
+|---------|----------|-------|
+| DB | testcontainers / docker-compose.test.yml | テストごとにクリーンな DB |
+| Cache | testcontainers / in-memory stub | |
+| External API | mock server container / trait DI | |
+
+---
+
 ## Testing Strategy
 
+> 詳細なテスト仕様（テストケースレベル）は test-design.md に定義する。
+> このセクションはテスト戦略の概要のみを記載する。
+
 ### Unit Testing
-- [Unit testing approach]
-- [Key components to test]
+- [ユニットテスト方針の概要]
+- [テスト対象の主要コンポーネント]
 
 ### Integration Testing
-- [Integration testing approach]
-- [Key flows to test]
+- [統合テスト方針の概要]
+- [テスト対象の主要フロー]
 
 ### End-to-End Testing
-- [E2E testing approach]
-- [User scenarios to test]
+- [E2Eテスト方針の概要]
+- [テスト対象のユーザーシナリオ]

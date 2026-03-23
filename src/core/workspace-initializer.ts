@@ -55,6 +55,7 @@ export class WorkspaceInitializer {
     const templates = [
       'requirements-template',
       'design-template',
+      'test-design-template',
       'tasks-template',
       'product-template',
       'tech-template',
@@ -96,6 +97,7 @@ This directory allows you to create custom templates that override the default S
 1. **Create your custom template file** in this directory with the exact same name as the default template you want to override:
    - \`requirements-template.md\` - Override requirements document template
    - \`design-template.md\` - Override design document template
+   - \`test-design-template.md\` - Override test design document template
    - \`tasks-template.md\` - Override tasks document template
    - \`product-template.md\` - Override product steering template
    - \`tech-template.md\` - Override tech steering template

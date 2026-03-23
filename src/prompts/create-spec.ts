@@ -32,7 +32,7 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
     throw new Error('specName and documentType are required arguments');
   }
 
-  const validDocTypes = ['requirements', 'design', 'tasks'];
+  const validDocTypes = ['requirements', 'design', 'test-design', 'tasks'];
   // ダッシュボードのプレビュー用サンプルコンテキストではバリデーションをスキップ
   const isPreviewContext = context.projectPath === '{{projectPath}}';
   if (!isPreviewContext && !validDocTypes.includes(documentType)) {

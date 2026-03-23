@@ -70,9 +70,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "Documentos de Especificación" },
-    "tooltips": { "viewRendered": "Ver documento renderizado", "viewSource": "Ver markdown fuente" },
-    "empty": { "docNotCreated": "Este documento {{doc}} aún no ha sido creado." }
+    "header": {
+      "title": "Documentos de Especificación"
+    },
+    "tooltips": {
+      "viewRendered": "Ver documento renderizado",
+      "viewSource": "Ver markdown fuente"
+    },
+    "empty": {
+      "docNotCreated": "Este documento {{doc}} aún no ha sido creado."
+    }
   },
   "language": {
     "select": "Seleccionar idioma"
@@ -166,9 +173,15 @@
       "task": "Tarea",
       "groupBadge": "Grupo de Tareas"
     },
-    "files": { "label": "Archivos:" },
-    "implementation": { "label": "Implementación:" },
-    "labels": { "spec": "Especificación:" },
+    "files": {
+      "label": "Archivos:"
+    },
+    "implementation": {
+      "label": "Implementación:"
+    },
+    "labels": {
+      "spec": "Especificación:"
+    },
     "noSpecsFound": {
       "title": "No se encontraron especificaciones",
       "noMatch": "Ninguna especificación coincide con \"{{query}}\"",
@@ -219,6 +232,7 @@
     "documents": {
       "requirements": "Requerimientos",
       "design": "Diseño",
+      "test-design": "Diseño de pruebas",
       "tasks": "Tareas"
     },
     "table": {
@@ -441,6 +455,11 @@
       "rejectFailed": "Error al rechazar \"{{title}}\"",
       "revisionRequested": "Revisiones solicitadas para \"{{title}}\"",
       "revisionFailed": "Error al solicitar revisiones para \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Re-revisión: Este documento fue revisado según sus comentarios anteriores",
+      "bannerDescription": "La vista de diferencias muestra los cambios desde su última revisión.",
+      "previousComments": "Comentarios de la revisión anterior"
     }
   },
   "logsPage": {

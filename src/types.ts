@@ -69,6 +69,7 @@ export interface SpecData {
   phases: {
     requirements: PhaseStatus;
     design: PhaseStatus;
+    testDesign: PhaseStatus;
     tasks: PhaseStatus;
     implementation: PhaseStatus;
   };

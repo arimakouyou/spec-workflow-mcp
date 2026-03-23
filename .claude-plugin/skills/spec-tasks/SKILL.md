@@ -1,9 +1,9 @@
 ---
 name: spec-tasks
-description: "Phase 3 of spec-driven development: break an approved design into atomic implementation tasks. Use this skill after design is approved, when the user wants to create tasks, plan implementation steps, or break down work into actionable items. Triggers on: 'create tasks', 'break down into tasks', 'implementation plan', 'task breakdown for X', or any request to create a tasks.md document."
+description: "Phase 4 of spec-driven development: break an approved design into atomic implementation tasks. Use this skill after test design is approved, when the user wants to create tasks, plan implementation steps, or break down work into actionable items. Triggers on: 'create tasks', 'break down into tasks', 'implementation plan', 'task breakdown for X', or any request to create a tasks.md document."
 ---
 
-# Spec Tasks (Phase 3)
+# Spec Tasks (Phase 4)
 
 Break the approved design into atomic, implementable tasks. This phase converts architecture decisions into a concrete action plan.
 
@@ -13,12 +13,19 @@ Before doing anything else, verify all prerequisite files exist:
 
 1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
+3. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
 
 If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin task breakdown. Please run {skill-name} first." Then exit this skill.
 
+| Missing File | Required Skill |
+|-------------|---------------|
+| requirements.md | `/spec-requirements` |
+| design.md | `/spec-design` |
+| test-design.md | `/spec-test-design` |
+
 ---
 
-Design must be approved and cleaned up (Phases 1-2 complete). If not, use `/spec-design` first.
+Test design must be approved and cleaned up (Phases 1-3 complete). If not, use `/spec-test-design` first.
 
 ## Inputs
 
@@ -37,6 +44,7 @@ Check for a custom template first, then fall back to the default:
 
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
+- `.spec-workflow/specs/{spec-name}/test-design.md`
 
 ### 2.5 Detect New Project
 
@@ -75,6 +83,35 @@ echo $?
 - 後続のタスク番号は 0.1 から始める
 - 既存リポジトリの場合、タスク番号は従来通り 0.1 から始まる
 
+### 2.6 Detect Container Requirements
+
+design.md の Container Architecture セクションを読み、コンテナセットアップタスクの要否を判断する。
+
+**検出ロジック:**
+1. design.md に「Container Architecture」セクションが存在するか
+2. Service Dependencies テーブルにサービスが列挙されているか
+
+**Container Architecture が存在する場合**、Phase 0 に以下のタスクを追加する（Git 初期化タスクの後、他のセットアップタスクの前）:
+
+```markdown
+- [ ] 0.1 Create Dockerfile and docker-compose.yml
+  - File: Dockerfile, docker-compose.yml, .dockerignore
+  - _TDDSkip: true_
+  - _Requirements: REQ-0_
+  - _Prompt: Role: DevOps Engineer | Task: design.md の Container Architecture に基づいて Dockerfile (multi-stage build) と docker-compose.yml を作成する。Service Dependencies テーブルの全サービスを含める | Restrictions: シークレットを Dockerfile に埋め込まない。.dockerignore で不要ファイルを除外。ポート番号は design.md の定義に従う | Success: `docker-compose up -d` で全サービスが起動する_
+
+- [ ] 0.2 Create test container configuration
+  - File: docker-compose.test.yml
+  - _TDDSkip: true_
+  - _DependsOn: 0.1_
+  - _Requirements: REQ-0_
+  - _Prompt: Role: DevOps Engineer | Task: テスト用の docker-compose.test.yml を作成する。本番用とポートが衝突しないようオフセットする（例: 5432→15432）。DB にはテスト用の初期化スクリプトを含める | Restrictions: 本番用 docker-compose.yml を修正しない。テスト用ボリュームは永続化しない（tmpfs 推奨） | Success: `docker-compose -f docker-compose.test.yml up -d` でテスト用サービスが起動し、本番用と共存できる_
+```
+
+**Container Architecture が存在しない場合**: コンテナタスクを追加しない（従来通り）。
+
+**注意:** Git 初期化タスク (0.0) がある場合、コンテナタスクは 0.1, 0.2 とし、他のセットアップタスクは 0.3 から始める。
+
 ### 3. Create Tasks
 
 Convert the design into atomic tasks. Each task should touch 1-3 files and be independently implementable. Include:
@@ -110,11 +147,26 @@ Group tasks into phases using `## Phase N: Title` headings. Each phase is a **ve
 - Each phase ends with a `_PhaseReview: true_` task for review and commit
 - Phases are ordered by dependency (core → API → UI → integration)
 
-### 3.6 TDD Task Design Rules
+### 3.6 Integration & E2E Test Tasks
 
-- **No standalone test tasks.** TDD handles testing automatically in each task's RED phase.
+test-design.md の IT 仕様と E2E 仕様を基に、Phase の適切な位置に IT/E2E テストタスクを配置する。
+
+#### IT タスク
+- test-design.md の各 IT 仕様（IT-1, IT-2, ...）に対応するタスクを作成
+- 対象コンポーネントがすべて実装済みの Phase に配置（通常は PhaseReview の直前）
+- `_TestFocus` は test-design.md の IT 仕様を参照し、Verification Points を列挙
+- `_Prompt` の Task に「test-design.md の IT-{N} 仕様に基づいて統合テストを実装する」と明記
+
+#### E2E タスク
+- test-design.md の各 E2E 仕様（E2E-1, E2E-2, ...）に対応するタスクを最終 Phase に配置
+- `_TestFocus` は test-design.md の E2E 仕様を参照し、Scenario Steps と Success Criteria を列挙
+- `_Prompt` の Task に「test-design.md の E2E-{N} 仕様に基づいて E2E テストを実装する」と明記
+
+### 3.7 TDD Task Design Rules
+
+- **No standalone unit test tasks.** TDD handles unit testing automatically in each task's RED phase. However, IT/E2E test tasks (defined in section 3.6) are **allowed and expected** as separate tasks — they implement integration and end-to-end tests from test-design.md specifications.
 - **Each task must be independently testable** — it must produce observable behavior that can be verified.
-- **`_TestFocus` field** — Structured in 4 categories (Happy Path / Boundary Values / Error Handling / Edge Cases) as required by the unit-test-engineer. Free-form text is not allowed.
+- **`_TestFocus` field** — Structured in 4 categories (Happy Path / Boundary Values / Error Handling / Edge Cases) as required by the unit-test-engineer. Free-form text is not allowed. **Must be derived from test-design.md**: reference the corresponding UT spec IDs (e.g., UT-1.1, UT-1.2) and include the concrete test cases defined there.
 
 #### Tasks eligible for TDD skip (`_TDDSkip: true`)
 
@@ -167,6 +219,7 @@ This is critical for implementation quality. Each task needs a `_Prompt` field w
 - [ ] 1.2 Implement UserRepository with CRUD operations
   - File: src/db/repository/users.rs
   - Implement find_by_id, list, create, update, delete
+  - _DependsOn: 1.1_
   - _Leverage: src/db/mod.rs, src/models/user.rs_
   - _Requirements: REQ-1_
   - _TestFocus: Happy Path: success paths for all CRUD operations | Boundary Values: list with 0 / 1 / many records | Error Handling: find with nonexistent ID, create with duplicate key, DB connection error | Edge Cases: concurrent updates_
@@ -182,6 +235,7 @@ This is critical for implementation quality. Each task needs a `_Prompt` field w
 Also include:
 - `_Leverage`: Existing files/utilities to reuse (copied from the Code Reuse Analysis table in design.md)
 - `_Requirements`: Which requirements this task fulfills (traceability)
+- `_DependsOn`: Same Phase 内で、このタスクが依存する他タスクのID（カンマ区切り）。依存がない場合は省略する。依存があるタスクは、依存先が完了するまで実行されない。Phase 跨ぎの依存は不要（Phase 順序で暗黙保証）。例: `_DependsOn: 1.1, 1.2_`
 - `_TestFocus`: Written in the 4-category structured format (see below)
 
 #### _TestFocus Format
@@ -262,6 +316,7 @@ Agent({
     Template: {project-path}/.spec-workflow/templates/tasks-template.md
     Requirements: {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
     Design: {project-path}/.spec-workflow/specs/{spec-name}/design.md
+    Test Design: {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
 
     Checks:
     1. TEMPLATE: Every task has - [ ] marker, file path(s), _Leverage, _Requirements, _Prompt fields
@@ -275,9 +330,14 @@ Agent({
     5. Tasks are atomic (1-3 files), in logical dependency order
     6. No placeholder text, descriptions specific enough for AI implementation
     7. PHASE STRUCTURE: Tasks are grouped under ## Phase headings with vertical slices
-    8. TDD: No standalone test tasks (e.g., 'write tests', 'create unit tests')
+    8. TDD: No standalone unit test tasks (e.g., 'write tests', 'create unit tests'). IT/E2E test tasks are allowed as separate tasks.
     9. Every non-PhaseReview task has a _TestFocus field
     10. Each phase ends with a _PhaseReview: true_ task
+    11. DEPENDENCIES: _DependsOn references point to valid task IDs within the same Phase. No circular dependencies. No self-references. Tasks that use types/models/outputs created by another task declare the dependency.
+    12. TEST-DESIGN TRACEABILITY: Read test-design.md —
+        every UT spec must have a corresponding task with matching _TestFocus,
+        every IT spec must have an integration test task,
+        every E2E spec must have an E2E test task
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

@@ -72,9 +72,16 @@
     }
   },
   "specViewer": {
-    "header": { "title": "Документы спецификации" },
-    "tooltips": { "viewRendered": "Просмотреть отрендеренный документ", "viewSource": "Просмотреть исходный markdown" },
-    "empty": { "docNotCreated": "Этот документ {{doc}} еще не создан." }
+    "header": {
+      "title": "Документы спецификации"
+    },
+    "tooltips": {
+      "viewRendered": "Просмотреть отрендеренный документ",
+      "viewSource": "Просмотреть исходный markdown"
+    },
+    "empty": {
+      "docNotCreated": "Этот документ {{doc}} еще не создан."
+    }
   },
   "language": {
     "select": "Выберите язык"
@@ -168,9 +175,15 @@
       "task": "Задача",
       "groupBadge": "Группа задач"
     },
-    "files": { "label": "Файлы:" },
-    "implementation": { "label": "Реализация:" },
-    "labels": { "spec": "Спецификация:" },
+    "files": {
+      "label": "Файлы:"
+    },
+    "implementation": {
+      "label": "Реализация:"
+    },
+    "labels": {
+      "spec": "Спецификация:"
+    },
     "noSpecsFound": {
       "title": "Спецификации не найдены",
       "noMatch": "Нет спецификаций соответствующих \"{{query}}\"",
@@ -202,8 +215,7 @@
       "progress": "Прогресс",
       "progressDesc": "Завершено"
     }
-  }
-  ,
+  },
   "specsPage": {
     "header": {
       "title": "Спецификации",
@@ -222,6 +234,7 @@
     "documents": {
       "requirements": "Требования",
       "design": "Дизайн",
+      "test-design": "Тестовый дизайн",
       "tasks": "Задачи"
     },
     "table": {
@@ -450,6 +463,11 @@
       "rejectFailed": "Не удалось отклонить \"{{title}}\"",
       "revisionRequested": "Запрошены исправления для \"{{title}}\"",
       "revisionFailed": "Не удалось запросить исправления для \"{{title}}\""
+    },
+    "reReview": {
+      "banner": "Повторная проверка: документ был исправлен на основе вашего предыдущего отзыва",
+      "bannerDescription": "Режим различий показывает изменения с момента последней проверки.",
+      "previousComments": "Комментарии предыдущей проверки"
     }
   },
   "logsPage": {

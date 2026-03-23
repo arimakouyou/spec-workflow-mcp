@@ -61,14 +61,14 @@ Based on the user's judgment, proceed with one of the following:
 **If design.md must be changed, discard all implementation so far and restart from Phase 2.** Partial fixes are not permitted.
 
 Phase Reset procedure:
-1. **Suspend Phase 4**: Revert in-progress tasks (`[-]`) to `[ ]`
-2. **Discard implementation code**: Undo code implemented and committed in Phase 4 using `git revert`
-3. **Delete tasks.md**: Delete `.spec-workflow/specs/{spec-name}/tasks.md` (Phase 3 artifact)
+1. **Suspend Phase 5**: Revert in-progress tasks (`[-]`) to `[ ]`
+2. **Discard implementation code**: Undo code implemented and committed in Phase 5 using `git revert`
+3. **Delete tasks.md**: Delete `.spec-workflow/specs/{spec-name}/tasks.md` (Phase 4 artifact)
 4. **Fix design.md**: Return to Phase 2 and fix design.md
 5. **Re-review**: Re-validate design.md with spec-review (check)
 6. **Re-approval**: Obtain re-approval of design.md via the Approval Workflow
-7. **Re-run Phase 3**: Re-create tasks.md with `/spec-tasks`
-8. **Re-run Phase 4**: Restart implementation from the beginning with `/spec-implement`
+7. **Re-run Phase 3-4**: Re-create test-design.md with `/spec-test-design`, then tasks.md with `/spec-tasks`
+8. **Re-run Phase 5**: Restart implementation from the beginning with `/spec-implement`
 
 **Note:** Phase Reset carries a high cost. To avoid this, conduct thorough design reviews in Phase 2 (DB Schema, API Design, Data Model, Error Handling).
 

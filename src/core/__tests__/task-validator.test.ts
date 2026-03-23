@@ -211,6 +211,82 @@ Just some text.
     });
   });
 
+    describe('dependency validation', () => {
+      it('正常な依存宣言はエラーなし', () => {
+        const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Requirements: REQ-1_
+
+- [ ] 1.2 Create service
+  - File: src/service.ts
+  - _DependsOn: 1.1_
+`;
+        const result = validateTasksMarkdown(content);
+        const depErrors = result.errors.filter(e => e.field === 'dependsOn');
+        expect(depErrors).toHaveLength(0);
+      });
+
+      it('存在しないタスクIDへの依存はエラー', () => {
+        const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _DependsOn: 9.9_
+`;
+        const result = validateTasksMarkdown(content);
+        const depErrors = result.errors.filter(e => e.field === 'dependsOn');
+        expect(depErrors.length).toBeGreaterThan(0);
+        expect(depErrors[0].message).toContain('non-existent task ID');
+      });
+
+      it('自己参照はエラー', () => {
+        const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _DependsOn: 1.1_
+`;
+        const result = validateTasksMarkdown(content);
+        const depErrors = result.errors.filter(e => e.field === 'dependsOn');
+        expect(depErrors.length).toBeGreaterThan(0);
+        expect(depErrors[0].message).toContain('Self-dependency');
+      });
+
+      it('循環依存を検出する', () => {
+        const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _DependsOn: 1.2_
+
+- [ ] 1.2 Create service
+  - File: src/service.ts
+  - _DependsOn: 1.1_
+`;
+        const result = validateTasksMarkdown(content);
+        const depErrors = result.errors.filter(e => e.field === 'dependsOn');
+        expect(depErrors.some(e => e.message.includes('Circular dependency'))).toBe(true);
+      });
+
+      it('DependsOn のアンダースコア区切り欠落は警告', () => {
+        const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+
+- [ ] 1.2 Create service
+  - File: src/service.ts
+  - DependsOn: 1.1
+`;
+        const result = validateTasksMarkdown(content);
+        const depWarnings = result.warnings.filter(w => w.field === 'dependsOn');
+        expect(depWarnings.length).toBeGreaterThan(0);
+        expect(depWarnings[0].message).toContain('missing underscore delimiters');
+      });
+    });
+
   describe('formatValidationErrors', () => {
     it('should format errors correctly', () => {
       const result = {

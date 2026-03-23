@@ -76,6 +76,7 @@ export class SpecParser {
         phases: {
           requirements: { exists: false },
           design: { exists: false },
+          testDesign: { exists: false },
           tasks: { exists: false },
           implementation: { exists: false }
         }
@@ -89,6 +90,7 @@ export class SpecParser {
       // Check each phase
       const requirementsPath = join(specDir, 'requirements.md');
       const designPath = join(specDir, 'design.md');
+      const testDesignPath = join(specDir, 'test-design.md');
       const tasksPath = join(specDir, 'tasks.md');
 
       // Check requirements
@@ -97,7 +99,7 @@ export class SpecParser {
         spec.phases.requirements.exists = true;
         const reqStats = await stat(requirementsPath);
         spec.phases.requirements.lastModified = reqStats.mtime.toISOString();
-        
+
         // Update overall last modified if this is newer
         if (reqStats.mtime > new Date(spec.lastModified)) {
           spec.lastModified = reqStats.mtime.toISOString();
@@ -110,9 +112,21 @@ export class SpecParser {
         spec.phases.design.exists = true;
         const designStats = await stat(designPath);
         spec.phases.design.lastModified = designStats.mtime.toISOString();
-        
+
         if (designStats.mtime > new Date(spec.lastModified)) {
           spec.lastModified = designStats.mtime.toISOString();
+        }
+      } catch {}
+
+      // Check test design
+      try {
+        await access(testDesignPath);
+        spec.phases.testDesign.exists = true;
+        const testDesignStats = await stat(testDesignPath);
+        spec.phases.testDesign.lastModified = testDesignStats.mtime.toISOString();
+
+        if (testDesignStats.mtime > new Date(spec.lastModified)) {
+          spec.lastModified = testDesignStats.mtime.toISOString();
         }
       } catch {}
 
@@ -122,7 +136,7 @@ export class SpecParser {
         spec.phases.tasks.exists = true;
         const tasksStats = await stat(tasksPath);
         spec.phases.tasks.lastModified = tasksStats.mtime.toISOString();
-        
+
         if (tasksStats.mtime > new Date(spec.lastModified)) {
           spec.lastModified = tasksStats.mtime.toISOString();
         }
@@ -159,6 +173,7 @@ export class SpecParser {
         phases: {
           requirements: { exists: false },
           design: { exists: false },
+          testDesign: { exists: false },
           tasks: { exists: false },
           implementation: { exists: false }
         }
@@ -172,6 +187,7 @@ export class SpecParser {
       // Check each phase
       const requirementsPath = join(specDir, 'requirements.md');
       const designPath = join(specDir, 'design.md');
+      const testDesignPath = join(specDir, 'test-design.md');
       const tasksPath = join(specDir, 'tasks.md');
 
       // Check requirements
@@ -180,7 +196,7 @@ export class SpecParser {
         spec.phases.requirements.exists = true;
         const reqStats = await stat(requirementsPath);
         spec.phases.requirements.lastModified = reqStats.mtime.toISOString();
-        
+
         // Update overall last modified if this is newer
         if (reqStats.mtime > new Date(spec.lastModified)) {
           spec.lastModified = reqStats.mtime.toISOString();
@@ -193,9 +209,21 @@ export class SpecParser {
         spec.phases.design.exists = true;
         const designStats = await stat(designPath);
         spec.phases.design.lastModified = designStats.mtime.toISOString();
-        
+
         if (designStats.mtime > new Date(spec.lastModified)) {
           spec.lastModified = designStats.mtime.toISOString();
+        }
+      } catch {}
+
+      // Check test design
+      try {
+        await access(testDesignPath);
+        spec.phases.testDesign.exists = true;
+        const testDesignStats = await stat(testDesignPath);
+        spec.phases.testDesign.lastModified = testDesignStats.mtime.toISOString();
+
+        if (testDesignStats.mtime > new Date(spec.lastModified)) {
+          spec.lastModified = testDesignStats.mtime.toISOString();
         }
       } catch {}
 

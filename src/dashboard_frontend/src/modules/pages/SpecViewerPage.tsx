@@ -12,9 +12,9 @@ function Content() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const spec = params.get('name') || '';
-  const initialDoc = (params.get('doc') as 'requirements' | 'design' | 'tasks') || 'requirements';
+  const initialDoc = (params.get('doc') as 'requirements' | 'design' | 'test-design' | 'tasks') || 'requirements';
   const initialMode = (params.get('mode') as ViewMode) || 'rendered';
-  const [activeDoc, setActiveDoc] = useState<'requirements' | 'design' | 'tasks'>(initialDoc);
+  const [activeDoc, setActiveDoc] = useState<'requirements' | 'design' | 'test-design' | 'tasks'>(initialDoc);
   const [viewMode, setViewMode] = useState<ViewMode>(initialMode);
   const [documents, setDocuments] = useState<Record<string, { content: string; lastModified: string } | null>>({});
   const [loading, setLoading] = useState(false);
@@ -54,7 +54,7 @@ function Content() {
         <div className="flex items-center gap-3">
           {/* Document Type Tabs */}
           <div className="flex items-center bg-[var(--surface-sunken)] rounded-lg p-1">
-            {(['requirements', 'design', 'tasks'] as const).map((d) => (
+            {(['requirements', 'design', 'test-design', 'tasks'] as const).map((d) => (
               <button
                 key={d}
                 className={`px-3 py-1 text-sm rounded-md transition-colors capitalize ${

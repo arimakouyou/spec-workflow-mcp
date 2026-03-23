@@ -496,7 +496,7 @@ export class MultiProjectDashboardServer {
       }
 
       const specDir = join(project.projectPath, '.spec-workflow', 'specs', name);
-      const documents = ['requirements', 'design', 'tasks'];
+      const documents = ['requirements', 'design', 'test-design', 'tasks'];
       const result: Record<string, { content: string; lastModified: string } | null> = {};
 
       for (const doc of documents) {
@@ -526,7 +526,7 @@ export class MultiProjectDashboardServer {
 
       // Use archive path instead of active specs path
       const specDir = join(project.projectPath, '.spec-workflow', 'archive', 'specs', name);
-      const documents = ['requirements', 'design', 'tasks'];
+      const documents = ['requirements', 'design', 'test-design', 'tasks'];
       const result: Record<string, { content: string; lastModified: string } | null> = {};
 
       for (const doc of documents) {
@@ -556,7 +556,7 @@ export class MultiProjectDashboardServer {
         return reply.code(404).send({ error: 'Project not found' });
       }
 
-      const allowedDocs = ['requirements', 'design', 'tasks'];
+      const allowedDocs = ['requirements', 'design', 'test-design', 'tasks'];
       if (!allowedDocs.includes(document)) {
         return reply.code(400).send({ error: 'Invalid document type' });
       }
