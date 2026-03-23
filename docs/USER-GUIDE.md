@@ -16,9 +16,15 @@ Spec Workflow MCP is a Model Context Protocol server that provides structured, s
 ### Basic Workflow
 
 1. **Create a spec** - Define what you want to build
-2. **Review and approve** - Ensure specifications meet requirements
-3. **Implement tasks** - Execute the implementation plan
-4. **Track progress** - Monitor completion status
+2. **Review requirements** - Ensure specifications meet requirements
+3. **Approve requirements** - Sign off on the requirements document
+4. **Create design** - Design the technical approach
+5. **Approve design** - Sign off on the design document
+6. **Create test design** - Define test strategies, cases, and acceptance criteria
+7. **Approve test design** - Sign off on the test design document
+8. **Create tasks** - Break down implementation into actionable tasks
+9. **Implement tasks** - Execute the implementation plan
+10. **Track progress** - Monitor completion status
 
 ## Creating Specifications
 
@@ -33,7 +39,8 @@ Ask your AI assistant to create a spec:
 The AI will automatically:
 1. Create a requirements document
 2. Design the technical approach
-3. Break down implementation into tasks
+3. Create a test design with test strategies and cases
+4. Break down implementation into tasks
 
 ### Detailed Spec Creation
 
@@ -78,6 +85,7 @@ Returns:
 Provides:
 - Requirements approval status
 - Design approval status
+- Test design approval status
 - Task completion progress
 - Detailed task breakdown
 
@@ -86,6 +94,7 @@ Provides:
 Use the dashboard or VSCode extension to:
 - Read requirements documents
 - Review design documents
+- Review test design documents
 - Browse task lists
 - Track implementation progress
 
@@ -182,6 +191,7 @@ Generates:
 Spec Workflow includes templates for:
 - Requirements documents
 - Design documents
+- Test design documents
 - Task lists
 - Bug reports
 - Steering documents
@@ -264,7 +274,8 @@ Not ideal:
 Always review and approve:
 1. Requirements document
 2. Design document
-3. Task breakdown
+3. Test design document
+4. Task breakdown
 
 ### 4. Implement Incrementally
 
@@ -289,8 +300,10 @@ The dashboard provides:
 3. Approve or request changes
 4. Review design document
 5. Approve design
-6. Implement tasks sequentially
-7. Track progress in dashboard
+6. Review test design document
+7. Approve test design
+8. Implement tasks sequentially
+9. Track progress in dashboard
 
 ### Bug Fixing
 

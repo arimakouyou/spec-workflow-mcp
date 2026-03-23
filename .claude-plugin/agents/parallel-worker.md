@@ -18,6 +18,8 @@ permissionMode: bypassPermissions
 - **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification
 - **Do not perform review or commit** (those are the responsibility of review-worker)
 
+> **Note on spec-impl-\* skills**: The skills `spec-impl-code`, `spec-impl-test-write`, `spec-impl-test-run`, and `spec-impl-review` are referenced in the orchestrator's prompt as guidelines (e.g., "see /spec-impl-test-write skill"). Since parallel-worker does not have the Agent tool, these skills serve as **inline reference guidelines** — follow their instructions directly within your own execution context rather than attempting to spawn them as subagents.
+
 ## Working Directory
 
 - The orchestrator provides `Worktree path` and `Branch`. **Always `cd {Worktree path}` before starting implementation.**

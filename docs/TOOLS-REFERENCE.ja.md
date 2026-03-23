@@ -58,14 +58,14 @@ Spec Workflow MCPは、構造化されたソフトウェア開発のための専
 
 ### create-spec-doc
 
-**目的**: 仕様ドキュメント（要件、設計、タスク）を作成または更新します。
+**目的**: 仕様ドキュメント（要件、設計、テスト設計、タスク）を作成または更新します。
 
 **パラメータ**:
 
 | パラメータ | タイプ | 必須 | 説明 |
 |-----------|------|----------|-------------|
 | specName | string | はい | 仕様の名前（ケバブケース） |
-| docType | string | はい | タイプ: "requirements"、"design"、または"tasks" |
+| docType | string | はい | タイプ: "requirements"、"design"、"test-design"、または"tasks" |
 | content | string | はい | ドキュメントのMarkdownコンテンツ |
 | revision | boolean | いいえ | 改訂版かどうか（デフォルト: false） |
 
@@ -113,6 +113,7 @@ Spec Workflow MCPは、構造化されたソフトウェア開発のための専
     documents: {
       requirements: "approved",
       design: "pending-approval",
+      testDesign: "not-created",
       tasks: "not-created"
     },
     taskStats: {
@@ -160,6 +161,12 @@ Spec Workflow MCPは、構造化されたソフトウェア開発のための専
       pendingApproval: true,
       lastModified: "2024-01-15T14:20:00Z",
       size: 6234
+    },
+    testDesign: {
+      exists: false,
+      approved: false,
+      lastModified: null,
+      size: 0
     },
     tasks: {
       exists: true,
@@ -317,6 +324,11 @@ Spec Workflow MCPは、構造化されたソフトウェア開発のための専
       content: "# Design\n\n...",
       approved: false
     },
+    testDesign: {
+      exists: false,
+      content: null,
+      approved: false
+    },
     tasks: {
       exists: true,
       content: "# Tasks\n\n...",
@@ -471,7 +483,11 @@ Spec Workflow MCPは、構造化されたソフトウェア開発のための専
 5. `request-approval` → レビューをリクエスト
 6. `get-approval-status` → ステータスを確認
 7. `create-spec-doc` → 設計を作成（承認後）
-8. `manage-tasks` → 実装を追跡
+8. `request-approval` → 設計レビューをリクエスト
+9. `create-spec-doc` → テスト設計を作成（設計承認後）
+10. `request-approval` → テスト設計レビューをリクエスト
+11. `create-spec-doc` → タスクを作成（テスト設計承認後）
+12. `manage-tasks` → 実装を追跡
 
 ### 並行操作
 
@@ -506,7 +522,8 @@ Spec Workflow MCPは、構造化されたソフトウェア開発のための専
 2. **ドキュメント作成**:
    - 常に要件を最初に作成
    - 設計の前に承認を待つ
-   - 設計承認後にタスクを作成
+   - 設計承認後にテスト設計を作成
+   - テスト設計承認後にタスクを作成
 
 3. **タスク管理**:
    - タスク開始時にステータスを更新

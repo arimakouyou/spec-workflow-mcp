@@ -7,12 +7,12 @@ This guide explains the complete spec-driven development workflow and best pract
 The spec-driven workflow follows a structured approach:
 
 ```
-Steering → Specifications → Implementation → Verification
+Steering → Requirements → Design → Test Design → Tasks → Implementation → Verification
 ```
 
 Each phase builds on the previous, ensuring systematic and well-documented development.
 
-## Phase 1: Project Setup with Steering Documents
+## Phase 0: Project Setup with Steering Documents
 
 ### Why Steering Documents?
 
@@ -54,17 +54,17 @@ This generates three key documents:
 3. **Reference often** - Use for decision making
 4. **Share widely** - Ensure team alignment
 
-## Phase 2: Specification Creation
+## Phases 1–4: Specification Creation
 
-### The Three-Document System
+### The Four-Document System
 
-Each spec consists of three sequential documents:
+Each spec consists of four sequential documents:
 
 ```
-Requirements → Design → Tasks
+Requirements → Design → Test Design → Tasks
 ```
 
-### Requirements Document
+### Phase 1: Requirements Document (spec-requirements)
 
 **Purpose**: Define WHAT needs to be built
 
@@ -86,7 +86,7 @@ Requirements → Design → Tasks
 - Notification history"
 ```
 
-### Design Document
+### Phase 2: Design Document (spec-design)
 
 **Purpose**: Define HOW it will be built
 
@@ -98,9 +98,23 @@ Requirements → Design → Tasks
 - Integration points
 - Implementation approach
 
-**Automatic Generation**: Created after requirements approval
+**Auto-generated**: Created after requirements approval
 
-### Tasks Document
+### Phase 3: Test Design Document (spec-test-design)
+
+**Purpose**: Define HOW to test the feature
+
+**Contents**:
+- Test strategy overview
+- Unit test specifications (UT) per component
+- Integration test specifications (IT)
+- End-to-end test specifications (E2E)
+- Requirements-test traceability matrix
+- Test data requirements
+
+**Auto-generated**: Created after design approval
+
+### Phase 4: Tasks Document (spec-tasks)
 
 **Purpose**: Define the STEPS to build it
 
@@ -131,7 +145,9 @@ Requirements → Design → Tasks
   3.3 Add preference UI
 ```
 
-## Phase 3: Review and Approval
+Tasks can declare dependencies on other tasks within the same phase using the `_DependsOn` field (e.g., `_DependsOn: 1.1, 1.2`). Tasks with dependencies are not executed until their prerequisites are complete.
+
+## Review and Approval (embedded in each phase)
 
 ### Approval Workflow
 
@@ -175,7 +191,7 @@ Poor feedback:
 "This doesn't look right. Fix it."
 ```
 
-## Phase 4: Implementation
+## Phase 5: Implementation (spec-implement)
 
 ### Task Execution Strategy
 
@@ -215,7 +231,7 @@ When blocked:
 3. Move to parallel tasks if possible
 4. Update task status to "blocked"
 
-## Phase 5: Verification
+## Final E2E Gate: Verification
 
 ### Testing Strategy
 
@@ -259,10 +275,12 @@ your-project/
 │   │   ├── user-auth/
 │   │   │   ├── requirements.md
 │   │   │   ├── design.md
+│   │   │   ├── test-design.md
 │   │   │   └── tasks.md
 │   │   └── payment-gateway/
 │   │       ├── requirements.md
 │   │       ├── design.md
+│   │       ├── test-design.md
 │   │       └── tasks.md
 │   └── approval/
 │       └── [approval tracking files]
@@ -280,7 +298,7 @@ your-project/
 - Avoid versions: `user-profile` not `user-profile-v2`
 
 **Document Names**:
-- Always: `requirements.md`, `design.md`, `tasks.md`
+- Always: `requirements.md`, `design.md`, `test-design.md`, `tasks.md`
 - Consistent across all specs
 
 ## Advanced Workflows
@@ -370,16 +388,18 @@ Example:
 Always follow the order:
 1. Requirements (what)
 2. Design (how)
-3. Tasks (steps)
+3. Test Design (how to test)
+4. Tasks (steps)
 
 Never skip ahead.
 
 ### 3. Complete Approval Before Implementation
 
-- ✅ Approve requirements → Create design
-- ✅ Approve design → Create tasks
-- ✅ Review tasks → Start implementation
-- ❌ Skip approval → Implementation issues
+- ✅ Requirements approved → Create design
+- ✅ Design approved → Create test design
+- ✅ Test design approved → Create tasks
+- ✅ Tasks reviewed → Begin implementation
+- ❌ Skip approval → Implementation problems
 
 ### 4. Keep Specs Updated
 

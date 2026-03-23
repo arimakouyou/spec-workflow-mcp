@@ -365,6 +365,8 @@ Branch based on parallel-worker's `status`:
 
 > ⛔ **Do not add tests yourself. Always call the `unit-test-engineer` agent.**
 
+> **Language note**: `unit-test-engineer` is specialized for Rust. For non-Rust projects (Node.js, Python, etc.), skip this step or use a `general-purpose` subagent with the same test quality criteria (Happy Path / Boundary Values / Error Handling / Edge Cases coverage).
+
 Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
 Pass the implementation files to the `unit-test-engineer` agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).

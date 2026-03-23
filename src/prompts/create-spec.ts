@@ -5,7 +5,7 @@ import { ToolContext } from '../types.js';
 const prompt: Prompt = {
   name: 'create-spec',
   title: 'Create Specification Document',
-  description: 'Guide for creating spec documents directly in the file system. Shows how to use templates and create requirements, design, or tasks documents at the correct paths.',
+  description: 'Guide for creating spec documents directly in the file system. Shows how to use templates and create requirements, design, test-design, or tasks documents at the correct paths.',
   arguments: [
     {
       name: 'specName',
@@ -14,7 +14,7 @@ const prompt: Prompt = {
     },
     {
       name: 'documentType', 
-      description: 'Type of document to create: requirements, design, or tasks',
+      description: 'Type of document to create: requirements, design, test-design, or tasks',
       required: true
     },
     {

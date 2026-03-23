@@ -155,12 +155,45 @@ Agent({
 - Error scenarios cover realistic failure modes
 - DB Schema / API / Data Model are concrete enough that implementers have minimal room to interpret the design
 
+### Test Design (`test-design.md`)
+
+**Template compliance:**
+- Test Strategy Overview section with overall test approach and Test Pyramid
+- Unit Test Specifications for every component in design.md
+- Integration Test Specifications for significant component interactions
+- E2E Test Specifications derived from user stories in requirements.md
+- Requirements-Test Traceability Matrix covering all Requirement IDs
+- Test Data Requirements section with shared fixtures and generation strategy
+- E2E Test Infrastructure section with project type, container setup, and test runner
+
+**UT Coverage:**
+- Every component in design.md has corresponding UT specifications
+- Each component's UT specs cover applicable categories (Happy Path / Boundary Values / Error Handling / Edge Cases)
+- Test case IDs follow naming convention (UT-N.M)
+- design.md Error Handling table entries have corresponding error handling test cases
+
+**IT/E2E Coverage:**
+- Every significant component interaction in design.md Architecture has an IT specification (IT-N)
+- Every user story in requirements.md has at least one E2E specification (E2E-N)
+- IT/E2E Technology fields are consistent with design.md Container Architecture
+
+**Cross-reference (read requirements.md and design.md):**
+- Every Requirement ID has at least one UT and one IT or E2E in the Traceability Matrix
+- E2E scenarios trace back to specific user stories and acceptance criteria
+- Container test setup aligns with design.md Container Architecture (if present)
+
+**Quality:**
+- No placeholder text in Input / Expected Output / Verification fields
+- Test cases are specific and concrete (not abstract like "verify success")
+- Test data is realistic and covers the necessary scenarios
+- Naming conventions are consistent (UT-N.M, IT-N, E2E-N)
+
 ### Tasks (`tasks.md`)
 
 **Template compliance:**
 - Every task has `- [ ]` checkbox marker
 - Every task specifies target file path(s)
-- Every task has `_Leverage` field
+- Every implementation task has `_Leverage` field (Phase 0 setup tasks, PhaseReview tasks, and IT/E2E test tasks may omit it)
 - Every task has `_Requirements` field
 - Every task has `_Prompt` field with: Role, Task, Restrictions, Success
 - `_Prompt` contains Role, Task, Restrictions, Success fields in the format "Role: ... | Task: ... | Restrictions: ... | Success: ..."

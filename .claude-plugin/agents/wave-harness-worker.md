@@ -58,6 +58,8 @@ cargo test --lib --quiet
 
 Common:
 
+> **Intentional deviation from quality-checks.md**: wave-harness-worker uses scoped checks (affected files only) for performance. `--all-targets` is omitted because full-project checks are the orchestrator's responsibility at Phase Review. Similarly, `rustfmt --check ${affected_files}` targets only changed files instead of `cargo fmt --all -- --check`.
+
 ```bash
 cargo clippy --quiet -- -D warnings
 rustfmt --check ${affected_files}

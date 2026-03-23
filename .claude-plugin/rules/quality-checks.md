@@ -86,6 +86,42 @@ The full check order becomes:
 3. `cargo test --quiet`
 4. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
 
+## Node.js Task-Level Quality Checks
+
+When the project is Node.js-based (detected by `package.json` existence without Rust indicators), use the following task-level quality checks.
+
+### lint
+
+```bash
+npx eslint . --max-warnings=0
+```
+
+- Falls back to `npx tsc --noEmit` if eslint is not configured
+- If neither eslint nor TypeScript is configured, skip this check
+
+### format
+
+```bash
+npx prettier --check .
+```
+
+- Skip if prettier is not configured in the project
+
+### test
+
+```bash
+npm test
+```
+
+- Or `npx vitest run` / `npx jest` depending on the project's test runner
+- To run a specific test: `npm test -- --testPathPattern={test_name}`
+
+The full check order for Node.js projects:
+
+1. `npx eslint . --max-warnings=0` (or `npx tsc --noEmit` fallback)
+2. `npx prettier --check .`
+3. `npm test`
+
 ## Integration Verification (Phase Review / Final E2E Gate)
 
 Phase Review (3.5.1.5) および全Phase完了後の Final E2E Gate (セクション9) で実行する統合レベルの検証。
@@ -127,8 +163,9 @@ fi
 統合テストファイルが存在する場合にのみ実行する。存在しない場合は SKIP（FAIL ではない）。
 
 ```bash
-# Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ は除外）
-find tests -type f -name '*.rs' -not -path 'tests/e2e/*' -print -quit 2>/dev/null
+# Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ と unit/ は除外）
+# 検出対象: tests/integration*/ 配下の .rs ファイル、または tests/ 直下の .rs ファイル
+find tests -type f -name '*.rs' -not -path 'tests/e2e/*' -not -path 'tests/unit/*' -print -quit 2>/dev/null
 
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 grep -q '"test:integration"' package.json 2>/dev/null || \
