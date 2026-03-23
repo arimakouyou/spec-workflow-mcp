@@ -319,7 +319,7 @@ Agent({
     Test Design: {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
 
     Checks:
-    1. TEMPLATE: Every task has - [ ] marker, file path(s), _Leverage, _Requirements, _Prompt fields
+    1. TEMPLATE: Every task has - [ ] marker, file path(s), _Requirements, _Prompt fields. Every implementation task also has _Leverage (Phase 0 setup tasks, PhaseReview tasks, and IT/E2E test tasks may omit _Leverage)
     2. _Prompt has: Role, Task, Restrictions, Success fields in the format "Role: ... | Task: ... | Restrictions: ... | Success: ..."
     3. CROSS-REFERENCE: Read requirements.md and design.md —
        every requirement must have at least one implementing task,

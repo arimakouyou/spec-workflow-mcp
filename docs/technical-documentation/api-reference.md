@@ -34,7 +34,7 @@
     dashboardAvailable: boolean
   },
   nextSteps: [
-    "Follow sequence: Requirements → Design → Tasks → Implementation",
+    "Follow sequence: Requirements → Design → Test Design → Tasks → Implementation",
     "Load templates with get-template-context first",
     "Request approval after each document"
   ]
@@ -42,7 +42,7 @@
 ```
 
 **Workflow Sequence**:
-1. Requirements Phase → 2. Design Phase → 3. Tasks Phase → 4. Implementation Phase
+1. Requirements Phase → 2. Design Phase → 3. Test Design Phase → 4. Tasks Phase → 5. Implementation Phase
 
 **Key Rules**:
 - ✅ Always use MCP tools, never manual document creation
@@ -125,7 +125,7 @@ sequenceDiagram
 {
   projectPath: "/absolute/path/to/project",
   specName: "user-authentication",     // kebab-case only
-  document: "requirements",            // "requirements" | "design" | "tasks" 
+  document: "requirements",            // "requirements" | "design" | "test-design" | "tasks"
   content: "# Requirements Document\n..." // Complete markdown content
 }
 
@@ -143,7 +143,8 @@ sequenceDiagram
 
 **Workflow Enforcement**:
 - ❌ Cannot create `design.md` without `requirements.md`
-- ❌ Cannot create `tasks.md` without `design.md`
+- ❌ Cannot create `test-design.md` without `design.md`
+- ❌ Cannot create `tasks.md` without `test-design.md`
 - ✅ Auto-creates `.spec-workflow/specs/` directory structure
 
 **Next Step**: Always call `request-approval` immediately after creation
@@ -211,7 +212,7 @@ sequenceDiagram
 
 | templateType | Available templates |
 |--------------|-------------------|
-| `spec` | `requirements`, `design`, `tasks` |
+| `spec` | `requirements`, `design`, `test-design`, `tasks` |
 | `steering` | `product`, `tech`, `structure` |
 
 ## 🔍 Search Tools
@@ -234,11 +235,12 @@ sequenceDiagram
   success: true,
   message: "Specification context loaded successfully for: user-authentication",
   data: {
-    context: "## Specification Context (Pre-loaded): user-authentication\n\n### Requirements\n[content]\n\n### Design\n[content]\n\n### Tasks\n[content]",
+    context: "## Specification Context (Pre-loaded): user-authentication\n\n### Requirements\n[content]\n\n### Design\n[content]\n\n### Test Design\n[content]\n\n### Tasks\n[content]",
     specName: "user-authentication",
     documents: {
       requirements: true,
-      design: true, 
+      design: true,
+      testDesign: false,
       tasks: false
     },
     sections: 2,
@@ -293,7 +295,7 @@ sequenceDiagram
   },
   nextSteps: [
     "Steering context loaded - do not call get-steering-context again",
-    "Reference these standards in requirements, design, and tasks"
+    "Reference these standards in requirements, design, test design, and tasks"
   ]
 }
 
@@ -339,6 +341,7 @@ sequenceDiagram
         phases: {
           requirements: true,
           design: true,
+          testDesign: true,
           tasks: true,
           implementation: false
         },
@@ -395,6 +398,7 @@ sequenceDiagram
     phases: {
       requirements: { exists: true, approved: true },
       design: { exists: true, approved: true },
+      testDesign: { exists: true, approved: true },
       tasks: { exists: true, approved: true },
       implementation: { exists: false, approved: false }
     },
@@ -657,7 +661,7 @@ sequenceDiagram
 5. request-approval(projectPath, title, filePath, "document", "spec", specName)
 6. get-approval-status(projectPath, approvalId) // Poll until approved
 7. delete-approval(projectPath, approvalId)
-8. // Repeat for design, then tasks
+8. // Repeat for design, then test-design, then tasks
 ```
 
 ### Implementing Tasks

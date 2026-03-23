@@ -10,6 +10,7 @@ A comprehensive guide with examples and best practices for interacting with Spec
 "Create a spec for [feature]"
 "List all my specs"
 "Show status of [spec-name]"
+"Create test design for user-auth"
 "Implement task [number] from [spec]"
 "Create steering documents"
 ```
@@ -26,7 +27,8 @@ A comprehensive guide with examples and best practices for interacting with Spec
 The AI will create:
 - Requirements document
 - Design document (after approval)
-- Task breakdown (after design approval)
+- Test design document (after design approval)
+- Task breakdown (after test design approval)
 
 #### Detailed Request
 ```
@@ -569,10 +571,11 @@ The AI will then follow the comprehensive refresh instructions to update your ta
 2. "Create a spec for user authentication"
 3. "Review and approve requirements"
 4. "Review and approve design"
-5. "Implement task 1.1 - database schema"
-6. "Implement task 1.2 - authentication service"
-7. "Create tests for the authentication flow"
-8. "Mark all tasks as complete"
+5. "Review and approve test design"
+6. "Implement task 1.1 - database schema"
+7. "Implement task 1.2 - authentication service"
+8. "Create tests for the authentication flow"
+9. "Mark all tasks as complete"
 ```
 
 ### Parallel Development

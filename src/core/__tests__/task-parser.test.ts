@@ -166,14 +166,15 @@ describe('task-parser', () => {
       expect(waves[0].taskIds).toEqual(['1.1']);
     });
 
-    it('循環依存がある場合は進行不可タスクが残る', () => {
+    it('循環依存がある場合はエラーを投げる', () => {
       const { tasks, phase } = makeTasks([
         { id: '1.1', dependsOn: ['1.2'] },
         { id: '1.2', dependsOn: ['1.1'] },
       ]);
-      const waves = computeExecutionWaves(tasks, phase);
-      // 循環依存により両方とも Wave に入れない → 空
-      expect(waves).toHaveLength(0);
+      // 循環依存により進行不可 → エラーを投げる
+      expect(() => computeExecutionWaves(tasks, phase)).toThrow(
+        /cyclic dependency detected/
+      );
     });
 
     it('ダイヤモンド依存: A → B,C → D', () => {

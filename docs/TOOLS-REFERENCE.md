@@ -58,14 +58,14 @@ Spec Workflow MCP provides specialized tools for structured software development
 
 ### create-spec-doc
 
-**Purpose**: Creates or updates specification documents (requirements, design, tasks).
+**Purpose**: Creates or updates specification documents (requirements, design, test-design, tasks).
 
 **Parameters**:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | specName | string | Yes | Name of the spec (kebab-case) |
-| docType | string | Yes | Type: "requirements", "design", or "tasks" |
+| docType | string | Yes | Type: "requirements", "design", "test-design", or "tasks" |
 | content | string | Yes | Markdown content of the document |
 | revision | boolean | No | Whether this is a revision (default: false) |
 
@@ -113,6 +113,7 @@ Spec Workflow MCP provides specialized tools for structured software development
     documents: {
       requirements: "approved",
       design: "pending-approval",
+      testDesign: "not-created",
       tasks: "not-created"
     },
     taskStats: {
@@ -160,6 +161,12 @@ Spec Workflow MCP provides specialized tools for structured software development
       pendingApproval: true,
       lastModified: "2024-01-15T14:20:00Z",
       size: 6234
+    },
+    testDesign: {
+      exists: false,
+      approved: false,
+      lastModified: null,
+      size: 0
     },
     tasks: {
       exists: true,
@@ -317,6 +324,11 @@ Spec Workflow MCP provides specialized tools for structured software development
       content: "# Design\n\n...",
       approved: false
     },
+    testDesign: {
+      exists: false,
+      content: null,
+      approved: false
+    },
     tasks: {
       exists: true,
       content: "# Tasks\n\n...",
@@ -471,7 +483,11 @@ Tools are designed to work in sequence:
 5. `request-approval` → Request review
 6. `get-approval-status` → Check status
 7. `create-spec-doc` → Create design (after approval)
-8. `manage-tasks` → Track implementation
+8. `request-approval` → Request design review
+9. `create-spec-doc` → Create test design (after design approval)
+10. `request-approval` → Request test design review
+11. `create-spec-doc` → Create tasks (after test design approval)
+12. `manage-tasks` → Track implementation
 
 ### Parallel Operations
 
@@ -506,7 +522,8 @@ All tools return consistent error structures:
 2. **Document Creation**:
    - Always create requirements first
    - Wait for approval before design
-   - Create tasks after design approval
+   - Create test design after design approval
+   - Create tasks after test design approval
 
 3. **Task Management**:
    - Update status when starting tasks

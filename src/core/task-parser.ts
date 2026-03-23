@@ -539,7 +539,7 @@ export function computeExecutionWaves(
       // 呼び出し元が tasks.md などの設定を修正できるよう、明示的にエラーを投げる
       const blockedTaskIds = remaining.map(t => t.id);
       throw new Error(
-        `Cannot compute execution waves for phase "${phase.id ?? ''}": ` +
+        `Cannot compute execution waves for phase "${phase.name ?? ''}": ` +
           `unsatisfied dependencies or cyclic dependency detected. ` +
           `Blocked task IDs: ${blockedTaskIds.join(', ')}`
       );
