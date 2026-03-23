@@ -163,9 +163,9 @@ fi
 統合テストファイルが存在する場合にのみ実行する。存在しない場合は SKIP（FAIL ではない）。
 
 ```bash
-# Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ と unit/ は除外）
+# Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ と unit/ は再帰的に除外）
 # 検出対象: tests/integration*/ 配下の .rs ファイル、または tests/ 直下の .rs ファイル
-find tests -type f -name '*.rs' -not -path 'tests/e2e/*' -not -path 'tests/unit/*' -print -quit 2>/dev/null
+find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*' -print -quit 2>/dev/null
 
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 grep -q '"test:integration"' package.json 2>/dev/null || \
