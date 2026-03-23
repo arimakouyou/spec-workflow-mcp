@@ -340,7 +340,8 @@ project-root/
 │   │   └── feature-name/        # Individual spec
 │   │       ├── requirements.md  # Phase 1
 │   │       ├── design.md        # Phase 2
-│   │       └── tasks.md         # Phase 3
+│   │       ├── test-design.md   # Phase 3
+│   │       └── tasks.md         # Phase 4
 │   ├── steering/                # Project guidance
 │   │   ├── product.md           # Product vision
 │   │   ├── tech.md              # Technical standards

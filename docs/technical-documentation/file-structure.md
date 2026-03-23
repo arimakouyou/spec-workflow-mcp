@@ -11,8 +11,9 @@ project-root/
 │   ├── specs/                         # Specification documents  
 │   │   └── feature-name/              # Individual specification
 │   │       ├── requirements.md        # Phase 1: Requirements
-│   │       ├── design.md             # Phase 2: Design  
-│   │       └── tasks.md              # Phase 3: Tasks
+│   │       ├── design.md             # Phase 2: Design
+│   │       ├── test-design.md        # Phase 3: Test Design
+│   │       └── tasks.md              # Phase 4: Tasks
 │   ├── steering/                      # Project guidance documents
 │   │   ├── product.md                # Product vision & strategy
 │   │   ├── tech.md                   # Technical standards

@@ -261,6 +261,10 @@ git commit -m "<scope>: <summary of changes>"
     - design_conformance: pass|fail
 - observations: <レビュー観察ログ — 全カテゴリ (A-F) の確認結果を review_action に関係なく常に記録>
 - auto_fixed: <自動修正した Minor 問題のリスト (0件でも空リスト [] として記載)>
+- integration-verification: <PhaseReview のみ必須。通常タスクレビューでは省略>
+    - build: pass|fail|skip
+    - integration-tests: pass|fail|skip
+    - smoke-test: pass|fail|skip
 - observations_summary: "<N> 項目確認、<M> 件 auto-fixed、<K> 件 finding"
 - integration-verification: <PhaseReview 時のみ必須。各ステップの結果を記載>
     - build: pass|fail|skip
