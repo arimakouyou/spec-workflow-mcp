@@ -535,8 +535,14 @@ export function computeExecutionWaves(
     });
 
     if (ready.length === 0) {
-      // 循環依存により進行不可（バリデーションで事前検出すべき）
-      break;
+      // 循環依存や未解決の依存関係により進行不可
+      // 呼び出し元が tasks.md などの設定を修正できるよう、明示的にエラーを投げる
+      const blockedTaskIds = remaining.map(t => t.id);
+      throw new Error(
+        `Cannot compute execution waves for phase "${phase.id ?? ''}": ` +
+          `unsatisfied dependencies or cyclic dependency detected. ` +
+          `Blocked task IDs: ${blockedTaskIds.join(', ')}`
+      );
     }
 
     waves.push({ waveIndex, taskIds: ready.map(t => t.id) });
