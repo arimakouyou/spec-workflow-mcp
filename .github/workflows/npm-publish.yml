@@ -65,6 +65,12 @@ jobs:
       - name: Sync plugin versions
         run: npm run sync:plugin-version
 
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || 'latest' }}
+        run: npm publish --access public --tag "${NPM_TAG}"
+
       - name: Commit and push version bump
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -73,12 +79,6 @@ jobs:
           git add package.json package-lock.json .claude-plugin/
           git commit -m "chore: bump version to v${VERSION} [skip ci]"
           git push origin HEAD:main
-
-      - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || 'latest' }}
-        run: npm publish --access public --tag "${NPM_TAG}"
 
       - name: Summary
         env:
