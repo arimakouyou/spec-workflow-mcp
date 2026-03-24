@@ -1,6 +1,8 @@
 name: Publish to npm
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
@@ -9,12 +11,44 @@ on:
         default: 'latest'
         type: string
 
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  test:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Build
+        run: npm run build
+
+  publish:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,10 +59,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Bump patch version
+        run: npm version patch --no-git-tag-version
+
+      - name: Sync plugin versions
+        run: npm run sync:plugin-version
+
+      - name: Commit and push version bump
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json .claude-plugin/
+          git commit -m "chore: bump version to v${VERSION} [skip ci]"
+          git push origin HEAD:main
 
       - name: Publish to npm
-        run: npm publish --access public --tag ${{ inputs.tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || 'latest' }}
+        run: npm publish --access public --tag "${NPM_TAG}"
+
+      - name: Summary
+        env:
+          PKG: ${{ github.event.repository.name }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          {
+            echo "### npm に公開しました"
+            echo ""
+            echo "\`@arimakouyou/${PKG}@${VERSION}\`"
+            echo ""
+            echo "使い方: \`npx @arimakouyou/${PKG}@latest .\`"
+          } >> "$GITHUB_STEP_SUMMARY"
