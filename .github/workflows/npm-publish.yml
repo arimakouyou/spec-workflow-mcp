@@ -83,6 +83,7 @@ jobs:
       - name: Summary
         env:
           PKG: ${{ github.event.repository.name }}
+          NPM_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || 'latest' }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           {
@@ -90,5 +91,5 @@ jobs:
             echo ""
             echo "\`@arimakouyou/${PKG}@${VERSION}\`"
             echo ""
-            echo "使い方: \`npx @arimakouyou/${PKG}@latest .\`"
+            echo "使い方: \`npx @arimakouyou/${PKG}@${NPM_TAG} .\`"
           } >> "$GITHUB_STEP_SUMMARY"
