@@ -11,8 +11,13 @@ on:
         default: 'latest'
         type: string
 
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
 jobs:
   test:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -61,7 +66,7 @@ jobs:
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TAG: ${{ inputs.tag || 'latest' }}
+          NPM_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || 'latest' }}
         run: npm publish --access public --tag "${NPM_TAG}"
 
       - name: Commit and push version bump
@@ -69,7 +74,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json .claude-plugin/
+          git add package.json package-lock.json .claude-plugin/
           git commit -m "chore: bump version to v${VERSION} [skip ci]"
           git push
 
