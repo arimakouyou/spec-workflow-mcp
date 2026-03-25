@@ -122,7 +122,8 @@ This is a strict, automated process. Verbal approval from the user is never acce
 4. **Cleanup**: Use `approvals` with `action: 'delete'`. This must succeed before proceeding.
    - If delete fails: STOP. Return to polling. Never proceed without successful cleanup.
 
-5. **Next phase**: Only after cleanup succeeds, proceed to Phase 1 (Requirements). Use the `/spec-requirements` skill.
+5. **Next phase**: After cleanup succeeds, **automatically** proceed to Phase 1 (Requirements).
+   Load the `/spec-requirements` skill and begin immediately — do not wait for user input.
 
 ## Rules
 

@@ -329,9 +329,9 @@ Same strict process — verbal approval is never accepted.
    - **approved**: Move to cleanup
 4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
    - If delete fails: STOP, return to polling
-5. **Spec complete**: After successful cleanup, tell the user:
-   > "Spec complete. test-design.md has been approved. To define tasks, run `/spec-tasks`."
-   **Stop here.** No automatic startup of any kind until the user personally types `/spec-tasks` or a task breakdown trigger phrase. Auto-triggering on confirmation responses like "yes" or "go ahead" is also prohibited.
+5. **Next phase**: After successful cleanup, **automatically** proceed to Phase 4 (Tasks).
+   Tell the user: "test-design.md has been approved. Proceeding to task breakdown."
+   Load the `/spec-tasks` skill and begin immediately — do not wait for user input.
 
 ## Rules
 

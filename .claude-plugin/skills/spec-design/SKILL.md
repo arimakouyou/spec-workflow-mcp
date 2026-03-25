@@ -275,7 +275,8 @@ Formal approval — verbal approval is not accepted.
    - **approved**: Proceed to cleanup
 4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
    - If delete fails: STOP, return to polling
-5. **Next phase**: After successful cleanup, proceed to Phase 3 (Test Design). Use the `/spec-test-design` skill.
+5. **Next phase**: After successful cleanup, **automatically** proceed to Phase 3 (Test Design).
+   Load the `/spec-test-design` skill and begin immediately — do not wait for user input.
 
 ## Rules
 

@@ -360,9 +360,9 @@ Same strict process — verbal approval is never accepted.
    - **approved**: Move to cleanup
 4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
    - If delete fails: STOP, return to polling
-5. **Spec complete**: After successful cleanup, tell the user:
-   > "Spec complete. tasks.md has been approved. To begin implementation, run `/spec-implement`."
-   **Stop here.** No automatic startup of any kind until the user personally types `/spec-implement` or an implementation trigger phrase (e.g., "implement task X", "start coding"). Auto-triggering on confirmation responses like "yes" or "go ahead" is also prohibited.
+5. **Next phase**: After successful cleanup, **automatically** proceed to Phase 5 (Implementation).
+   Tell the user: "tasks.md has been approved. Proceeding to implementation."
+   Load the `/spec-implement` skill and begin immediately — do not wait for user input.
 
 ## Rules
 
