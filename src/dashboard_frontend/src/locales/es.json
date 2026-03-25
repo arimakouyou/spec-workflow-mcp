@@ -230,6 +230,7 @@
       "docSelectAria": "Seleccionar tipo de documento"
     },
     "documents": {
+      "request-spec": "Espec. solicitud",
       "requirements": "Requerimientos",
       "design": "Diseño",
       "test-design": "Diseño de pruebas",

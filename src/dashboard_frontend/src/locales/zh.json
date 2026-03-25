@@ -230,6 +230,7 @@
       "docSelectAria": "选择文档类型"
     },
     "documents": {
+      "request-spec": "需求规格",
       "requirements": "需求",
       "design": "设计",
       "test-design": "测试设计",

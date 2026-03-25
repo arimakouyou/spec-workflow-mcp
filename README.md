@@ -27,7 +27,7 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 
 ## ✨ Key Features
 
-- **Structured Development Workflow** - Sequential spec creation (Requirements → Design → Test Design → Tasks)
+- **Structured Development Workflow** - Sequential spec creation (Request Spec → Requirements → Design → Test Design → Tasks)
 - **Real-Time Web Dashboard** - Monitor specs, tasks, and progress with live updates
 - **VSCode Extension** - Integrated sidebar dashboard for VSCode users
 - **Approval Workflow** - Complete approval process with revisions
@@ -64,7 +64,7 @@ Two plugin variants are available:
 
 > **What the plugin includes:**
 > - MCP server for spec-driven development workflow
-> - Skills: spec-requirements, spec-design, spec-test-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
+> - Skills: spec-request-spec, spec-requirements, spec-design, spec-test-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
 > - Agents: code-simplifier, review-worker, unit-test-engineer, parallel-worker, etc.
 > - Rules: project architecture, quality checks, security, design principles, etc.
 > - Hooks: automated task read guards

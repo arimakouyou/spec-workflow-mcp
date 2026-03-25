@@ -74,6 +74,7 @@ export class SpecParser {
         createdAt: '',
         lastModified: '',
         phases: {
+          requestSpec: { exists: false },
           requirements: { exists: false },
           design: { exists: false },
           testDesign: { exists: false },
@@ -88,10 +89,23 @@ export class SpecParser {
       spec.lastModified = dirStats.mtime.toISOString();
 
       // Check each phase
+      const requestSpecPath = join(specDir, 'request-spec.md');
       const requirementsPath = join(specDir, 'requirements.md');
       const designPath = join(specDir, 'design.md');
       const testDesignPath = join(specDir, 'test-design.md');
       const tasksPath = join(specDir, 'tasks.md');
+
+      // Check request spec
+      try {
+        await access(requestSpecPath);
+        spec.phases.requestSpec.exists = true;
+        const reqSpecStats = await stat(requestSpecPath);
+        spec.phases.requestSpec.lastModified = reqSpecStats.mtime.toISOString();
+
+        if (reqSpecStats.mtime > new Date(spec.lastModified)) {
+          spec.lastModified = reqSpecStats.mtime.toISOString();
+        }
+      } catch {}
 
       // Check requirements
       try {
@@ -171,6 +185,7 @@ export class SpecParser {
         createdAt: '',
         lastModified: '',
         phases: {
+          requestSpec: { exists: false },
           requirements: { exists: false },
           design: { exists: false },
           testDesign: { exists: false },
@@ -185,10 +200,23 @@ export class SpecParser {
       spec.lastModified = dirStats.mtime.toISOString();
 
       // Check each phase
+      const requestSpecPath = join(specDir, 'request-spec.md');
       const requirementsPath = join(specDir, 'requirements.md');
       const designPath = join(specDir, 'design.md');
       const testDesignPath = join(specDir, 'test-design.md');
       const tasksPath = join(specDir, 'tasks.md');
+
+      // Check request spec
+      try {
+        await access(requestSpecPath);
+        spec.phases.requestSpec.exists = true;
+        const reqSpecStats = await stat(requestSpecPath);
+        spec.phases.requestSpec.lastModified = reqSpecStats.mtime.toISOString();
+
+        if (reqSpecStats.mtime > new Date(spec.lastModified)) {
+          spec.lastModified = reqSpecStats.mtime.toISOString();
+        }
+      } catch {}
 
       // Check requirements
       try {

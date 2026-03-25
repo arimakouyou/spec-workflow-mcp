@@ -11,11 +11,19 @@ The design document is created in **two stages (Waves)**. Wave 1 aligns the arch
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
-Before doing anything else, verify the prerequisite file exists:
+Before doing anything else, verify the prerequisite files exist:
 
-1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
+1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
+2. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 
-If missing — **STOP immediately.** Tell the user: "Cannot start design because requirements.md does not exist. Please run `/spec-requirements` first." Then exit this skill.
+**Legacy workflow exception**: If `request-spec.md` does not exist but `requirements.md` already exists, this is a legacy spec created before Phase 0. Skip the `request-spec.md` check and proceed normally.
+
+If `requirements.md` is missing — **STOP immediately.** Inform the user: "requirements.md does not exist; cannot begin design. Please run `/spec-requirements` first." Then exit this skill.
+
+| Missing File | Required Skill | Skip if legacy? |
+|-------------|---------------|-----------------|
+| request-spec.md | `/spec-request-spec` | Yes (if requirements.md exists) |
+| requirements.md | `/spec-requirements` | No |
 
 ---
 
@@ -42,6 +50,7 @@ The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`)
 
 ### 2. Analyze and Research
 
+- Read the approved request spec: `.spec-workflow/specs/{spec-name}/request-spec.md`
 - Read the approved requirements: `.spec-workflow/specs/{spec-name}/requirements.md`
 - Explore the codebase to understand existing patterns and reusable components
 - If web search is available, research best practices for technology choices
@@ -261,14 +270,23 @@ If check returns FAIL, fix the issues yourself and re-run check (up to 3 times).
 
 Formal approval — verbal approval is not accepted.
 
-1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content)
-2. **Poll status**: `approvals` tool, `action: 'status'`, poll until status changes
-3. **Handle result**:
-   - **needs-revision**: Read the review comments, update the document, re-run the subagent review, submit a NEW approval request
-   - **approved**: Proceed to cleanup
-4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
-   - If delete fails: STOP, return to polling
-5. **Next phase**: After successful cleanup, proceed to Phase 3 (Test Design). Use the `/spec-test-design` skill.
+1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content). Save the returned `approvalId`.
+
+2. **Automatic polling**: Start automatic status checking:
+   ```
+   /loop 1m /check-approval <approvalId>
+   ```
+   The loop will automatically check approval status every minute and handle the result:
+   - **pending**: Continue polling (no action needed)
+   - **approved**: Cleanup is performed automatically, loop stops
+   - **needs-revision**: Loop stops, reviewer comments are displayed
+
+3. **Handle needs-revision** (if loop stopped with revision request):
+   - Read the review comments, update the document, re-run the subagent review
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
+
+4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 3 (Test Design).
+   Load the `/spec-test-design` skill and begin immediately — do not wait for user input.
 
 ## Rules
 

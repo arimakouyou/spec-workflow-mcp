@@ -121,7 +121,7 @@ flowchart TD
 10. If delete fails: STOP - return to polling
 
 ### Phase 2: Tech Document
-**Purpose**: Document technology decisions and architecture.
+**Purpose**: Document project-level technology stack and architecture. Technology selection rationale and decision history should be recorded in \`.spec-workflow/steering/logs/tech-decisions.md\`, not in the tech.md document itself.
 
 **File Operations**:
 - Check for custom template: \`.spec-workflow/user-templates/tech-template.md\`
@@ -191,6 +191,8 @@ flowchart TD
 └── steering/
     ├── product.md
     ├── tech.md
-    └── structure.md
+    ├── structure.md
+    └── logs/
+        └── tech-decisions.md  # 技術選定の経緯・根拠（実装時参照不要）
 \`\`\``;
 }

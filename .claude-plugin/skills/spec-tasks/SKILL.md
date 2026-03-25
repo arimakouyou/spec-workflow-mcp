@@ -11,16 +11,20 @@ Break the approved design into atomic, implementable tasks. This phase converts 
 
 Before doing anything else, verify all prerequisite files exist:
 
-1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
-2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
-3. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
+1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
+2. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
+3. Check `.spec-workflow/specs/{spec-name}/design.md` exists
+4. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
 
-If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin task breakdown. Please run {skill-name} first." Then exit this skill.
+**Legacy workflow exception**: If `request-spec.md` does not exist but `requirements.md` already exists, this is a legacy spec created before Phase 0. Skip the `request-spec.md` check and proceed normally.
 
-| Missing File | Required Skill |
-|-------------|---------------|
-| requirements.md | `/spec-requirements` |
-| design.md | `/spec-design` |
+If `requirements.md`, `design.md`, or `test-design.md` is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin task breakdown. Please run {skill-name} first." Then exit this skill.
+
+| Missing File | Required Skill | Skip if legacy? |
+|-------------|---------------|-----------------|
+| request-spec.md | `/spec-request-spec` | Yes (if requirements.md exists) |
+| requirements.md | `/spec-requirements` | No |
+| design.md | `/spec-design` | No |
 | test-design.md | `/spec-test-design` |
 
 ---
@@ -42,6 +46,7 @@ Check for a custom template first, then fall back to the default:
 
 ### 2. Read Approved Documents
 
+- `.spec-workflow/specs/{spec-name}/request-spec.md`
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
 - `.spec-workflow/specs/{spec-name}/test-design.md`
@@ -350,16 +355,24 @@ If check returns FAIL, fix the issues yourself and re-run check (up to 3 times).
 
 Same strict process — verbal approval is never accepted.
 
-1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only
-2. **Poll status**: `approvals` tool, `action: 'status'`, keep polling
-3. **Handle result**:
-   - **needs-revision**: Update tasks using reviewer comments, spawn the review subagent again, submit NEW approval
-   - **approved**: Move to cleanup
-4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
-   - If delete fails: STOP, return to polling
-5. **Spec complete**: After successful cleanup, tell the user:
-   > "Spec complete. tasks.md has been approved. To begin implementation, run `/spec-implement`."
-   **Stop here.** No automatic startup of any kind until the user personally types `/spec-implement` or an implementation trigger phrase (e.g., "implement task X", "start coding"). Auto-triggering on confirmation responses like "yes" or "go ahead" is also prohibited.
+1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only. Save the returned `approvalId`.
+
+2. **Automatic polling**: Start automatic status checking:
+   ```
+   /loop 1m /check-approval <approvalId>
+   ```
+   The loop will automatically check approval status every minute and handle the result:
+   - **pending**: Continue polling (no action needed)
+   - **approved**: Cleanup is performed automatically, loop stops
+   - **needs-revision**: Loop stops, reviewer comments are displayed
+
+3. **Handle needs-revision** (if loop stopped with revision request):
+   - Update tasks using reviewer comments, spawn the review subagent again
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
+
+4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 5 (Implementation).
+   Tell the user: "tasks.md has been approved. Proceeding to implementation."
+   Load the `/spec-implement` skill and begin immediately — do not wait for user input.
 
 ## Rules
 

@@ -64,7 +64,11 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
     let currentPhase = 'not-started';
     let overallStatus = 'not-started';
     
-    if (!spec.phases.requirements.exists) {
+    // レガシーワークフロー互換: request-spec.mdがないがrequirements.mdが存在する場合はスキップ
+    if (!spec.phases.requestSpec.exists && !spec.phases.requirements.exists) {
+      currentPhase = 'request-spec';
+      overallStatus = 'request-spec-needed';
+    } else if (!spec.phases.requirements.exists) {
       currentPhase = 'requirements';
       overallStatus = 'requirements-needed';
     } else if (!spec.phases.design.exists) {
@@ -89,6 +93,11 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
 
     // Phase details
     const phaseDetails = [
+      {
+        name: 'Request Spec',
+        status: spec.phases.requestSpec.exists ? (spec.phases.requestSpec.approved ? 'approved' : 'created') : 'missing',
+        lastModified: spec.phases.requestSpec.lastModified
+      },
       {
         name: 'Requirements',
         status: spec.phases.requirements.exists ? (spec.phases.requirements.approved ? 'approved' : 'created') : 'missing',
@@ -119,13 +128,18 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
     // Next steps based on current phase
     const nextSteps = [];
     switch (currentPhase) {
+      case 'request-spec':
+        nextSteps.push('Read template: .spec-workflow/templates/request-spec-template.md');
+        nextSteps.push('Create: .spec-workflow/specs/{name}/request-spec.md');
+        nextSteps.push('Request approval');
+        break;
       case 'requirements':
-        nextSteps.push('Read template: .spec-workflow/templates/requirements-template-v*.md');
+        nextSteps.push('Read template: .spec-workflow/templates/requirements-template.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/requirements.md');
         nextSteps.push('Request approval');
         break;
       case 'design':
-        nextSteps.push('Read template: .spec-workflow/templates/design-template-v*.md');
+        nextSteps.push('Read template: .spec-workflow/templates/design-template.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/design.md');
         nextSteps.push('Request approval');
         break;
@@ -135,7 +149,7 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
         nextSteps.push('Request approval');
         break;
       case 'tasks':
-        nextSteps.push('Read template: .spec-workflow/templates/tasks-template-v*.md');
+        nextSteps.push('Read template: .spec-workflow/templates/tasks-template.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/tasks.md');
         nextSteps.push('Request approval');
         break;

@@ -21,12 +21,13 @@ function SpecModal({ spec, isOpen, onClose, isArchived }: { spec: any; isOpen: b
 
   const phases = spec?.phases || {};
   const docToPhaseKey: Record<string, string> = {
+    'request-spec': 'requestSpec',
     requirements: 'requirements',
     design: 'design',
     'test-design': 'testDesign',
     tasks: 'tasks'
   };
-  const availableDocs = ['requirements', 'design', 'test-design', 'tasks'].filter(doc => {
+  const availableDocs = ['request-spec', 'requirements', 'design', 'test-design', 'tasks'].filter(doc => {
     const key = docToPhaseKey[doc] || doc;
     return phases[key] && phases[key].exists;
   });

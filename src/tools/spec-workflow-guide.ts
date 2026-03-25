@@ -6,7 +6,7 @@ export const specWorkflowGuideTool: Tool = {
   description: `Load essential spec workflow instructions to guide feature development from idea to implementation.
 
 # Instructions
-Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. It's important that you follow this workflow exactly to avoid errors.
+Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Request Spec → Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. It's important that you follow this workflow exactly to avoid errors.
 
 NOTE: Do NOT call this tool when the user requests setup-claude-skills. That tool is a standalone file-copy operation and does not require loading the workflow guide.`,
   inputSchema: {
@@ -35,7 +35,7 @@ export async function specWorkflowGuideHandler(args: any, context: ToolContext):
       dashboardAvailable: !!context.dashboardUrl
     },
     nextSteps: [
-      'Follow sequence: Requirements → Design → Test Design → Tasks → Implementation',
+      'Follow sequence: Request Spec → Requirements → Design → Test Design → Tasks → Implementation',
       'Load templates with get-template-context first',
       'Request approval after each document',
       'Use MCP tools only',
@@ -49,14 +49,22 @@ function getSpecWorkflowGuide(): string {
 
 ## Overview
 
-Guide users through spec-driven development: Requirements -> Design -> Test Design -> Tasks -> Implementation.
+Guide users through spec-driven development: Request Spec -> Requirements -> Design -> Test Design -> Tasks -> Implementation.
 Feature names use kebab-case (e.g., user-authentication). Create ONE spec at a time.
 Follow this workflow exactly to avoid errors.
 
 ## Phases
 
-### Phase 1: Requirements — Define WHAT to build
+### Phase 0: Request Spec — Define USE CASES, TECH STACK, and EXECUTION ENVIRONMENT
 - Read steering docs from \`.spec-workflow/steering/*.md\` if they exist
+- Load template: check \`user-templates/\` first, then \`templates/request-spec-template.md\`
+- Define basic use cases, technology stack selection, and execution environment
+- If steering/tech.md exists, only describe feature-specific additional technologies
+- Create: \`.spec-workflow/specs/{spec-name}/request-spec.md\`
+- Approval: request -> poll status -> handle revision/approved -> delete -> proceed
+
+### Phase 1: Requirements — Define WHAT to build
+- Read request-spec.md and steering docs from \`.spec-workflow/steering/*.md\` if they exist
 - Load template: check \`user-templates/\` first, then \`templates/requirements-template.md\`
 - Create: \`.spec-workflow/specs/{spec-name}/requirements.md\`
 - Approval: request -> poll status -> handle revision/approved -> delete -> proceed
@@ -90,10 +98,11 @@ Follow this workflow exactly to avoid errors.
 ## Approval Workflow (all phases)
 
 1. \`approvals\` action:'request' — filePath only, never content
-2. \`approvals\` action:'status' — poll until approved/needs-revision
-3. If needs-revision: update doc, create NEW approval, do NOT proceed
-4. If approved: \`approvals\` action:'delete' — must succeed before next phase
-5. If delete fails: STOP, return to polling
+2. Start automated polling: \`/loop 1m /check-approval <approvalId>\`
+3. The check-approval skill handles status polling, cleanup on approval, and loop termination
+4. If needs-revision: update doc, create NEW approval with new \`/loop\`
+5. If approved: check-approval automatically runs \`approvals\` action:'delete' and stops the loop
+6. If delete fails: check-approval retries on next loop iteration
 
 ## Key Rules
 
@@ -101,6 +110,7 @@ Follow this workflow exactly to avoid errors.
 - One spec at a time, kebab-case names
 - Verbal approval is NEVER accepted — dashboard or VS Code extension only
 - Never proceed if approval delete fails
+- **Auto-transition**: After each phase's approval is approved and cleaned up, automatically proceed to the next phase. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension)
 - Every task marked [x] MUST have log-implementation called first
 - Steering docs are optional — only create when explicitly requested
 
@@ -111,11 +121,13 @@ Follow this workflow exactly to avoid errors.
 ├── user-templates/      # Custom template overrides
 ├── user-prompts/        # Custom prompt overrides
 ├── specs/{spec-name}/
+│   ├── request-spec.md
 │   ├── requirements.md
 │   ├── design.md
 │   ├── test-design.md
 │   ├── tasks.md
 │   └── Implementation Logs/
 └── steering/            # Optional: product.md, tech.md, structure.md
+    └── logs/            # Tech decision logs (not referenced during implementation)
 \`\`\``;
 }

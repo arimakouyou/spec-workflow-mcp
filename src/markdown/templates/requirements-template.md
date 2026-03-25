@@ -37,14 +37,23 @@
 - **Dependency Management**: Minimize interdependencies between modules
 - **Clear Interfaces**: Define clean contracts between components and layers
 
-### Performance
-- [Performance requirements]
+### 品質特性方針
 
-### Security
-- [Security requirements]
+[数値目標を記述する場合は、その根拠（計測方法、比較対象、ユーザー体験への影響）を
+ 併記すること。根拠のない数値は記載しない]
 
-### Reliability
-- [Reliability requirements]
+#### パフォーマンス
+- **方針**: [例: ユーザー操作に対して体感上の遅延なくレスポンスすること]
+- **計測対象と基準**（根拠がある場合のみ）:
 
-### Usability
-- [Usability requirements]
+#### セキュリティ
+- **方針**: [例: 認証・認可の要件、データ保護の方針]
+- **適用基準・規格**（該当する場合）:
+
+#### 信頼性
+- **方針**: [例: データの整合性保証、障害時の挙動]
+- **回復方針**:
+
+#### ユーザビリティ
+- **方針**: [例: アクセシビリティ基準、多言語対応の要否]
+- **対象ユーザーの前提条件**:

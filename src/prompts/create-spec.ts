@@ -13,8 +13,8 @@ const prompt: Prompt = {
       required: true
     },
     {
-      name: 'documentType', 
-      description: 'Type of document to create: requirements, design, test-design, or tasks',
+      name: 'documentType',
+      description: 'Type of document to create: request-spec, requirements, design, test-design, or tasks',
       required: true
     },
     {
@@ -32,7 +32,7 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
     throw new Error('specName and documentType are required arguments');
   }
 
-  const validDocTypes = ['requirements', 'design', 'test-design', 'tasks'];
+  const validDocTypes = ['request-spec', 'requirements', 'design', 'test-design', 'tasks'];
   // ダッシュボードのプレビュー用サンプルコンテキストではバリデーションをスキップ
   const isPreviewContext = context.projectPath === '{{projectPath}}';
   if (!isPreviewContext && !validDocTypes.includes(documentType)) {
@@ -68,11 +68,12 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 - Document destination: .spec-workflow/specs/${specName}/${documentType}.md
 
 **Workflow Guidelines:**
+- Request spec documents define USE CASES, TECH STACK, and EXECUTION ENVIRONMENT
 - Requirements documents define WHAT needs to be built
 - Design documents define HOW it will be built
 - Test design documents define HOW TO TEST the feature (UT/IT/E2E specifications)
 - Tasks documents break down implementation into actionable steps
-- Sequence: Requirements → Design → Test Design → Tasks
+- Sequence: Request Spec → Requirements → Design → Test Design → Tasks
 - Each document builds upon the previous one in sequence
 - Templates are automatically updated on server start
 

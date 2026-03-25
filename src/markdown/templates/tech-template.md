@@ -84,16 +84,14 @@
 - **Availability Requirements**: [Uptime targets, disaster recovery]
 - **Growth Projections**: [How the system needs to scale]
 
-## Technical Decisions & Rationale
-[Document key architectural and technology choices]
+## Technical Decisions
 
-### Decision Log
-1. **[Technology/Pattern Choice]**: [Why this was chosen, alternatives considered]
-2. **[Architecture Decision]**: [Rationale, trade-offs accepted]
-3. **[Tool/Library Selection]**: [Reasoning, evaluation criteria]
+[現在採用中の技術的判断を簡潔に記述する。
+ 選定の経緯・根拠・却下した代替案は .spec-workflow/steering/logs/tech-decisions.md に記録する]
 
 ## Known Limitations
-[Document any technical debt, limitations, or areas for improvement]
+
+[技術的負債、制限事項、改善の余地がある領域を記述する]
 
 - [Limitation 1]: [Impact and potential future solutions]
 - [Limitation 2]: [Why it exists and when it might be addressed]

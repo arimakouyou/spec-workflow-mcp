@@ -49,13 +49,14 @@ ${specName ?
 3. Provide a consolidated overview of project progress`}
 
 **Status Information Includes:**
-- **Document Status**: Which documents exist (requirements, design, tasks)
+- **Document Status**: Which documents exist (request-spec, requirements, design, test-design, tasks)
 - **Task Progress**: Completion status and remaining work
 - **Approval Status**: Pending, approved, or rejected approvals
 - **File Information**: Last modified dates and file sizes
 - **Workflow Stage**: Current phase in the spec-driven development process
 
 **Workflow Stages:**
+0. **Request Spec**: Use cases, tech stack, and execution environment defined and approved
 1. **Planning**: Requirements document created and approved
 2. **Design**: Design document created and approved
 3. **Test Design**: Test design document (UT/IT/E2E specifications) created and approved

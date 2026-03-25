@@ -231,6 +231,7 @@
       "docSelectAria": "ドキュメント種類を選択"
     },
     "documents": {
+      "request-spec": "要求仕様",
       "requirements": "要件",
       "design": "設計",
       "test-design": "テスト設計",

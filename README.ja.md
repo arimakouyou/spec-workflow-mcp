@@ -29,7 +29,7 @@
 
 ## ✨ 主な機能
 
-- **構造化された開発ワークフロー** - 順次仕様作成（要件 → 設計 → テスト設計 → タスク）
+- **構造化された開発ワークフロー** - 順次仕様作成（要求仕様 → 要件 → 設計 → テスト設計 → タスク）
 - **リアルタイムWebダッシュボード** - ライブ更新で仕様、タスク、進捗を監視
 - **VSCode拡張機能** - VSCodeユーザー向けの統合サイドバーダッシュボード
 - **承認ワークフロー** - 改訂を含む完全な承認プロセス
@@ -62,7 +62,7 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 
 > **プラグインに含まれるもの：**
 > - 仕様駆動開発ワークフロー用の MCP サーバー
-> - スキル：spec-requirements、spec-design、spec-test-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
+> - スキル：spec-request-spec、spec-requirements、spec-design、spec-test-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
 > - エージェント：code-simplifier、review-worker、unit-test-engineer、parallel-worker など
 > - ルール：プロジェクトアーキテクチャ、品質チェック、セキュリティ、設計原則など
 > - フック：タスク読み取りガードの自動化

@@ -230,6 +230,7 @@
       "docSelectAria": "اختر نوع الوثيقة"
     },
     "documents": {
+      "request-spec": "مواصفات الطلب",
       "requirements": "المتطلبات",
       "design": "التصميم",
       "test-design": "تصميم الاختبارات",

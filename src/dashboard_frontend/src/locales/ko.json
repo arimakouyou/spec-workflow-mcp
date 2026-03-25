@@ -230,6 +230,7 @@
       "docSelectAria": "문서 유형 선택"
     },
     "documents": {
+      "request-spec": "요구 사양",
       "requirements": "요구사항",
       "design": "설계",
       "test-design": "테스트 설계",

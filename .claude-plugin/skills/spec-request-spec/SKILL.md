@@ -1,25 +1,11 @@
 ---
-name: spec-requirements
-description: "Phase 1 of spec-driven development: create a requirements document for a feature. Use this skill when the user wants to start a new spec, define requirements, or begin the spec workflow for a feature. Triggers on: 'create requirements', 'new spec for X', 'start spec workflow', 'define what to build', or any request to create a requirements.md document."
+name: spec-request-spec
+description: "Phase 0 of spec-driven development: create a request specification document that defines use cases, technology stack, and execution environment. Use this skill when starting a new spec, as the very first phase before requirements definition. Triggers on: 'create request spec', 'new spec for X', 'start spec workflow', 'define use cases', 'select tech stack', or any request to create a request-spec.md document."
 ---
 
-# Spec Requirements (Phase 1)
+# Spec Request Spec (Phase 0)
 
-Create a requirements document that defines **what** to build based on user needs. This is the second phase of the spec-driven development workflow (Request Spec -> Requirements -> Design -> Test Design -> Tasks -> Implementation).
-
-## Prerequisites Check (MANDATORY — DO NOT SKIP)
-
-Before doing anything else, verify the prerequisite file exists:
-
-1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
-
-**Legacy workflow exception**: If `request-spec.md` does not exist but `requirements.md` already exists in the spec directory, this is a legacy spec created before Phase 0 was introduced. In this case, skip the request-spec prerequisite and proceed normally.
-
-If missing AND no downstream documents exist — **STOP immediately.** Tell the user: "Cannot start requirements because request-spec.md does not exist. Please run `/spec-request-spec` first." Then exit this skill.
-
----
-
-Request specification must be approved and cleaned up (Phase 0 complete). If not, use `/spec-request-spec` first.
+Create a request specification document that defines **use cases**, **technology stack**, and **execution environment** before diving into detailed requirements. This is the first phase of the spec-driven development workflow (Request Spec -> Requirements -> Design -> Test Design -> Tasks -> Implementation).
 
 ## Inputs
 
@@ -29,11 +15,7 @@ You need a **spec name** in kebab-case (e.g., `user-authentication`, `data-expor
 
 ### 1. Gather Context
 
-Read the approved request specification and steering documents if they exist:
-
-```
-.spec-workflow/specs/{spec-name}/request-spec.md
-```
+Read steering documents if they exist — these contain project-level guidance that should inform your request specification:
 
 ```
 .spec-workflow/steering/product.md
@@ -41,27 +23,30 @@ Read the approved request specification and steering documents if they exist:
 .spec-workflow/steering/structure.md
 ```
 
+If `tech.md` exists, the technology stack section of the request spec should only describe **feature-specific additions** — do not duplicate project-level base technologies.
+
 ### 2. Load the Template
 
 Check for a custom template first. If none exists, fall back to the default:
 
-1. `.spec-workflow/user-templates/requirements-template.md` (custom)
-2. `.spec-workflow/templates/requirements-template.md` (default)
+1. `.spec-workflow/user-templates/request-spec-template.md` (custom)
+2. `.spec-workflow/templates/request-spec-template.md` (default)
 
 Follow the template structure exactly for consistency across the project.
 
 ### 3. Research and Write
 
-- If web search is available, research current market expectations and best practices
-- Generate requirements as user stories using EARS criteria (Event, Action, Response, State)
-- Cover all functional and non-functional requirements
-- Be comprehensive — the design phase depends on complete requirements
+- Discuss with the user to confirm basic use cases for the feature
+- Identify the technology stack needed (feature-specific additions only if tech.md exists)
+- Confirm the execution environment and its constraints
+- Define clear scope boundaries (what's in scope and what's explicitly out of scope)
+- If web search is available, research relevant technology options and best practices
 
 ### 4. Create the Document
 
 Write the file to:
 ```
-.spec-workflow/specs/{spec-name}/requirements.md
+.spec-workflow/specs/{spec-name}/request-spec.md
 ```
 
 ### 5. Self-Review via Subagent (before approval)
@@ -75,11 +60,11 @@ Auto-fix placeholders, formatting, and typos. Do not add or change content:
 ```
 Agent({
   subagent_type: "general-purpose",
-  description: "Fix requirements spec (auto-fix)",
+  description: "Fix request-spec (auto-fix)",
   prompt: "You are a spec document reviewer. Auto-fix minor issues in the document at:
-    {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+    {project-path}/.spec-workflow/specs/{spec-name}/request-spec.md
 
-    Document type: requirements
+    Document type: request-spec
 
     Auto-fix targets (you may directly modify the file):
     - Remove placeholder text ([describe...], TODO, TBD)
@@ -88,7 +73,7 @@ Agent({
 
     Not auto-fix targets (report as issues only):
     - Adding or removing sections
-    - Adding or changing content (requirements, Acceptance Criteria, etc.)
+    - Adding or changing content (use cases, technology selections, etc.)
 
     Mode: fix — Return a structured report (auto-fixed items + remaining issues)."
 })
@@ -101,18 +86,19 @@ After fix is complete, detect content issues. Do not modify the file:
 ```
 Agent({
   subagent_type: "general-purpose",
-  description: "Review requirements spec (check)",
+  description: "Review request-spec (check)",
   prompt: "You are a spec document reviewer. Review the document (do NOT modify the file) at:
-    {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+    {project-path}/.spec-workflow/specs/{spec-name}/request-spec.md
 
-    Document type: requirements
-    Template: {project-path}/.spec-workflow/templates/requirements-template.md
+    Document type: request-spec
+    Template: {project-path}/.spec-workflow/templates/request-spec-template.md
 
     Checks:
     1. TEMPLATE: Every section from the template must exist with real content (no [describe...] or TODO)
-    2. Every requirement needs User Story ('As a [role]...') and EARS Acceptance Criteria (WHEN/IF...THEN...SHALL)
-    3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability
-    4. Requirements should be uniquely identified (REQ-1, REQ-2, etc.)
+    2. USE CASES: At least one use case with Actor, Purpose, Basic Flow, and Post-conditions defined
+    3. TECH STACK: Technology selections table is filled with concrete entries (no placeholders)
+    4. EXECUTION ENVIRONMENT: Target environment and constraints are specified
+    5. SCOPE: Both 'In Scope' and 'Out of Scope' sections have concrete entries
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
@@ -141,8 +127,8 @@ This is a strict, automated process. Verbal approval from the user is never acce
    - Spawn the review subagent again (Step A + B)
    - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
 
-4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 2 (Design).
-   Load the `/spec-design` skill and begin immediately — do not wait for user input.
+4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 1 (Requirements).
+   Load the `/spec-requirements` skill and begin immediately — do not wait for user input.
 
 ## Rules
 
@@ -151,4 +137,5 @@ This is a strict, automated process. Verbal approval from the user is never acce
 - Approval requests: filePath only, never content
 - Never accept verbal approval — dashboard/VS Code extension only
 - Never proceed if approval delete fails
-- Must have approved status AND successful cleanup before moving to design
+- Must have approved status AND successful cleanup before moving to requirements
+- If steering/tech.md exists, only describe feature-specific technology additions
