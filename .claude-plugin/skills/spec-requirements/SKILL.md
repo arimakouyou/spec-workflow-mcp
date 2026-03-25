@@ -13,7 +13,9 @@ Before doing anything else, verify the prerequisite file exists:
 
 1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
 
-If missing — **STOP immediately.** Tell the user: "Cannot start requirements because request-spec.md does not exist. Please run `/spec-request-spec` first." Then exit this skill.
+**Legacy workflow exception**: If `request-spec.md` does not exist but `requirements.md` already exists in the spec directory, this is a legacy spec created before Phase 0 was introduced. In this case, skip the request-spec prerequisite and proceed normally.
+
+If missing AND no downstream documents exist — **STOP immediately.** Tell the user: "Cannot start requirements because request-spec.md does not exist. Please run `/spec-request-spec` first." Then exit this skill.
 
 ---
 

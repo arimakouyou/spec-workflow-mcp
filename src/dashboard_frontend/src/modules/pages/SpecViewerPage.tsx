@@ -19,6 +19,18 @@ function Content() {
   const [documents, setDocuments] = useState<Record<string, { content: string; lastModified: string } | null>>({});
   const [loading, setLoading] = useState(false);
 
+  // 利用可能なドキュメントの一覧（存在するもののみ）
+  const availableDocs = (['request-spec', 'requirements', 'design', 'test-design', 'tasks'] as const).filter(
+    (d) => documents[d] != null
+  );
+
+  // 選択中のドキュメントが存在しない場合、最初の利用可能なドキュメントにフォールバック
+  useEffect(() => {
+    if (availableDocs.length > 0 && !availableDocs.includes(activeDoc)) {
+      setActiveDoc(availableDocs[0]);
+    }
+  }, [availableDocs, activeDoc]);
+
   useEffect(() => {
     if (!spec) return;
     let active = true;

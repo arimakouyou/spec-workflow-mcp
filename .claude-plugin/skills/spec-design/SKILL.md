@@ -16,12 +16,14 @@ Before doing anything else, verify the prerequisite files exist:
 1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
 2. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 
-If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin design. Please run {skill-name} first." Then exit this skill.
+**Legacy workflow exception**: If `request-spec.md` does not exist but `requirements.md` already exists, this is a legacy spec created before Phase 0. Skip the `request-spec.md` check and proceed normally.
 
-| Missing File | Required Skill |
-|-------------|---------------|
-| request-spec.md | `/spec-request-spec` |
-| requirements.md | `/spec-requirements` |
+If `requirements.md` is missing — **STOP immediately.** Inform the user: "requirements.md does not exist; cannot begin design. Please run `/spec-requirements` first." Then exit this skill.
+
+| Missing File | Required Skill | Skip if legacy? |
+|-------------|---------------|-----------------|
+| request-spec.md | `/spec-request-spec` | Yes (if requirements.md exists) |
+| requirements.md | `/spec-requirements` | No |
 
 ---
 

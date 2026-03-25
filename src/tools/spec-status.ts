@@ -64,7 +64,8 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
     let currentPhase = 'not-started';
     let overallStatus = 'not-started';
     
-    if (!spec.phases.requestSpec.exists) {
+    // レガシーワークフロー互換: request-spec.mdがないがrequirements.mdが存在する場合はスキップ
+    if (!spec.phases.requestSpec.exists && !spec.phases.requirements.exists) {
       currentPhase = 'request-spec';
       overallStatus = 'request-spec-needed';
     } else if (!spec.phases.requirements.exists) {

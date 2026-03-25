@@ -49,7 +49,7 @@ ${specName ?
 3. Provide a consolidated overview of project progress`}
 
 **Status Information Includes:**
-- **Document Status**: Which documents exist (request-spec, requirements, design, tasks)
+- **Document Status**: Which documents exist (request-spec, requirements, design, test-design, tasks)
 - **Task Progress**: Completion status and remaining work
 - **Approval Status**: Pending, approved, or rejected approvals
 - **File Information**: Last modified dates and file sizes

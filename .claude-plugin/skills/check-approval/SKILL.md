@@ -20,7 +20,7 @@ Called automatically by `/loop` during the approval workflow:
 
 Call the `approvals` MCP tool:
 ```
-approvals action:"status" approvalId:"<approvalId>"
+approvals action: 'status', approvalId: '<approvalId>'
 ```
 
 ### 2. Handle Result
