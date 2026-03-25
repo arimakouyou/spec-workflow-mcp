@@ -64,7 +64,10 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
     let currentPhase = 'not-started';
     let overallStatus = 'not-started';
     
-    if (!spec.phases.requirements.exists) {
+    if (!spec.phases.requestSpec.exists) {
+      currentPhase = 'request-spec';
+      overallStatus = 'request-spec-needed';
+    } else if (!spec.phases.requirements.exists) {
       currentPhase = 'requirements';
       overallStatus = 'requirements-needed';
     } else if (!spec.phases.design.exists) {
@@ -89,6 +92,11 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
 
     // Phase details
     const phaseDetails = [
+      {
+        name: 'Request Spec',
+        status: spec.phases.requestSpec.exists ? (spec.phases.requestSpec.approved ? 'approved' : 'created') : 'missing',
+        lastModified: spec.phases.requestSpec.lastModified
+      },
       {
         name: 'Requirements',
         status: spec.phases.requirements.exists ? (spec.phases.requirements.approved ? 'approved' : 'created') : 'missing',
@@ -119,6 +127,11 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
     // Next steps based on current phase
     const nextSteps = [];
     switch (currentPhase) {
+      case 'request-spec':
+        nextSteps.push('Read template: .spec-workflow/templates/request-spec-template.md');
+        nextSteps.push('Create: .spec-workflow/specs/{name}/request-spec.md');
+        nextSteps.push('Request approval');
+        break;
       case 'requirements':
         nextSteps.push('Read template: .spec-workflow/templates/requirements-template-v*.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/requirements.md');

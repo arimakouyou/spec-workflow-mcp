@@ -53,6 +53,7 @@ export class WorkspaceInitializer {
     const templatesDir = join(PathUtils.getWorkflowRoot(this.projectPath), 'templates');
     
     const templates = [
+      'request-spec-template',
       'requirements-template',
       'design-template',
       'test-design-template',
@@ -95,6 +96,7 @@ This directory allows you to create custom templates that override the default S
 ## How to Use Custom Templates
 
 1. **Create your custom template file** in this directory with the exact same name as the default template you want to override:
+   - \`request-spec-template.md\` - Override request specification document template
    - \`requirements-template.md\` - Override requirements document template
    - \`design-template.md\` - Override design document template
    - \`test-design-template.md\` - Override test design document template

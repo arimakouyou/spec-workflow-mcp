@@ -5,7 +5,19 @@ description: "Phase 1 of spec-driven development: create a requirements document
 
 # Spec Requirements (Phase 1)
 
-Create a requirements document that defines **what** to build based on user needs. This is the first phase of the spec-driven development workflow (Requirements -> Design -> Tasks -> Implementation).
+Create a requirements document that defines **what** to build based on user needs. This is the second phase of the spec-driven development workflow (Request Spec -> Requirements -> Design -> Test Design -> Tasks -> Implementation).
+
+## Prerequisites Check (MANDATORY — DO NOT SKIP)
+
+Before doing anything else, verify the prerequisite file exists:
+
+1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
+
+If missing — **STOP immediately.** Tell the user: "Cannot start requirements because request-spec.md does not exist. Please run `/spec-request-spec` first." Then exit this skill.
+
+---
+
+Request specification must be approved and cleaned up (Phase 0 complete). If not, use `/spec-request-spec` first.
 
 ## Inputs
 
@@ -15,7 +27,11 @@ You need a **spec name** in kebab-case (e.g., `user-authentication`, `data-expor
 
 ### 1. Gather Context
 
-Read steering documents if they exist — these contain project-level guidance that should inform your requirements:
+Read the approved request specification and steering documents if they exist:
+
+```
+.spec-workflow/specs/{spec-name}/request-spec.md
+```
 
 ```
 .spec-workflow/steering/product.md

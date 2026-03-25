@@ -60,7 +60,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 
 **Steering Document Types:**
 - **product**: Defines project vision, goals, and user outcomes
-- **tech**: Documents technology decisions and architecture patterns
+- **tech**: Documents project-level technology stack and architecture. Selection rationale and decision history go to .spec-workflow/steering/logs/tech-decisions.md
 - **structure**: Maps codebase organization and conventions
 
 **Key Principles:**

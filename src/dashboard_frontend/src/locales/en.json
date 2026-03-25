@@ -231,6 +231,7 @@
       "docSelectAria": "Select document type"
     },
     "documents": {
+      "request-spec": "Request Spec",
       "requirements": "Requirements",
       "design": "Design",
       "test-design": "Test Design",

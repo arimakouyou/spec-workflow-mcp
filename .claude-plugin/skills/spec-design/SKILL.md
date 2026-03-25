@@ -11,11 +11,17 @@ The design document is created in **two stages (Waves)**. Wave 1 aligns the arch
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
-Before doing anything else, verify the prerequisite file exists:
+Before doing anything else, verify the prerequisite files exist:
 
-1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
+1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
+2. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
 
-If missing — **STOP immediately.** Tell the user: "Cannot start design because requirements.md does not exist. Please run `/spec-requirements` first." Then exit this skill.
+If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin design. Please run {skill-name} first." Then exit this skill.
+
+| Missing File | Required Skill |
+|-------------|---------------|
+| request-spec.md | `/spec-request-spec` |
+| requirements.md | `/spec-requirements` |
 
 ---
 
@@ -42,6 +48,7 @@ The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`)
 
 ### 2. Analyze and Research
 
+- Read the approved request spec: `.spec-workflow/specs/{spec-name}/request-spec.md`
 - Read the approved requirements: `.spec-workflow/specs/{spec-name}/requirements.md`
 - Explore the codebase to understand existing patterns and reusable components
 - If web search is available, research best practices for technology choices

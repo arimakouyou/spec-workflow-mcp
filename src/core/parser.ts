@@ -40,6 +40,7 @@ export class SpecParser {
       }
       
       // Read all phase files
+      const requestSpec = await this.getPhaseStatus(specPath, 'request-spec.md');
       const requirements = await this.getPhaseStatus(specPath, 'requirements.md');
       const design = await this.getPhaseStatus(specPath, 'design.md');
       const testDesign = await this.getPhaseStatus(specPath, 'test-design.md');
@@ -61,6 +62,7 @@ export class SpecParser {
         createdAt: stats.birthtime.toISOString(),
         lastModified: stats.mtime.toISOString(),
         phases: {
+          requestSpec,
           requirements,
           design,
           testDesign,

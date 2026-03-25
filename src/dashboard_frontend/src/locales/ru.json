@@ -232,6 +232,7 @@
       "docSelectAria": "Выбрать тип документа"
     },
     "documents": {
+      "request-spec": "Спец. запроса",
       "requirements": "Требования",
       "design": "Дизайн",
       "test-design": "Тестовый дизайн",

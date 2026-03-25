@@ -11,14 +11,16 @@ Break the approved design into atomic, implementable tasks. This phase converts 
 
 Before doing anything else, verify all prerequisite files exist:
 
-1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
-2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
-3. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
+1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
+2. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
+3. Check `.spec-workflow/specs/{spec-name}/design.md` exists
+4. Check `.spec-workflow/specs/{spec-name}/test-design.md` exists
 
 If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin task breakdown. Please run {skill-name} first." Then exit this skill.
 
 | Missing File | Required Skill |
 |-------------|---------------|
+| request-spec.md | `/spec-request-spec` |
 | requirements.md | `/spec-requirements` |
 | design.md | `/spec-design` |
 | test-design.md | `/spec-test-design` |
@@ -42,6 +44,7 @@ Check for a custom template first, then fall back to the default:
 
 ### 2. Read Approved Documents
 
+- `.spec-workflow/specs/{spec-name}/request-spec.md`
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
 - `.spec-workflow/specs/{spec-name}/test-design.md`

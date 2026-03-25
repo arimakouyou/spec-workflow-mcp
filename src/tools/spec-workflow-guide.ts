@@ -6,7 +6,7 @@ export const specWorkflowGuideTool: Tool = {
   description: `Load essential spec workflow instructions to guide feature development from idea to implementation.
 
 # Instructions
-Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. It's important that you follow this workflow exactly to avoid errors.
+Call this tool FIRST when users request spec creation, feature development, or mention specifications. This provides the complete workflow sequence (Request Spec → Requirements → Design → Test Design → Tasks → Implementation) that must be followed. Always load before any other spec tools to ensure proper workflow understanding. It's important that you follow this workflow exactly to avoid errors.
 
 NOTE: Do NOT call this tool when the user requests setup-claude-skills. That tool is a standalone file-copy operation and does not require loading the workflow guide.`,
   inputSchema: {
@@ -35,7 +35,7 @@ export async function specWorkflowGuideHandler(args: any, context: ToolContext):
       dashboardAvailable: !!context.dashboardUrl
     },
     nextSteps: [
-      'Follow sequence: Requirements → Design → Test Design → Tasks → Implementation',
+      'Follow sequence: Request Spec → Requirements → Design → Test Design → Tasks → Implementation',
       'Load templates with get-template-context first',
       'Request approval after each document',
       'Use MCP tools only',
@@ -49,14 +49,22 @@ function getSpecWorkflowGuide(): string {
 
 ## Overview
 
-Guide users through spec-driven development: Requirements -> Design -> Test Design -> Tasks -> Implementation.
+Guide users through spec-driven development: Request Spec -> Requirements -> Design -> Test Design -> Tasks -> Implementation.
 Feature names use kebab-case (e.g., user-authentication). Create ONE spec at a time.
 Follow this workflow exactly to avoid errors.
 
 ## Phases
 
-### Phase 1: Requirements — Define WHAT to build
+### Phase 0: Request Spec — Define USE CASES, TECH STACK, and EXECUTION ENVIRONMENT
 - Read steering docs from \`.spec-workflow/steering/*.md\` if they exist
+- Load template: check \`user-templates/\` first, then \`templates/request-spec-template.md\`
+- Define basic use cases, technology stack selection, and execution environment
+- If steering/tech.md exists, only describe feature-specific additional technologies
+- Create: \`.spec-workflow/specs/{spec-name}/request-spec.md\`
+- Approval: request -> poll status -> handle revision/approved -> delete -> proceed
+
+### Phase 1: Requirements — Define WHAT to build
+- Read request-spec.md and steering docs from \`.spec-workflow/steering/*.md\` if they exist
 - Load template: check \`user-templates/\` first, then \`templates/requirements-template.md\`
 - Create: \`.spec-workflow/specs/{spec-name}/requirements.md\`
 - Approval: request -> poll status -> handle revision/approved -> delete -> proceed
@@ -111,11 +119,13 @@ Follow this workflow exactly to avoid errors.
 ├── user-templates/      # Custom template overrides
 ├── user-prompts/        # Custom prompt overrides
 ├── specs/{spec-name}/
+│   ├── request-spec.md
 │   ├── requirements.md
 │   ├── design.md
 │   ├── test-design.md
 │   ├── tasks.md
 │   └── Implementation Logs/
 └── steering/            # Optional: product.md, tech.md, structure.md
+    └── logs/            # Tech decision logs (not referenced during implementation)
 \`\`\``;
 }

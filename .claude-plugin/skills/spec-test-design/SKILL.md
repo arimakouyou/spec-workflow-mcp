@@ -11,13 +11,15 @@ Create a test design document that defines **how to test** the feature. This pha
 
 Before doing anything else, verify all prerequisite files exist:
 
-1. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
-2. Check `.spec-workflow/specs/{spec-name}/design.md` exists
+1. Check `.spec-workflow/specs/{spec-name}/request-spec.md` exists
+2. Check `.spec-workflow/specs/{spec-name}/requirements.md` exists
+3. Check `.spec-workflow/specs/{spec-name}/design.md` exists
 
 If ANY file is missing — **STOP immediately.** Inform the user: "{filename} does not exist; cannot begin test design. Please run {skill-name} first." Then exit this skill.
 
 | Missing File | Required Skill |
 |-------------|---------------|
+| request-spec.md | `/spec-request-spec` |
 | requirements.md | `/spec-requirements` |
 | design.md | `/spec-design` |
 
@@ -47,6 +49,7 @@ The same **spec name** used in previous phases (kebab-case, e.g., `user-authenti
 
 ### 2. Read Approved Documents
 
+- `.spec-workflow/specs/{spec-name}/request-spec.md`
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
 

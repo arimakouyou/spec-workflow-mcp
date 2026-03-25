@@ -78,6 +78,23 @@ Agent({
 
 ## Review Checklist by Document Type
 
+### Request Specification (`request-spec.md`)
+
+**Template compliance:**
+- Feature overview with clear purpose and value proposition
+- At least one use case with Actor, Purpose, Basic Flow, Alternative Flow, Exception Flow, and Post-conditions
+- Technology stack table with concrete entries (technology, purpose, version)
+- Selection constraints documented
+- Execution environment specified (OS/platform, runtime, external dependencies)
+- Environment-specific constraints listed
+- Scope definition with both "In Scope" and "Out of Scope" sections
+
+**Quality:**
+- No placeholder text (`[describe...]`, `TODO`, `TBD`)
+- Use cases are specific and actionable (not abstract)
+- Technology selections are justified by constraints (if steering/tech.md exists, only feature-specific additions)
+- Scope boundaries are clear and unambiguous
+
 ### Requirements (`requirements.md`)
 
 **Template compliance:**
@@ -85,7 +102,7 @@ Agent({
 - Alignment with Product Vision section (references steering docs if they exist)
 - Every requirement has User Story: "As a [role], I want [feature], so that [benefit]"
 - Every requirement has Acceptance Criteria using EARS pattern (WHEN/IF...THEN...SHALL)
-- Non-Functional Requirements: Code Architecture, Performance, Security, Reliability, Usability
+- Non-Functional Requirements: Code Architecture, Quality Characteristics Policy (Performance, Security, Reliability, Usability) — numerical targets must include justification
 
 **Quality:**
 - No placeholder text (`[describe...]`, `TODO`, `TBD`)
