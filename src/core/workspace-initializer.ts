@@ -35,9 +35,10 @@ export class WorkspaceInitializer {
     
     const directories = [
       'approvals',
-      'archive', 
+      'archive',
       'specs',
       'steering',
+      'steering/logs',
       'templates',
       'user-templates',
       'user-prompts'

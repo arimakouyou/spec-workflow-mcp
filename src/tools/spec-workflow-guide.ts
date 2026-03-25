@@ -98,10 +98,11 @@ Follow this workflow exactly to avoid errors.
 ## Approval Workflow (all phases)
 
 1. \`approvals\` action:'request' — filePath only, never content
-2. \`approvals\` action:'status' — poll until approved/needs-revision
-3. If needs-revision: update doc, create NEW approval, do NOT proceed
-4. If approved: \`approvals\` action:'delete' — must succeed before next phase
-5. If delete fails: STOP, return to polling
+2. Start automated polling: \`/loop 1m /check-approval <approvalId>\`
+3. The check-approval skill handles status polling, cleanup on approval, and loop termination
+4. If needs-revision: update doc, create NEW approval with new \`/loop\`
+5. If approved: check-approval automatically runs \`approvals\` action:'delete' and stops the loop
+6. If delete fails: check-approval retries on next loop iteration
 
 ## Key Rules
 

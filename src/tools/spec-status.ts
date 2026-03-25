@@ -134,12 +134,12 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
         nextSteps.push('Request approval');
         break;
       case 'requirements':
-        nextSteps.push('Read template: .spec-workflow/templates/requirements-template-v*.md');
+        nextSteps.push('Read template: .spec-workflow/templates/requirements-template.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/requirements.md');
         nextSteps.push('Request approval');
         break;
       case 'design':
-        nextSteps.push('Read template: .spec-workflow/templates/design-template-v*.md');
+        nextSteps.push('Read template: .spec-workflow/templates/design-template.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/design.md');
         nextSteps.push('Request approval');
         break;
@@ -149,7 +149,7 @@ export async function specStatusHandler(args: any, context: ToolContext): Promis
         nextSteps.push('Request approval');
         break;
       case 'tasks':
-        nextSteps.push('Read template: .spec-workflow/templates/tasks-template-v*.md');
+        nextSteps.push('Read template: .spec-workflow/templates/tasks-template.md');
         nextSteps.push('Create: .spec-workflow/specs/{name}/tasks.md');
         nextSteps.push('Request approval');
         break;

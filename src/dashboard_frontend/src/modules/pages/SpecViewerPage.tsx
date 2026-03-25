@@ -18,22 +18,28 @@ function Content() {
   const [viewMode, setViewMode] = useState<ViewMode>(initialMode);
   const [documents, setDocuments] = useState<Record<string, { content: string; lastModified: string } | null>>({});
   const [loading, setLoading] = useState(false);
+  const [hasAppliedInitialDocFallback, setHasAppliedInitialDocFallback] = useState(false);
 
   // 利用可能なドキュメントの一覧（存在するもののみ）
   const availableDocs = (['request-spec', 'requirements', 'design', 'test-design', 'tasks'] as const).filter(
     (d) => documents[d] != null
   );
 
-  // 選択中のドキュメントが存在しない場合、最初の利用可能なドキュメントにフォールバック
+  // 初期ロード時のみ、選択中のドキュメントが存在しない場合にフォールバック
+  // ユーザーが意図的に未作成ドキュメントのタブをクリックした場合は空状態を表示する
   useEffect(() => {
-    if (availableDocs.length > 0 && !availableDocs.includes(activeDoc)) {
-      setActiveDoc(availableDocs[0]);
-    }
-  }, [availableDocs, activeDoc]);
+    if (hasAppliedInitialDocFallback) return;
+    if (availableDocs.length === 0) return;
+
+    const targetDoc = availableDocs.includes(initialDoc) ? initialDoc : availableDocs[0];
+    setActiveDoc(targetDoc);
+    setHasAppliedInitialDocFallback(true);
+  }, [availableDocs, initialDoc, hasAppliedInitialDocFallback]);
 
   useEffect(() => {
     if (!spec) return;
     let active = true;
+    setHasAppliedInitialDocFallback(false);
     setLoading(true);
     getAllSpecDocuments(spec)
       .then((docs) => active && setDocuments(docs))
