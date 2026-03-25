@@ -268,14 +268,22 @@ If check returns FAIL, fix the issues yourself and re-run check (up to 3 times).
 
 Formal approval — verbal approval is not accepted.
 
-1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content)
-2. **Poll status**: `approvals` tool, `action: 'status'`, poll until status changes
-3. **Handle result**:
-   - **needs-revision**: Read the review comments, update the document, re-run the subagent review, submit a NEW approval request
-   - **approved**: Proceed to cleanup
-4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
-   - If delete fails: STOP, return to polling
-5. **Next phase**: After successful cleanup, **automatically** proceed to Phase 3 (Test Design).
+1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content). Save the returned `approvalId`.
+
+2. **Automatic polling**: Start automatic status checking:
+   ```
+   /loop 1m /check-approval <approvalId>
+   ```
+   The loop will automatically check approval status every minute and handle the result:
+   - **pending**: Continue polling (no action needed)
+   - **approved**: Cleanup is performed automatically, loop stops
+   - **needs-revision**: Loop stops, reviewer comments are displayed
+
+3. **Handle needs-revision** (if loop stopped with revision request):
+   - Read the review comments, update the document, re-run the subagent review
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
+
+4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 3 (Test Design).
    Load the `/spec-test-design` skill and begin immediately — do not wait for user input.
 
 ## Rules

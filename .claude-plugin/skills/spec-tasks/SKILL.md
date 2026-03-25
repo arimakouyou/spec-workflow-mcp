@@ -353,14 +353,22 @@ If check returns FAIL, fix the issues yourself and re-run check (up to 3 times).
 
 Same strict process — verbal approval is never accepted.
 
-1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only
-2. **Poll status**: `approvals` tool, `action: 'status'`, keep polling
-3. **Handle result**:
-   - **needs-revision**: Update tasks using reviewer comments, spawn the review subagent again, submit NEW approval
-   - **approved**: Move to cleanup
-4. **Cleanup**: `approvals` tool, `action: 'delete'` — must succeed
-   - If delete fails: STOP, return to polling
-5. **Next phase**: After successful cleanup, **automatically** proceed to Phase 5 (Implementation).
+1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only. Save the returned `approvalId`.
+
+2. **Automatic polling**: Start automatic status checking:
+   ```
+   /loop 1m /check-approval <approvalId>
+   ```
+   The loop will automatically check approval status every minute and handle the result:
+   - **pending**: Continue polling (no action needed)
+   - **approved**: Cleanup is performed automatically, loop stops
+   - **needs-revision**: Loop stops, reviewer comments are displayed
+
+3. **Handle needs-revision** (if loop stopped with revision request):
+   - Update tasks using reviewer comments, spawn the review subagent again
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
+
+4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 5 (Implementation).
    Tell the user: "tasks.md has been approved. Proceeding to implementation."
    Load the `/spec-implement` skill and begin immediately — do not wait for user input.
 
