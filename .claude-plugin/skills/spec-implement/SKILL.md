@@ -59,7 +59,7 @@ Prerequisites 通過後、実装開始前に全必須ツールの存在を検証
 
 以下2ファイルからツール要件テーブルを解析:
 1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` セクション
-2. `.spec-workflow/specs/{spec-name}/test-design.md` → `### Required Test Tools` セクション
+2. `.spec-workflow/specs/{spec-name}/test-design.md` → `#### Required Test Tools` セクション
 
 どちらのセクションも存在しない場合は警告ログ（`[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification`）を出力して Task Cycle へ進む（後方互換性）。
 
@@ -871,16 +871,23 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 ## Results
 | Step | Result | Details |
 |------|--------|---------|
-| Build | PASS/FAIL/SKIP | {details} |
-| All Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
-| Integration Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
-| Smoke Test | PASS/FAIL/SKIP | {details} |
-| E2E Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
+| Build | PASS/FAIL | {details} |
+| All Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要) | {N} passed, {M} failed |
+| Integration Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要) | {N} passed, {M} failed |
+| Smoke Test | PASS/FAIL/FAIL(環境不備)/SKIP(設計上不要) | {details} |
+| E2E Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要) | {N} passed, {M} failed |
 
-## Verdict: PASS / FAIL / FAIL (環境不備) / FAIL (実装漏れ) / FAIL (設計不備)
+## Verdict: PASS / PASS(SKIP含む) / FAIL(環境不備) / FAIL(実装漏れ) / FAIL(設計不備) / FAIL(テスト失敗)
+
+- **PASS**: 全ステップが PASS
+- **PASS(SKIP含む)**: 全ステップが PASS または SKIP(設計上不要)。SKIP の理由を Notes に記載
+- **FAIL(環境不備)**: 必須ツール・ランタイム未インストール → STOP
+- **FAIL(実装漏れ)**: test-design.md に仕様があるのにテストファイルなし
+- **FAIL(設計不備)**: 設計書の不整合・不足
+- **FAIL(テスト失敗)**: テスト実行時の失敗
 
 ## Notes
-{FAIL の詳細、設計時除外の理由等}
+{FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
 ```
 
 #### Wave Failure Handling
