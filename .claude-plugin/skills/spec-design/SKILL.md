@@ -226,7 +226,7 @@ Based on the Key Design Decisions from Wave 1, list all CLI tools needed to buil
 導出ルール:
 1. Key Design Decisions の技術選定 → 対応するビルドツール（Rust → cargo, Node.js → node+npm 等）
 2. Container Architecture → docker / podman
-3. Testing Strategy 概要 → E2E ブラウザテストの場合 playwright/chromium（Required=Yes）
+3. Testing Strategy 概要 → ビルドや基本テストに必要なツール（E2E ブラウザテスト用の playwright/chromium 等は test-design.md の Required Test Tools に記載）
 4. Check Command は、ツールがインストール済みなら exit 0 になる単一コマンド
 5. Required 列: `Yes`（必須）または `Recommended`（推奨）のみ。E2E テストに必要なツール（Playwright, Chrome等）は設計時に Required=Yes として明記すること
 

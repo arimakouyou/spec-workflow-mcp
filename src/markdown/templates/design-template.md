@@ -135,7 +135,7 @@ Notes:
 
 除外が **許可されない** 理由:
 - Docker/コンテナランタイムが未インストール（→ Required Build Tools で対応）
-- Chrome/ブラウザが未インストール（→ Required Test Tools で対応）
+- Chrome/ブラウザが未インストール（→ test-design.md の Required Test Tools で対応）
 - サーバー起動が必要（→ docker-compose / Required Build Tools で対応）
 - データベースが必要（→ testcontainers / docker-compose で対応）
 

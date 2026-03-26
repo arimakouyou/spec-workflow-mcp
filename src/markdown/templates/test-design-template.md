@@ -29,7 +29,7 @@
 
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
-| [例: cargo test] | [(bundled)] | [例: Unit test runner] | [例: cargo test --version] | [例: (bundled with cargo)] | Yes |
+| [例: cargo] | [(bundled)] | [例: Unit test runner (cargo test)] | [例: cargo --version] | [例: (bundled with rustup)] | Yes |
 | [例: docker] | [例: >= 24.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
 | [例: playwright] | [例: latest] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
 | [例: chromium] | [例: latest] | [例: E2E ブラウザエンジン] | [例: node -e "console.log(require('playwright').chromium.executablePath())"] | [例: npx playwright install chromium] | Yes |
