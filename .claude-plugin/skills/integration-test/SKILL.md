@@ -147,7 +147,7 @@ Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.
 
 **リソース適応型並列制御**: P0 で取得した `MAX_HEAVY_AGENTS` に基づき Worker 数を制限する。リソース検出結果をログに記録する:
 ```
-[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY}
+[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
 [worker-limit] Requested {N} workers, launching {M} (limited by MAX_HEAVY_AGENTS)
 ```
 

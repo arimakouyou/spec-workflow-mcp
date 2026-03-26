@@ -76,7 +76,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 **Multi-task wave**: If the wave contains multiple tasks, process them in parallel:
 - Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
 - Prepare worktrees for all tasks (step 3.7)
-- Launch parallel-workers simultaneously (step 4)
+- Launch parallel-workers in resource-aware batches (step 4)
 
 **リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
 
@@ -312,7 +312,7 @@ Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to t
 
 リソース検出結果をログに記録する:
 ```
-[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY}
+[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
 [wave-split] Wave has {N} tasks, processing in {M} sub-batch(es) of {sizes}
 ```
 

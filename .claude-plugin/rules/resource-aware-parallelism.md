@@ -20,37 +20,46 @@ elif command -v vm_stat >/dev/null 2>&1; then
 else
   FREE_MEM_MB=4096
 fi
+
+# 数値ガード: パース失敗時はフォールバック値を使用
+case "$CPU_CORES" in ''|*[!0-9]*) CPU_CORES=2 ;; esac
+case "$FREE_MEM_MB" in ''|*[!0-9]*) FREE_MEM_MB=4096 ;; esac
+
+# ユーザー上書き値のバリデーション（正の整数のみ受付、無効値は無視）
 MAX_OVERRIDE=${SWM_MAX_PARALLEL_AGENTS:-""}
+if [ -n "$MAX_OVERRIDE" ]; then
+  case "$MAX_OVERRIDE" in ''|*[!0-9]*|0) MAX_OVERRIDE="" ;; esac
+fi
 
 # 重量エージェント（コンパイル系: parallel-worker, integ-test-worker）
 if [ -n "$MAX_OVERRIDE" ]; then
-  MAX_HEAVY=$MAX_OVERRIDE
+  MAX_HEAVY_AGENTS=$MAX_OVERRIDE
 elif [ "$CPU_CORES" -ge 8 ] && [ "$FREE_MEM_MB" -ge 16384 ]; then
   BY_CPU=$((CPU_CORES / 2)); BY_MEM=$((FREE_MEM_MB / 4096))
-  MAX_HEAVY=$(( BY_CPU < BY_MEM ? BY_CPU : BY_MEM ))
-  MAX_HEAVY=$(( MAX_HEAVY > 4 ? 4 : MAX_HEAVY ))
+  MAX_HEAVY_AGENTS=$(( BY_CPU < BY_MEM ? BY_CPU : BY_MEM ))
+  MAX_HEAVY_AGENTS=$(( MAX_HEAVY_AGENTS > 4 ? 4 : MAX_HEAVY_AGENTS ))
 elif [ "$CPU_CORES" -ge 4 ] && [ "$FREE_MEM_MB" -ge 8192 ]; then
   BY_CPU=$((CPU_CORES / 2)); BY_MEM=$((FREE_MEM_MB / 4096))
-  MAX_HEAVY=$(( BY_CPU < BY_MEM ? BY_CPU : BY_MEM ))
-  MAX_HEAVY=$(( MAX_HEAVY > 3 ? 3 : MAX_HEAVY ))
+  MAX_HEAVY_AGENTS=$(( BY_CPU < BY_MEM ? BY_CPU : BY_MEM ))
+  MAX_HEAVY_AGENTS=$(( MAX_HEAVY_AGENTS > 3 ? 3 : MAX_HEAVY_AGENTS ))
 elif [ "$CPU_CORES" -ge 2 ] && [ "$FREE_MEM_MB" -ge 4096 ]; then
-  MAX_HEAVY=2
+  MAX_HEAVY_AGENTS=2
 else
-  MAX_HEAVY=1
+  MAX_HEAVY_AGENTS=1
 fi
 
 # 軽量エージェント（読み取り中心: phase-review-team experts）
 if [ -n "$MAX_OVERRIDE" ]; then
-  MAX_LIGHT=$MAX_OVERRIDE
+  MAX_LIGHT_AGENTS=$MAX_OVERRIDE
 elif [ "$CPU_CORES" -ge 4 ] && [ "$FREE_MEM_MB" -ge 4096 ]; then
-  MAX_LIGHT=5
+  MAX_LIGHT_AGENTS=5
 elif [ "$CPU_CORES" -ge 2 ] && [ "$FREE_MEM_MB" -ge 2048 ]; then
-  MAX_LIGHT=3
+  MAX_LIGHT_AGENTS=3
 else
-  MAX_LIGHT=2
+  MAX_LIGHT_AGENTS=2
 fi
 
-echo "RESOURCE_CHECK: CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY MAX_LIGHT_AGENTS=$MAX_LIGHT"
+echo "RESOURCE_CHECK: CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY_AGENTS MAX_LIGHT_AGENTS=$MAX_LIGHT_AGENTS"
 ```
 
 ## エージェント種別分類
