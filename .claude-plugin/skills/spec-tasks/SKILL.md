@@ -252,7 +252,7 @@ _TestFocus: Happy Path: {specific test targets} | Boundary Values: {specific bou
 ```
 
 If a category does not apply, explicitly write "N/A" (do not omit it).
-- Instructions about marking task status in tasks.md and logging implementation with `log-implementation` tool
+- Instructions about marking task status in tasks.md and logging implementation with `/log-implementation` skill
 
 ### 5. Create the Document
 

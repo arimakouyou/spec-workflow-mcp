@@ -1,7 +1,7 @@
 import { Prompt, PromptMessage } from '@modelcontextprotocol/sdk/types.js';
 import { PromptDefinition } from './types.js';
 import { ToolContext } from '../types.js';
-import { steeringGuideHandler } from '../tools/steering-guide.js';
+import { getSteeringGuide } from '../core/guides.js';
 
 const prompt: Prompt = {
   name: 'inject-steering-guide',
@@ -11,13 +11,8 @@ const prompt: Prompt = {
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
   let guide = '';
-  let dashboardUrl: string | undefined;
-  let nextSteps: string[] = [];
   try {
-    const toolResponse = await steeringGuideHandler({}, context);
-    guide = toolResponse.data?.guide || '';
-    dashboardUrl = toolResponse.data?.dashboardUrl;
-    nextSteps = toolResponse.nextSteps || [];
+    guide = getSteeringGuide();
   } catch (error: unknown) {
     if (context.projectPath === '{{projectPath}}') {
       // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
@@ -27,6 +22,15 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
       throw error;
     }
   }
+
+  const dashboardUrl = context.dashboardUrl;
+  const nextSteps = [
+    'Only proceed if user requested steering docs',
+    'Create product.md first',
+    'Then tech.md and structure.md',
+    'Reference in future specs',
+    dashboardUrl ? `Dashboard: ${dashboardUrl}` : 'Start the dashboard with: spec-workflow-mcp --dashboard'
+  ];
 
   const messages: PromptMessage[] = [
     {

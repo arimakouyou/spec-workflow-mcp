@@ -24,7 +24,7 @@ The orchestrator's sole responsibilities:
 1. Read tasks.md and identify the next task
 2. Call agents with the correct prompts
 3. Receive agent completion reports and hand off to the next agent
-4. Call log-implementation
+4. Call `/log-implementation` skill
 5. Update task status in tasks.md
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
@@ -581,7 +581,7 @@ The same cycle limit as rework (maximum 3 times) applies. If unresolved after 3 
 
 ### 7. Log Implementation (MANDATORY)
 
-Call the `log-implementation` MCP tool BEFORE marking the task complete. A task without a log is not complete — this is the most commonly skipped step.
+Call the `/log-implementation` skill BEFORE marking the task complete. A task without a log is not complete — this is the most commonly skipped step.
 
 Required fields:
 - `specName`: The spec name
@@ -655,11 +655,11 @@ Required fields:
 **If log-implementation fails:**
 - Do not mark the task as `[x]` (completion without a log is incomplete)
 - Report the error to the user and confirm whether to record the log manually or retry
-- If the MCP tool itself is unavailable: Creating a markdown file manually in the `.spec-workflow/specs/{spec-name}/Implementation Logs/` directory is an acceptable alternative
+- If the `/log-implementation` skill is unavailable: Creating a markdown file manually in the `.spec-workflow/specs/{spec-name}/Implementation Logs/` directory is an acceptable alternative
 
 ### 8. Complete the Task
 
-Only after `log-implementation` returns success:
+Only after `/log-implementation` returns success:
 - Verify all success criteria from the `_Prompt` are met
 - Edit tasks.md: Change `[-]` to `[x]`
 
@@ -771,7 +771,7 @@ E2E テストが存在しない（上記の検出条件をいずれも満たさ�
 
 | 結果 | アクション |
 |------|----------|
-| **PASS** | 全検証クリア → 実装完了をユーザーに報告。`spec-status` ツールで最終ステータスを表示 |
+| **PASS** | 全検証クリア → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
 | **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
 | **SKIP (環境依存)** | ユーザーに手動検証を依頼。SKIP した検証項目と理由を明示的にリストし、ユーザーが自分で確認できるコマンドを提示する |
 
@@ -815,7 +815,7 @@ When processing a multi-task wave, if any task results in `retry_exhausted`:
 
 ## Monitoring Progress
 
-Use the `spec-status` MCP tool at any time to check overall progress, task counts, and approval status.
+Use the `/spec-status` skill at any time to check overall progress, task counts, and approval status.
 
 ## Rules
 
@@ -833,7 +833,7 @@ Use the `spec-status` MCP tool at any time to check overall progress, task count
 - Always search implementation logs before coding (step 2)
 - Follow TDD: tests first (RED), then implementation (GREEN), then refactor (REFACTOR)
 - **Implementation (parallel-worker) and review (review-worker) are separate agents** — parallel-worker does not commit, review-worker does not implement
-- Always call log-implementation before marking a task `[x]` (step 7)
+- Always call `/log-implementation` skill before marking a task `[x]` (step 7)
 - Include test files in `filesCreated` when logging
 - A task marked `[x]` without a log is incomplete
 - If you encounter blockers, document them and move to another task

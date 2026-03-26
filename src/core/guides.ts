@@ -1,42 +1,95 @@
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { ToolContext, ToolResponse } from '../types.js';
+// ガイド関数の共有モジュール
+// spec-workflow-guide と steering-guide からガイドテキスト生成ロジックを抽出
 
-export const steeringGuideTool: Tool = {
-  name: 'steering-guide',
-  description: `Load guide for creating project steering documents.
+export function getSpecWorkflowGuide(): string {
+  return `# Spec Development Workflow
 
-# Instructions
-Call ONLY when user explicitly requests steering document creation or asks about project architecture docs. Not part of standard spec workflow. Provides templates and guidance for product.md, tech.md, and structure.md creation. Its important that you follow this workflow exactly to avoid errors.`,
-  inputSchema: {
-    type: 'object',
-    properties: {},
-    additionalProperties: false
-  },
-  annotations: {
-    title: 'Steering Guide',
-    readOnlyHint: true,
-  }
-};
+## Overview
 
-export async function steeringGuideHandler(args: any, context: ToolContext): Promise<ToolResponse> {
-  return {
-    success: true,
-    message: 'Steering workflow guide loaded - follow this workflow exactly to avoid errors',
-    data: {
-      guide: getSteeringGuide(),
-      dashboardUrl: context.dashboardUrl
-    },
-    nextSteps: [
-      'Only proceed if user requested steering docs',
-      'Create product.md first',
-      'Then tech.md and structure.md',
-      'Reference in future specs',
-      context.dashboardUrl ? `Dashboard: ${context.dashboardUrl}` : 'Start the dashboard with: spec-workflow-mcp --dashboard'
-    ]
-  };
+Guide users through spec-driven development: Request Spec -> Requirements -> Design -> Test Design -> Tasks -> Implementation.
+Feature names use kebab-case (e.g., user-authentication). Create ONE spec at a time.
+Follow this workflow exactly to avoid errors.
+
+## Phases
+
+### Phase 0: Request Spec — Define USE CASES, TECH STACK, and EXECUTION ENVIRONMENT
+- Read steering docs from \`.spec-workflow/steering/*.md\` if they exist
+- Load template: check \`user-templates/\` first, then \`templates/request-spec-template.md\`
+- Define basic use cases, technology stack selection, and execution environment
+- If steering/tech.md exists, only describe feature-specific additional technologies
+- Create: \`.spec-workflow/specs/{spec-name}/request-spec.md\`
+- Approval: request -> poll status -> handle revision/approved -> delete -> proceed
+
+### Phase 1: Requirements — Define WHAT to build
+- Read request-spec.md and steering docs from \`.spec-workflow/steering/*.md\` if they exist
+- Load template: check \`user-templates/\` first, then \`templates/requirements-template.md\`
+- Create: \`.spec-workflow/specs/{spec-name}/requirements.md\`
+- Approval: request -> poll status -> handle revision/approved -> delete -> proceed
+
+### Phase 2: Design — Define HOW to build it
+- Load template: check \`user-templates/\` first, then \`templates/design-template.md\`
+- Analyze codebase for patterns to reuse
+- Create: \`.spec-workflow/specs/{spec-name}/design.md\`
+- Approval: same workflow as Phase 1
+
+### Phase 3: Test Design — Define HOW to test it
+- Load template: check \`user-templates/\` first, then \`templates/test-design-template.md\`
+- Derive UT specs from design.md components, IT specs from component interactions, E2E specs from requirements.md user stories
+- Create: \`.spec-workflow/specs/{spec-name}/test-design.md\`
+- Approval: same workflow as Phase 1
+
+### Phase 4: Tasks — Break into atomic steps
+- Load template: check \`user-templates/\` first, then \`templates/tasks-template.md\`
+- Convert design into atomic tasks (1-3 files each)
+- Generate _Prompt field for each task (Role, Task, Restrictions, _Leverage, _Requirements, Success)
+- Derive _TestFocus from test-design.md UT specifications
+- Create: \`.spec-workflow/specs/{spec-name}/tasks.md\`
+- Approval: same workflow as Phase 1
+- After cleanup: "Spec complete. Ready to implement?"
+
+### Phase 5: Implementation — Execute tasks
+- For each task: mark [-] -> implement -> log-implementation (MANDATORY) -> mark [x]
+- Search implementation logs BEFORE coding to discover existing work
+- Task status: \`[ ]\` pending, \`[-]\` in-progress, \`[x]\` completed
+
+## Approval Workflow (all phases)
+
+1. \`approvals\` action:'request' — filePath only, never content
+2. Start automated polling: \`/loop 1m /check-approval <approvalId>\`
+3. The check-approval skill handles status polling, cleanup on approval, and loop termination
+4. If needs-revision: update doc, create NEW approval with new \`/loop\`
+5. If approved: check-approval automatically runs \`approvals\` action:'delete' and stops the loop
+6. If delete fails: check-approval retries on next loop iteration
+
+## Key Rules
+
+- Complete phases in sequence (no skipping)
+- One spec at a time, kebab-case names
+- Verbal approval is NEVER accepted — dashboard or VS Code extension only
+- Never proceed if approval delete fails
+- **Auto-transition**: After each phase's approval is approved and cleaned up, automatically proceed to the next phase. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension)
+- Every task marked [x] MUST have log-implementation called first
+- Steering docs are optional — only create when explicitly requested
+
+## File Structure
+\`\`\`
+.spec-workflow/
+├── templates/           # Auto-populated on server start
+├── user-templates/      # Custom template overrides
+├── user-prompts/        # Custom prompt overrides
+├── specs/{spec-name}/
+│   ├── request-spec.md
+│   ├── requirements.md
+│   ├── design.md
+│   ├── test-design.md
+│   ├── tasks.md
+│   └── Implementation Logs/
+└── steering/            # Optional: product.md, tech.md, structure.md
+    └── logs/            # Tech decision logs (not referenced during implementation)
+\`\`\``;
 }
 
-function getSteeringGuide(): string {
+export function getSteeringGuide(): string {
   return `# Steering Workflow
 
 ## Overview

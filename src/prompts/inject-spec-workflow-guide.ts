@@ -1,7 +1,7 @@
 import { Prompt, PromptMessage } from '@modelcontextprotocol/sdk/types.js';
 import { PromptDefinition } from './types.js';
 import { ToolContext } from '../types.js';
-import { specWorkflowGuideHandler } from '../tools/spec-workflow-guide.js';
+import { getSpecWorkflowGuide } from '../core/guides.js';
 
 const prompt: Prompt = {
   name: 'inject-spec-workflow-guide',
@@ -11,13 +11,8 @@ const prompt: Prompt = {
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
   let guide = '';
-  let dashboardUrl: string | undefined;
-  let nextSteps: string[] = [];
   try {
-    const toolResponse = await specWorkflowGuideHandler({}, context);
-    guide = toolResponse.data?.guide || '';
-    dashboardUrl = toolResponse.data?.dashboardUrl;
-    nextSteps = toolResponse.nextSteps || [];
+    guide = getSpecWorkflowGuide();
   } catch (error: unknown) {
     if (context.projectPath === '{{projectPath}}') {
       // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
@@ -27,6 +22,19 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
       throw error;
     }
   }
+
+  const dashboardUrl = context.dashboardUrl;
+  const dashboardMessage = dashboardUrl ?
+    `Monitor progress on dashboard: ${dashboardUrl}` :
+    'Please start the dashboard with: spec-workflow-mcp --dashboard';
+
+  const nextSteps = [
+    'Follow sequence: Request Spec → Requirements → Design → Test Design → Tasks → Implementation',
+    'Load templates with get-template-context first',
+    'Request approval after each document',
+    'Use MCP tools only',
+    dashboardMessage
+  ];
 
   const messages: PromptMessage[] = [
     {
