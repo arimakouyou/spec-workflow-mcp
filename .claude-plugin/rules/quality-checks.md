@@ -262,13 +262,13 @@ fi
 - 対応するプロジェクトタイプ（Rust/Node.js）が検出されない
 
 **環境不備の FAIL 条件**（ツール・ランタイム不足の場合 — 環境依存のスキップは一切許可しない）:
-- Docker/コンテナランタイムが未インストール
+- Docker/コンテナランタイムが未インストール、または `docker` / `docker-compose` コマンドが存在しない・権限不足で実行できない（`docker-compose up` の起動失敗を含む）
 - Chrome/ブラウザが未インストール
 - DB/キャッシュ起動に必要なツールが未インストール
 - サーバ起動に必要なランタイム（cargo, node 等）が未インストール
 - 外部依存（DB、キャッシュ等）が必要でローカル起動できない（Docker/testcontainers で起動できるようにするのが設計の責務）
 
-環境不備 FAIL 時は、不足ツールを明示してユーザーにエスカレートする。design.md / test-design.md の Required Tools テーブルの Install Command を提示すること。
+環境不備 FAIL 時は、不足ツールを明示してユーザーにエスカレートする。design.md / test-design.md の Required Tools テーブルの Install Command を提示すること。特に `docker-compose.yml` が存在しスモークテストで `docker-compose up` を実行する場合、コマンド未存在・実行権限不足・起動失敗はいずれも FAIL（環境不備）として直ちに STOP し、SKIP/PASS として扱わないこと。
 
 **テスト実装漏れの FAIL 条件**:
 - test-design.md に E2E テスト仕様が定義されているのにテストファイルが存在しない → FAIL（実装漏れ）
