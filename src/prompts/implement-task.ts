@@ -43,7 +43,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 **TDD Implementation Workflow:**
 
 1. **Check Current Status:**
-   - Use the \`/spec-status\` skill with specName "${specName}" to see overall progress
+   - Run \`/spec-status ${specName}\` to see overall progress
    - Read .spec-workflow/specs/${specName}/tasks.md to see all tasks
    - Identify ${taskId ? `task ${taskId}` : 'the next pending task marked with [ ]'}
 

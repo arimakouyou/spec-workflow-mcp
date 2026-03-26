@@ -36,9 +36,9 @@ description: "仕様の進捗状態を確認する。指定したスペック名
 
 Grep で各パターンをカウント:
 ```bash
-grep -c '^\- \[ \]' .spec-workflow/specs/{spec-name}/tasks.md
-grep -c '^\- \[-\]' .spec-workflow/specs/{spec-name}/tasks.md
-grep -c '^\- \[x\]' .spec-workflow/specs/{spec-name}/tasks.md
+grep -c '^\- \[ \]' .spec-workflow/specs/{spec-name}/tasks.md || echo 0
+grep -c '^\- \[-\]' .spec-workflow/specs/{spec-name}/tasks.md || echo 0
+grep -c '^\- \[x\]' .spec-workflow/specs/{spec-name}/tasks.md || echo 0
 ```
 
 ### 3. 現在フェーズの判定

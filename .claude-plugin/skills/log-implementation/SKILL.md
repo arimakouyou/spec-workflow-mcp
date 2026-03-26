@@ -88,7 +88,7 @@ findings:           # reworkCount > 0 の場合のみ
 
 **ファイル形式**（ダッシュボードの `ImplementationLogManager` パーサーと互換性のある形式）:
 
-```markdown
+````markdown
 # Implementation Log: Task {taskId}
 
 **Summary:** {summary}
@@ -163,13 +163,13 @@ findings:           # reworkCount > 0 の場合のみ
 ```json
 {
   "reworkCount": {reworkCount},
-  "outcome": "{reviewOutcome}",
+  "reviewOutcome": "{reviewOutcome}",
   "findings": [
     {findings があれば各attemptのオブジェクト。なければ空配列}
   ]
 }
 ```
-```
+````
 
 ### 3. 作成確認
 

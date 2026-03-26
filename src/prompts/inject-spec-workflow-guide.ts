@@ -55,8 +55,8 @@ ${nextSteps.map(step => `- ${step}`).join('\n')}
 **Important Instructions:**
 1. This guide has been injected into your context for immediate reference
 2. Follow the workflow sequence exactly: Request Spec → Requirements → Design → Test Design → Tasks → Implementation
-3. Use the MCP tools mentioned in the guide to execute each phase
-4. Always request approval between phases using the approvals tool
+3. Use plugin skills (slash commands like /spec-request-spec, /spec-requirements, etc.) to execute each phase
+4. Always request approval between phases using the approvals MCP tool
 5. Never proceed to the next phase without successful approval cleanup
 
 Please acknowledge that you've reviewed this workflow guide and are ready to help with spec-driven development.`

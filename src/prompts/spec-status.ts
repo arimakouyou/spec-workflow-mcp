@@ -41,7 +41,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 
 **Instructions:**
 ${specName ?
-  `1. Use the \`/spec-status\` skill with specName "${specName}" to check phase completion and task progress
+  `1. Run \`/spec-status ${specName}\` to check phase completion and task progress
 2. If you need detailed task information, read the tasks.md file directly at .spec-workflow/specs/${specName}/tasks.md
 3. Check for any pending approvals using approvals tool with action:'status'` :
   `1. List directory .spec-workflow/specs/ to see all specifications
