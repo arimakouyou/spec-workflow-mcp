@@ -9,7 +9,9 @@ description: "仕様の進捗状態を確認する。指定したスペック名
 
 ## 入力
 
-- **spec-name**: スペック名（kebab-case）。`$ARGS` の最初の引数として受け取る。
+- **specName** (spec-name): スペック名（kebab-case）。`$ARGS` の最初の引数として受け取る。
+
+**呼び出し形式**: `/spec-status <spec-name>` （例: `/spec-status user-authentication`）
 
 ## 手順
 

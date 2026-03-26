@@ -56,8 +56,10 @@ classes:          # 作成したクラス
     methods: [...]          # (任意) 主要メソッド名
     isExported: true/false  # モジュールの公開APIかどうか
 integrations:     # フロントエンド-バックエンド連携パターン
-  - purpose: ...            # 連携の目的・ユースケース
-    details: ...            # どのAPI/コンポーネントがどう連携しているか
+  - description: ...          # 連携の目的・ユースケース
+    frontendComponent: ...    # 関連するUIコンポーネント名/パス
+    backendEndpoint: ...      # 関連するAPIエンドポイント（method + path）
+    dataFlow: ...             # どのAPI/コンポーネント間でどのようにデータが流れるか
 ```
 
 ### reviewProcess 構造（オプション）
@@ -147,15 +149,26 @@ findings:           # reworkCount > 0 の場合のみ
 ### Integrations
 {各連携を以下の形式で:}
 #### Integration
-- **Purpose:** {purpose}
-- **Details:** {details}
+- **Description:** {description}
+- **Frontend Component:** {frontendComponent}
+- **Backend Endpoint:** {backendEndpoint}
+- **Data Flow:** {dataFlow}
 
 ---
 
 ## Review Process
-- **Rework Count:** {reworkCount}
-- **Outcome:** {reviewOutcome}
-{findings があれば各attemptの詳細}
+
+{reviewProcess をJSON形式で記述（パーサーがJSON.parseする）:}
+
+```json
+{
+  "reworkCount": {reworkCount},
+  "outcome": "{reviewOutcome}",
+  "findings": [
+    {findings があれば各attemptのオブジェクト。なければ空配列}
+  ]
+}
+```
 ```
 
 ### 3. 作成確認
