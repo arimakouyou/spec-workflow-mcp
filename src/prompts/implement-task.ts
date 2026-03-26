@@ -43,7 +43,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 **TDD Implementation Workflow:**
 
 1. **Check Current Status:**
-   - Use the spec-status tool with specName "${specName}" to see overall progress
+   - Run \`/spec-status ${specName}\` to see overall progress
    - Read .spec-workflow/specs/${specName}/tasks.md to see all tasks
    - Identify ${taskId ? `task ${taskId}` : 'the next pending task marked with [ ]'}
 
@@ -128,7 +128,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 12. **Log Implementation (MANDATORY - must complete BEFORE marking task done):**
    - ⚠️ **STOP: Do NOT mark the task [x] until this step succeeds.**
    - A task without an implementation log is NOT complete. Skipping this step is the #1 workflow violation.
-   - Call log-implementation with ALL of the following:
+   - Call the \`/log-implementation\` skill with ALL of the following:
      - specName: "${specName}"
      - taskId: ${taskId ? `"${taskId}"` : 'the task ID you just completed'}
      - summary: Clear description of what was implemented (1-2 sentences)
@@ -140,7 +140,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
    - Why: Future AI agents will query logs before implementing, preventing duplicate code
 
 13. **Complete the Task (only after step 12 succeeds):**
-   - Confirm that log-implementation returned success in step 12
+   - Confirm that \`/log-implementation\` created the log file successfully in step 12
    - Verify all success criteria from the _Prompt are met
    - Edit .spec-workflow/specs/${specName}/tasks.md directly
    - Change the task marker from [-] to [x] for the completed task
@@ -154,16 +154,16 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 - Pass \`_TestFocus\` content to the RED phase subagent when available
 - Use existing patterns and utilities mentioned in _Leverage fields
 - Include test files in filesCreated when logging implementation
-- **ALWAYS call log-implementation BEFORE marking a task [x]**
+- **ALWAYS call \`/log-implementation\` BEFORE marking a task [x]**
 - If a task has subtasks (e.g., 4.1, 4.2), complete them in order
 - If you encounter blockers, document them and move to another task
 
-**Tools to Use:**
-- spec-status: Check overall progress
+**Tools and Skills to Use:**
+- \`/spec-status\` skill: Check overall progress
 - Agent: Spawn subagents for TDD phases (test-write, test-run, code, review)
 - Bash (grep/ripgrep): CRITICAL - Search existing implementations before coding (step 5)
 - Read: Examine markdown implementation log files directly (step 5)
-- log-implementation: MANDATORY - Record implementation details with artifacts BEFORE marking task complete (step 12)
+- \`/log-implementation\` skill: MANDATORY - Record implementation details with artifacts BEFORE marking task complete (step 12)
 - Edit: Directly update task markers in tasks.md file
 - Read/Write/Edit: Implement the actual code changes
 - Bash: Run tests and verify implementation

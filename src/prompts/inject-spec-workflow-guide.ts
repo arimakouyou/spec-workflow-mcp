@@ -1,7 +1,7 @@
 import { Prompt, PromptMessage } from '@modelcontextprotocol/sdk/types.js';
 import { PromptDefinition } from './types.js';
 import { ToolContext } from '../types.js';
-import { specWorkflowGuideHandler } from '../tools/spec-workflow-guide.js';
+import { getSpecWorkflowGuide } from '../core/guides.js';
 
 const prompt: Prompt = {
   name: 'inject-spec-workflow-guide',
@@ -10,23 +10,20 @@ const prompt: Prompt = {
 };
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
-  let guide = '';
-  let dashboardUrl: string | undefined;
-  let nextSteps: string[] = [];
-  try {
-    const toolResponse = await specWorkflowGuideHandler({}, context);
-    guide = toolResponse.data?.guide || '';
-    dashboardUrl = toolResponse.data?.dashboardUrl;
-    nextSteps = toolResponse.nextSteps || [];
-  } catch (error: unknown) {
-    if (context.projectPath === '{{projectPath}}') {
-      // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
-      guide = '(ワークフローガイドはプロジェクトコンテキストで生成されます)';
-    } else {
-      // 本番コンテキストではエラーを上位レイヤーに伝播させる
-      throw error;
-    }
-  }
+  const guide = getSpecWorkflowGuide();
+
+  const dashboardUrl = context.dashboardUrl;
+  const dashboardMessage = dashboardUrl ?
+    `Monitor progress on dashboard: ${dashboardUrl}` :
+    'Please start the dashboard with: spec-workflow-mcp --dashboard';
+
+  const nextSteps = [
+    'Follow sequence: /spec-request-spec → /spec-requirements → /spec-design → /spec-test-design → /spec-tasks → /spec-implement',
+    'Read templates from .spec-workflow/templates/ (or user-templates/ for overrides)',
+    'Request approval after each document using the approvals MCP tool',
+    'Use plugin skills (slash commands) for workflow phases, approvals MCP tool for approval management',
+    dashboardMessage
+  ];
 
   const messages: PromptMessage[] = [
     {
@@ -47,8 +44,8 @@ ${nextSteps.map(step => `- ${step}`).join('\n')}
 **Important Instructions:**
 1. This guide has been injected into your context for immediate reference
 2. Follow the workflow sequence exactly: Request Spec → Requirements → Design → Test Design → Tasks → Implementation
-3. Use the MCP tools mentioned in the guide to execute each phase
-4. Always request approval between phases using the approvals tool
+3. Use plugin skills (slash commands like /spec-request-spec, /spec-requirements, etc.) to execute each phase
+4. Always request approval between phases using the approvals MCP tool
 5. Never proceed to the next phase without successful approval cleanup
 
 Please acknowledge that you've reviewed this workflow guide and are ready to help with spec-driven development.`
