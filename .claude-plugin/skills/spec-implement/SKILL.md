@@ -51,6 +51,90 @@ Tell the user: "Cannot start implementation because {filename} does not exist. P
 
 Tasks must be approved and cleaned up (Phases 1-4 complete). If not, use `/spec-tasks` first.
 
+## Step 0: Tool Verification (MANDATORY — DO NOT SKIP)
+
+Prerequisites 通過後、実装開始前に全必須ツールの存在を検証する。Task Cycle 開始前に **1回だけ** 実行。
+
+### 0.1 ツール要件の読み取り
+
+以下2ファイルからツール要件テーブルを解析:
+1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` セクション
+2. `.spec-workflow/specs/{spec-name}/test-design.md` → `#### Required Test Tools` セクション
+
+いずれかのセクションが存在しない場合は警告ログ（`[tool-verify] WARNING: Required Tools section missing in {filename} — skipping tool verification for that file`）を出力し、存在するセクションのみ検証する。両方とも存在しない場合は `[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification` を出力して Task Cycle へ進む（後方互換性）。
+
+**重要:** 後続の quality-checks では `docker-compose` コマンド（または `docker compose` サブコマンド）が必須扱いとなる場合がある。Docker Compose を利用するプロジェクトでは、いずれかの Required Tools テーブルに **必ず `docker-compose`（もしくは `docker compose`）を必須ツールとして含めること**。含めないと Step 0 を通過しても Phase Review / スモークテストで FAIL（環境不備）になる可能性がある。
+
+### 0.2 ツール存在確認
+
+各ツールエントリについて Check Command を実行する。**Check Command はセキュリティ上の制約に従うこと:**
+
+**安全性チェック（実行前に必ず検証 — 対象はドキュメントに記載された Check Command 文字列自体）:**
+- Check Command は `<tool> --version` や `<tool> -v` 等の読み取り専用バージョン確認パターンのみ許可
+- ドキュメント記載の Check Command 文字列にパイプ (`|`)、リダイレクト (`>`, `<`)、セミコロン (`;`)、`&&`、`$()` 等のシェル演算子が含まれる場合は**自動実行しない** — ユーザーに内容を提示して承認を得てから実行
+- 安全なパターンの場合のみ自動実行（`2>&1` はオーケストレータが付与するラッパーであり、Check Command 自体には含まれない）:
+
+```bash
+# 各ツールの Check Command を順次実行（安全パターンのみ自動実行）
+# 注: 2>&1 は stderr のバージョン出力を取得するためオーケストレータが付与
+{check_command} 2>&1
+echo "EXIT_CODE: $?"
+```
+
+- exit 0 → バージョン解析。Min Version が指定されている場合はバージョン比較:
+  - バージョン要件を満たす → `[tool-verify] {tool}: OK ({detected_version})`
+  - バージョンが古い → VERSION_MISMATCH リストへ追加
+- exit ≠ 0 → Required 列に応じて分類:
+  - `Yes` → MISSING_REQUIRED リストへ
+  - `Recommended` → 警告ログ `[tool-verify] WARNING: {tool} not found (recommended, not required)` を出力、続行
+
+### 0.3 インストール案内とユーザー承認
+
+**Install Command のユーザー承認なしの自動実行は行わない。** spec ドキュメント由来のコマンドには `curl|sh` や権限昇格等のリスクがあるため、必ずユーザーの明示的な承認を得てから実行する。
+
+MISSING_REQUIRED リストおよび VERSION_MISMATCH リストが空でない場合、以下の手順を実行:
+
+1. 不足ツール一覧をユーザーに提示:
+   ```
+   以下のツールが不足／バージョン不足です:
+
+   | Tool | Purpose | Install Command | Status |
+   |------|---------|-----------------|--------|
+   | {tool} | {purpose} | `{install_command}` | Missing / Version mismatch |
+
+   上記 Install Command を確認し、実行してよろしいですか？ (yes/no)
+   ```
+
+2. ユーザーが承認した場合のみ Install Command を実行し、再度 Check Command で検証:
+   - 成功 → リストから除外、ログ `[tool-verify] {tool}: installed successfully ({version})` を記録
+   - 失敗 → リストに残留
+
+3. ユーザーが拒否した場合 → リストに残留し、0.4 ゲート判定へ進む
+
+### 0.4 ゲート判定
+
+```
+if MISSING_REQUIRED is not empty OR VERSION_MISMATCH is not empty:
+  Report to user:
+    "## ⛔ Tool Verification Failed
+
+    以下の必須ツールが不足または要件を満たしていないため、実装を開始できません:
+
+    | Tool | Purpose | Install Command | Status |
+    |------|---------|-----------------|--------|
+    | {tool} | {purpose} | {install_command} | Missing / Version too old ({detected} < {required}) |
+
+    上記ツールをインストール／アップグレードした後、再度 `/spec-implement` を実行してください。"
+
+  STOP — Task Cycle に進まない。
+
+else:
+  log "[tool-verify] All required tools verified. Proceeding to implementation."
+  Proceed to Task Cycle.
+```
+
+---
+
 ## Inputs
 
 - **spec name** (kebab-case, e.g., `user-authentication`)
@@ -154,13 +238,17 @@ cargo test --quiet
 
 成果物のビルドが成功することを確認する。コマンドはプロジェクトタイプに応じて `quality-checks.md` を参照。
 
-**Step C: 統合テスト実行（テストが存在する場合のみ）**
+**Step C: 統合テスト実行**
 
-`tests/integration*` ディレクトリまたは同等のテストファイルが存在する場合に実行。存在しない場合は SKIP。
+統合テストファイルが存在する場合に実行。存在しない場合の判定（**このルールに厳密に従うこと**）:
+- design.md の Excluded Test Environments で当該環境が明示的に除外 → SKIP (設計時除外)
+- test-design.md に統合テスト仕様が存在する（仕様あり） → FAIL (実装漏れ)
+  - 「仕様あり」の判定: test-design.md に `## Integration Test Specifications` 見出しが存在し、かつそのセクション内に `### IT-` で始まる見出しが 1 件以上ある場合
+- 上記条件を満たす仕様が存在しない（仕様なし） → SKIP (設計上不要)
 
 **Step D: スモークテスト（API プロジェクトのみ）**
 
-サーバを一時起動し、ヘルスチェックエンドポイントへの疎通を確認する。外部依存（DB等）で起動不可の場合は SKIP + ログ記録。
+サーバを一時起動し、ヘルスチェックエンドポイントへの疎通を確認する。外部依存（DB等）で起動不可の場合は FAIL (環境不備)（SKIP は許可しない）。
 
 **結果判定:**
 
@@ -170,7 +258,12 @@ cargo test --quiet
 | FAIL (ビルド) | ビルドエラーを分析、根本原因タスクを特定。Phase 内タスク → `[x]` を `[-]` に戻して差し戻し、PhaseReview を `[ ]` に戻す。根本原因タスクの step 4 から再実行 |
 | FAIL (統合テスト) | 失敗テストを分析、根本原因タスク特定。Phase 内タスク → 差し戻し、前 Phase → ユーザーエスカレート |
 | FAIL (スモーク) | 起動ログを分析し根本原因特定、差し戻し |
-| SKIP (環境依存) | ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
+| FAIL (環境不備) | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、design.md / test-design.md の Required Tools テーブルの Install Command を提示。実装を停止（STOP） |
+| FAIL (実装漏れ) | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
+| SKIP (設計上不要) | テスト仕様自体が設計書に存在しない場合のみ（例: 統合テスト未定義、ヘルスチェック未定義）。ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
+| SKIP (設計時除外) | design.md の「Excluded Test Environments」で明示的に除外されたテスト。除外理由をログに記録し、3.5.2 に進む |
+
+**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由で「SKIP」を選択してはならない。test-design.md / design.md の Required Tools に Required=Yes で記載されたツールやランタイムが不足している場合は、常に上記の「FAIL (環境不備)」として扱い、実装を停止（STOP）すること（quality-checks.md の Step C/D に SKIP と記載がある場合も同様）。
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
@@ -765,15 +858,27 @@ if [ -f docker-compose.test.yml ]; then
 fi
 ```
 
-E2E テストが存在しない（上記の検出条件をいずれも満たさない）場合は SKIP として扱う。
+E2E テストファイルが存在しない場合（優先順位順に判定 — **このルールに厳密に従うこと**）:
+1. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → **SKIP (設計時除外)**（除外理由をログに記録）
+2. test-design.md に E2E テスト仕様が定義されている → **FAIL (実装漏れ)**。E2E テストが未実装であることをユーザーに報告
+   - 「仕様あり」の判定: test-design.md に `## E2E Test Specifications` 見出しが存在し、かつそのセクション内に `### E2E-` で始まる見出しが 1 件以上ある場合
+3. 上記条件を満たす仕様が存在しない → **SKIP (設計上不要)**。ログに理由を記録し続行
+
+**環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。** これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
 
 #### 9.3 結果判定
 
 | 結果 | アクション |
 |------|----------|
-| **PASS** | 全検証クリア → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
+| **PASS** | 全ステップが PASS のみ（SKIP なし） → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
+| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ。各 SKIP の理由を明示したうえで実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
 | **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
-| **SKIP (環境依存)** | ユーザーに手動検証を依頼。SKIP した検証項目と理由を明示的にリストし、ユーザーが自分で確認できるコマンドを提示する |
+| **FAIL (環境不備)** | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止 |
+| **FAIL (実装漏れ)** | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
+| **SKIP (設計上不要)** | テスト仕様自体が設計書に存在しない場合のみ。ログに SKIP 理由を記録し続行 |
+| **SKIP (設計時除外)** | design.md の「Excluded Test Environments」で明示的に除外されたテストのみ。除外理由をログに記録 |
+
+**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。
 
 #### 9.4 最終レポート
 
@@ -788,16 +893,22 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 ## Results
 | Step | Result | Details |
 |------|--------|---------|
-| Build | PASS/FAIL/SKIP | {details} |
-| All Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
-| Integration Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
-| Smoke Test | PASS/FAIL/SKIP | {details} |
-| E2E Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
+| Build | PASS/FAIL/SKIP(ビルドコマンド未検出) | {details} |
+| All Tests | PASS/FAIL(テスト失敗)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {N} passed, {M} failed / 実行不能理由 等 |
+| Integration Tests | PASS/FAIL(統合テスト)/FAIL(実装漏れ)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
+| Smoke Test | PASS/FAIL(スモーク)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
+| E2E Tests | PASS/FAIL(実装漏れ)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
 
-## Verdict: PASS / FAIL / PARTIAL (SKIP あり)
+## Verdict: PASS / PASS(SKIP含む) / FAIL(テスト失敗) / FAIL(環境不備) / FAIL(実装漏れ)
+
+- **PASS**: 全ステップが PASS
+- **PASS(SKIP含む)**: SKIP(設計上不要)、SKIP(設計時除外)、SKIP(ビルドコマンド未検出) を含む全ステップが成功。SKIP の理由を Notes に記載
+- **FAIL(テスト失敗)**: テスト実行時の失敗
+- **FAIL(環境不備)**: 必須ツール・ランタイム未インストール → STOP
+- **FAIL(実装漏れ)**: test-design.md に仕様があるのにテストファイルなし
 
 ## Notes
-{SKIP の理由、手動検証が必要な項目等}
+{FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
 ```
 
 #### Wave Failure Handling

@@ -94,6 +94,12 @@ Leave the detail sections (API spec, error handling, traceability, etc.) as `(to
 
 ## Code Reuse Analysis
 (to be written in Wave 2)
+
+## Required Build Tools
+(to be written in Wave 2)
+
+## Excluded Test Environments
+(to be written in Wave 2)
 ```
 
 ### 4. Architecture Confirmation (Present to User)
@@ -204,6 +210,40 @@ Error response format: `{ "error": { "code": "...", "message": "..." } }`
 | Internal | 500 | Unexpected internal error |
 ```
 
+#### Required Build Tools
+
+Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. Search the codebase to detect current tool versions.
+
+```markdown
+## Required Build Tools
+
+| Tool | Min Version | Purpose | Check Command | Install Command | Required |
+|------|-------------|---------|---------------|-----------------|----------|
+| cargo | >= 1.82 | Rust build system | cargo --version | rustup update | Yes |
+| docker | >= 24.0 | Container runtime | docker --version | apt install docker.io | Yes |
+```
+
+導出ルール:
+1. Key Design Decisions の技術選定 → 対応するビルドツール（Rust → cargo, Node.js → node+npm 等）
+2. Container Architecture → docker / podman
+3. Testing Strategy 概要 → ビルドや基本テストに必要なツール（E2E ブラウザテスト用の playwright/chromium 等は test-design.md の Required Test Tools に記載）
+4. Check Command は、ツールがインストール済みなら exit 0 になる単一コマンド
+5. Required 列: `Yes`（必須）または `Recommended`（推奨）のみ。E2E テストに必要なツール（Playwright, Chrome等）は設計時に Required=Yes として明記すること
+
+#### Excluded Test Environments
+
+特定環境でのみ実行可能なテスト（特殊ハードウェア依存等）がある場合に、除外理由と代替検証方法を明記する。
+
+```markdown
+## Excluded Test Environments
+
+| Test Category | Excluded Tests | Reason | Alternative Verification |
+|--------------|---------------|--------|------------------------|
+| E2E | E2E-3 (iOS Safari 検証) | CI に iOS デバイスがない | BrowserStack で手動検証 |
+```
+
+**重要**: 設計時に明示的に除外宣言されていないテストは、すべて実装フェーズで実行必須。Docker/Chrome/サーバー起動/DB 等の不足は除外理由にならない（design.md/test-design.md の Required Tools で対応すべき）。除外テストがない場合はテーブルを空にする（セクション自体は残す）。
+
 ### 6. Self-Review via Subagent (before approval)
 
 After Wave 2 is complete, review in **2 steps** before requesting formal approval.
@@ -255,9 +295,12 @@ Agent({
     2. CROSS-REFERENCE: Read requirements.md — every requirement must have a corresponding design solution.
        No design component should exist without a backing requirement.
     3. Must include: Overview, Architecture diagram, Component details (Purpose/Interfaces/Dependencies/Reuses),
-       Data Models, Error Handling table, Requirements Traceability Matrix, Code Reuse Analysis with concrete paths
+       Data Models, Error Handling table, Requirements Traceability Matrix, Code Reuse Analysis with concrete paths,
+       Required Build Tools table, Excluded Test Environments section
     4. Data models must cover all entities referenced in requirements
     5. Error Handling must have a complete table (not just scenario descriptions)
+    6. Required Build Tools section must exist with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns)
+    7. Excluded Test Environments section must exist (table may be empty if no exclusions, but section must be present)
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
