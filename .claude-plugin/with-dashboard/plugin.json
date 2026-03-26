@@ -1,6 +1,6 @@
 {
   "name": "spec-workflow-mcp-with-dashboard",
-  "version": "2.2.9",
+  "version": "2.2.10",
   "description": "Lightweight MCP server for structured spec-driven development (no skills/agents/rules/hooks). Start the dashboard separately with --dashboard.",
   "author": {
     "name": "arimakouyou"
