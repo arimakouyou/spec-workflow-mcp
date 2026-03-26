@@ -43,7 +43,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 ${specName ?
   `1. Run \`/spec-status ${specName}\` to check phase completion and task progress
 2. If you need detailed task information, read the tasks.md file directly at .spec-workflow/specs/${specName}/tasks.md
-3. Check for any pending approvals using approvals tool with action:'status'` :
+3. To check pending approvals, use the dashboard or VS Code extension (the approvals tool requires a specific approvalId)` :
   `1. List directory .spec-workflow/specs/ to see all specifications
 2. For each specification, invoke the \`/spec-status\` skill with the spec name to check phase completion and task progress
 3. Provide a consolidated overview of project progress`}
