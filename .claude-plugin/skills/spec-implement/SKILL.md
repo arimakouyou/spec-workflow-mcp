@@ -63,6 +63,8 @@ Prerequisites 通過後、実装開始前に全必須ツールの存在を検証
 
 いずれかのセクションが存在しない場合は警告ログ（`[tool-verify] WARNING: Required Tools section missing in {filename} — skipping tool verification for that file`）を出力し、存在するセクションのみ検証する。両方とも存在しない場合は `[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification` を出力して Task Cycle へ進む（後方互換性）。
 
+**重要:** 後続の quality-checks では `docker-compose` コマンド（または `docker compose` サブコマンド）が必須扱いとなる場合がある。Docker Compose を利用するプロジェクトでは、いずれかの Required Tools テーブルに **必ず `docker-compose`（もしくは `docker compose`）を必須ツールとして含めること**。含めないと Step 0 を通過しても Phase Review / スモークテストで FAIL（環境不備）になる可能性がある。
+
 ### 0.2 ツール存在確認
 
 各ツールエントリについて Check Command を実行:
