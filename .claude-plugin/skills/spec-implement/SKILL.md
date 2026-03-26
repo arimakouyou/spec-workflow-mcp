@@ -888,7 +888,7 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 | Step | Result | Details |
 |------|--------|---------|
 | Build | PASS/FAIL/SKIP(ビルドコマンド未検出) | {details} |
-| All Tests | PASS/FAIL | {N} passed, {M} failed |
+| All Tests | PASS/FAIL(テスト失敗)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {N} passed, {M} failed / 実行不能理由 等 |
 | Integration Tests | PASS/FAIL(統合テスト)/FAIL(実装漏れ)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
 | Smoke Test | PASS/FAIL(スモーク)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
 | E2E Tests | PASS/FAIL(実装漏れ)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
