@@ -28,7 +28,7 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
 
-> **Note**: Ensure `RUSTC_WRAPPER=sccache` is set before running these commands (if sccache is available). See `.claude-plugin/rules/rust-build-cache.md`.
+> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `.claude-plugin/rules/rust-build-cache.md`.
 
 ```bash
 cargo fmt --all -- --check

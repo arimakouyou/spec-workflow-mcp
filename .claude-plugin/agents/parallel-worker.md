@@ -28,13 +28,7 @@ permissionMode: bypassPermissions
   git worktree add .worktrees/{spec-name}/{task-id} -b impl/{spec-name}/{task-id}
   ```
 - After moving to the worktree, verify you are on the correct path and branch with `pwd` and `git branch --show-current`.
-- After verifying the worktree, set up the build cache environment:
-  ```bash
-  # Rust build cache (see .claude-plugin/rules/rust-build-cache.md)
-  if command -v sccache >/dev/null 2>&1; then
-    export RUSTC_WRAPPER=sccache
-  fi
-  ```
+- After verifying the worktree, apply the build cache when running cargo commands (see `.claude-plugin/rules/rust-build-cache.md`). Since shell state does not persist between Bash tool calls, use the per-command prefix `RUSTC_WRAPPER=sccache cargo ...` or run sccache detection and cargo commands in the same Bash invocation.
 - Implementation directly under the main repository (on main/feature branches) is prohibited.
 
 ## Whiteboard
@@ -50,7 +44,7 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
 
-> **Note**: Ensure `RUSTC_WRAPPER=sccache` is set before running these commands (if sccache is available). See `.claude-plugin/rules/rust-build-cache.md`.
+> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `.claude-plugin/rules/rust-build-cache.md`.
 
 ```bash
 cargo fmt --all -- --check

@@ -68,7 +68,7 @@ rustfmt --check ${affected_files}
 ## Procedure
 
 1. `cd {worktree_path}` (do not create the worktree).
-2. Set up build cache: `if command -v sccache >/dev/null 2>&1; then export RUSTC_WRAPPER=sccache; fi`
+2. When running verification commands, enable the build cache if sccache is available by using a per-command prefix or folding detection into the same Bash block (see `.claude-plugin/rules/rust-build-cache.md`).
 3. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
 4. Implement (file editing only).
 5. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).

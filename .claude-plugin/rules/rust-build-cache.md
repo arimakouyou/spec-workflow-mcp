@@ -34,7 +34,11 @@ fi
 
 ```bash
 # sccache があれば使う、なければ通常実行
-RUSTC_WRAPPER=$(command -v sccache 2>/dev/null || true) cargo test --quiet
+if command -v sccache >/dev/null 2>&1; then
+  RUSTC_WRAPPER=sccache cargo test --quiet
+else
+  cargo test --quiet
+fi
 ```
 
 ### export 方式（単一 Bash 呼び出し内でコマンドを連続実行する場合）
