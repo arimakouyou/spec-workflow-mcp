@@ -32,19 +32,32 @@ description: "タスク実装完了後にMarkdown形式の実装ログを記録�
 apiEndpoints:     # 作成/変更したAPIエンドポイント
   - method: GET/POST/PUT/DELETE
     path: /api/...
-    description: ...
+    purpose: ...            # このエンドポイントの目的・役割
+    location: path/to/file  # 実装されているソースファイル
+    requestFormat: ...      # (任意) 主なリクエスト形式
+    responseFormat: ...     # (任意) 主なレスポンス形式
 components:       # 作成したUIコンポーネント
   - name: ...
-    path: ...
+    type: ...               # コンポーネントの種類（page, widget等）
+    purpose: ...            # コンポーネントの目的・役割
+    location: path/to/file  # 実装されているソースファイル
+    props: ...              # (任意) 主要なプロパティ
+    exports: [...]          # (任意) エクスポートされる名前
 functions:        # 作成したユーティリティ関数
   - name: ...
-    path: ...
-    description: ...
+    purpose: ...            # 関数の目的・役割
+    location: path/to/file  # 実装されているソースファイル
+    signature: ...          # (任意) 関数シグネチャ
+    isExported: true/false  # モジュールの公開APIかどうか
 classes:          # 作成したクラス
   - name: ...
-    path: ...
+    purpose: ...            # クラスの目的・役割
+    location: path/to/file  # 実装されているソースファイル
+    methods: [...]          # (任意) 主要メソッド名
+    isExported: true/false  # モジュールの公開APIかどうか
 integrations:     # フロントエンド-バックエンド連携パターン
-  - description: ...
+  - purpose: ...            # 連携の目的・ユースケース
+    details: ...            # どのAPI/コンポーネントがどう連携しているか
 ```
 
 ### reviewProcess 構造（オプション）
@@ -71,47 +84,77 @@ findings:           # reworkCount > 0 の場合のみ
 
 **ディレクトリが存在しない場合は作成する。**
 
-**ファイル形式**:
+**ファイル形式**（ダッシュボードの `ImplementationLogManager` パーサーと互換性のある形式）:
 
 ```markdown
-# Task {taskId}: {summary}
+# Implementation Log: Task {taskId}
 
-**Date**: {YYYY-MM-DD HH:MM:SS}
-**Spec**: {specName}
+**Summary:** {summary}
 
-## Summary
-{summary}
+**Timestamp:** {ISO 8601形式、例: 2026-03-26T13:30:00.000Z}
+**Log ID:** {ユニークID、例: task-{taskId}_{YYYYMMDD}_{HHMMSS}}
 
-## Files Modified
-{filesModified をリスト形式で}
-
-## Files Created
-{filesCreated をリスト形式で}
+---
 
 ## Statistics
-- Lines added: {linesAdded}
-- Lines removed: {linesRemoved}
+
+- **Lines Added:** +{linesAdded}
+- **Lines Removed:** -{linesRemoved}
+- **Files Changed:** {filesModified.length + filesCreated.length}
+- **Net Change:** {linesAdded - linesRemoved}
+
+## Files Modified
+{filesModified を各行 `- path/to/file` 形式で。なければ `_No files modified_`}
+
+## Files Created
+{filesCreated を各行 `- path/to/file` 形式で。なければ `_No files created_`}
+
+---
 
 ## Artifacts
 
+{artifacts が空なら `_No artifacts recorded_`}
+
 ### API Endpoints
-{apiEndpoints をテーブル形式で}
+{各エンドポイントを以下の形式で:}
+#### {method} {path}
+- **Purpose:** {purpose}
+- **Location:** {location}
+- **Request Format:** {requestFormat}  ← 任意
+- **Response Format:** {responseFormat}  ← 任意
 
 ### Components
-{components をリスト形式で}
+{各コンポーネントを以下の形式で:}
+#### {name}
+- **Type:** {type}
+- **Purpose:** {purpose}
+- **Location:** {location}
 
 ### Functions
-{functions をリスト形式で}
+{各関数を以下の形式で:}
+#### {name}
+- **Purpose:** {purpose}
+- **Location:** {location}
+- **Exported:** Yes/No
 
 ### Classes
-{classes をリスト形式で}
+{各クラスを以下の形式で:}
+#### {name}
+- **Purpose:** {purpose}
+- **Location:** {location}
+- **Exported:** Yes/No
 
 ### Integrations
-{integrations をリスト形式で}
+{各連携を以下の形式で:}
+#### Integration
+- **Purpose:** {purpose}
+- **Details:** {details}
+
+---
 
 ## Review Process
-- Rework count: {reworkCount}
-- Outcome: {reviewOutcome}
+- **Rework Count:** {reworkCount}
+- **Outcome:** {reviewOutcome}
 {findings があれば各attemptの詳細}
 ```
 

@@ -41,15 +41,17 @@ grep -c '^\- \[x\]' .spec-workflow/specs/{spec-name}/tasks.md
 
 ### 3. 現在フェーズの判定
 
-存在するファイルの最後のフェーズを現在のフェーズとする:
+存在するファイルから現在のフェーズを判定する。**次に必要なフェーズ**を報告する:
 - tasks.md あり + タスク全完了 → `completed`
 - tasks.md あり + 未完了タスクあり → `implementation`
-- tasks.md あり + 全タスク未着手 → `tasks`
-- test-design.md まで存在 → `test-design`
-- design.md まで存在 → `design`
-- requirements.md まで存在 → `requirements`
-- request-spec.md のみ存在 → `request-spec`
+- tasks.md あり + 全タスク未着手 → `tasks`（実装開始待ち）
+- test-design.md まで存在 → `tasks-needed`（Phase 4 未完了）
+- design.md まで存在 → `test-design-needed`（Phase 3 未完了）
+- requirements.md まで存在 → `design-needed`（Phase 2 未完了）
+- request-spec.md のみ存在 → `requirements-needed`（Phase 1 未完了）
 - 何もなし → `not-started`
+
+**レガシースペック互換**: `request-spec.md` が存在しなくても `requirements.md` が存在する場合は、Phase 0 をスキップして Phase 1 完了として扱う（request-spec は後から導入されたフェーズのため）。
 
 ### 4. 結果表示
 

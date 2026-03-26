@@ -652,7 +652,7 @@ Required fields:
     }
     ```
 
-**If log-implementation fails:**
+**If `/log-implementation` fails:**
 - Do not mark the task as `[x]` (completion without a log is incomplete)
 - Report the error to the user and confirm whether to record the log manually or retry
 - If the `/log-implementation` skill is unavailable: Creating a markdown file manually in the `.spec-workflow/specs/{spec-name}/Implementation Logs/` directory is an acceptable alternative

@@ -29,10 +29,10 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
     'Please start the dashboard with: spec-workflow-mcp --dashboard';
 
   const nextSteps = [
-    'Follow sequence: Request Spec → Requirements → Design → Test Design → Tasks → Implementation',
-    'Load templates with get-template-context first',
-    'Request approval after each document',
-    'Use MCP tools only',
+    'Follow sequence: /spec-request-spec → /spec-requirements → /spec-design → /spec-test-design → /spec-tasks → /spec-implement',
+    'Read templates from .spec-workflow/templates/ (or user-templates/ for overrides)',
+    'Request approval after each document using the approvals MCP tool',
+    'Use plugin skills (slash commands) for workflow phases, approvals MCP tool for approval management',
     dashboardMessage
   ];
 
