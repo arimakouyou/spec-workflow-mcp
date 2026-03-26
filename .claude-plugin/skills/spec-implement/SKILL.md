@@ -80,12 +80,24 @@ echo "EXIT_CODE: $?"
   - `Yes` → MISSING_REQUIRED リストへ
   - `Recommended` → 警告ログ `[tool-verify] WARNING: {tool} not found (recommended, not required)` を出力、続行
 
-### 0.3 自動インストール試行
+### 0.3 不足ツールのインストール案内
 
-MISSING_REQUIRED リストおよび VERSION_MISMATCH リストの各ツールに対して Install Command を実行:
+MISSING_REQUIRED リストおよび VERSION_MISMATCH リストの各ツールについて、Install Command をユーザーに提示して手動実行を依頼する。**Install Command の自動実行は行わない**（意図しない危険なコマンド実行を防止するため）。
+
+```
+[tool-verify] 以下のツールが不足しています。インストールコマンドを確認し、実行してください:
+
+| Tool | Install Command | Status |
+|------|-----------------|--------|
+| {tool} | {install_command} | Missing / Version too old |
+
+インストール後、再度 `/spec-implement` を実行してください。
+```
+
+ユーザーがインストールを承認した場合のみ、Install Command を実行して再検証:
 
 ```bash
-# Install Command を実行
+# ユーザー承認後に Install Command を実行
 {install_command}
 
 # 再検証
@@ -871,11 +883,11 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 ## Results
 | Step | Result | Details |
 |------|--------|---------|
-| Build | PASS/FAIL | {details} |
-| All Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要) | {N} passed, {M} failed |
-| Integration Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要) | {N} passed, {M} failed |
-| Smoke Test | PASS/FAIL/FAIL(環境不備)/SKIP(設計上不要) | {details} |
-| E2E Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要) | {N} passed, {M} failed |
+| Build | PASS/FAIL/SKIP(ビルドコマンド未検出) | {details} |
+| All Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要)/SKIP(設計時除外) | {N} passed, {M} failed |
+| Integration Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要)/SKIP(設計時除外) | {N} passed, {M} failed |
+| Smoke Test | PASS/FAIL/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
+| E2E Tests | PASS/FAIL(環境不備)/FAIL(実装漏れ)/SKIP(設計上不要)/SKIP(設計時除外) | {N} passed, {M} failed |
 
 ## Verdict: PASS / PASS(SKIP含む) / FAIL(環境不備) / FAIL(実装漏れ) / FAIL(設計不備) / FAIL(テスト失敗)
 

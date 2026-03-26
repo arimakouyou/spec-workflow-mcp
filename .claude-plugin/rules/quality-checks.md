@@ -162,10 +162,10 @@ fi
 
 ### Step C: 統合テスト実行
 
-統合テストファイルが存在する場合に実行する。存在しない場合の判定:
-- test-design.md にテスト仕様が定義されている → **FAIL（実装漏れ）** — テストファイルの作成が必要
-- test-design.md にテスト仕様が未定義、かつ design.md の Excluded Test Environments で除外されている → **SKIP（設計上不要）**
-- test-design.md にテスト仕様が未定義、かつ除外宣言もない → **SKIP** — ログに理由を記録し Expert Team Review で補完
+統合テストファイルが存在する場合に実行する。存在しない場合の判定（優先順）:
+- design.md の Excluded Test Environments に当該統合テスト環境の除外宣言がある → **SKIP（設計時除外）**
+- 上記の除外宣言はなく、test-design.md に当該統合テスト仕様が定義されている → **FAIL（実装漏れ）** — テストファイルの作成が必要
+- 上記いずれにも該当せず、test-design.md に当該統合テスト仕様が未定義 → **SKIP（設計上不要）** — ログに理由を記録し Expert Team Review で補完
 
 ```bash
 # Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ と unit/ は再帰的に除外）
