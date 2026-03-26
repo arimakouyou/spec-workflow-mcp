@@ -37,17 +37,18 @@ Phase 完了時にコミット前に実施する、専門家チームによる�
 
 - `MAX_LIGHT_AGENTS >= 5`: 5 名全員を**同時に並列起動**（デフォルト動作）
 - `MAX_LIGHT_AGENTS = 3〜4`: 2 バッチに分割して起動
-  - バッチ 1: 実装担当 + セキュリティ担当1 + セキュリティ担当2（+ パフォーマンス担当、MAX_LIGHT=4 の場合）
+  - バッチ 1: 実装担当 + セキュリティ担当1 + セキュリティ担当2（+ パフォーマンス担当、MAX_LIGHT_AGENTS=4 の場合）
   - バッチ 2: 残りの専門家
   - 各バッチの完了を待ってから次のバッチを起動
 - `MAX_LIGHT_AGENTS = 2`: 3 バッチに分割して起動
   - バッチ 1: 実装担当 + セキュリティ担当1
   - バッチ 2: セキュリティ担当2 + パフォーマンス担当
   - バッチ 3: 品質・保守性担当（単独起動）
+- `MAX_LIGHT_AGENTS = 1`: 5 名を**逐次起動**（1 名ずつ順番に起動し、各完了を待ってから次の専門家を起動）
 
 リソース検出結果をログに記録する:
 ```
-[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_LIGHT_AGENTS: {MAX_LIGHT}
+[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_LIGHT_AGENTS: {MAX_LIGHT_AGENTS}
 [review-team] Launching 5 experts in {N} batch(es)
 ```
 

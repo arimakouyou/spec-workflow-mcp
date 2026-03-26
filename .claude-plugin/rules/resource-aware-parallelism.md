@@ -16,7 +16,8 @@ CPU_CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
 if [ -f /proc/meminfo ]; then
   FREE_MEM_MB=$(awk '/MemAvailable/{printf "%d", $2/1024}' /proc/meminfo)
 elif command -v vm_stat >/dev/null 2>&1; then
-  FREE_MEM_MB=$(vm_stat | awk '/Pages free/{gsub(/\./,"",$3); print int($3*4096/1048576)}')
+  PAGE_SIZE=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+  FREE_MEM_MB=$(vm_stat | awk -v PS="$PAGE_SIZE" '/Pages free/{gsub(/\./,"",$3); print int($3*PS/1048576)}')
 else
   FREE_MEM_MB=4096
 fi
@@ -59,7 +60,7 @@ else
   MAX_LIGHT_AGENTS=2
 fi
 
-echo "RESOURCE_CHECK: CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY_AGENTS MAX_LIGHT_AGENTS=$MAX_LIGHT_AGENTS"
+echo "[resource-check] CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY_AGENTS MAX_LIGHT_AGENTS=$MAX_LIGHT_AGENTS"
 ```
 
 ## エージェント種別分類
@@ -99,7 +100,7 @@ export SWM_MAX_PARALLEL_AGENTS=2
 
 1. **並列エージェント起動前に必ずリソース検出を実行する**
 2. wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合、wave を**サブバッチ**に分割する
-   - 例: wave に 6 タスクあり MAX_HEAVY=3 の場合 → [3, 3] のサブバッチで逐次実行
+   - 例: wave に 6 タスクあり MAX_HEAVY_AGENTS=3 の場合 → [3, 3] のサブバッチで逐次実行
 3. `MAX_HEAVY_AGENTS=1` の場合は逐次実行（並列化しない）
 4. リソース検出結果はログ出力し、ユーザーに可視化する
 5. リソース検出コマンドが失敗した場合のフォールバック: CPU=2, メモリ=4096MB として計算

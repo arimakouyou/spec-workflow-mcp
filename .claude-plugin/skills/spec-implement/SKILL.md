@@ -81,9 +81,9 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 **リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
 
 サブバッチ分割例:
-- wave 6タスク, MAX_HEAVY=3 → サブバッチ [3, 3]
-- wave 4タスク, MAX_HEAVY=2 → サブバッチ [2, 2]
-- wave 3タスク, MAX_HEAVY=1 → サブバッチ [1, 1, 1]（逐次実行）
+- wave 6タスク, MAX_HEAVY_AGENTS=3 → サブバッチ [3, 3]
+- wave 4タスク, MAX_HEAVY_AGENTS=2 → サブバッチ [2, 2]
+- wave 3タスク, MAX_HEAVY_AGENTS=1 → サブバッチ [1, 1, 1]（逐次実行）
 
 > Note: multi-task wave では、複数タスクが同時に `[-]`（進行中）になることは **意図された正常な動作** です。これは `implement-task` プロンプト等の「Only one task should be in-progress at a time」ガイダンスの明示的な例外です。
 

@@ -116,7 +116,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
    - Identify external dependencies: find trait-based dependencies (e.g., external API clients)
 3. **Worker assignment**: assign to Workers per test file. 割当前に `resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。Worker 数は `min(下表の Workers 列, MAX_HEAVY_AGENTS)` に制限する。
 
-   | # of Targets | MAX_HEAVY | # of Workers | Assignment Method |
+   | # of Targets | MAX_HEAVY_AGENTS | # of Workers | Assignment Method |
    |:------:|:------:|:---------:|---------|
    | 1 | any | 1 | All to alpha |
    | 2 | >= 2 | 2 | One each to alpha / bravo |
