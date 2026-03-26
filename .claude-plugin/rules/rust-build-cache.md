@@ -81,7 +81,13 @@ sccache --start-server
 
 ```bash
 sccache --stop-server
-rm -rf ${SCCACHE_DIR:-~/.cache/sccache}
+cache_dir="${SCCACHE_DIR:-"$HOME/.cache/sccache"}"
+# 念のため危険なパスを防ぐ
+if [ -n "$cache_dir" ] && [ "$cache_dir" != "/" ]; then
+  rm -rf -- "$cache_dir"
+else
+  echo "Refusing to remove suspicious sccache directory: '$cache_dir'" >&2
+fi
 sccache --start-server
 ```
 
