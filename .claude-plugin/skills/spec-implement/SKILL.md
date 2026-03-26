@@ -78,6 +78,13 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers simultaneously (step 4)
 
+**リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
+
+サブバッチ分割例:
+- wave 6タスク, MAX_HEAVY=3 → サブバッチ [3, 3]
+- wave 4タスク, MAX_HEAVY=2 → サブバッチ [2, 2]
+- wave 3タスク, MAX_HEAVY=1 → サブバッチ [1, 1, 1]（逐次実行）
+
 > Note: multi-task wave では、複数タスクが同時に `[-]`（進行中）になることは **意図された正常な動作** です。これは `implement-task` プロンプト等の「Only one task should be in-progress at a time」ガイダンスの明示的な例外です。
 
 **Wave 計算時の PhaseReview 除外**: `_PhaseReview: true` のタスクは wave 計算から常に除外する。PhaseReview はフェーズ内の全通常タスク完了後に単独で処理する。
@@ -171,7 +178,9 @@ cargo test --quiet
 
 Phase 完了時は、コミット前に専門家チームによる多角的コードレビューを実施する。詳細は `/phase-review-team` スキルを参照。
 
-**チーム編成（5名を並列起動）:**
+**リソース制限**: 並列起動前に `resource-aware-parallelism.md` のリソース検出を実行し、`MAX_LIGHT_AGENTS` に基づいて専門家をバッチ分割起動する。詳細は `/phase-review-team` スキル内の手順を参照。
+
+**チーム編成（最大5名を並列起動）:**
 
 | Role | Perspective |
 |------|-------------|
@@ -183,7 +192,7 @@ Phase 完了時は、コミット前に専門家チームによる多角的コ�
 
 **手順:**
 
-1. 5名の専門家を Agent tool で **並列** 起動（プロンプト詳細は `/phase-review-team` スキルを参照）
+1. `MAX_LIGHT_AGENTS` に基づき、5名の専門家を Agent tool でバッチ分割起動（リソースが十分な場合は全員同時並列。プロンプト詳細は `/phase-review-team` スキルを参照）
 2. 各担当は独立して調査し、具体的な問題箇所と改善案を報告
 3. リーダー（オーケストレーター）は各報告を統合し、優先度付き最終レポートを作成
 4. レポートを `.spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md` に保存
@@ -299,7 +308,15 @@ Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prom
 
 Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
 
-**Wave parallel execution**: For multi-task waves, launch ALL parallel-worker agents **simultaneously** in a single message with multiple Agent tool calls. Each agent works in its own isolated worktree. Wait for all agents to complete before proceeding to step 5.
+**Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control（`resource-aware-parallelism.md` 参照）。並列起動前にリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合はサブバッチに分割し、各サブバッチ内のエージェントのみ同時起動する。各サブバッチの完了を待ってから次のサブバッチを起動し、全サブバッチ完了後に step 5 へ進む。wave 内タスク数が `MAX_HEAVY_AGENTS` 以下の場合は全エージェントを同時起動する。
+
+リソース検出結果をログに記録する:
+```
+[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY}
+[wave-split] Wave has {N} tasks, processing in {M} sub-batch(es) of {sizes}
+```
+
+Each agent works in its own isolated worktree.
 
 ```javascript
 Agent({

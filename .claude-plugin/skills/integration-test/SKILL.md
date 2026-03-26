@@ -114,13 +114,15 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
    - Identify repository: analyze query logic from `src/db/repository/{domain}.rs`
    - Identify model: check Diesel models from `src/models/{domain}.rs`
    - Identify external dependencies: find trait-based dependencies (e.g., external API clients)
-3. **Worker assignment**: assign to Workers per test file
+3. **Worker assignment**: assign to Workers per test file. 割当前に `resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。Worker 数は `min(下表の Workers 列, MAX_HEAVY_AGENTS)` に制限する。
 
-   | # of Targets | # of Workers | Assignment Method |
-   |:------:|:---------:|---------|
-   | 1 | 1 | All to alpha |
-   | 2 | 2 | One each to alpha / bravo |
-   | 3+ | 2 | Round-robin |
+   | # of Targets | MAX_HEAVY | # of Workers | Assignment Method |
+   |:------:|:------:|:---------:|---------|
+   | 1 | any | 1 | All to alpha |
+   | 2 | >= 2 | 2 | One each to alpha / bravo |
+   | 2 | 1 | 1 | Both to alpha (sequential) |
+   | 3+ | >= 2 | 2 | Round-robin |
+   | 3+ | 1 | 1 | All to alpha (sequential) |
 
 4. **On `--dry-run`**: output the following and exit
 
@@ -143,6 +145,12 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
 
 Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.claude/agents/` via `subagent_type`.
 
+**リソース適応型並列制御**: P0 で取得した `MAX_HEAVY_AGENTS` に基づき Worker 数を制限する。リソース検出結果をログに記録する:
+```
+[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY}
+[worker-limit] Requested {N} workers, launching {M} (limited by MAX_HEAVY_AGENTS)
+```
+
 **Launch Pentagon** (launch first to put it in a review-request waiting state):
 ```
 Agent(
@@ -159,7 +167,7 @@ Agent(
 )
 ```
 
-If there are 2 or more targets, launch alpha/bravo in parallel.
+If there are 2 or more targets and `MAX_HEAVY_AGENTS >= 2`, launch alpha/bravo in parallel. Otherwise, launch alpha only and assign all targets sequentially.
 
 ### P3: Monitor & Facilitate
 
