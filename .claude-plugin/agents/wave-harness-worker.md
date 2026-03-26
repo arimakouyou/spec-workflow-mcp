@@ -68,13 +68,14 @@ rustfmt --check ${affected_files}
 ## Procedure
 
 1. `cd {worktree_path}` (do not create the worktree).
-2. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
-3. Implement (file editing only).
-4. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).
-5. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.
-6. Return the `changed_files` list (do not commit). Do not include `whiteboard_path` in `changed_files`.
-7. If there are no changes, return `no_op`.
-8. Return JSON.
+2. Set up build cache: `if command -v sccache >/dev/null 2>&1; then export RUSTC_WRAPPER=sccache; fi`
+3. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
+4. Implement (file editing only).
+5. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).
+6. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.
+7. Return the `changed_files` list (do not commit). Do not include `whiteboard_path` in `changed_files`.
+8. If there are no changes, return `no_op`.
+9. Return JSON.
 
 ## Output schema (v3)
 

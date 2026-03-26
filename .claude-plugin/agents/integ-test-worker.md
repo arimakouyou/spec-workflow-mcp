@@ -16,8 +16,9 @@ Worker for integration tests. Implements the test file assigned by Command.
 2. **Understand the context**: Read handler → repository → model → dto
 3. **Design test cases**: Cover all 5 categories (happy path / error / boundary / edge / external dependency error)
 4. **Implement tests**: Write code in compliance with test-patterns.md
-5. **Self quality check**: Run rustfmt + clippy + cargo test
-6. **Report completion**: TaskUpdate(completed) + SendMessage to Command
+5. **Build cache setup**: `if command -v sccache >/dev/null 2>&1; then export RUSTC_WRAPPER=sccache; fi` (see `.claude-plugin/rules/rust-build-cache.md`)
+6. **Self quality check**: Run rustfmt + clippy + cargo test
+7. **Report completion**: TaskUpdate(completed) + SendMessage to Command
 
 ## Required Reference Files
 

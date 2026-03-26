@@ -9,6 +9,8 @@ paths:
 
 Unified command specification for quality checks run by parallel-worker, review-worker, and other agents. All agents must use the commands defined in this rule.
 
+> **Build Cache**: Before running these commands, set up the Rust build cache environment per `.claude-plugin/rules/rust-build-cache.md`.
+
 ## rustfmt
 
 ```bash
