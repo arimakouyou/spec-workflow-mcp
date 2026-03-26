@@ -840,8 +840,8 @@ fi
 
 E2E テストファイルが存在しない場合:
 1. test-design.md に E2E テスト仕様が定義されている → **FAIL (実装漏れ)**。E2E テストが未実装であることをユーザーに報告
-2. test-design.md に E2E テスト仕様が存在しない → **FAIL (設計不備)**。E2E テスト仕様の策定をユーザーに要求
-3. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → SKIP（除外理由をログに記録）
+2. test-design.md に E2E テスト仕様が存在しない → **SKIP (設計上不要)**。他ルールと同様に、E2E テスト仕様が未定義であれば E2E は設計上不要とみなす
+3. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → **SKIP**（除外理由をログに記録）
 
 **環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。** これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
 
