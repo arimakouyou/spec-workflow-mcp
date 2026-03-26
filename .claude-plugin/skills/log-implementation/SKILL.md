@@ -82,8 +82,10 @@ findings:           # reworkCount > 0 の場合のみ
 
 ### 2. ログファイル作成
 
-**パス**: `.spec-workflow/specs/{specName}/Implementation Logs/task-{taskId}_{YYYYMMDD-HHMMSS}_{logIdPrefix}.md`
-（logIdPrefix = Log ID の先頭8文字）
+**パス**: `.spec-workflow/specs/{specName}/Implementation Logs/task-{sanitizedTaskId}_{timestamp}_{idPrefix}.md`
+- `sanitizedTaskId`: `taskId` の `.` と `/` を `-` に置換（例: `3.1.4` → `3-1-4`）
+- `timestamp`: ISO形式から記号を除去（例: `20260326T133000`）。Bashで: `date -u +%Y%m%dT%H%M%S`
+- `idPrefix`: Log ID（UUID）の先頭8文字
 
 **ディレクトリが存在しない場合は作成する。**
 
@@ -159,8 +161,14 @@ findings:           # reworkCount > 0 の場合のみ
 
 ## Review Process
 
+reworkCount=0 の場合:
 ```json
-{"reworkCount": {reworkCount}, "reviewOutcome": "{reviewOutcome}", "findings": [{findings}]}
+{"reworkCount": 0, "reviewOutcome": "commit", "findings": []}
+```
+
+reworkCount>0 の場合:
+```json
+{"reworkCount": 2, "reviewOutcome": "commit", "findings": [{"attempt": 1, "categories": ["naming"], "summary": "変数名が不明瞭", "action": "rework"}, {"attempt": 2, "categories": [], "summary": "修正確認", "action": "commit"}]}
 ```
 
 ````
