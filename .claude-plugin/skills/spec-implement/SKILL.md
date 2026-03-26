@@ -51,6 +51,75 @@ Tell the user: "Cannot start implementation because {filename} does not exist. P
 
 Tasks must be approved and cleaned up (Phases 1-4 complete). If not, use `/spec-tasks` first.
 
+## Step 0: Tool Verification (MANDATORY — DO NOT SKIP)
+
+Prerequisites 通過後、実装開始前に全必須ツールの存在を検証する。Task Cycle 開始前に **1回だけ** 実行。
+
+### 0.1 ツール要件の読み取り
+
+以下2ファイルからツール要件テーブルを解析:
+1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` セクション
+2. `.spec-workflow/specs/{spec-name}/test-design.md` → `### Required Test Tools` セクション
+
+どちらのセクションも存在しない場合は警告ログ（`[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification`）を出力して Task Cycle へ進む（後方互換性）。
+
+### 0.2 ツール存在確認
+
+各ツールエントリについて Check Command を実行:
+
+```bash
+# 各ツールの Check Command を順次実行
+{check_command} 2>/dev/null
+echo "EXIT_CODE: $?"
+```
+
+- exit 0 → バージョン解析。Min Version が指定されている場合はバージョン比較:
+  - バージョン要件を満たす → `[tool-verify] {tool}: OK ({detected_version})`
+  - バージョンが古い → VERSION_MISMATCH リストへ追加
+- exit ≠ 0 → Required 列に応じて分類:
+  - `Yes` → MISSING_REQUIRED リストへ
+  - `Recommended` → 警告ログ `[tool-verify] WARNING: {tool} not found (recommended, not required)` を出力、続行
+
+### 0.3 自動インストール試行
+
+MISSING_REQUIRED リストおよび VERSION_MISMATCH リストの各ツールに対して Install Command を実行:
+
+```bash
+# Install Command を実行
+{install_command}
+
+# 再検証
+{check_command} 2>/dev/null
+```
+
+- インストール/アップグレード後に再度 Check Command で検証
+- 成功 → リストから除外、ログ `[tool-verify] {tool}: installed successfully ({version})` を記録
+- 失敗 → リストに残留
+
+### 0.4 ゲート判定
+
+```
+if MISSING_REQUIRED is not empty:
+  Report to user:
+    "## ⛔ Tool Verification Failed
+
+    以下の必須ツールが不足しているため、実装を開始できません:
+
+    | Tool | Purpose | Install Command | Status |
+    |------|---------|-----------------|--------|
+    | {tool} | {purpose} | {install_command} | Missing / Version too old ({detected} < {required}) |
+
+    上記ツールをインストールした後、再度 `/spec-implement` を実行してください。"
+
+  STOP — Task Cycle に進まない。
+
+else:
+  log "[tool-verify] All required tools verified. Proceeding to implementation."
+  Proceed to Task Cycle.
+```
+
+---
+
 ## Inputs
 
 - **spec name** (kebab-case, e.g., `user-authentication`)
@@ -170,7 +239,11 @@ cargo test --quiet
 | FAIL (ビルド) | ビルドエラーを分析、根本原因タスクを特定。Phase 内タスク → `[x]` を `[-]` に戻して差し戻し、PhaseReview を `[ ]` に戻す。根本原因タスクの step 4 から再実行 |
 | FAIL (統合テスト) | 失敗テストを分析、根本原因タスク特定。Phase 内タスク → 差し戻し、前 Phase → ユーザーエスカレート |
 | FAIL (スモーク) | 起動ログを分析し根本原因特定、差し戻し |
-| SKIP (環境依存) | ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
+| FAIL (環境不備) | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、design.md / test-design.md の Required Tools テーブルの Install Command を提示。実装を停止（STOP） |
+| FAIL (実装漏れ) | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
+| SKIP (設計上不要) | テスト仕様自体が設計書に存在しない場合のみ（例: 統合テスト未定義、ヘルスチェック未定義）。ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
+
+**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
@@ -765,7 +838,12 @@ if [ -f docker-compose.test.yml ]; then
 fi
 ```
 
-E2E テストが存在しない（上記の検出条件をいずれも満たさない）場合は SKIP として扱う。
+E2E テストファイルが存在しない場合:
+1. test-design.md に E2E テスト仕様が定義されている → **FAIL (実装漏れ)**。E2E テストが未実装であることをユーザーに報告
+2. test-design.md に E2E テスト仕様が存在しない → **FAIL (設計不備)**。E2E テスト仕様の策定をユーザーに要求
+3. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → SKIP（除外理由をログに記録）
+
+**環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。** これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
 
 #### 9.3 結果判定
 
@@ -773,7 +851,12 @@ E2E テストが存在しない（上記の検出条件をいずれも満たさ�
 |------|----------|
 | **PASS** | 全検証クリア → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
 | **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
-| **SKIP (環境依存)** | ユーザーに手動検証を依頼。SKIP した検証項目と理由を明示的にリストし、ユーザーが自分で確認できるコマンドを提示する |
+| **FAIL (環境不備)** | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止 |
+| **FAIL (実装漏れ)** | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
+| **FAIL (設計不備)** | test-design.md に E2E テスト仕様が存在しない。E2E テスト仕様の策定をユーザーに要求 |
+| **SKIP (設計時除外)** | design.md の「Excluded Test Environments」で明示的に除外されたテストのみ。除外理由をログに記録 |
+
+**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。
 
 #### 9.4 最終レポート
 
@@ -794,10 +877,10 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 | Smoke Test | PASS/FAIL/SKIP | {details} |
 | E2E Tests | PASS/FAIL/SKIP | {N} passed, {M} failed |
 
-## Verdict: PASS / FAIL / PARTIAL (SKIP あり)
+## Verdict: PASS / FAIL / FAIL (環境不備) / FAIL (実装漏れ) / FAIL (設計不備)
 
 ## Notes
-{SKIP の理由、手動検証が必要な項目等}
+{FAIL の詳細、設計時除外の理由等}
 ```
 
 #### Wave Failure Handling

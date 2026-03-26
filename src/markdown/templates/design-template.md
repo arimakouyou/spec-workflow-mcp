@@ -106,6 +106,39 @@ graph TD
 | Cache | testcontainers / in-memory stub | |
 | External API | mock server container / trait DI | |
 
+## Required Build Tools
+
+| Tool | Min Version | Purpose | Check Command | Install Command | Required |
+|------|-------------|---------|---------------|-----------------|----------|
+| [例: cargo] | [例: >= 1.82] | [例: Rust build system] | [例: cargo --version] | [例: rustup update] | Yes |
+| [例: docker] | [例: >= 24.0] | [例: Container runtime] | [例: docker --version] | [例: apt install docker.io] | Yes |
+| [例: sccache] | [例: any] | [例: Build cache] | [例: sccache --version] | [例: cargo install sccache] | Recommended |
+
+Notes:
+- **Yes**: 実装開始前に必須。未インストール = FAIL。実装を停止しユーザーに報告
+- **Recommended**: 未インストールでも警告のみで続行可能
+
+## Excluded Test Environments
+
+> このセクションは、特定のテストが実行不可能な場合に **設計時に明示的に除外宣言** するためのセクションです。
+> ここに記載されていないテストは、すべて実装フェーズで実行必須です。
+> 環境がない、サーバー起動が必要、Chrome が必要 等の理由は、Required Build Tools で対応すべきであり、除外理由にはなりません。
+
+| Test Category | Excluded Tests | Reason | Alternative Verification |
+|--------------|---------------|--------|------------------------|
+| [例: E2E] | [例: E2E-3 (iOS Safari 検証)] | [例: CI に iOS デバイスがない] | [例: BrowserStack で手動検証] |
+
+除外が許可される理由の例:
+- 特殊ハードウェア依存（GPU, IoT デバイス, 特定OS等）
+- 外部サービスの本番環境でのみ検証可能（サンドボックスが存在しない）
+- ライセンス制約のあるツール
+
+除外が **許可されない** 理由:
+- Docker/コンテナランタイムが未インストール（→ Required Build Tools で対応）
+- Chrome/ブラウザが未インストール（→ Required Build Tools で対応）
+- サーバー起動が必要（→ docker-compose / Required Build Tools で対応）
+- データベースが必要（→ testcontainers / docker-compose で対応）
+
 ---
 
 ## Testing Strategy

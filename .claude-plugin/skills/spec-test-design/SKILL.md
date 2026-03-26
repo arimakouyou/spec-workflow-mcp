@@ -101,6 +101,27 @@ find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*
 - 既存テストパターン: [パターンの概要]
 ```
 
+#### 3.3 テスト用ツール要件の列挙
+
+セクション 3.1 と 3.2 の結果に基づき、テスト実行に必要なツールを Required Test Tools テーブル形式で列挙する:
+
+1. **テストフレームワーク**（cargo test, vitest, jest 等）→ Check Command と共に Required=Yes で記録
+2. **コンテナランタイム**（testcontainers 使用時）→ docker (Required=Yes)
+3. **E2E テストランナー**（Playwright, Cypress 等）→ Required=Yes、Install Command 含めて記録
+4. **ブラウザエンジン**（Browser E2E 時）→ chromium (Required=Yes) — **環境依存スキップ不可**
+5. **DB ツール**（diesel_cli, prisma 等）→ Required=Yes
+6. **ビルドキャッシュ等の最適化ツール** → Recommended
+
+結果を以下の形式でまとめ、Step 5 で test-design.md に挿入する:
+```
+テスト用ツール一覧:
+| Tool | Min Version | Purpose | Check Command | Install Command | Required |
+|------|-------------|---------|---------------|-----------------|----------|
+| ... | ... | ... | ... | ... | ... |
+```
+
+**重要**: E2E テストに必要なツール（Playwright, Chrome等）は必ず Required=Yes とする。design.md の「Excluded Test Environments」で明示的に除外されているテスト以外は、すべて実行必須。
+
 ---
 
 ### 4. Generate Test Specifications via Subagents
@@ -225,6 +246,7 @@ Agent({
 1. **Test Strategy Overview** を冒頭に追加:
    - テスト全体方針、Test Pyramid（UT > IT > E2E）、環境要件
    - セクション 3 で決定したテスト技術選定の結果
+   - **Required Test Tools** テーブル: セクション 3.3 で列挙したツール一覧
 
 2. **サブエージェント結果を順序通り配置**:
    - Unit Test Specifications（Subagent A の出力）
@@ -312,6 +334,7 @@ Agent({
     10. TEST DATA: Test Data Requirements section must define shared fixtures and generation strategy
     11. E2E INFRASTRUCTURE: E2E Test Infrastructure section must define project type, container test setup, and test runner
     12. CONTAINER CONSISTENCY: IT/E2E specs Technology fields must be consistent with design.md Container Architecture and E2E Test Infrastructure section
+    13. REQUIRED TEST TOOLS: Required Test Tools section must exist within Test Environment Requirements, with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns). All E2E test tools must be Required=Yes.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
