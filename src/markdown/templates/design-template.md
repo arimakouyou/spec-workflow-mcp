@@ -112,11 +112,13 @@ graph TD
 |------|-------------|---------|---------------|-----------------|----------|
 | [例: cargo] | [例: >= 1.82] | [例: Rust build system] | [例: cargo --version] | [例: rustup update] | Yes |
 | [例: docker] | [例: >= 24.0] | [例: Container runtime] | [例: docker --version] | [例: apt install docker.io] | Yes |
+| [例: docker compose] | [例: >= 2.20] | [例: Compose-based local/dev orchestration] | [例: docker compose version] | [例: apt install docker-compose-plugin] | Yes |
 | [例: sccache] | [例: any] | [例: Build cache] | [例: sccache --version] | [例: cargo install sccache] | Recommended |
 
 Notes:
 - **Yes**: 実装開始前に必須。未インストール = FAIL。実装を停止しユーザーに報告
 - **Recommended**: 未インストールでも警告のみで続行可能
+- プロジェクトで docker-compose / docker compose を使用する場合は、**必ず本テーブルに Required=Yes として記載**すること（quality-checks / スモークテストでの環境要件と整合させるため）
 
 ## Excluded Test Environments
 
