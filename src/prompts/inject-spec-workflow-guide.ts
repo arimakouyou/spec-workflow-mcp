@@ -10,18 +10,7 @@ const prompt: Prompt = {
 };
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
-  let guide = '';
-  try {
-    guide = getSpecWorkflowGuide();
-  } catch (error: unknown) {
-    if (context.projectPath === '{{projectPath}}') {
-      // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
-      guide = '(ワークフローガイドはプロジェクトコンテキストで生成されます)';
-    } else {
-      // 本番コンテキストではエラーを上位レイヤーに伝播させる
-      throw error;
-    }
-  }
+  const guide = getSpecWorkflowGuide();
 
   const dashboardUrl = context.dashboardUrl;
   const dashboardMessage = dashboardUrl ?

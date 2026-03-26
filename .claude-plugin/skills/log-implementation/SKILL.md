@@ -82,7 +82,8 @@ findings:           # reworkCount > 0 の場合のみ
 
 ### 2. ログファイル作成
 
-**パス**: `.spec-workflow/specs/{specName}/Implementation Logs/task-{taskId}_{YYYYMMDD}_{HHMMSS}.md`
+**パス**: `.spec-workflow/specs/{specName}/Implementation Logs/task-{taskId}_{YYYYMMDD-HHMMSS}_{logIdPrefix}.md`
+（logIdPrefix = Log ID の先頭8文字）
 
 **ディレクトリが存在しない場合は作成する。**
 
@@ -94,7 +95,7 @@ findings:           # reworkCount > 0 の場合のみ
 **Summary:** {summary}
 
 **Timestamp:** {ISO 8601形式、例: 2026-03-26T13:30:00.000Z}
-**Log ID:** {ユニークID、例: task-{taskId}_{YYYYMMDD}_{HHMMSS}}
+**Log ID:** {UUID形式のユニークID。Bashで `uuidgen` または `cat /proc/sys/kernel/random/uuid` で生成}
 
 ---
 

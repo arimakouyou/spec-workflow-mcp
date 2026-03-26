@@ -815,7 +815,7 @@ When processing a multi-task wave, if any task results in `retry_exhausted`:
 
 ## Monitoring Progress
 
-Use the `/spec-status` skill at any time to check overall progress, task counts, and approval status.
+Use the `/spec-status` skill at any time to check overall progress and task counts. For pending approvals, query the `approvals` MCP tool separately.
 
 ## Rules
 

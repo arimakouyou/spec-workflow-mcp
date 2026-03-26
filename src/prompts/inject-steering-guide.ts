@@ -10,18 +10,7 @@ const prompt: Prompt = {
 };
 
 async function handler(args: Record<string, any>, context: ToolContext): Promise<PromptMessage[]> {
-  let guide = '';
-  try {
-    guide = getSteeringGuide();
-  } catch (error: unknown) {
-    if (context.projectPath === '{{projectPath}}') {
-      // ダッシュボードのプレビュー用サンプルコンテキストではプレースホルダーを表示
-      guide = '(ステアリングガイドはプロジェクトコンテキストで生成されます)';
-    } else {
-      // 本番コンテキストではエラーを上位レイヤーに伝播させる
-      throw error;
-    }
-  }
+  const guide = getSteeringGuide();
 
   const dashboardUrl = context.dashboardUrl;
   const nextSteps = [

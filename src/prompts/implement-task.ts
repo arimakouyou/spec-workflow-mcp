@@ -140,7 +140,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
    - Why: Future AI agents will query logs before implementing, preventing duplicate code
 
 13. **Complete the Task (only after step 12 succeeds):**
-   - Confirm that `/log-implementation` created the log file successfully in step 12
+   - Confirm that \`/log-implementation\` created the log file successfully in step 12
    - Verify all success criteria from the _Prompt are met
    - Edit .spec-workflow/specs/${specName}/tasks.md directly
    - Change the task marker from [-] to [x] for the completed task
@@ -154,7 +154,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 - Pass \`_TestFocus\` content to the RED phase subagent when available
 - Use existing patterns and utilities mentioned in _Leverage fields
 - Include test files in filesCreated when logging implementation
-- **ALWAYS call `/log-implementation` BEFORE marking a task [x]**
+- **ALWAYS call \`/log-implementation\` BEFORE marking a task [x]**
 - If a task has subtasks (e.g., 4.1, 4.2), complete them in order
 - If you encounter blockers, document them and move to another task
 
