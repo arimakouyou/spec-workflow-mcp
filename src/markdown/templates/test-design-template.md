@@ -31,12 +31,13 @@
 |------|-------------|---------|---------------|-----------------|----------|
 | [例: cargo] | [(bundled)] | [例: Unit test runner (cargo test)] | [例: cargo --version] | [例: (bundled with rustup)] | Yes |
 | [例: docker] | [例: >= 24.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
-| [例: playwright] | [例: latest] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
-| [例: chromium] | [例: latest] | [例: E2E ブラウザエンジン] | [例: node -e "console.log(require('playwright').chromium.executablePath())"] | [例: npx playwright install chromium] | Yes |
+| [例: playwright] | [例: >= 1.42.0] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
+| [例: chromium] | [例: any] | [例: E2E ブラウザエンジン] | [例: node -e "console.log(require('playwright').chromium.executablePath())"] | [例: npx playwright install chromium] | Yes |
 
 Notes:
 - **Yes**: テスト実行前に必須。未インストール = FAIL。実装を停止しユーザーに報告
 - **Recommended**: 未インストールでも警告のみで続行可能（ビルドキャッシュ等の最適化ツール向け）
+- Min Version は `any`（バージョン不問）/ `(bundled)`（同梱）/ `>= x.y.z`（最低バージョン指定）など、Step 0 でバージョン比較可能な形式で記載すること（`latest` など比較不能な値は使用しない）
 - E2E テストに必要なツール（Playwright, Chrome等）は **必ず Required=Yes** とする。環境依存によるテストスキップは許可しない
 - 実行不可能なテストがある場合は、design.md の「Excluded Test Environments」セクションで設計時に明示すること
 - design.md の Required Build Tools と重複するツールは、テスト用に異なるバージョン要件がある場合のみ記載
