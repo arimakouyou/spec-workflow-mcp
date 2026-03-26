@@ -159,17 +159,11 @@ findings:           # reworkCount > 0 の場合のみ
 
 ## Review Process
 
-{reviewProcess をJSON形式で記述（パーサーがJSON.parseする）:}
-
 ```json
-{
-  "reworkCount": {reworkCount},
-  "reviewOutcome": "{reviewOutcome}",
-  "findings": [
-    {findings があれば各attemptのオブジェクト。なければ空配列}
-  ]
-}
+{"reworkCount": {reworkCount}, "reviewOutcome": "{reviewOutcome}", "findings": [{findings}]}
 ```
+
+注意: `## Review Process` セクションには JSON ブロック**のみ**を記述すること（説明テキスト禁止。パーサーが JSON.parse する）。
 ````
 
 ### 3. 作成確認
