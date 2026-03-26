@@ -232,10 +232,11 @@ cargo test --quiet
 
 **Step C: 統合テスト実行**
 
-統合テストファイルが存在する場合に実行。存在しない場合の判定:
-- design.md の Excluded Test Environments で除外 → SKIP (設計時除外)
-- test-design.md に仕様あり → FAIL (実装漏れ)
-- test-design.md に仕様なし → SKIP (設計上不要)
+統合テストファイルが存在する場合に実行。存在しない場合の判定（**このルールに厳密に従うこと**）:
+- design.md の Excluded Test Environments で当該環境が明示的に除外 → SKIP (設計時除外)
+- test-design.md に統合テスト仕様が存在する（仕様あり） → FAIL (実装漏れ)
+  - 「仕様あり」の判定: test-design.md に `## Integration Test Specifications` 見出しが存在し、かつそのセクション内に `### IT-` で始まる見出しが 1 件以上ある場合
+- 上記条件を満たす仕様が存在しない（仕様なし） → SKIP (設計上不要)
 
 **Step D: スモークテスト（API プロジェクトのみ）**
 
@@ -848,10 +849,11 @@ if [ -f docker-compose.test.yml ]; then
 fi
 ```
 
-E2E テストファイルが存在しない場合（優先順位順に判定）:
+E2E テストファイルが存在しない場合（優先順位順に判定 — **このルールに厳密に従うこと**）:
 1. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → **SKIP (設計時除外)**（除外理由をログに記録）
 2. test-design.md に E2E テスト仕様が定義されている → **FAIL (実装漏れ)**。E2E テストが未実装であることをユーザーに報告
-3. test-design.md に E2E テスト仕様が存在しない → **SKIP (設計上不要)**。ログに理由を記録し続行
+   - 「仕様あり」の判定: test-design.md に `## E2E Test Specifications` 見出しが存在し、かつそのセクション内に `### E2E-` で始まる見出しが 1 件以上ある場合
+3. 上記条件を満たす仕様が存在しない → **SKIP (設計上不要)**。ログに理由を記録し続行
 
 **環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。** これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
 
