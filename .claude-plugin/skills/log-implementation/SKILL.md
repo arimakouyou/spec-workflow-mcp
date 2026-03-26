@@ -163,8 +163,9 @@ findings:           # reworkCount > 0 の場合のみ
 {"reworkCount": {reworkCount}, "reviewOutcome": "{reviewOutcome}", "findings": [{findings}]}
 ```
 
-注意: `## Review Process` セクションには JSON ブロック**のみ**を記述すること（説明テキスト禁止。パーサーが JSON.parse する）。
 ````
+
+> **注意**: `## Review Process` セクションには JSON ブロック**のみ**を記述すること（説明テキスト禁止。パーサーが JSON.parse する）。
 
 ### 3. 作成確認
 
