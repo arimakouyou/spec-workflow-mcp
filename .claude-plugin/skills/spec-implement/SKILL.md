@@ -69,7 +69,7 @@ Prerequisites 通過後、実装開始前に全必須ツールの存在を検証
 
 ```bash
 # 各ツールの Check Command を順次実行
-{check_command} 2>/dev/null
+{check_command} 2>&1
 echo "EXIT_CODE: $?"
 ```
 
@@ -859,7 +859,8 @@ E2E テストファイルが存在しない場合（優先順位順に判定）:
 
 | 結果 | アクション |
 |------|----------|
-| **PASS** | 全検証クリア（SKIP 含む） → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
+| **PASS** | 全ステップが PASS のみ（SKIP なし） → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
+| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ。各 SKIP の理由を明示したうえで実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
 | **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
 | **FAIL (環境不備)** | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止 |
 | **FAIL (実装漏れ)** | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
