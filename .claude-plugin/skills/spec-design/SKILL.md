@@ -242,7 +242,7 @@ Based on the Key Design Decisions from Wave 1, list all CLI tools needed to buil
 | E2E | E2E-3 (iOS Safari 検証) | CI に iOS デバイスがない | BrowserStack で手動検証 |
 ```
 
-**重要**: 設計時に明示的に除外宣言されていないテストは、すべて実装フェーズで実行必須。Docker/Chrome/サーバー起動/DB 等の不足は除外理由にならない（Required Build Tools で対応すべき）。除外テストがない場合はテーブルを空にする（セクション自体は残す）。
+**重要**: 設計時に明示的に除外宣言されていないテストは、すべて実装フェーズで実行必須。Docker/Chrome/サーバー起動/DB 等の不足は除外理由にならない（design.md/test-design.md の Required Tools で対応すべき）。除外テストがない場合はテーブルを空にする（セクション自体は残す）。
 
 ### 6. Self-Review via Subagent (before approval)
 

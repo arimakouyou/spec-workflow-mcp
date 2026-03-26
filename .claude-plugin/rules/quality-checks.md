@@ -160,9 +160,12 @@ fi
 | Node.js | `npm run build` | `build` スクリプトが package.json に存在する場合のみ。存在しない場合は SKIP（FAIL ではない）とし、ログに「build スクリプトなし」と記録 |
 | Generic | `cargo build` or `npm run build` | 検出可能なビルドコマンドを実行。該当コマンドがない場合は SKIP とする |
 
-### Step C: 統合テスト実行（テストが存在する場合のみ）
+### Step C: 統合テスト実行
 
-統合テストファイルが存在する場合にのみ実行する。存在しない場合は SKIP（FAIL ではない）。
+統合テストファイルが存在する場合に実行する。存在しない場合の判定:
+- test-design.md にテスト仕様が定義されている → **FAIL（実装漏れ）** — テストファイルの作成が必要
+- test-design.md にテスト仕様が未定義、かつ design.md の Excluded Test Environments で除外されている → **SKIP（設計上不要）**
+- test-design.md にテスト仕様が未定義、かつ除外宣言もない → **SKIP** — ログに理由を記録し Expert Team Review で補完
 
 ```bash
 # Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ と unit/ は再帰的に除外）

@@ -99,17 +99,17 @@ MISSING_REQUIRED リストおよび VERSION_MISMATCH リストの各ツールに
 ### 0.4 ゲート判定
 
 ```
-if MISSING_REQUIRED is not empty:
+if MISSING_REQUIRED is not empty or VERSION_MISMATCH is not empty:
   Report to user:
     "## ⛔ Tool Verification Failed
 
-    以下の必須ツールが不足しているため、実装を開始できません:
+    以下の必須ツールが不足しているか、バージョンが不足しているため、実装を開始できません:
 
     | Tool | Purpose | Install Command | Status |
     |------|---------|-----------------|--------|
     | {tool} | {purpose} | {install_command} | Missing / Version too old ({detected} < {required}) |
 
-    上記ツールをインストールした後、再度 `/spec-implement` を実行してください。"
+    上記ツールをインストールまたはアップグレードした後、再度 `/spec-implement` を実行してください。"
 
   STOP — Task Cycle に進まない。
 
@@ -243,7 +243,7 @@ cargo test --quiet
 | FAIL (実装漏れ) | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
 | SKIP (設計上不要) | テスト仕様自体が設計書に存在しない場合のみ（例: 統合テスト未定義、ヘルスチェック未定義）。ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
 
-**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
+**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由で「SKIP」を選択してはならない。test-design.md / design.md の Required Tools に Required=Yes で記載されたツールやランタイムが不足している場合は、常に上記の「FAIL (環境不備)」として扱い、実装を停止（STOP）すること（quality-checks.md の Step C/D に SKIP と記載がある場合も同様）。
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 

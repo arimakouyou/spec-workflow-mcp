@@ -122,7 +122,7 @@ Notes:
 
 > このセクションは、特定のテストが実行不可能な場合に **設計時に明示的に除外宣言** するためのセクションです。
 > ここに記載されていないテストは、すべて実装フェーズで実行必須です。
-> 環境がない、サーバー起動が必要、Chrome が必要 等の理由は、Required Build Tools で対応すべきであり、除外理由にはなりません。
+> 環境がない、サーバー起動が必要、Chrome が必要 等の理由は、Required Tools（design.md の Required Build Tools / test-design.md の Required Test Tools）で対応すべきであり、除外理由にはなりません。
 
 | Test Category | Excluded Tests | Reason | Alternative Verification |
 |--------------|---------------|--------|------------------------|
