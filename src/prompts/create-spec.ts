@@ -79,12 +79,23 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 
 ${documentType === 'tasks' ? `
 **Special Instructions for Tasks Document:**
-- For each task, generate a _Prompt field with structured AI guidance
-- Format: _Prompt: Role: [role] | Task: [description] | Restrictions: [constraints] | Success: [criteria]
-- Make prompts specific to the project context and requirements
-- Include _Leverage fields pointing to existing code to reuse
-- Include _Requirements fields showing which requirements each task implements
+- Group tasks by phases using "## Phase N: Name" headings
+- Each task line must follow this exact format: \`- [ ] N.N Description\`
+  - N.N = Phase number.Task number (e.g., 1.1, 1.2, 2.1, 2.3.1)
+  - Use numeric IDs — do NOT omit them
+  - Use hyphen (-) bullets with checkbox \`[ ]\`, NOT asterisks
+- For each task, include these metadata fields (all wrapped in underscores):
+  - \`_Prompt: Role: [role] | Task: [description] | Restrictions: [constraints] | Success: [criteria]_\`
+  - \`_Requirements: [comma-separated requirement IDs]_\`
+  - \`_Leverage: [comma-separated file paths to reuse]_\`
+  - \`_TestFocus: [what tests should cover in the RED phase]_\`
+  - \`_DependsOn: [comma-separated task IDs within same phase]_\` (if applicable)
+- End each phase with a PhaseReview task:
+  - \`_PhaseReview: true_\`
+  - Include a \`_Prompt\` for review and commit instructions
 - Tasks should be atomic (1-3 files each) and in logical order
+- Make prompts specific to the project context and requirements
+- Do NOT create standalone test tasks — TDD handles testing automatically in each task
 
 **Implementation Logging:**
 - When implementing tasks, developers will use the \`/log-implementation\` skill to record what was done
