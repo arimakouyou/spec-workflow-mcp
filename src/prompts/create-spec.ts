@@ -80,19 +80,19 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 ${documentType === 'tasks' ? `
 **Special Instructions for Tasks Document:**
 - Group tasks by phases using "## Phase N: Name" headings
-- Each task line must follow this exact format: \`- [ ] N.N Description\`
-  - N.N = Phase number.Task number (e.g., 1.1, 1.2, 2.1, 2.3.1)
+- Each task line must follow this exact format: - [ ] ID Description
+  - ID = dot-separated numeric segments starting with the phase number (e.g., 1.1, 1.2, 2.1, 2.3.1)
   - Use numeric IDs — do NOT omit them
-  - Use hyphen (-) bullets with checkbox \`[ ]\`, NOT asterisks
-- For each task, include these metadata fields (all wrapped in underscores):
-  - \`_Prompt: Role: [role] | Task: [description] | Restrictions: [constraints] | Success: [criteria]_\`
-  - \`_Requirements: [comma-separated requirement IDs]_\`
-  - \`_Leverage: [comma-separated file paths to reuse]_\`
-  - \`_TestFocus: [what tests should cover in the RED phase]_\`
-  - \`_DependsOn: [comma-separated task IDs within same phase]_\` (if applicable)
+  - Use hyphen (-) bullets with checkbox [ ], NOT asterisks
+- For each task, include these metadata fields. Write them exactly as shown below (wrapped in underscores, no backticks):
+  - _Prompt: Role: [role] | Task: [description] | Restrictions: [constraints] | Success: [criteria]_
+  - _Requirements: [comma-separated requirement IDs]_
+  - _Leverage: [comma-separated file paths to reuse]_
+  - _TestFocus: [what tests should cover in the RED phase]_
+  - _DependsOn: [comma-separated task IDs within same phase]_ (if applicable)
 - End each phase with a PhaseReview task:
-  - \`_PhaseReview: true_\`
-  - Include a \`_Prompt\` for review and commit instructions
+  - _PhaseReview: true_
+  - Include a _Prompt_ for review and commit instructions
 - Tasks should be atomic (1-3 files each) and in logical order
 - Make prompts specific to the project context and requirements
 - Do NOT create standalone test tasks — TDD handles testing automatically in each task
