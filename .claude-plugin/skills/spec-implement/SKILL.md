@@ -317,7 +317,7 @@ fi
 
 ```javascript
 Agent({
-  subagent_type: "review-worker",
+  subagent_type: "spec-workflow-mcp:review-worker",
   description: "Phase review: final commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
     Expert team review has already been completed, but you MUST perform your own independent review.
@@ -413,7 +413,7 @@ Each agent works in its own isolated worktree.
 
 ```javascript
 Agent({
-  subagent_type: "parallel-worker",
+  subagent_type: "spec-workflow-mcp:parallel-worker",
   description: "TDD: Red-Green-Refactor implementation",
   prompt: `Implement the following task using TDD (Red→Green→Refactor).
 
@@ -483,7 +483,7 @@ Pass the implementation files to the `unit-test-engineer` agent and have it conf
 
 ```javascript
 Agent({
-  subagent_type: "unit-test-engineer",
+  subagent_type: "spec-workflow-mcp:unit-test-engineer",
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
@@ -521,7 +521,7 @@ The output of `code-simplifier` is comprehensively reviewed by the subsequent st
 
 ```javascript
 Agent({
-  subagent_type: "code-simplifier",
+  subagent_type: "spec-workflow-mcp:code-simplifier",
   description: "Simplify: improve clarity without changing behavior",
   prompt: `Simplify and refine the following implementation files while preserving functionality.
 
@@ -553,7 +553,7 @@ Delegate code review and commit to the `review-worker` agent. Separating impleme
 
 ```javascript
 Agent({
-  subagent_type: "review-worker",
+  subagent_type: "spec-workflow-mcp:review-worker",
   description: "Review and commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
     This code has passed through parallel-worker (TDD), unit-test-engineer, and code-simplifier.
@@ -620,7 +620,7 @@ Send back to parallel-worker with the review-worker's `findings`:
 
 ```javascript
 Agent({
-  subagent_type: "parallel-worker",
+  subagent_type: "spec-workflow-mcp:parallel-worker",
   description: "Rework: fix review findings ({N}/3)",
   prompt: `The review found the following issues. Please fix them.
 

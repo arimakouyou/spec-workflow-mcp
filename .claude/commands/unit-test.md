@@ -10,7 +10,7 @@ Agent ツールで `unit-test-engineer` を起動し、対象ファイル・モ�
 
 ```
 Agent(
-  subagent_type: "unit-test-engineer",
+  subagent_type: "spec-workflow-mcp:unit-test-engineer",
   prompt: "以下の対象に対してユニットテストを設計・実装してください。\n\n対象: $ARGUMENTS"
 )
 ```

@@ -44,16 +44,16 @@ Worker 分担:
 Workers と Pentagon を `.claude/agents/` のエージェント定義を使ってサブエージェントとして起動。
 
 **起動順序:**
-1. Pentagon（`subagent_type: "integ-test-auditor"`）— 起動後はレビュー依頼待ち
-2. Workers（`subagent_type: "integ-test-worker"`）— alpha, bravo を並列起動
+1. Pentagon（`subagent_type: "spec-workflow-mcp:integ-test-auditor"`）— 起動後はレビュー依頼待ち
+2. Workers（`subagent_type: "spec-workflow-mcp:integ-test-worker"`）— alpha, bravo を並列起動
 
 ```
 # Pentagon 起動
-Agent(subagent_type: "integ-test-auditor", prompt: "ホワイトボード: {whiteboard_path}\nレビュー依頼を待機")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-auditor", prompt: "ホワイトボード: {whiteboard_path}\nレビュー依頼を待機")
 
 # Worker 起動（並列）
-Agent(subagent_type: "integ-test-worker", prompt: "Worker名: alpha\nドメイン: {domain_a}\n...")
-Agent(subagent_type: "integ-test-worker", prompt: "Worker名: bravo\nドメイン: {domain_b}\n...")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Worker名: alpha\nドメイン: {domain_a}\n...")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Worker名: bravo\nドメイン: {domain_b}\n...")
 ```
 
 ### P3: Monitor & Facilitate

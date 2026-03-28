@@ -154,7 +154,7 @@ Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.
 **Launch Pentagon** (launch first to put it in a review-request waiting state):
 ```
 Agent(
-  subagent_type: "integ-test-auditor",
+  subagent_type: "spec-workflow-mcp:integ-test-auditor",
   prompt: "Whiteboard: {whiteboard_path}\nPlease wait for a review request from Command."
 )
 ```
@@ -162,7 +162,7 @@ Agent(
 **Launch Workers** (fill in variables from [worker-prompt.md](references/worker-prompt.md)):
 ```
 Agent(
-  subagent_type: "integ-test-worker",
+  subagent_type: "spec-workflow-mcp:integ-test-worker",
   prompt: "Worker name: {worker_name}\nDomain: {domain}\nTest file: tests/integration/test_{domain}.rs\nTarget endpoints:\n{endpoint_list}\nWhiteboard: {whiteboard_path}"
 )
 ```
