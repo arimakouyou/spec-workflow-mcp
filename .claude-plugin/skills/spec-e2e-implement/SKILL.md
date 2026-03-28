@@ -99,7 +99,7 @@ test-design.md の各 IT 仕様に対して parallel-worker でテストコー�
 
 ```javascript
 Agent({
-  subagent_type: "parallel-worker",
+  subagent_type: "spec-workflow-mcp:parallel-worker",
   description: "IT: Implement integration test IT-{N}",
   prompt: `Implement integration test based on the following specification.
 
@@ -137,7 +137,7 @@ test-design.md の各 E2E 仕様に対してテストコードを生成する。
 
 ```javascript
 Agent({
-  subagent_type: "parallel-worker",
+  subagent_type: "spec-workflow-mcp:parallel-worker",
   description: "E2E: Implement API E2E test E2E-{N}",
   prompt: `Implement API E2E test based on the following specification.
 
@@ -160,7 +160,7 @@ Agent({
 
 ```javascript
 Agent({
-  subagent_type: "parallel-worker",
+  subagent_type: "spec-workflow-mcp:parallel-worker",
   description: "E2E: Implement browser E2E test E2E-{N}",
   prompt: `Implement browser E2E test using Playwright based on the following specification.
 
