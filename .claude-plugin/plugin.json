@@ -1,6 +1,6 @@
 {
   "name": "spec-workflow-mcp",
-  "version": "2.2.15",
+  "version": "2.2.16",
   "description": "MCP server for structured spec-driven development with real-time web dashboard and VSCode extension.",
   "author": {
     "name": "arimakouyou"
