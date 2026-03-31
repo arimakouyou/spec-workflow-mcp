@@ -177,4 +177,4 @@ After all requested steering documents are approved:
 - Never proceed if approval delete fails
 - Must have approved status AND successful cleanup before next document
 - tech.md: selection rationale goes to `.spec-workflow/steering/logs/tech-decisions.md`
-- Complete phases in sequence (no skipping)
+- When the user requests the full steering-doc set, complete documents in the specified sequence (no skipping); users may still request or update individual documents directly.
