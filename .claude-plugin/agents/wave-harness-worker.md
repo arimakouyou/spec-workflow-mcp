@@ -1,6 +1,7 @@
 ---
 name: wave-harness-worker
 description: Implementation worker dedicated to wave-harness. Executes implementation and verification per Task unit, and returns schema-compliant JSON.
+model: sonnet
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills:
   - tdd-skills

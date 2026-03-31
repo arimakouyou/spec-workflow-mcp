@@ -1,6 +1,7 @@
 ---
 name: integ-test-worker
 description: Implementation worker for the integration-test skill. Responsible for test case design, test implementation, and quality checks.
+model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskGet, TaskUpdate, TaskList, SendMessage
 memory: project
 permissionMode: bypassPermissions

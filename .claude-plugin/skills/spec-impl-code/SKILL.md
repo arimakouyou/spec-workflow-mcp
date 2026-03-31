@@ -12,6 +12,7 @@ This skill is designed to run as a **subagent** via the Agent tool. It writes th
 ```javascript
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "GREEN: Implement to pass tests",
   prompt: `You are a TDD implementer. Write minimal code to make the failing tests pass.
 

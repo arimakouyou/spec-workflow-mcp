@@ -135,6 +135,7 @@ find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "UT 仕様を導出",
   prompt: "You are a test specification engineer. Generate Unit Test specifications.
 
@@ -172,6 +173,7 @@ Agent({
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "IT 仕様を導出",
   prompt: "You are a test specification engineer. Generate Integration Test specifications.
 
@@ -207,6 +209,7 @@ Agent({
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "E2E 仕様を導出",
   prompt: "You are a test specification engineer. Generate End-to-End Test specifications.
 
@@ -285,6 +288,7 @@ Auto-fix placeholders, formatting, and typos. Do not add or change content:
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "Fix test-design spec (auto-fix)",
   prompt: "You are a spec document reviewer. Auto-fix minor issues in the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
@@ -312,6 +316,7 @@ After fix completes, detect content issues. Do not modify the file:
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Review test-design spec (check)",
   prompt: "You are a spec document reviewer. Review the document (do NOT modify the file) at:
     {project-path}/.spec-workflow/specs/{spec-name}/test-design.md

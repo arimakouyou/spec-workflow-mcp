@@ -1,6 +1,7 @@
 ---
 name: parallel-worker
 description: TDD implementation worker. Executes Red→Green→Refactor + quality checks end-to-end. Used in step 4 of spec-implement. Review and commit are the responsibility of review-worker.
+model: sonnet
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage
 skills:
   - tdd-skills

@@ -14,6 +14,7 @@ This skill is designed to run as a **subagent** via the Agent tool. It has two m
 ```javascript
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Review spec document (check)",
   prompt: `You are a spec document reviewer. Check the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/{doc-type}.md
@@ -54,6 +55,7 @@ Performs **only mechanical fixes** such as removing placeholder text and fixing 
 ```javascript
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "Review spec document (fix)",
   prompt: `You are a spec document reviewer. Check and auto-fix minor issues in the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/{doc-type}.md
