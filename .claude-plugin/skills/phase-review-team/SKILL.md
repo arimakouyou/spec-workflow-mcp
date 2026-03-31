@@ -58,6 +58,7 @@ Phase 完了時にコミット前に実施する、専門家チームによる�
 // 実装担当
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Phase review: spec compliance",
   prompt: `あなたは実装レビューの専門家です。Phase {phase-number} で変更されたコードを、仕様書の観点からレビューしてください。
 
@@ -97,6 +98,7 @@ Agent({
 // セキュリティ担当1
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Phase review: auth & data security",
   prompt: `あなたはセキュリティレビューの専門家（認証・認可・データ保護）です。Phase {phase-number} で変更されたコードをレビューしてください。
 
@@ -152,6 +154,7 @@ Agent({
 // セキュリティ担当2
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Phase review: OWASP & CVE",
   prompt: `あなたはセキュリティレビューの専門家（OWASP・脆弱性）です。Phase {phase-number} で変更されたコードをレビューしてください。
 
@@ -229,6 +232,7 @@ Agent({
 // パフォーマンス担当
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Phase review: performance",
   prompt: `あなたはパフォーマンスレビューの専門家です。Phase {phase-number} で変更されたコードをレビューしてください。
 
@@ -263,6 +267,7 @@ Agent({
 // 品質・保守性担当
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Phase review: quality & maintainability",
   prompt: `あなたは品質・保守性レビューの専門家です。Phase {phase-number} で変更されたコードをレビューしてください。
 

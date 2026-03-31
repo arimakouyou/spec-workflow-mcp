@@ -12,6 +12,7 @@ This skill is designed to run as a **subagent** via the Agent tool. It reviews a
 ```javascript
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "REFACTOR: Review and clean up",
   prompt: `You are a TDD refactoring reviewer. Review and refactor the code written in the RED-GREEN phases.
 

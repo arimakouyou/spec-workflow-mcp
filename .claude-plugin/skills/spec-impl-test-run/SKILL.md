@@ -12,6 +12,7 @@ This skill is designed to run as a **subagent** via the Agent tool. It executes 
 ```javascript
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "Run tests ({mode} mode)",
   prompt: `You are a TDD test runner. Execute the specified tests and validate the results.
 

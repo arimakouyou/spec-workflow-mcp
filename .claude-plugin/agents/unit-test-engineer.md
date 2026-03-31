@@ -1,6 +1,7 @@
 ---
 name: unit-test-engineer
 description: Rust unit testing specialist. Designs and implements tests based on Design by Contract.
+model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob
 color: green
 ---

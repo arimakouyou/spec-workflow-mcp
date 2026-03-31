@@ -286,6 +286,7 @@ Auto-fix placeholders, formatting, and typos. Do not add or change content:
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "Fix tasks spec (auto-fix)",
   prompt: "You are a spec document reviewer. Auto-fix minor issues in the document at:
     {project-path}/.spec-workflow/specs/{spec-name}/tasks.md
@@ -313,6 +314,7 @@ After fix completes, detect content issues. Do not modify the file:
 ```
 Agent({
   subagent_type: "general-purpose",
+  model: "opus",
   description: "Review tasks spec (check)",
   prompt: "You are a spec document reviewer. Review the document (do NOT modify the file) at:
     {project-path}/.spec-workflow/specs/{spec-name}/tasks.md

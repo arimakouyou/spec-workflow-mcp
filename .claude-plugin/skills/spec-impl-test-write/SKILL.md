@@ -12,6 +12,7 @@ This skill is designed to run as a **subagent** via the Agent tool. It writes fa
 ```javascript
 Agent({
   subagent_type: "general-purpose",
+  model: "sonnet",
   description: "RED: Write failing tests",
   prompt: `You are a TDD test writer. Write failing tests for the task described below.
 

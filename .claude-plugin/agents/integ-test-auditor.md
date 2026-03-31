@@ -1,6 +1,7 @@
 ---
 name: integ-test-auditor
 description: Quality auditor for integration tests. Reviews tests created by Workers against the quality gate criteria.
+model: opus
 tools: Read, Grep, Glob, TaskGet, TaskUpdate, TaskList, SendMessage
 memory: project
 permissionMode: bypassPermissions

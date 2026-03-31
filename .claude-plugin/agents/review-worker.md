@@ -1,6 +1,7 @@
 ---
 name: review-worker
 description: Review-dedicated worker. Runs quality checks + code review and commits. Used in step 6 of spec-implement.
+model: opus
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage
 memory: project
 permissionMode: bypassPermissions
