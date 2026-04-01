@@ -102,6 +102,46 @@ Leave the detail sections (API spec, error handling, traceability, etc.) as `(to
 (to be written in Wave 2)
 ```
 
+### 3.5 Version Freshness Verification (MANDATORY)
+
+Key Design Decisions の記述後、記載した全てのライブラリ・フレームワークのバージョンが最新安定版であることを検証する。AI の学習データに基づくバージョンは古い可能性がある。
+
+#### 3.5.1 バージョン情報の抽出
+
+Key Design Decisions セクションから技術名＋バージョンのペアを全て収集する（例: 「Leptos 0.7」「Diesel 2.2」「Axum 0.8」）。
+
+#### 3.5.2 最新安定版の確認
+
+収集した各ライブラリについて、以下の優先順で最新安定版を確認する:
+
+1. **WebSearch**（推奨）:
+   - 検索: "{ライブラリ名} latest stable release"
+   - 検索: "{ライブラリ名} crates.io"（Rust）/ "{パッケージ名} npm"（Node.js）
+
+2. **context7 MCP**（補助）:
+   - resolve-library-id でライブラリを特定
+   - query-docs で最新バージョンやチェンジログを確認
+
+3. **レジストリ CLI フォールバック**（Web ツール利用不可時）:
+   ```bash
+   # Rust
+   cargo search {crate_name} --limit 1
+   # Node.js
+   npm view {package_name} version
+   ```
+
+#### 3.5.3 バージョン更新
+
+検証結果をテーブルにまとめ、Key Design Decisions を更新する:
+
+| Library | Design Version | Latest Stable | Action |
+|---------|---------------|---------------|--------|
+| {name} | {old} | {new} | Updated / Kept (理由) |
+
+- Key Design Decisions のバージョンを最新安定版に更新
+- **例外**: steering ドキュメント（tech.md 等）が互換性のため特定バージョンを指定している場合は維持し理由を注記
+- **メジャーバージョン変更**: 設計版と最新版のメジャーバージョンが異なる場合、Architecture Confirmation (step 4) でユーザーに報告
+
 ### 4. Architecture Confirmation (Present to User)
 
 After creating the Wave 1 document, present the following to the user **without using the formal approval tool**:
@@ -229,6 +269,7 @@ Based on the Key Design Decisions from Wave 1, list all CLI tools needed to buil
 3. Testing Strategy 概要 → ビルドや基本テストに必要なツール（E2E ブラウザテスト用の playwright/chromium 等は test-design.md の Required Test Tools に記載）
 4. Check Command は、ツールがインストール済みなら exit 0 になる単一コマンド
 5. Required 列: `Yes`（必須）または `Recommended`（推奨）のみ。E2E テストに必要なツール（Playwright, Chrome等）は設計時に Required=Yes として明記すること
+6. Min Version は step 3.5 で検証した最新安定版を反映すること。AI の学習データのデフォルト値を使用しない
 
 #### Excluded Test Environments
 

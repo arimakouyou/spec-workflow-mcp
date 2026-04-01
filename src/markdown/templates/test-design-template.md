@@ -41,6 +41,7 @@ Notes:
 - E2E テストに必要なツール（Playwright, Chrome等）は **必ず Required=Yes** とする。環境依存によるテストスキップは許可しない
 - 実行不可能なテストがある場合は、design.md の「Excluded Test Environments」セクションで設計時に明示すること
 - design.md の Required Build Tools と重複するツールは、テスト用に異なるバージョン要件がある場合のみ記載
+- **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch またはレジストリ CLI で最新安定版を確認し反映すること
 
 ---
 
