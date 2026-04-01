@@ -337,7 +337,7 @@ pub fn validate_username(name: &str) -> Result<(), String> {
     if name.is_empty() {
         return Err("名前は必須です".into());
     }
-    if name.len() > 50 {
+    if name.chars().count() > 50 {
         return Err("名前は50文字以内です".into());
     }
     Ok(())

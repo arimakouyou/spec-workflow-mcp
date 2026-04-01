@@ -151,7 +151,7 @@ pub fn validate_username(name: &str) -> Result<(), String> {
     if name.is_empty() {
         return Err("名前は必須です".into());
     }
-    if name.len() > 50 {
+    if name.chars().count() > 50 {
         return Err("名前は50文字以内です".into());
     }
     Ok(())
@@ -214,10 +214,10 @@ mod tests {
     }
 
     #[test]
-    fn validate_username_rejects_multibyte_exceeding_50_bytes() {
-        // 'あ' は3バイトなので、50文字 = 150バイト > 50 → Err
+    fn validate_username_accepts_50_multibyte_chars() {
+        // 'あ' は3バイトだが chars().count() では1文字。50文字 ≦ 50 → Ok
         let name: String = std::iter::repeat('あ').take(50).collect();
-        assert!(validate_username(&name).is_err());
+        assert!(validate_username(&name).is_ok());
     }
 }
 ```
