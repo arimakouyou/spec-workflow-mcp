@@ -33,7 +33,7 @@ RED:      次のテスト...
 2. **Triangulation**: 複数のテストケースから一般化
 3. **Obvious Implementation**: 解決策が明確な場合に直接実装
 
-詳細: [references/green-strategies.md](references/green-strategies.md)
+詳細: [references/green-strategies.ja.md](references/green-strategies.ja.md)
 
 ## テスト構造（Given-When-Then）
 
@@ -65,7 +65,7 @@ RED:      次のテスト...
 | Mock | インタラクションを検証する |
 | Fake | 軽量な実装（例: インメモリストア） |
 
-詳細: [references/test-doubles.md](references/test-doubles.md)
+詳細: [references/test-doubles.ja.md](references/test-doubles.ja.md)
 
 ## F.I.R.S.T 原則
 
@@ -87,9 +87,9 @@ RED:      次のテスト...
 
 | 優先度 | ドキュメント |
 |--------|-----------|
-| 高 | [green-strategies.md](references/green-strategies.md) — Green 戦略 |
-| 高 | [test-design.md](references/test-design.md) — 境界値分析 |
-| 中 | [test-patterns.md](references/test-patterns.md) — テストパターン |
-| 中 | [test-doubles.md](references/test-doubles.md) — テストダブル |
-| 低 | [advanced-techniques.md](references/advanced-techniques.md) — 高度なテクニック |
-| 低 | [tdd-and-design.md](references/tdd-and-design.md) — TDD と設計 |
+| 高 | [green-strategies.ja.md](references/green-strategies.ja.md) — Green 戦略 |
+| 高 | [test-design.ja.md](references/test-design.ja.md) — 境界値分析 |
+| 中 | [test-patterns.ja.md](references/test-patterns.ja.md) — テストパターン |
+| 中 | [test-doubles.ja.md](references/test-doubles.ja.md) — テストダブル |
+| 低 | [advanced-techniques.ja.md](references/advanced-techniques.ja.md) — 高度なテクニック |
+| 低 | [tdd-and-design.ja.md](references/tdd-and-design.ja.md) — TDD と設計 |

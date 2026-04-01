@@ -18,8 +18,8 @@ Edit / Write / Bash は使用不可。テストファイルを読み取り、品
 
 起動直後に以下のファイルを読み込み、評価基準をコンテキストに保持する:
 
-1. `.claude/skills/integration-test/references/quality-gate.md` — 品質チェックリスト
-2. `.claude/skills/integration-test/references/test-case-design.md` — テストケース5分類
+1. `.claude-plugin/skills/integration-test/references/quality-gate.ja.md` — 品質チェックリスト
+2. `.claude-plugin/skills/integration-test/references/test-case-design.ja.md` — テストケース5分類
 
 ## レビュー手順
 

@@ -138,7 +138,7 @@ Worker（alpha/bravo）がテストを実装し、Pentagon が品質ゲートで
 ### P1: チームセットアップ
 
 1. 共有テストヘルパー（`tests/integration/helpers/`）の確認・更新
-2. ホワイトボード作成: [whiteboard-template.md](references/whiteboard-template.md) に従って作成
+2. ホワイトボード作成: [whiteboard-template.ja.md](references/whiteboard-template.ja.md) に従って作成
    - **必ず Key Questions を設定**（1-3項目）
 
 ### P2: エージェント起動
@@ -159,7 +159,7 @@ Agent(
 )
 ```
 
-**Worker を起動**（[worker-prompt.md](references/worker-prompt.md) から変数を埋める）:
+**Worker を起動**（[worker-prompt.ja.md](references/worker-prompt.ja.md) から変数を埋める）:
 ```
 Agent(
   subagent_type: "spec-workflow-mcp:integ-test-worker",
@@ -227,12 +227,12 @@ Quality gate:
 
 | ドキュメント | 目的 |
 |-----------|------|
-| [quality-gate.md](references/quality-gate.md) | Pentagon の判定基準 |
-| [test-case-design.md](references/test-case-design.md) | テストケース5分類 |
-| [test-patterns.md](references/test-patterns.md) | テスト実装パターン |
-| [fixture-catalog.md](references/fixture-catalog.md) | 共有ヘルパー・フィクスチャカタログ |
-| [external-api-mock.md](references/external-api-mock.md) | 外部 API モックパターン |
-| [worker-prompt.md](references/worker-prompt.md) | Worker プロンプトテンプレート |
-| [auditor-prompt.md](references/auditor-prompt.md) | Pentagon プロンプトテンプレート |
-| [whiteboard-template.md](references/whiteboard-template.md) | ホワイトボードテンプレート |
-| [parallel-execution.md](references/parallel-execution.md) | 並列実行フロー詳細 |
+| [quality-gate.ja.md](references/quality-gate.ja.md) | Pentagon の判定基準 |
+| [test-case-design.ja.md](references/test-case-design.ja.md) | テストケース5分類 |
+| [test-patterns.ja.md](references/test-patterns.ja.md) | テスト実装パターン |
+| [fixture-catalog.ja.md](references/fixture-catalog.ja.md) | 共有ヘルパー・フィクスチャカタログ |
+| [external-api-mock.ja.md](references/external-api-mock.ja.md) | 外部 API モックパターン |
+| [worker-prompt.ja.md](references/worker-prompt.ja.md) | Worker プロンプトテンプレート |
+| [auditor-prompt.ja.md](references/auditor-prompt.ja.md) | Pentagon プロンプトテンプレート |
+| [whiteboard-template.ja.md](references/whiteboard-template.ja.md) | ホワイトボードテンプレート |
+| [parallel-execution.ja.md](references/parallel-execution.ja.md) | 並列実行フロー詳細 |

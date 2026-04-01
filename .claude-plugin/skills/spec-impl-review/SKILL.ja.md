@@ -54,7 +54,7 @@ Agent({
 
 ### 3. 設計原則を適用する
 
-設計ガイダンスについて `/tdd-skills` と `tdd-skills/references/tdd-and-design.md` を参照する:
+設計ガイダンスについて `/tdd-skills` と `tdd-skills/references/tdd-and-design.ja.md` を参照する:
 
 **プロダクションコードのリファクタリング:**
 - **重複**: 共有ロジックをヘルパー関数に抽出

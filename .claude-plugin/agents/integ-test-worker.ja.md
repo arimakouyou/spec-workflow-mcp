@@ -27,9 +27,9 @@ permissionMode: bypassPermissions
 
 - ホワイトボード（Command から SendMessage で通知されるパス）
 - `tests/integration/helpers/` — 共通ヘルパー（TestContext 等）
-- `.claude/skills/integration-test/references/test-patterns.md` — テスト実装パターン
-- `.claude/skills/integration-test/references/test-case-design.md` — テストケース設計
-- `.claude/skills/integration-test/references/quality-gate.md` — 品質基準
+- `.claude-plugin/skills/integration-test/references/test-patterns.ja.md` — テスト実装パターン
+- `.claude-plugin/skills/integration-test/references/test-case-design.ja.md` — テストケース設計
+- `.claude-plugin/skills/integration-test/references/quality-gate.ja.md` — 品質基準
 
 ## 禁止事項
 

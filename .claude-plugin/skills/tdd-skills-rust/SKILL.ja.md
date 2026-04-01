@@ -42,7 +42,7 @@ Red:      次のテスト...
 2. **Triangulation**: 複数のテストから一般化
 3. **Obvious Implementation**: 解決策が明確な場合に直接実装
 
-詳細: [references/green-strategies.md](references/green-strategies.md)
+詳細: [references/green-strategies.ja.md](references/green-strategies.ja.md)
 
 ## テスト構造（Given-When-Then）
 
@@ -97,7 +97,7 @@ Rust ではテスト関数に `test_` プレフィックスは不要（`#[test]`
 | Mock | 呼び出しを検証 | `mockall` の `expect_*()` |
 | Fake | 軽量な実装 | `HashMap` ベースの InMemoryRepository |
 
-詳細: [references/test-doubles.md](references/test-doubles.md)
+詳細: [references/test-doubles.ja.md](references/test-doubles.ja.md)
 
 ## F.I.R.S.T 原則
 
@@ -120,9 +120,9 @@ Rust ではテスト関数に `test_` プレフィックスは不要（`#[test]`
 
 | ドキュメント | 内容 |
 |-----------|------|
-| [green-strategies.md](references/green-strategies.md) | Green 戦略の詳細と実践例 |
-| [test-design.md](references/test-design.md) | 境界値分析と同値分割 |
-| [test-patterns.md](references/test-patterns.md) | フィクスチャとパラメータ化テスト |
-| [test-doubles.md](references/test-doubles.md) | テストダブルの種類と使い分け |
-| [tdd-and-design.md](references/tdd-and-design.md) | TDD が設計に与える効果 |
-| [advanced-techniques.md](references/advanced-techniques.md) | レガシーコードの対処とアンチパターン |
+| [green-strategies.ja.md](references/green-strategies.ja.md) | Green 戦略の詳細と実践例 |
+| [test-design.ja.md](references/test-design.ja.md) | 境界値分析と同値分割 |
+| [test-patterns.ja.md](references/test-patterns.ja.md) | フィクスチャとパラメータ化テスト |
+| [test-doubles.ja.md](references/test-doubles.ja.md) | テストダブルの種類と使い分け |
+| [tdd-and-design.ja.md](references/tdd-and-design.ja.md) | TDD が設計に与える効果 |
+| [advanced-techniques.ja.md](references/advanced-techniques.ja.md) | レガシーコードの対処とアンチパターン |

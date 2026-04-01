@@ -31,17 +31,17 @@ Worker（alpha/bravo）起動時に展開するプロンプト。
 - tests/integration/helpers/（共通ヘルパー）
 
 ### 3. テストケース設計
-references/test-case-design.md の 5 分類に従い、テストケースを列挙する。
+references/test-case-design.ja.md の 5 分類に従い、テストケースを列挙する。
 各エンドポイントに対して正常系・異常系・境界値・エッジケース・外部依存を考慮する。
 
 ### 4. テスト実装
-references/test-patterns.md のパターンに従い実装する。
+references/test-patterns.ja.md のパターンに従い実装する。
 - Given-When-Then 構造を守る
 - TestContext を使用する
-- 外部 API は trait DI でテストダブルに差し替える（references/external-api-mock.md 参照）
+- 外部 API は trait DI でテストダブルに差し替える（references/external-api-mock.ja.md 参照）
 
 ### 5. 品質セルフチェック
-references/quality-gate.md の全項目を自己チェックする。
+references/quality-gate.ja.md の全項目を自己チェックする。
 Pentagon に差し戻されるとサイクルが増えるため、事前に品質を担保する。
 
 ### 6. 完了報告

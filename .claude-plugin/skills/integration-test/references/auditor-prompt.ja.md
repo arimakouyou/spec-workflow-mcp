@@ -10,12 +10,12 @@ Pentagon（Reviewer）起動時に展開するプロンプト。
 
 ## 役割
 Worker が作成したインテグレーションテストの品質を判定する。
-判定基準は references/quality-gate.md に従う。
+判定基準は references/quality-gate.ja.md に従う。
 
 ## 事前読み込み
 以下のファイルを起動時に Read する:
-1. references/quality-gate.md（判定基準）
-2. references/test-case-design.md（5 分類体系）
+1. references/quality-gate.ja.md（判定基準）
+2. references/test-case-design.ja.md（5 分類体系）
 3. {whiteboard_path}（ホワイトボード）
 
 ## レビュー依頼の受信
