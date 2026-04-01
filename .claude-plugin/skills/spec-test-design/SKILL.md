@@ -150,6 +150,15 @@ Agent({
     2. 各インターフェースに対して、4カテゴリ（Happy Path / Boundary Values / Error Handling / Edge Cases）のテストケースを設計
     3. コンポーネントの **Dependencies** からモック対象を特定
     4. design.md の **Error Handling** テーブルから、各エラーコードに対応するエラーハンドリングテストを設計
+    5. **Leptos フロントエンドコンポーネント**: コンポーネントが Leptos フロントエンドコンポーネント（view! マクロ、#[component]、signal 使用、pages/ / components/ ディレクトリ配置）の場合:
+       - HTML レンダリングや DOM 構造のテストは指定しない
+       - 代わりに以下のテストを指定:
+         a. シグナル状態遷移（初期状態、更新後の値）
+         b. 派生計算の正しさ（クロージャ、Memo の値）
+         c. バリデーションロジック（コンポーネントから抽出）
+         d. Callback/ハンドラロジック（抽出した関数の動作）
+         e. サーバー関数ビジネスロジック（コア計算）
+       - UT テーブルの Verification 列に「Test target: extracted logic function」と注記
 
     命名規則: UT-{コンポーネント番号}.{テストケース番号} (例: UT-1.1, UT-1.2, UT-2.1)
 
@@ -157,6 +166,7 @@ Agent({
     - design.md の全コンポーネントに対して UT 仕様が存在すること
     - 各 UT は 4カテゴリのうち該当するカテゴリを網羅していること
     - テストケースの Input / Expected Output / Verification が具体的であること（プレースホルダー不可）
+    - Leptos フロントエンドコンポーネントの UT 仕様は抽出可能なロジック（シグナル、バリデーション、計算）を対象とし、HTML レンダリングは対象としないこと
 
     テスト技術コンテキスト:
     {メインエージェントが調査したテスト技術サマリーをここに挿入}

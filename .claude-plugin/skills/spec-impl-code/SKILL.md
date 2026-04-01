@@ -71,6 +71,13 @@ Follow `/tdd-skills` Green Strategies:
 
 **Key constraint**: Write only what the tests demand. If a test doesn't check for input validation, don't add it. If a test doesn't verify logging, don't add it.
 
+**Leptos Frontend Components:**
+Leptos フロントエンドテストを満たすための実装:
+- 抽出ロジック関数を **先に** 実装する（テストがインポートする対象）
+- 次に `#[component]` 関数と `view!` マクロにロジックを配線する
+- ロジック関数は `pub` または `pub(crate)` でテストからアクセス可能にする
+- テスト通過後、`cargo leptos build` で WASM コンパイルを検証する
+
 ### 5. Verify Locally (Optional Quick Check)
 
 If possible, do a quick mental check that:
