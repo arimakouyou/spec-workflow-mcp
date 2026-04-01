@@ -86,7 +86,7 @@ Follow `/tdd-skills` principles:
 - コンポーネントからテスト可能なロジックを抽出（バリデーション、計算、状態遷移）
 - 抽出関数のテストを記述する。`view!` マクロ出力のテストは書かない
 - シグナル動作のテスト: 作成、更新、派生状態
-- `tdd-skills-rust/references/leptos-frontend-testing.md` のパターンを参照
+- `../tdd-skills-rust/references/leptos-frontend-testing.md` のパターンを参照
 
 **Test Organization:**
 - One test file per component/module being tested

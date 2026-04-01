@@ -214,10 +214,10 @@ mod tests {
     }
 
     #[test]
-    fn validate_username_counts_bytes_not_chars_for_multibyte() {
-        // 50文字のマルチバイト文字列
+    fn validate_username_rejects_multibyte_exceeding_50_bytes() {
+        // 'あ' は3バイトなので、50文字 = 150バイト > 50 → Err
         let name: String = std::iter::repeat('あ').take(50).collect();
-        assert!(validate_username(&name).is_ok());
+        assert!(validate_username(&name).is_err());
     }
 }
 ```
@@ -474,8 +474,8 @@ src/
 | 派生計算 | Memo ロジックを純粋関数に | `assert_eq!(calculate_total(&items), 700)` |
 | バリデーション | validate 関数を抽出 | `assert!(validate_username("").is_err())` |
 | サーバー関数 | コアロジックを async 関数に、依存を trait 注入 | `assert_eq!(get_user_logic(&mock, 1).await?.name, "Alice")` |
-| ハンドラロジック | on:click/on:submit の本体を関数に | `assert!(handle_submit("", "bad").is_err())` |
-| Props 初期状態 | 初期化ロジックを関数に | `assert_eq!(calc_pagination(21, 10).total_pages, 3)` |
+| ハンドラロジック | on:click/on:submit の本体を関数に | `assert!(handle_form_submit("", "bad").is_err())` |
+| Props 初期状態 | 初期化ロジックを関数に | `assert_eq!(calculate_pagination(21, 10).total_pages, 3)` |
 | 表示フォーマット | format 関数を抽出 | `assert_eq!(format_price(1000), "¥1,000")` |
 
 ## 4カテゴリカバレッジ（フロントエンド適用）

@@ -121,7 +121,7 @@ Details: [references/test-doubles.md](references/test-doubles.md)
 Leptos フロントエンドコンポーネント（シグナル、view!、サーバー関数）のテスト戦略:
 
 - **ロジックをテストし、レンダリングはテストしない**: `#[component]` からビジネスロジックを独立関数に抽出しテスト
-- **シグナルは直接テスト可能**: `signal()` で作成、変更、派生値をアサート
+- **シグナルは直接テスト可能**: `signal(initial_value)` で作成、変更、派生値をアサート
 - **サーバー関数**: コアロジックをテスト可能な async 関数に抽出。依存は trait 経由でモック
 - **`cargo test` = SSR のみ**: GREEN 後に `cargo leptos build` で WASM コンパイルを検証
 

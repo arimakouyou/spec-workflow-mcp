@@ -15,7 +15,7 @@ permissionMode: bypassPermissions
 - TDD implementation (Red→Green→Refactor)
 - Quality checks (rustfmt + clippy + cargo test)
 - Read/Edit the whiteboard (only when `Whiteboard path` is provided)
-- **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification. For Leptos frontend components, follow the patterns in `tdd-skills-rust/references/leptos-frontend-testing.md` — test extracted logic functions, signal state, and computations rather than `view!` macro output.
+- **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification. For Leptos frontend components, follow the patterns in `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` — test extracted logic functions, signal state, and computations rather than `view!` macro output.
 - **Do not perform review or commit** (those are the responsibility of review-worker)
 
 > **Note on spec-impl-\* skills**: The skills `spec-impl-code`, `spec-impl-test-write`, `spec-impl-test-run`, and `spec-impl-review` are referenced in the orchestrator's prompt as guidelines (e.g., "see /spec-impl-test-write skill"). Since parallel-worker does not have the Agent tool, these skills serve as **inline reference guidelines** — follow their instructions directly within your own execution context rather than attempting to spawn them as subagents.
@@ -24,7 +24,7 @@ permissionMode: bypassPermissions
 
 タスクの `_Prompt` が Leptos フロントエンド関心事（`#[component]`、`view!`、signal、Callback、`pages/`・`components/` ディレクトリ）を含む場合:
 
-- **RED phase**: `tdd-skills-rust/references/leptos-frontend-testing.md` のパターンに従い、コンポーネントからロジックを抽出しテストを記述する。`view!` マクロ出力のテストは書かない
+- **RED phase**: `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` のパターンに従い、コンポーネントからロジックを抽出しテストを記述する。`view!` マクロ出力のテストは書かない
 - **GREEN phase**: テスト対象の抽出ロジック関数を先に実装し、次に `#[component]` と `view!` マクロに配線する
 - **Quality checks**: `cargo test` 通過後、`cargo leptos build` で WASM コンパイルを検証する（既存の Leptos Full-Stack Projects セクションに従う）
 
