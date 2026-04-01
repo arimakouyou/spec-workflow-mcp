@@ -129,6 +129,28 @@ mod tests {
 }
 ```
 
+## Leptos Frontend Testing Considerations
+
+Leptos フロントエンドコンポーネントのテスト品質検証時、標準の Required Test Aspects（4カテゴリ）を `view!` マクロ出力ではなく**抽出ロジック関数**に適用する。
+
+### フロントエンドで適切なテストカバレッジ:
+
+| コンポーネント関心事 | 期待されるテストカバレッジ |
+|---|---|
+| シグナル状態遷移 | Happy Path（初期値+更新後）、Boundary Values（数値シグナルの境界）、Edge Cases（連続更新） |
+| 派生計算 | Happy Path（各派生値）、Boundary Values（計算閾値） |
+| バリデーションロジック | 4カテゴリ全て（有効入力、境界、無効入力、Unicode/空文字等） |
+| サーバー関数ロジック | Happy Path、Error Handling（依存障害）、Boundary Values（入力境界） |
+| Callback/ハンドラロジック | Happy Path（状態変更）、Error Cases（無効状態遷移） |
+
+### テスト品質ギャップとして報告しないもの:
+
+- `view!` レンダリングテストの不在（E2E 領域）
+- DOM イベント配線テストの不在
+- CSS クラスアサーションテストの不在
+
+これらは E2E テスト（Playwright）で検証すべき対象であり、ユニットテスト品質のギャップではない。
+
 ## Guidelines
 - **Naming**: `{behavior}_when_{condition}` (e.g., `returns_error_when_empty_name`)
 - **One concept per test**: Multiple asserts are fine as long as they verify "one concept"

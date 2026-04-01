@@ -116,6 +116,17 @@ Details: [references/test-doubles.md](references/test-doubles.md)
 | Data interference between tests | Use `test_transaction` to rollback |
 | Slow compilation | Isolate test-only code with `#[cfg(test)]` |
 
+## Leptos Frontend Testing
+
+Leptos フロントエンドコンポーネント（シグナル、view!、サーバー関数）のテスト戦略:
+
+- **ロジックをテストし、レンダリングはテストしない**: `#[component]` からビジネスロジックを独立関数に抽出しテスト
+- **シグナルは直接テスト可能**: `signal(initial_value)` で作成、変更、派生値をアサート
+- **サーバー関数**: コアロジックをテスト可能な async 関数に抽出。依存は trait 経由でモック
+- **`cargo test` = SSR のみ**: GREEN 後に `cargo leptos build` で WASM コンパイルを検証
+
+詳細: [references/leptos-frontend-testing.md](references/leptos-frontend-testing.md)
+
 ## Detailed References
 
 | Document | Contents |
@@ -126,3 +137,4 @@ Details: [references/test-doubles.md](references/test-doubles.md)
 | [test-doubles.md](references/test-doubles.md) | Types of test doubles and when to use them |
 | [tdd-and-design.md](references/tdd-and-design.md) | The effect of TDD on design |
 | [advanced-techniques.md](references/advanced-techniques.md) | Legacy code handling and anti-patterns |
+| [leptos-frontend-testing.md](references/leptos-frontend-testing.md) | Leptos component, signal, and server function testing patterns |

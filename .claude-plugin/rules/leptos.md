@@ -306,10 +306,76 @@ This command builds both SSR and WASM targets. Common WASM-only compilation erro
 
 ### TDD with Leptos
 
-- `cargo test` runs tests for the SSR target only. This is sufficient for server functions and repository logic
-- Component rendering tests use `leptos::mount_to` in `#[cfg(test)]` blocks
-- After Green phase in TDD, always run `cargo leptos build` to verify WASM compilation before proceeding to Refactor
-- WASM compilation failure after Green is a signal that `#[cfg(feature = "ssr")]` guards are missing
+#### テスト戦略
+
+`cargo test` は SSR ターゲットでのみコンパイルする。Leptos フロントエンドコード（コンポーネント、シグナル、リアクティブロジック）は、`view!` マクロからロジックを**抽出**することで標準の `#[test]` でテスト可能。
+
+#### ユニットテスト対象
+
+| フロントエンド関心事 | テストアプローチ |
+|---|---|
+| シグナル状態遷移 | 状態更新ロジックを純粋関数に抽出、signal 値をアサート |
+| 派生計算 / Memo | 計算ロジックを純粋関数に抽出、入出力をアサート |
+| バリデーションロジック | コンポーネントから validate 関数を抽出、直接テスト |
+| サーバー関数ロジック | `#[server]` のコア計算を async 関数に抽出、依存を trait モック |
+| Callback/ハンドラロジック | `on:click`/`on:submit` の本体を名前付き関数に抽出、テスト |
+| コンポーネント初期状態 | Props から初期シグナル値を導出するロジックをテスト |
+
+#### ユニットテスト対象外（E2E に委譲）
+
+- `view!` マクロの HTML 出力
+- DOM イベント配線（`on:click` が発火するか）
+- CSS クラスの動的適用（`class:active=signal`）
+- ルーティング遷移
+- `Suspense` / `Resource` のローディング表示
+
+#### 例: コンポーネントロジック抽出テスト
+
+```rust
+/// バリデーションロジックをコンポーネントから抽出
+pub fn validate_username(name: &str) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("名前は必須です".into());
+    }
+    if name.chars().count() > 50 {
+        return Err("名前は50文字以内です".into());
+    }
+    Ok(())
+}
+
+#[component]
+fn CreateUserForm() -> impl IntoView {
+    let (name, set_name) = signal(String::new());
+    let validation = move || validate_username(&name.get());
+    // ... view! { ... }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_username_rejects_empty() {
+        assert!(validate_username("").is_err());
+    }
+
+    #[test]
+    fn validate_username_accepts_valid() {
+        assert!(validate_username("alice").is_ok());
+    }
+
+    #[test]
+    fn validate_username_rejects_over_50_chars() {
+        assert!(validate_username(&"a".repeat(51)).is_err());
+    }
+}
+```
+
+#### GREEN 後のビルド検証
+
+GREEN phase でテストが通過した後、必ず `cargo leptos build` を実行して WASM コンパイルを検証する。WASM コンパイル失敗は `#[cfg(feature = "ssr")]` ガードの不足を示す。
+
+詳細なテストパターンは TDD Skills (Rust) リファレンス: [leptos-frontend-testing.md](../skills/tdd-skills-rust/references/leptos-frontend-testing.md) を参照。
 
 ## Performance
 
