@@ -30,9 +30,9 @@
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
 | [例: cargo] | [(bundled)] | [例: Unit test runner (cargo test)] | [例: cargo --version] | [例: (bundled with rustup)] | Yes |
-| [例: docker] | [例: >= 24.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
-| [例: playwright] | [例: >= 1.42.0] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
-| [例: chromium] | [例: any] | [例: E2E ブラウザエンジン] | [例: node -e "console.log(require('playwright').chromium.executablePath())"] | [例: npx playwright install chromium] | Yes |
+| [例: docker] | [例: >= 29.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
+| [例: playwright] | [例: >= 1.58.0] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
+| [例: chromium] | [例: (bundled with playwright)] | [例: E2E ブラウザエンジン（Playwright バージョンに対応するビルドを使用）] | [例: npx playwright --version] | [例: npx playwright install chromium] | Yes |
 
 Notes:
 - **Yes**: テスト実行前に必須。未インストール = FAIL。実装を停止しユーザーに報告
@@ -41,6 +41,8 @@ Notes:
 - E2E テストに必要なツール（Playwright, Chrome等）は **必ず Required=Yes** とする。環境依存によるテストスキップは許可しない
 - 実行不可能なテストがある場合は、design.md の「Excluded Test Environments」セクションで設計時に明示すること
 - design.md の Required Build Tools と重複するツールは、テスト用に異なるバージョン要件がある場合のみ記載
+- **Version Detection (MANDATORY)**: Min Version はテンプレートの例をそのまま使用しない。実行環境で各ツールの Check Command を実行し、検出した値を記載すること
+- **Browser Version**: Chromium/Chrome のバージョンは Playwright のバージョンと連動する。`npx playwright install chromium` で Playwright バージョンに対応する最新ブラウザを取得すること。古い Playwright を使うと古いブラウザエンジンが使用される
 
 ---
 
