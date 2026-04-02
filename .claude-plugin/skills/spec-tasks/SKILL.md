@@ -110,7 +110,7 @@ design.md の Container Architecture セクションを読み、コンテナセ�
   - _TDDSkip: true_
   - _DependsOn: 0.1_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: テスト用の docker-compose.test.yml を作成する。本番用とポートが衝突しないようオフセットする（例: 5432→15432）。DB にはテスト用の初期化スクリプトを含める | Restrictions: 本番用 docker-compose.yml を修正しない。テスト用ボリュームは永続化しない（tmpfs 推奨） | Success: `docker-compose -f docker-compose.test.yml up -d` でテスト用サービスが起動し、本番用と共存できる_
+  - _Prompt: Role: DevOps Engineer | Task: テスト用の docker-compose.test.yml を作成する。外部ポートは固定値ではなく環境変数（例: ${TEST_DB_PORT:-15432}:5432）で指定し、起動スクリプトで5桁のランダムポート（10000-65535）を生成して渡す方式にする。DB にはテスト用の初期化スクリプトを含める | Restrictions: 本番用 docker-compose.yml を修正しない。テスト用ボリュームは永続化しない（tmpfs 推奨）。固定オフセットポート（5432→15432 等）は他プロセスとの競合リスクがあるため使用しない | Success: ランダムポートで `docker-compose -f docker-compose.test.yml up -d` が起動し、本番用と共存できる_
 ```
 
 **Container Architecture が存在しない場合**: コンテナタスクを追加しない（従来通り）。

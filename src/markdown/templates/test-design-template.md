@@ -223,18 +223,25 @@ Notes:
 
 ### docker-compose.test.yml
 [テスト専用の compose 定義]
-- ポート衝突回避: 本番用ポートからオフセット（例: 5432 → 15432）
+- ポート衝突回避: 5桁のランダムポート（10000-65535）を環境変数で渡す。固定オフセット（5432→15432 等）は他プロセスと競合しやすいため使用しない
+- ポート生成例: `shuf -i 10000-65535 -n 1` または `$((RANDOM % 55536 + 10000))`
+- docker-compose.test.yml ではポートを環境変数で参照する（例: `${TEST_DB_PORT:-15432}:5432`）
 - DB 初期化: テスト用マイグレーション + シードデータ
 - ボリューム: tmpfs で永続化しない（テストごとにクリーン）
 
 ### Test Server Setup
 [テスト時のアプリケーションサーバ起動方法]
-- `docker-compose -f docker-compose.test.yml up -d`
+- ランダムポートを生成してから compose を起動:
+  ```bash
+  export TEST_DB_PORT=$(shuf -i 10000-65535 -n 1)
+  export TEST_APP_PORT=$(shuf -i 10000-65535 -n 1)
+  docker-compose -f docker-compose.test.yml up -d
+  ```
 - ヘルスチェック待機後にテスト開始
 
 ### Browser Test Configuration (フロントエンドがある場合)
 [Playwright / Cypress の設定]
-- **baseURL:** [例: http://localhost:13000]
+- **baseURL:** [例: http://localhost:${TEST_APP_PORT}]（環境変数で動的に解決）
 - **viewport:** [例: 1280x720]
 - **timeout:** [例: 30000ms]
 - **screenshot:** on failure
