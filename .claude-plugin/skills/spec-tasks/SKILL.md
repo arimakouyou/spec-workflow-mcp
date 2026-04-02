@@ -117,6 +117,36 @@ design.md の Container Architecture セクションを読み、コンテナセ�
 
 **注意:** Git 初期化タスク (0.0) がある場合、コンテナタスクは 0.1, 0.2 とし、他のセットアップタスクは 0.3 から始める。
 
+### 2.7 Detect CI Workflow Requirements
+
+`.github/workflows/` 配下に PR トリガーの CI ワークフローが存在するか確認し、CI セットアップタスクの要否を判断する。
+
+**検出ロジック:**
+
+```bash
+# PR トリガーの CI ワークフローが存在するか
+grep -rl 'pull_request' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null
+echo $?
+```
+
+| 結果 | 判定 | アクション |
+|------|------|-----------|
+| ファイルが見つかった（exit 0） | PR トリガーの CI ワークフローが既に存在 | CI タスクを追加しない |
+| ファイルが見つからない（exit 1）| PR トリガーの CI ワークフローが未作成 | Phase 0 に CI セットアップタスクを追加 |
+| `.github/workflows/` が存在しない | CI 未構成 | Phase 0 に CI セットアップタスクを追加 |
+
+**PR トリガーの CI ワークフローが存在しない場合**、Phase 0 に以下のタスクを追加する（Git 初期化 → コンテナ → CI の順）:
+
+```markdown
+- [ ] 0.N Create CI workflow
+  - File: .github/workflows/ci.yml
+  - _TDDSkip: true_
+  - _Requirements: REQ-0_
+  - _Prompt: Role: DevOps Engineer | Task: /setup-ci スキルを使用して、プロジェクトタイプに応じた PR トリガーの GitHub Actions CI ワークフローを生成する。quality-checks.md に定義された品質チェックコマンドと同一のステップを含めること。design.md に Container Architecture がある場合は --with-services オプションを使用する | Restrictions: シークレットをワークフローにハードコードしない。既存の CI ワークフロー（npm-publish.yml 等）を変更しない | Success: PR 作成時に CI が自動実行され、品質チェック（lint, test, build）が通る_
+```
+
+**注意:** タスク番号 `0.N` は Phase 0 内の順序に応じて割り振る（Git 初期化 0.0 → コンテナ 0.1, 0.2 → CI 0.3 の順。コンテナタスクがない場合は繰り上げる）。
+
 ### 3. Create Tasks
 
 Convert the design into atomic tasks. Each task should touch 1-3 files and be independently implementable. Include:

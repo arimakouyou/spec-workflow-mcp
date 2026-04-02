@@ -1,0 +1,29 @@
+# Service container snippets — appended by /setup-ci --with-services
+# Add under the `services:` key of any job that needs external dependencies
+
+    # PostgreSQL
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Valkey (Redis-compatible)
+      # valkey:
+      #   image: valkey/valkey:8
+      #   ports:
+      #     - 6379:6379
+      #   options: >-
+      #     --health-cmd "valkey-cli ping"
+      #     --health-interval 10s
+      #     --health-timeout 5s
+      #     --health-retries 5
