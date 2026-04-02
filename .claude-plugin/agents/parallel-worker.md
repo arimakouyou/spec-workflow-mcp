@@ -77,6 +77,42 @@ fi
 
 Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
 
+### Mutation Testing (post-quality check)
+
+After all quality checks pass, run mutation testing on the diff to verify that unit tests actually detect code changes. This step runs only when `cargo-mutants` is installed.
+
+```bash
+# Generate diff against base branch
+git diff main -- '*.rs' > git.diff
+
+# Run mutation testing (only if cargo-mutants is installed and diff is non-empty)
+if command -v cargo-mutants >/dev/null 2>&1 && [ -s git.diff ]; then
+  cargo mutants --no-shuffle -vV --in-diff git.diff
+  MUTANTS_EXIT=$?
+else
+  MUTANTS_EXIT=skip
+fi
+
+# Clean up
+rm -f git.diff
+```
+
+- `--no-shuffle`: Deterministic execution order for reproducibility
+- `-vV`: Verbose output (both mutant list and test output)
+- `--in-diff git.diff`: Limit mutations to only the changed lines
+
+**Result handling**:
+
+| Outcome | Action |
+|---------|--------|
+| All mutants killed | Record `mutation_testing: pass` in completion report |
+| Survived mutants found | Analyze each survived mutant, write additional tests to kill them, then re-run `cargo test --quiet`. Record `mutation_testing: pass (N mutants killed after supplement)` |
+| Supplement retry exhausted (2 attempts) | Record `mutation_testing: warn` with survived mutant details. Do not block — proceed to completion |
+| cargo-mutants not installed | Record `mutation_testing: skip` |
+| Empty diff | Record `mutation_testing: skip (no .rs changes)` |
+
+> **Note**: If the base branch is not `main`, the orchestrator must specify the correct base branch in the prompt (e.g., `Base branch: develop`). Default to `main`.
+
 ## Retry Policy
 
 Apply a uniform limit to all phases. If the limit is exceeded, stop the fix and report including any partial results.
@@ -119,6 +155,7 @@ When the retry limit is reached, return the following instead of a normal comple
 - tests: pass|fail <details>
 - rustfmt: pass|fail
 - clippy: pass|fail
+- mutation_testing: pass|warn|skip <details>
 - changed_files: <list>
 ```
 

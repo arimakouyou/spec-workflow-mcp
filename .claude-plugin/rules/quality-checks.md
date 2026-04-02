@@ -39,6 +39,58 @@ cargo test --quiet
 - Runs all tests (unit + integration)
 - To run a specific test only: `cargo test --test {test_name} -- --nocapture`
 
+## Dependency Analysis (Optional Tools)
+
+Additional checks for dependency hygiene and security. These tools are optional — they run when installed and are skipped when unavailable. Agents must detect availability before running.
+
+> **Note**: sccache (`RUSTC_WRAPPER`) is **not** applied to these commands. `cargo audit` does not invoke the compiler, and `cargo-udeps` uses `+nightly` which has unreliable sccache compatibility.
+
+### cargo-audit (Security — blocking)
+
+```bash
+cargo audit
+```
+
+- Checks dependencies against the RustSec Advisory Database
+- **Blocking**: If installed and vulnerabilities are found, the check **fails**. Agents must report findings and stop
+- Fast execution (database lookup only, no compilation)
+- See also: `.claude-plugin/rules/security.md` section A9
+
+### cargo-udeps (Unused dependencies — advisory)
+
+```bash
+cargo +nightly udeps --quiet
+```
+
+- Detects unused dependencies declared in `Cargo.toml`
+- **Advisory**: Results are reported as warnings but **do not block** commits
+- Requires nightly toolchain (`rustup run nightly`)
+- Runs the compiler internally, so the project must compile successfully first (place after `cargo test`)
+
+### Detection and availability check
+
+```bash
+# cargo-audit
+AUDIT_AVAILABLE=false
+if command -v cargo-audit >/dev/null 2>&1; then
+  AUDIT_AVAILABLE=true
+fi
+
+# cargo-udeps (requires nightly)
+UDEPS_AVAILABLE=false
+if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
+  UDEPS_AVAILABLE=true
+fi
+```
+
+| Tool | Installed | Nightly available | Action |
+|------|-----------|-------------------|--------|
+| cargo-audit | Yes | — | Run `cargo audit`. Fail on vulnerabilities |
+| cargo-audit | No | — | Skip with log: "cargo-audit not installed, skipping vulnerability check" |
+| cargo-udeps | Yes | Yes | Run `cargo +nightly udeps --quiet`. Warn on findings |
+| cargo-udeps | Yes | No | Skip with log: "nightly toolchain unavailable, skipping udeps" |
+| cargo-udeps | No | — | Skip silently |
+
 ## Leptos Full-Stack (WASM Frontend) Build Verification
 
 When the project uses `cargo-leptos` (detected by `[package.metadata.leptos]` in `Cargo.toml`), the following additional checks are **required** after the standard checks above.
@@ -86,7 +138,9 @@ The full check order becomes:
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --quiet --all-targets -- -D warnings`
 3. `cargo test --quiet`
-4. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
+4. `cargo audit` (if installed — blocking on vulnerabilities)
+5. `cargo +nightly udeps --quiet` (if installed — advisory only)
+6. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
 
 ## Node.js Task-Level Quality Checks
 

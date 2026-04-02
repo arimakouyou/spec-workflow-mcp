@@ -61,3 +61,8 @@ version = "4.5.6"
 - `authors`: use `Full Name <email@address>` format
 - `license`: use valid SPDX expressions (e.g., `MIT OR Apache-2.0`)
 - `description`: wrap at 80 columns, do not start with the crate name
+
+## Dependency Hygiene
+
+- Remove unused dependencies. Use `cargo +nightly udeps` to detect them (see `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section)
+- Prefer dependencies with active maintenance and no known vulnerabilities (verified by `cargo audit`)
