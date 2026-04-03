@@ -65,7 +65,7 @@ Two plugin variants are available:
 > **What the plugin includes:**
 > - MCP server for spec-driven development workflow
 > - Skills: spec-request-spec, spec-requirements, spec-design, spec-test-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
-> - Agents: code-simplifier, review-worker, unit-test-engineer, parallel-worker, etc.
+> - Agents: code-simplifier, review-worker, unit-test-engineer, frontend-test-engineer, parallel-worker, etc.
 > - Rules: project architecture, quality checks, security, design principles, etc.
 > - Hooks: automated task read guards
 
@@ -393,7 +393,8 @@ your-project/
   agents/                  # Specialized sub-agents
     code-simplifier.md     # Code simplification
     review-worker.md       # Review automation
-    unit-test-engineer.md  # Unit test generation
+    unit-test-engineer.md  # Rust unit test generation
+    frontend-test-engineer.md # Leptos frontend test generation
     parallel-worker.md     # Parallel task execution
     integ-test-worker.md   # Integration test worker
     integ-test-auditor.md  # Integration test auditor

@@ -473,17 +473,25 @@ Branch based on parallel-worker's `status`:
 
 ### 5. Unit Test Quality Verification [AGENT CALL REQUIRED]
 
-> ⛔ **Do not add tests yourself. Always call the `unit-test-engineer` agent.**
+> ⛔ **Do not add tests yourself. Always call the appropriate test engineer agent.**
 
-> **Language note**: `unit-test-engineer` is specialized for Rust. For non-Rust projects (Node.js, Python, etc.), skip this step or use a `general-purpose` subagent with the same test quality criteria (Happy Path / Boundary Values / Error Handling / Edge Cases coverage).
+> **Agent selection**:
+> - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`pages/`、`components/`）が対象なら `frontend-test-engineer`
+> - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
+> - 非 Rust プロジェクトはこのステップをスキップするか、同じ4カテゴリ基準を満たす汎用サブエージェントを使う
 
 Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
-Pass the implementation files to the `unit-test-engineer` agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
+Pass the implementation files to the selected test engineer agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
+
+Leptos frontend task detection hints:
+- `_Prompt` に `#[component]`、`view!`、signal、memo、`#[server]` が含まれる
+- 対象ファイルが `src/pages/`、`src/components/`、`src/server_fns/` 配下にある
+- `Cargo.toml` に `[package.metadata.leptos]` があり、実装が UI ロジックを含む
 
 ```javascript
 Agent({
-  subagent_type: "spec-workflow-mcp:unit-test-engineer",
+  subagent_type: "{spec-workflow-mcp:frontend-test-engineer | spec-workflow-mcp:unit-test-engineer}",
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
@@ -498,16 +506,18 @@ Agent({
     and add any missing test cases.
     Be careful not to duplicate existing tests.
     If Test focus areas are specified, prioritize those verification points.
+    If this is a Leptos frontend task, do not test \`view!\` output directly. Extract logic if needed and test the extracted logic instead.
 
     The completion report must include:
     - ut_action: added (tests were added) | verified_sufficient (no additions needed, already sufficient)
     - added_tests: list of added test function names (if added)
     - added_to_files: list of modified test files (if added)
-    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)`
+    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)
+    - excluded_as_e2e: list of concerns intentionally excluded as E2E territory (empty if none)`
 })
 ```
 
-Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**.
+Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**, **excluded_as_e2e**.
 
 - `ut_action: added` → run the tests, confirm all pass, and pass the additional info to step 5.5
 - `ut_action: verified_sufficient` → proceed directly to step 5.5
