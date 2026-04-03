@@ -143,6 +143,31 @@ Key Design Decisions セクションから技術名＋バージョンのペア�
 - **例外**: steering ドキュメント（tech.md 等）が互換性のため特定バージョンを指定している場合は維持し理由を注記
 - **メジャーバージョン変更**: 設計版と最新版のメジャーバージョンが異なる場合、Architecture Confirmation (step 4) でユーザーに報告
 
+### 3.6 Generate ADRs from Key Design Decisions
+
+Key Design Decisions セクションの各決定事項から ADR (Architecture Decision Record) を自動生成する。
+
+1. `.claude/_docs/adr/` ディレクトリが存在するか確認。なければ作成する
+2. Key Design Decisions の各項目について:
+   - 「代替案と比較して選択した」技術・パターン・アプローチを ADR 候補として抽出
+   - 既存の ADR と重複しないか INDEX.md を確認
+3. 各候補について `/adr` スキルの手順に従い ADR ファイルを作成:
+   - `status: Accepted`（設計承認プロセスが意思決定承認を兼ねるため）
+   - **Context**: design.md の該当 Key Design Decision のコンテキスト
+   - **Decision**: 選択した技術・パターン
+   - **Alternatives Considered**: 検討した代替案と棄却理由（Key Design Decisions に記載されていれば転記）
+   - **Consequences**: 設計への影響
+4. INDEX.md を更新
+
+**ADR 生成の判断基準** — 以下に該当する決定のみ ADR を作成:
+- フレームワーク・言語・データベースの選択（例: Axum, PostgreSQL, Leptos）
+- アーキテクチャパターンの選択（例: レイヤードアーキテクチャ、イベント駆動）
+- 重大なトレードオフを伴う決定（例: パフォーマンス vs 保守性）
+
+**ADR 不要な決定** — 以下は ADR を作成しない:
+- ライブラリのバージョン選択（バージョンは Key Design Decisions で管理）
+- 業界標準で代替案のない選択
+
 ### 4. Architecture Confirmation (Present to User)
 
 After creating the Wave 1 document, present the following to the user **without using the formal approval tool**:

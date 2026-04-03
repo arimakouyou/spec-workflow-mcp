@@ -31,3 +31,14 @@ When any of the following is detected, use the `/knowhow-capture` skill to recor
 - The same feedback has been received two or more times → Skill Pattern B (proposal type)
 
 For recording procedures, format, and rule promotion, follow the `/knowhow-capture` skill.
+
+## Promotion Paths
+
+Know-how that matures beyond practical tips can be promoted to more formal artifacts:
+
+| From | To | Condition | Skill |
+|------|----|-----------|-------|
+| know-how | `.claude/rules/` | Established convention that should be enforced | `/knowhow-capture` ("make it a rule") |
+| know-how (domain: architecture) | `.claude/_docs/adr/` | Significant irreversible architectural decision | `/adr` |
+
+When promoting to an ADR, the know-how file is kept (as background context) and the ADR references it.
