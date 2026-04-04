@@ -38,7 +38,7 @@ Know-how that matures beyond practical tips can be promoted to more formal artif
 
 | From | To | Condition | Skill |
 |------|----|-----------|-------|
-| know-how | `.claude/rules/` | Established convention that should be enforced | `/knowhow-capture` ("make it a rule") |
+| know-how | `.claude-plugin/rules/` | Established convention that should be enforced | `/knowhow-capture` ("make it a rule") |
 | know-how (domain: architecture) | `.claude/_docs/adr/` | Significant irreversible architectural decision | `/adr` |
 
 When promoting to an ADR, the know-how file is kept (as background context) and the ADR references it.

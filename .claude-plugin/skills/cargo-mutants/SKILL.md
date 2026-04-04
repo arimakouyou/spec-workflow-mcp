@@ -5,7 +5,7 @@ description: >
   that tests detect them. Survived mutants indicate weak test coverage. Long-running — invoke
   explicitly when you want to validate test quality for specific modules or recent changes.
   Use for: mutation testing, test quality analysis, coverage gaps, survived mutants.
-argument-hint: "[--package <crate>] [--file <path>] [--in-diff <base-branch>] [--timeout <secs>]"
+argument-hint: "[--package <crate>] [--file <path>] [--base-branch <branch>] [--timeout <secs>]"
 user-invokable: true
 ---
 
@@ -32,7 +32,7 @@ command -v cargo-mutants >/dev/null 2>&1 || {
 |----------|:--------:|-------------|
 | `--package <crate>` | — | Limit to a specific crate in a workspace |
 | `--file <path>` | — | Limit to mutations in a specific source file |
-| `--in-diff <base-branch>` | — | Only mutate lines changed since `<base-branch>` (e.g., `main`). **Recommended** |
+| `--base-branch <branch>` | — | Only mutate lines changed since `<branch>` (e.g., `main`). Internally generates a diff file and passes it to `cargo mutants --in-diff`. **Recommended** |
 | `--timeout <secs>` | — | Per-mutant timeout (default: 300s). Prevents runaway tests |
 | `--jobs <N>` | — | Number of parallel test jobs (default: auto-detect from CPU cores) |
 
@@ -40,7 +40,7 @@ command -v cargo-mutants >/dev/null 2>&1 || {
 
 ```bash
 # Mutation test only the code changed since main
-/cargo-mutants --in-diff main
+/cargo-mutants --base-branch main
 
 # Target a specific source file
 /cargo-mutants --file src/db/repository/users.rs
@@ -88,7 +88,7 @@ cargo mutants --no-shuffle -vV --in-diff git.diff --timeout 120
 
 ```bash
 # Detect workspace vs single crate
-if cargo metadata --format-version=1 2>/dev/null | grep -q '"workspace_members"'; then
+if [ -f Cargo.toml ] && grep -Eq '^\[workspace\]$' Cargo.toml; then
   echo "Workspace detected"
 fi
 
@@ -177,7 +177,7 @@ Report results in the following format:
 ## Integration with Other Workflows
 
 - **TDD implementation** (`parallel-worker`): Automatically runs `cargo mutants --no-shuffle -vV --in-diff git.diff` after quality checks pass. Survived mutants trigger supplementary test writing (up to 2 retries)
-- **Standalone invocation**: Run `/cargo-mutants --in-diff main` to verify test quality for recent changes
+- **Standalone invocation**: Run `/cargo-mutants --base-branch main` to verify test quality for recent changes
 - **Periodic audit**: Run on the full codebase periodically to find coverage gaps
 
 ## Troubleshooting

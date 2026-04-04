@@ -125,8 +125,12 @@ design.md の Container Architecture セクションを読み、コンテナセ�
 
 ```bash
 # PR トリガーの CI ワークフローが存在するか
-grep -rl 'pull_request' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null
-echo $?
+if test -d .github/workflows; then
+  grep -R --include='*.yml' --include='*.yaml' -l 'pull_request' .github/workflows
+  echo $?
+else
+  echo "1"
+fi
 ```
 
 | 結果 | 判定 | アクション |
@@ -142,7 +146,7 @@ echo $?
   - File: .github/workflows/ci.yml
   - _TDDSkip: true_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: /setup-ci スキルを使用して、プロジェクトタイプに応じた PR トリガーの GitHub Actions CI ワークフローを生成する。quality-checks.md に定義された品質チェックコマンドと同一のステップを含めること。design.md に Container Architecture がある場合は --with-services オプションを使用する | Restrictions: シークレットをワークフローにハードコードしない。既存の CI ワークフロー（npm-publish.yml 等）を変更しない | Success: PR 作成時に CI が自動実行され、品質チェック（lint, test, build）が通る_
+  - _Prompt: Role: DevOps Engineer | Task: /setup-ci スキルを使用して、プロジェクトタイプに応じた PR トリガーの GitHub Actions CI ワークフローを生成する。quality-checks.md に定義された品質チェックコマンドと同一のステップを含めること。design.md に Container Architecture がある場合は --with-services オプションを使用する | Restrictions: シークレットをワークフローにハードコードしない。既存の CI ワークフロー（npm-publish.yml 等）を変更しない | Success: PR 作成時に CI が自動実行され、quality-checks.md に定義された品質チェックが通る_
 ```
 
 **注意:** タスク番号 `0.N` は Phase 0 内の順序に応じて割り振る（Git 初期化 0.0 → コンテナ 0.1, 0.2 → CI 0.3 の順。コンテナタスクがない場合は繰り上げる）。

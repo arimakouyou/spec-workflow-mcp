@@ -1,8 +1,7 @@
 # Service container snippets — appended by /setup-ci --with-services
-# Add under the `services:` key of any job that needs external dependencies
+# Add the following entries directly under the job's `services:` key
 
     # PostgreSQL
-    services:
       postgres:
         image: postgres:16
         env:
