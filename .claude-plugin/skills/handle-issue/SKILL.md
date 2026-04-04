@@ -43,7 +43,7 @@ gh repo view --json nameWithOwner -q '.nameWithOwner'
 git status --porcelain
 ```
 
-未コミットの変更がある場合: 警告を表示し、続行するか確認する。
+未コミットの変更がある場合: **STOP**。`git commit` または `git stash` でワーキングツリーをクリーンな状態にしてから再実行するよう案内する。4B パスでは最終的に `/create-pr` を実行し、その前提としてクリーンなワーキングツリーが必須。
 
 ## 手順
 

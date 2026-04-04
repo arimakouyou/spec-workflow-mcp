@@ -132,9 +132,14 @@ fi
 # 変数を明示初期化（環境値の誤拾い防止）
 unset UT_EXIT; UT_RESULT=""; UT_OUTPUT=""
 
-# Rust（rust-api, leptos を含む）— lib テストのみ実行し IT と重複させない
+# Rust（rust-api, leptos を含む）— IT と重複しないよう lib テスト優先
+# bin-only クレート（src/lib.rs なし）では cargo test --lib が失敗するためフォールバック
 if [[ "$PROJECT_TYPE" =~ ^(rust-api|leptos)$ ]]; then
-  UT_OUTPUT=$(cargo test --lib --quiet 2>&1) ; UT_EXIT=$?
+  if [ -f src/lib.rs ] || grep -qE '^\s*\[lib\]' Cargo.toml 2>/dev/null; then
+    UT_OUTPUT=$(cargo test --lib --quiet 2>&1) ; UT_EXIT=$?
+  else
+    UT_OUTPUT=$(cargo test --quiet 2>&1) ; UT_EXIT=$?
+  fi
 
 # Node.js
 elif [ "$PROJECT_TYPE" = "nodejs" ]; then
@@ -207,16 +212,23 @@ if test -f playwright.config.ts || test -f playwright.config.js; then
 
 # Rust E2E（tests/e2e/ 配下のみ対象 — IT と範囲が重複しないよう --test で個別指定）
 elif test -d tests/e2e; then
-  E2E_OUTPUT=""
-  E2E_EXIT=0
-  for e2e_file in tests/e2e/*.rs; do
-    [ -e "$e2e_file" ] || continue
-    e2e_target=$(basename "$e2e_file" .rs)
-    e2e_run_output=$(cargo test --test "$e2e_target" --quiet 2>&1)
-    e2e_run_exit=$?
-    E2E_OUTPUT="${E2E_OUTPUT}${E2E_OUTPUT:+$'\n'}${e2e_run_output}"
-    if [ "$e2e_run_exit" -ne 0 ]; then E2E_EXIT=$e2e_run_exit; fi
-  done
+  E2E_RS_COUNT=$(find tests/e2e -maxdepth 1 -name '*.rs' -type f 2>/dev/null | wc -l)
+  if [ "$E2E_RS_COUNT" -eq 0 ]; then
+    # ディレクトリは存在するが .rs ファイルがない場合は SKIP
+    E2E_RESULT="SKIP"
+    E2E_OUTPUT="tests/e2e/ にテストファイルなし"
+  else
+    E2E_OUTPUT=""
+    E2E_EXIT=0
+    for e2e_file in tests/e2e/*.rs; do
+      [ -e "$e2e_file" ] || continue
+      e2e_target=$(basename "$e2e_file" .rs)
+      e2e_run_output=$(cargo test --test "$e2e_target" --quiet 2>&1)
+      e2e_run_exit=$?
+      E2E_OUTPUT="${E2E_OUTPUT}${E2E_OUTPUT:+$'\n'}${e2e_run_output}"
+      if [ "$e2e_run_exit" -ne 0 ]; then E2E_EXIT=$e2e_run_exit; fi
+    done
+  fi
 
 # Node.js E2E スクリプト
 elif grep -q '"test:e2e"' package.json 2>/dev/null; then
