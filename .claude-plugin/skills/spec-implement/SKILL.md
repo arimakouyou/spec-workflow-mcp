@@ -14,7 +14,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 | Prohibited | Reason |
 |-----------|--------|
 | **Do not write code yourself** | Implementation must always be delegated to `parallel-worker` |
-| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is `unit-test-engineer`'s responsibility |
+| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is the test engineer's (`frontend-test-engineer` or `unit-test-engineer`) responsibility |
 | **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
 | **Do not skip agent calls** | Each step's agent call cannot be skipped |
 
@@ -573,7 +573,7 @@ Agent({
   subagent_type: "spec-workflow-mcp:review-worker",
   description: "Review and commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
-    This code has passed through parallel-worker (TDD), unit-test-engineer, and code-simplifier.
+    This code has passed through parallel-worker (TDD), test engineer (frontend-test-engineer or unit-test-engineer), and code-simplifier.
     However, you MUST NOT assume it is correct because previous steps reported success.
     Previous results are provided as reference ONLY — your independent, critical review is mandatory.
     Treat this as if you are seeing the code for the first time. Your job is to find problems, not confirm success.
@@ -585,7 +585,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
-    Changed files: {changed_files from step 4 + added_to_files from step 5 + changed_files from step 5.5}
+    Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
     **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
@@ -594,15 +594,18 @@ Agent({
     UT quality verification results (step 5):
     - ut_action: {ut_action from step 5}
     - added_tests: {added_tests from step 5}
+    - modified_implementation_files: {modified_implementation_files from step 5}
     - coverage_summary: {coverage_summary from step 5}
+    - excluded_as_e2e: {excluded_as_e2e from step 5}
 
     Simplification results (step 5.5):
     - simplify_result: {simplify_result from step 5.5} (one of: simplified / no_change / reverted)
     - changed_files: {changed_files from step 5.5 (only if simplified)}
 
     Notes:
-    - Tests listed in added_tests have already been quality-verified by unit-test-engineer.
+    - Tests listed in added_tests have already been quality-verified by the appropriate test engineer (frontend-test-engineer or unit-test-engineer).
       In category E (final test verification), do not flag these tests as "insufficient".
+    - excluded_as_e2e lists concerns intentionally deferred to E2E testing. Do not flag these as missing unit test coverage.
       However, style, naming, and sensitive data checks should be performed as usual.
     - Files with simplify_result: simplified have been confirmed by code-simplifier to preserve functionality and pass tests.
       In category A (style), evaluate the simplified code as the final form.

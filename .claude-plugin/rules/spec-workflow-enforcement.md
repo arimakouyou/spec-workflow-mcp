@@ -41,7 +41,7 @@ Writing code that corresponds to a task without going through the skill is prohi
 
 The spec-implement skill enforces the following agent chain:
 - `parallel-worker` → TDD implementation
-- `unit-test-engineer` → test quality verification
+- `frontend-test-engineer` / `unit-test-engineer` → test quality verification
 - `review-worker` → review + commit
 
 Direct implementation that skips this chain completely bypasses TDD quality assurance and is therefore absolutely not permitted.

@@ -61,7 +61,7 @@ Inspect the diff with `git diff` and check all of the following aspects in order
 
 ### ⚠️ Anti-Bias Protocol (確証バイアス防止)
 
-このコードは parallel-worker (TDD)、unit-test-engineer、code-simplifier の3段階を通過している。しかし、「既に良いはず」という前提でレビューしてはならない。
+このコードは parallel-worker (TDD)、test engineer (frontend-test-engineer or unit-test-engineer)、code-simplifier の3段階を通過している。しかし、「既に良いはず」という前提でレビューしてはならない。
 
 - **前提**: コードには問題がある。あなたの仕事はそれを見つけること
 - **禁止**: 「3段階通過しているから大丈夫」「TDD で書かれているから品質は高い」という推論
@@ -109,7 +109,7 @@ Refer to `.claude-plugin/rules/security.md`. Check the following against the dif
 
 ### E. Final Check of Test Code
 
-Although unit-test-engineer has already ensured test quality, perform a final check as part of the review:
+Although the test engineer (frontend-test-engineer or unit-test-engineer) has already ensured test quality, perform a final check as part of the review:
 
 - Are the tests correctly verifying the behavior of the implementation? (Are they out of sync with the implementation?)
 - Do the test names accurately express what is being verified?
