@@ -1,6 +1,7 @@
 ---
 name: frontend-test-engineer
 description: Leptos フロントエンドのユニットテスト専門エージェント。ロジック抽出を通じて signal、派生計算、server function、イベントハンドラのテスト品質を補強する。
+model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob
 color: teal
 ---
