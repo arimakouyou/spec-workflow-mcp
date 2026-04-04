@@ -174,11 +174,31 @@ npm test
 - Or `npx vitest run` / `npx jest` depending on the project's test runner
 - To run a specific test: `npm test -- --testPathPattern={test_name}`
 
+### type check (conditional)
+
+```bash
+npx tsc --noEmit
+```
+
+- Only run if `typescript` is in devDependencies
+- If eslint is not configured, this serves as the lint fallback (see above)
+
+### build (conditional)
+
+```bash
+npm run build
+```
+
+- Only run if `scripts.build` exists in package.json
+- Skip if no build script is defined (not a failure)
+
 The full check order for Node.js projects:
 
 1. `npx eslint . --max-warnings=0` (or `npx tsc --noEmit` fallback)
 2. `npx prettier --check .`
 3. `npm test`
+4. `npx tsc --noEmit` (if TypeScript configured and not already run as lint fallback)
+5. `npm run build` (if build script exists)
 
 ## Integration Verification (Phase Review / Final E2E Gate)
 

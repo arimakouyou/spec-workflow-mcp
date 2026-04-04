@@ -124,9 +124,10 @@ design.md の Container Architecture セクションを読み、コンテナセ�
 **検出ロジック:**
 
 ```bash
-# PR トリガーの CI ワークフローが存在するか（pull_request_target 等の誤検出を防ぐ）
+# PR トリガーの CI ワークフローが存在するか
+# pull_request: (マッピング形式)、- pull_request (リスト形式)、[..., pull_request, ...] (インライン配列) を検出
 if test -d .github/workflows; then
-  grep -R --include='*.yml' --include='*.yaml' -Pl '^\s*pull_request:' .github/workflows
+  grep -rEl '(^\s*pull_request:|^\s*-\s*pull_request|\[\s*.*pull_request)' .github/workflows --include='*.yml' --include='*.yaml'
   echo $?
 else
   echo "1"

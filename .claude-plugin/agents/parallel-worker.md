@@ -61,6 +61,22 @@ cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
 ```
 
+### Dependency Analysis (after core checks, before mutation testing)
+
+quality-checks.md で定義されたオプショナルツールを利用可能時に実行する。mutation testing より先に実行し、ブロッキング脆弱性がある場合は早期に検出する。
+
+```bash
+# cargo-audit (blocking — 脆弱性検出時は停止)
+if command -v cargo-audit >/dev/null 2>&1; then
+  cargo audit
+fi
+
+# cargo-udeps (advisory — 警告のみ)
+if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
+  cargo +nightly udeps --quiet || true
+fi
+```
+
 ### Leptos Full-Stack Projects
 
 If `Cargo.toml` contains `[package.metadata.leptos]`, WASM frontend build verification is **required**:

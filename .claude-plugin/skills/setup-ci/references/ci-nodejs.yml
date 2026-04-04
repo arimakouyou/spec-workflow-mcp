@@ -38,7 +38,7 @@ jobs:
         run: npx prettier --check .
 
       - name: Tests
-        run: npm test
+        run: {{PACKAGE_MANAGER}} test
 
       - name: Build
-        run: npm run build
+        run: {{PACKAGE_MANAGER}} run build

@@ -487,7 +487,7 @@ Agent({
     4. Confirm all tests pass by running them (retry up to 3 times on failure)
     5. REFACTOR: Clean up the code (see /spec-impl-review skill)
     6. Confirm all tests still pass after refactoring
-    7. Run quality checks (rustfmt + clippy + cargo test)
+    7. Run the quality checks defined in quality-checks.md (rustfmt, clippy, cargo test, and dependency analysis tools if available)
     8. Run mutation testing on the diff (if cargo-mutants is installed)
 
     Include the following in the completion report:

@@ -6,7 +6,7 @@ description: >
   (Proposed, Accepted, Deprecated, Superseded). Triggers: 'create ADR', 'record decision',
   'architecture decision', 'ADR', '意思決定記録', 'design decision',
   or any request to document an architectural choice.
-argument-hint: "<title> [--status Proposed|Accepted] [--supersedes ADR-NNNN]"
+argument-hint: "<title> [--status Proposed|Accepted]"
 user-invokable: true
 ---
 
