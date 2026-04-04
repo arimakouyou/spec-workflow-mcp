@@ -926,18 +926,20 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 
 ### 10. PR 作成（Final E2E Gate PASS 後）
 
-Final E2E Gate が PASS（SKIP 含む場合も）となった場合、PR を作成する。
+Final E2E Gate が PASS（SKIP 含む場合も）となった場合、PR 作成フェーズに進む。
 FAIL の場合は PR 作成をスキップし、修正フローに進む（9.3 の結果判定に従う）。
 
-`/create-pr` スキルに以下の引数を渡す:
+**重要:** オーケストレータ自身は `/create-pr` を直接実行してはならない（⛔ `git commit` 禁止ルール）。PR 作成は **review-worker に委譲**する。`/create-pr` 実行中の `git commit` / `git push`（スクリーンショット追加等）も review-worker の責務とする。
+
+review-worker へ以下の引数・情報を渡す:
 - `--spec {spec-name}`
 - `--skip-tests`（Final E2E Gate で全テスト実行済みのため）
 - `--title "{spec-name に基づく機能の要約}"`
 - Final E2E Gate レポート (`final-e2e-gate.md`) の Notes セクションの内容を `/create-pr` に引き継ぎ、PR ボディの Notes セクションに転記する
 
-> 上記の引数で `/create-pr` スキルをロードする。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。
+> review-worker は上記の引数で `/create-pr` スキルを実行する。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。必要なコミット/プッシュも review-worker が担当する。
 
-PR 作成後、`/spec-status` スキルで最終ステータスを表示する。
+PR 作成完了後、`/spec-status` スキルで最終ステータスを表示する。
 
 ## Monitoring Progress
 

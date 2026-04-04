@@ -9,6 +9,17 @@ argument-hint: "[--title <title>] [--closes <issue-number>] [--spec <spec-name>]
 
 テスト結果と UI スクリーンショットを含む PR を作成する。単独でも、`/handle-issue` や `/spec-implement` からの参照でも使用可能。
 
+## 実行コンテキスト
+
+このスキルは以下の2つのコンテキストで使用される。コミット/プッシュの責務が異なる点に注意:
+
+| コンテキスト | コミット/プッシュの責務 |
+|-------------|----------------------|
+| **スタンドアロン実行** (`/create-pr` を直接実行) | このスキ��自身がコミット/プッシュを実行する |
+| **spec-implement からの呼び出し** (Step 10 経由) | review-worker がこのスキルを実行する。コミット/プッシュは review-worker の責務 |
+
+`/handle-issue` の 4B パスから呼び出される場合はスタンドアロン実行と同じ扱い。
+
 ## 入力
 
 `$ARGS` から以下の引数を解析する。全て省略可能。
@@ -477,14 +488,21 @@ Closes #${CLOSES_ARG}
 
 ### 5. PR 作成
 
-構築した PR ボディで `gh pr create` を実行する:
+構築した PR ボディを一時ファイルに書き出し、`--body-file` で渡す（改行や引用���を含むボディでもクォート崩れを防止）:
 
 ```bash
+PR_BODY_FILE="$(mktemp)"
+cat > "${PR_BODY_FILE}" <<'PRBODY'
+{4.1〜4.6 で構築したボディ}
+PRBODY
+
 gh pr create \
   --title "{title}" \
-  --body "{4.1〜4.6 で構築したボディ}" \
+  --body-file "${PR_BODY_FILE}" \
   --base "${BASE_BRANCH}" \
   --assignee @me
+
+rm -f "${PR_BODY_FILE}"
 ```
 
 PR 作成後、**PR の URL をユーザーに報告する**。
