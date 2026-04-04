@@ -46,7 +46,15 @@ gh pr view {number} --json state,headRefName,baseRefName -q '.state'
 - `MERGED` の場合 → 「この PR は既にマージ済みです」と警告し、続行するか確認
 - `CLOSED` の場合 → 「この PR はクローズ済みです」と警告し、続行するか確認
 
-### 4. PR ブランチへの切り替え
+### 4. ワーキングツリー確認
+
+```bash
+git status --porcelain
+```
+
+未コミットの変更がある場合: 「ワーキングツリーに未コミットの変更があります。コミットまたは stash してから再実行してください」と案内して STOP。
+
+### 5. PR ブランチへの切り替え
 
 ```bash
 gh pr checkout {number}
@@ -70,18 +78,18 @@ gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
 # レビューサマリー
 gh api repos/{owner}/{repo}/pulls/{number}/reviews --paginate
 
-# レビュースレッドの resolved 状態（GraphQL）
-gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[].body]}'
+# レビュースレッドの resolved 状態（GraphQL 経由）
+gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[] | {id: .id, databaseId: .databaseId, createdAt: .createdAt, path: .path, line: .line, body: .body}]}'
 ```
 
 `{owner}/{repo}` は前提条件チェック 2 で取得した `nameWithOwner` を使用する。
 
 **取得する情報**:
-- 各コメントの `id`、`body`、`path`（ファイル）、`line`（行番号）、`user`、`created_at`
-- コメントが `resolved` かどうか（`gh pr view --json reviewThreads` の `isResolved` フィールドで判定）
+- REST: 各コメントの `id`、`body`、`path`（ファイル）、`line`（行番号）、`user`、`created_at`
+- GraphQL (`reviewThreads`): 各スレッドの `isResolved` と、スレッド内コメントの `id`、`databaseId`、`createdAt`、`path`、`line`
 - レビューの決定ステータス（`APPROVED`、`CHANGES_REQUESTED`、`COMMENTED`）
 
-**resolved 判定**: REST API (`pulls/{number}/comments`) ではスレッドの resolved 状態を取得できないため、`gh pr view --json reviewThreads` を使用する。取得した `reviewThreads` の各スレッド内コメントを、REST API のコメントと `body` で突合して resolved 状態をマッピングする。
+**resolved 判定**: REST API (`pulls/{number}/comments`) ではスレッドの resolved 状態を取得できないため、`gh pr view --json reviewThreads` を使用する。resolved 状態を REST のコメントへマッピングする際は、`reviewThreads` 側で取得したコメントの `id` / `databaseId` を最優先で突合に用いる。これらが直接使えない場合のみ、`createdAt` + `path` + `line` などの複合キーで対応付ける。`body` 文字列だけで突合してはならない（同一文面のコメントで誤マッピングが発生するため）。
 
 ### 2. コメントのカテゴリ分類
 

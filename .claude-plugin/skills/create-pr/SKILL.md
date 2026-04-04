@@ -126,14 +126,15 @@ fi
 `quality-checks.md` の「Step C: 統合テスト実行」の検出ロジックに従う:
 
 ```bash
-# Rust: 統合テストの存在確認
+# Rust: 統合テストの存在確認（tests/ 配下の .rs。e2e/ と unit/ は除外）
 IT_EXISTS=$(find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*' -print -quit 2>/dev/null)
 
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 IT_SCRIPT=$(grep -q '"test:integration"' package.json 2>/dev/null && echo "yes")
+IT_FILES=$(find tests test __tests__ -type f -name 'integration*' -print -quit 2>/dev/null)
 ```
 
-`IT_EXISTS` または `IT_SCRIPT` が非空の場合のみテストを実行する:
+`IT_EXISTS`、`IT_SCRIPT`、`IT_FILES` のいずれかが非空の場合のみテストを実行する:
 
 ```bash
 if [ -n "$IT_EXISTS" ]; then
@@ -143,6 +144,10 @@ if [ -n "$IT_EXISTS" ]; then
 elif [ "$IT_SCRIPT" = "yes" ]; then
   # Node.js（スクリプトあり）
   IT_OUTPUT=$(npm run test:integration 2>&1) ; IT_EXIT=$?
+
+elif [ -n "$IT_FILES" ]; then
+  # Node.js（ファイルパターンのみ — スクリプトなし）
+  IT_OUTPUT=$(npm test -- --testPathPattern=integration 2>&1) ; IT_EXIT=$?
 
 else
   # 統合テストが存在しない
@@ -163,9 +168,18 @@ fi
 if test -f playwright.config.ts || test -f playwright.config.js; then
   E2E_OUTPUT=$(npx playwright test 2>&1) ; E2E_EXIT=$?
 
-# Rust E2E
+# Rust E2E（tests/e2e/ 配下のみ対象 — IT と範囲が重複しないよう --test で個別指定）
 elif test -d tests/e2e; then
-  E2E_OUTPUT=$(cargo test --tests --quiet 2>&1) ; E2E_EXIT=$?
+  E2E_OUTPUT=""
+  E2E_EXIT=0
+  for e2e_file in tests/e2e/*.rs; do
+    [ -e "$e2e_file" ] || continue
+    e2e_target=$(basename "$e2e_file" .rs)
+    e2e_run_output=$(cargo test --test "$e2e_target" --quiet 2>&1)
+    e2e_run_exit=$?
+    E2E_OUTPUT="${E2E_OUTPUT}${E2E_OUTPUT:+$'\n'}${e2e_run_output}"
+    if [ "$e2e_run_exit" -ne 0 ]; then E2E_EXIT=$e2e_run_exit; fi
+  done
 
 # Node.js E2E スクリプト
 elif grep -q '"test:e2e"' package.json 2>/dev/null; then
@@ -221,10 +235,13 @@ UI_DIR_FILES=$(git diff --name-only ${BASE_BRANCH}...HEAD | \
 
 # Leptos: view! マクロを含む Rust ファイルの変更検出
 if [ "$PROJECT_TYPE" = "leptos" ]; then
-  LEPTOS_RS_FILES=$(git diff --name-only ${BASE_BRANCH}...HEAD -- '*.rs')
-  if [ -n "$LEPTOS_RS_FILES" ]; then
-    LEPTOS_UI=$(echo "$LEPTOS_RS_FILES" | xargs -r grep -l 'view!' 2>/dev/null)
-  fi
+  LEPTOS_UI=$(
+    git diff --name-only ${BASE_BRANCH}...HEAD -- '*.rs' | \
+      while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        grep -l 'view!' "$file" 2>/dev/null
+      done
+  )
 fi
 ```
 
