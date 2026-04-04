@@ -476,7 +476,7 @@ Branch based on parallel-worker's `status`:
 > ⛔ **Do not add tests yourself. Always call the appropriate test engineer agent.**
 
 > **Agent selection**:
-> - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`pages/`、`components/`）が対象なら `frontend-test-engineer`
+> - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`src/pages/`、`src/components/`）が対象なら `frontend-test-engineer`
 > - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
 > - 非 Rust プロジェクトはこのステップをスキップするか、同じ4カテゴリ基準を満たす汎用サブエージェントを使う
 
@@ -489,9 +489,15 @@ Leptos frontend task detection hints:
 - 対象ファイルが `src/pages/`、`src/components/`、`src/server_fns/` 配下にある
 - `Cargo.toml` に `[package.metadata.leptos]` があり、実装が UI ロジックを含む
 
+Select the test engineer agent based on the detection hints above, then call:
+
 ```javascript
+// Leptos frontend task の場合:
+//   subagent_type: "spec-workflow-mcp:frontend-test-engineer"
+// それ以外の Rust task の場合:
+//   subagent_type: "spec-workflow-mcp:unit-test-engineer"
 Agent({
-  subagent_type: "{selected_test_engineer}",  // "spec-workflow-mcp:frontend-test-engineer" or "spec-workflow-mcp:unit-test-engineer"
+  subagent_type: "spec-workflow-mcp:frontend-test-engineer",  // or "spec-workflow-mcp:unit-test-engineer"
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
