@@ -43,7 +43,7 @@ fi
 ```
 
 - `cargo audit`: **Blocking** — vulnerabilities found means the check fails. Do not commit
-- `cargo udeps`: **Advisory** — report warnings but do not block commit (`|| true`)
+- `cargo +nightly udeps`: **Advisory** — report warnings but do not block commit (`|| true`)
 - See `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section for detection details
 
 ### Leptos Full-Stack Projects

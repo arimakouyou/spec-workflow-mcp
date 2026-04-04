@@ -478,7 +478,7 @@ Agent({
 
     **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
 
-    Base branch: main
+    Base branch: {BASE_BRANCH}
 
     Steps:
     1. RED: Write failing tests (see /spec-impl-test-write skill)
