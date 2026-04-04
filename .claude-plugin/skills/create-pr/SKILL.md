@@ -28,23 +28,17 @@ argument-hint: "[--title <title>] [--closes <issue-number>] [--spec <spec-name>]
 
 ## 引数パース
 
-`$ARGS` から以下の変数を抽出する:
+`$ARGS` 文字列から以下の変数を抽出する。Claude が `$ARGS` を意味的に解析し、各変数に値を設定する。
 
-```bash
-# $ARGS を positional parameters に展開してからオプションを解析
-TITLE_ARG=""  CLOSES_ARG=""  SPEC_ARG=""  BASE_ARG=""  SKIP_TESTS=false
-set -- $ARGS
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --title)   TITLE_ARG="$2"; shift 2 ;;
-    --closes)  CLOSES_ARG="$2"; shift 2 ;;
-    --spec)    SPEC_ARG="$2"; shift 2 ;;
-    --base)    BASE_ARG="$2"; shift 2 ;;
-    --skip-tests) SKIP_TESTS=true; shift ;;
-    *) shift ;;
-  esac
-done
-```
+| 変数 | 対応引数 | デフォルト |
+|------|---------|-----------|
+| `TITLE_ARG` | `--title <value>` | `""` （省略時はブランチ名から自動生成） |
+| `CLOSES_ARG` | `--closes <number>` | `""` |
+| `SPEC_ARG` | `--spec <name>` | `""` |
+| `BASE_ARG` | `--base <branch>` | `""` |
+| `SKIP_TESTS` | `--skip-tests` | `false` |
+
+**パース規則**: `--title` など値にスペースを含む引数は、引用符で囲まれた部分を1つの値として扱う（例: `--title "Fix null pointer in parser"` → `TITLE_ARG="Fix null pointer in parser"`）。Claude はシェルの `set --` による分割ではなく、`$ARGS` 文字列を直接読み取って意味的に解析すること。
 
 ## 前提条件チェック（MANDATORY）
 
@@ -138,9 +132,9 @@ fi
 # 変数を明示初期化（環境値の誤拾い防止）
 unset UT_EXIT; UT_RESULT=""; UT_OUTPUT=""
 
-# Rust（rust-api, leptos を含む）
+# Rust（rust-api, leptos を含む）— lib テストのみ実行し IT と重複させない
 if [[ "$PROJECT_TYPE" =~ ^(rust-api|leptos)$ ]]; then
-  UT_OUTPUT=$(cargo test --quiet 2>&1) ; UT_EXIT=$?
+  UT_OUTPUT=$(cargo test --lib --quiet 2>&1) ; UT_EXIT=$?
 
 # Node.js
 elif [ "$PROJECT_TYPE" = "nodejs" ]; then
@@ -163,8 +157,8 @@ fi
 `quality-checks.md` の「Step C: 統合テスト実行」の検出ロジックに従う:
 
 ```bash
-# Rust: 統合テストの存在確認（tests/ 配下の .rs。e2e/ と unit/ は除外）
-IT_EXISTS=$(find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*' -print -quit 2>/dev/null)
+# Rust: 統合テストの存在確認（tests/ 配下の .rs。e2e/ と unit/ は -path で除外）
+IT_EXISTS=$(find tests -path 'tests/e2e' -prune -o -path 'tests/unit' -prune -o -type f -name '*.rs' -print -quit 2>/dev/null)
 
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 IT_SCRIPT=$(grep -q '"test:integration"' package.json 2>/dev/null && echo "yes")
