@@ -941,8 +941,8 @@ E2E テストファイルが存在しない場合（優先順位順に判定 —
 
 | 結果 | アクション |
 |------|----------|
-| **PASS** | 全ステップが PASS のみ（SKIP なし） → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
-| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ。各 SKIP の理由を明示したうえで実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
+| **PASS** | 全ステップが PASS のみ（SKIP なし） → Step 10 (PR 作成) に進む |
+| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ → Step 10 (PR 作成) に進む。各 SKIP の理由を PR ボディの Notes に記載 |
 | **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
 | **FAIL (環境不備)** | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止 |
 | **FAIL (実装漏れ)** | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
@@ -982,18 +982,35 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 {FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
 ```
 
-#### Wave Failure Handling
+#### ウェーブ失敗時の処理
 
-When processing a multi-task wave, if any task results in `retry_exhausted`:
-1. **Continue executing** remaining tasks in the wave — do not abort the entire wave
-2. After all tasks in the wave complete/fail, report a summary to the user:
-   - Succeeded: [task-ids]
-   - Failed: [task-ids with reasons]
-3. Tasks in subsequent waves that depend on a failed task (via `_DependsOn:`):
-   - Add `<!-- BLOCKED: dependency {failed-task-id} failed -->` comment to the task line and ensure its checkbox state is `- [ ]` (do not change the checkbox token itself)
-   - Skip these tasks in subsequent waves
-4. Tasks in subsequent waves with **no dependency** on failed tasks:
-   - Continue execution normally in the next wave
+マルチタスクウェーブの処理中に、いずれかのタスクが `retry_exhausted` になった場合:
+1. ウェーブ内の残りのタスクは**実行を継続**する — ウェーブ全体を中止しない
+2. ウェーブ内の全タスクが完了/失敗した後、ユーザーにサマリーを報告する:
+   - 成功: [task-ids]
+   - 失敗: [task-ids と理由]
+3. 失敗したタスクに依存する後続ウェーブのタスク（`_DependsOn:` 経由）:
+   - タスク行に `<!-- BLOCKED: dependency {failed-task-id} failed -->` コメントを追加し、チェックボックスの状態を `- [ ]` にする（チェックボックストークン自体は変更しない）
+   - 後続ウェーブではこれらのタスクをスキップする
+4. 失敗したタスクに**依存しない**後続ウェーブのタスク:
+   - 次のウェーブで通常通り実行を継続する
+
+### 10. PR 作成（Final E2E Gate PASS 後）
+
+Final E2E Gate が PASS（SKIP 含む場合も）となった場合、PR 作成フェーズに進む。
+FAIL の場合は PR 作成をスキップし、修正フローに進む（9.3 の結果判定に従う）。
+
+**重要:** オーケストレータ自身は `/create-pr` を直接実行してはならない（⛔ `git commit` 禁止ルール）。PR 作成は **review-worker に委譲**する。`/create-pr` 実行中の `git commit` / `git push`（スクリーンショット追加等）も review-worker の責務とする。
+
+review-worker へ以下の引数・情報を渡す:
+- `--spec {spec-name}`
+- `--skip-tests`（Final E2E Gate で全テスト実行済みのため）
+- `--title "{spec-name に基づく機能の要約}"`
+- Final E2E Gate レポート (`final-e2e-gate.md`) の Notes セクションの内容を `/create-pr` に引き継ぎ、PR ボディの Notes セクションに転記する
+
+> review-worker は上記の引数で `/create-pr` スキルを実行する。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。必要なコミット/プッシュも review-worker が担当する。
+
+PR 作成完了後、`/spec-status` スキルで最終ステータスを表示する。
 
 ## Monitoring Progress
 
