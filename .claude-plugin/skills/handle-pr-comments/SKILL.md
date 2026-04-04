@@ -1,6 +1,8 @@
 ---
 name: handle-pr-comments
 description: "PRレビューコメントを取得し、カテゴリ分類して対応する。コード修正が必要なコメントは修正を実施し、質問には回答、承認は記録。修正後は品質チェックを実行しプッシュ。Triggers on: 'handle PR comments', 'address review comments', 'fix PR feedback', 'PR #N comments', 'レビュー対応', 'PRコメント対応', '/handle-pr-comments'."
+user-invokable: true
+argument-hint: "<pr-number>"
 ---
 
 # PR コメント対応 — レビューコメントワークフロー
@@ -56,7 +58,7 @@ gh pr checkout {number}
 
 ### 1. PR 情報とコメントの取得
 
-以下の3つの API コールで PR の全コメントを取得する。
+以下の API コールで PR の全コメントと resolved 状態を取得する。
 
 ```bash
 # PR のメタ情報
@@ -67,14 +69,19 @@ gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
 
 # レビューサマリー
 gh api repos/{owner}/{repo}/pulls/{number}/reviews --paginate
+
+# レビュースレッドの resolved 状態（GraphQL）
+gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[].body]}'
 ```
 
 `{owner}/{repo}` は前提条件チェック 2 で取得した `nameWithOwner` を使用する。
 
 **取得する情報**:
 - 各コメントの `id`、`body`、`path`（ファイル）、`line`（行番号）、`user`、`created_at`
-- コメントが `resolved` かどうか（`isResolved` フィールドまたは review thread の状態）
+- コメントが `resolved` かどうか（`gh pr view --json reviewThreads` の `isResolved` フィールドで判定）
 - レビューの決定ステータス（`APPROVED`、`CHANGES_REQUESTED`、`COMMENTED`）
+
+**resolved 判定**: REST API (`pulls/{number}/comments`) ではスレッドの resolved 状態を取得できないため、`gh pr view --json reviewThreads` を使用する。取得した `reviewThreads` の各スレッド内コメントを、REST API のコメントと `body` で突合して resolved 状態をマッピングする。
 
 ### 2. コメントのカテゴリ分類
 

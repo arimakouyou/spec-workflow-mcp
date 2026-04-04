@@ -1,6 +1,8 @@
 ---
 name: handle-issue
 description: "GitHub Issueを取得し、変更規模を分析して適切なワークフローにルーティングする。大規模変更はspec workflowへ、軽微なバグ修正はTDDで直接対応、判断が必要な場合はユーザーに確認。Triggers on: 'handle issue', 'work on issue #N', 'issue #N', 'GitHub issue', 'fix issue', 'issueを対応', 'issueに取り組む', '/handle-issue'."
+user-invokable: true
+argument-hint: "<issue-number>"
 ---
 
 # Issue ハンドリング — GitHub Issue ワークフロー
@@ -128,7 +130,7 @@ Issue の内容を基に、影響範囲を調査する:
    - Issue URL を request-spec.md の「背景」セクションに記録する
    - Issue 本文をユースケースの初期入力として渡す
 
-   > Load the `/spec-request-spec` skill and begin immediately. Use the Issue context above as input for the request specification.
+   > `/spec-request-spec` スキルをロードし、即座に開始する。上記の Issue コンテキストをリクエスト仕様の入力として使用する。
 
 ### 4B. 軽微なバグ修正パス — TDD 直接対応
 
@@ -164,7 +166,7 @@ Issue の内容を基に、影響範囲を調査する:
    - `--title "{Issue タイトルに基づく修正の要約}"`
    - `--closes {number}`
 
-   > Load the `/create-pr` skill with the arguments above. The skill will run IT/E2E tests, detect UI changes, capture screenshots if applicable, and create the PR with structured test results in the body.
+   > 上記の引数で `/create-pr` スキルをロードする。スキルは IT/E2E テストを実行し、UI 変更を検出し、該当する場合はスクリーンショットを取得して、構造化されたテスト結果を含む PR を作成する。
 
 ### 4C. 判断が必要パス — ユーザー確認
 

@@ -76,21 +76,23 @@ COMMIT_COUNT=$(git rev-list --count ${BASE_BRANCH}..HEAD)
 
 ### 1. テスト結果の収集
 
-`--skip-tests` が指定されている場合はこのステップをスキップし、Step 1.4 の既存レポート読み取りのみ実行する。
+`--skip-tests` が指定されている場合はこのステップをスキップし、Step 1.5 の既存レポート読み取りのみ実行する。
 
 #### 1.1 プロジェクトタイプ検出
 
-`quality-checks.md` のプロジェクトタイプ検出ロジックに従う:
+`quality-checks.md` のプロジェクトタイプ検出ロジックに準拠する:
 
 ```bash
+# 1. Leptos フルスタック検出
 if grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/null; then
   PROJECT_TYPE="leptos"
+# 2. Rust API 検出（axum, actix-web, rocket 等）
 elif grep -qE '(axum|actix-web|rocket)' Cargo.toml 2>/dev/null; then
   PROJECT_TYPE="rust-api"
-elif test -f Cargo.toml; then
-  PROJECT_TYPE="rust"
+# 3. Node.js 検出
 elif test -f package.json; then
   PROJECT_TYPE="nodejs"
+# 4. いずれにも該当しない
 else
   PROJECT_TYPE="generic"
 fi
@@ -99,19 +101,25 @@ fi
 #### 1.2 ユニットテスト実行・結果キャプチャ
 
 ```bash
-# Rust
-if [[ "$PROJECT_TYPE" =~ ^(rust|rust-api|leptos)$ ]]; then
+# Rust（rust-api, leptos を含む）
+if [[ "$PROJECT_TYPE" =~ ^(rust-api|leptos)$ ]]; then
   UT_OUTPUT=$(cargo test --quiet 2>&1) ; UT_EXIT=$?
 
 # Node.js
 elif [ "$PROJECT_TYPE" = "nodejs" ]; then
-  UT_OUTPUT=$(npm test -- --run 2>&1) ; UT_EXIT=$?
+  UT_OUTPUT=$(npm test 2>&1) ; UT_EXIT=$?
+
+# テストランナー未検出（generic 等）
+else
+  UT_RESULT="SKIP"
+  UT_OUTPUT="ユニットテストなし"
 fi
 
-if [ "${UT_EXIT:-1}" -eq 0 ]; then UT_RESULT="PASS"; else UT_RESULT="FAIL"; fi
+# ランナー実行時の結果判定
+if [ -n "$UT_EXIT" ]; then
+  if [ "$UT_EXIT" -eq 0 ]; then UT_RESULT="PASS"; else UT_RESULT="FAIL"; fi
+fi
 ```
-
-テストランナーが存在しない場合: `UT_RESULT="SKIP"`, `UT_OUTPUT="ユニットテストなし"`
 
 #### 1.3 統合テスト実行・結果キャプチャ
 
@@ -125,22 +133,28 @@ IT_EXISTS=$(find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*'
 IT_SCRIPT=$(grep -q '"test:integration"' package.json 2>/dev/null && echo "yes")
 ```
 
-統合テストが存在する場合:
+`IT_EXISTS` または `IT_SCRIPT` が非空の場合のみテストを実行する:
 
 ```bash
-# Rust
-IT_OUTPUT=$(cargo test --tests --quiet 2>&1) ; IT_EXIT=$?
+if [ -n "$IT_EXISTS" ]; then
+  # Rust
+  IT_OUTPUT=$(cargo test --tests --quiet 2>&1) ; IT_EXIT=$?
 
-# Node.js（スクリプトあり）
-IT_OUTPUT=$(npm run test:integration 2>&1) ; IT_EXIT=$?
+elif [ "$IT_SCRIPT" = "yes" ]; then
+  # Node.js（スクリプトあり）
+  IT_OUTPUT=$(npm run test:integration 2>&1) ; IT_EXIT=$?
 
-# Node.js（ファイルパターン）
-IT_OUTPUT=$(npm test -- --testPathPattern=integration 2>&1) ; IT_EXIT=$?
+else
+  # 統合テストが存在しない
+  IT_RESULT="SKIP"
+  IT_OUTPUT="統合テストなし"
+fi
 
-if [ "${IT_EXIT:-1}" -eq 0 ]; then IT_RESULT="PASS"; else IT_RESULT="FAIL"; fi
+# ランナー実行時の結果判定
+if [ -n "$IT_EXIT" ]; then
+  if [ "$IT_EXIT" -eq 0 ]; then IT_RESULT="PASS"; else IT_RESULT="FAIL"; fi
+fi
 ```
-
-統合テストが存在しない場合: `IT_RESULT="SKIP"`, `IT_OUTPUT="統合テストなし"`
 
 #### 1.4 E2E テスト実行・結果キャプチャ
 
@@ -207,8 +221,10 @@ UI_DIR_FILES=$(git diff --name-only ${BASE_BRANCH}...HEAD | \
 
 # Leptos: view! マクロを含む Rust ファイルの変更検出
 if [ "$PROJECT_TYPE" = "leptos" ]; then
-  LEPTOS_UI=$(git diff --name-only ${BASE_BRANCH}...HEAD -- '*.rs' | \
-    xargs grep -l 'view!' 2>/dev/null)
+  LEPTOS_RS_FILES=$(git diff --name-only ${BASE_BRANCH}...HEAD -- '*.rs')
+  if [ -n "$LEPTOS_RS_FILES" ]; then
+    LEPTOS_UI=$(echo "$LEPTOS_RS_FILES" | xargs -r grep -l 'view!' 2>/dev/null)
+  fi
 fi
 ```
 
@@ -336,7 +352,12 @@ SKIP — 統合テストなし
 {final-e2e-gate.md の Results テーブルをそのまま転記}
 
 **Verdict**: {PASS / PASS(SKIP含む)}
+
+### Notes
+{final-e2e-gate.md の Notes セクションをそのまま転記。SKIP 理由、設計時除外の根拠等を含む}
 ```
+
+Notes セクションが空または存在しない場合は Notes セクション自体を省略する。
 
 #### 4.4 UI スクリーンショットセクション（`HAS_UI_CHANGES=true` の場合のみ）
 

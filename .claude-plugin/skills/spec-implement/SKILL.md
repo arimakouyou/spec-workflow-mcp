@@ -911,6 +911,19 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 {FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
 ```
 
+#### ウェーブ失敗時の処理
+
+マルチタスクウェーブの処理中に、いずれかのタスクが `retry_exhausted` になった場合:
+1. ウェーブ内の残りのタスクは**実行を継続**する — ウェーブ全体を中止しない
+2. ウェーブ内の全タスクが完了/失敗した後、ユーザーにサマリーを報告する:
+   - 成功: [task-ids]
+   - 失敗: [task-ids と理由]
+3. 失敗したタスクに依存する後続ウェーブのタスク（`_DependsOn:` 経由）:
+   - タスク行に `<!-- BLOCKED: dependency {failed-task-id} failed -->` コメントを追加し、チェックボックスの状態を `- [ ]` にする（チェックボックストークン自体は変更しない）
+   - 後続ウェーブではこれらのタスクをスキップする
+4. 失敗したタスクに**依存しない**後続ウェーブのタスク:
+   - 次のウェーブで通常通り実行を継続する
+
 ### 10. PR 作成（Final E2E Gate PASS 後）
 
 Final E2E Gate が PASS（SKIP 含む場合も）となった場合、PR を作成する。
@@ -920,23 +933,11 @@ FAIL の場合は PR 作成をスキップし、修正フローに進む（9.3 �
 - `--spec {spec-name}`
 - `--skip-tests`（Final E2E Gate で全テスト実行済みのため）
 - `--title "{spec-name に基づく機能の要約}"`
+- Final E2E Gate レポート (`final-e2e-gate.md`) の Notes セクションの内容を `/create-pr` に引き継ぎ、PR ボディの Notes セクションに転記する
 
-> Load the `/create-pr` skill with the arguments above. The skill will read the Final E2E Gate report for test results, detect UI changes, capture screenshots if applicable, and create the PR.
+> 上記の引数で `/create-pr` スキルをロードする。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。
 
 PR 作成後、`/spec-status` スキルで最終ステータスを表示する。
-
-#### Wave Failure Handling
-
-When processing a multi-task wave, if any task results in `retry_exhausted`:
-1. **Continue executing** remaining tasks in the wave — do not abort the entire wave
-2. After all tasks in the wave complete/fail, report a summary to the user:
-   - Succeeded: [task-ids]
-   - Failed: [task-ids with reasons]
-3. Tasks in subsequent waves that depend on a failed task (via `_DependsOn:`):
-   - Add `<!-- BLOCKED: dependency {failed-task-id} failed -->` comment to the task line and ensure its checkbox state is `- [ ]` (do not change the checkbox token itself)
-   - Skip these tasks in subsequent waves
-4. Tasks in subsequent waves with **no dependency** on failed tasks:
-   - Continue execution normally in the next wave
 
 ## Monitoring Progress
 
