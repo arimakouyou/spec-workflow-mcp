@@ -226,7 +226,7 @@ git push
 コード修正を伴うコメントに対し、対応完了を通知する:
 
 ```bash
-gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments/{comment_id}/replies \
+gh api repos/${OWNER}/${REPO_NAME}/pulls/comments/{comment_id}/replies \
   -f body="対応しました。{変更内容の簡潔な説明}"
 ```
 
