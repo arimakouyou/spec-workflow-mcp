@@ -491,7 +491,7 @@ Leptos frontend task detection hints:
 
 ```javascript
 Agent({
-  subagent_type: "{spec-workflow-mcp:frontend-test-engineer | spec-workflow-mcp:unit-test-engineer}",
+  subagent_type: "{selected_test_engineer}",  // "spec-workflow-mcp:frontend-test-engineer" or "spec-workflow-mcp:unit-test-engineer"
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
@@ -512,12 +512,13 @@ Agent({
     - ut_action: added (tests were added) | verified_sufficient (no additions needed, already sufficient)
     - added_tests: list of added test function names (if added)
     - added_to_files: list of modified test files (if added)
+    - modified_implementation_files: list of implementation files modified during logic extraction (empty if none)
     - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)
     - excluded_as_e2e: list of concerns intentionally excluded as E2E territory (empty if none)`
 })
 ```
 
-Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**, **excluded_as_e2e**.
+Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **modified_implementation_files**, **coverage_summary**, **excluded_as_e2e**.
 
 - `ut_action: added` → run the tests, confirm all pass, and pass the additional info to step 5.5
 - `ut_action: verified_sufficient` → proceed directly to step 5.5
@@ -536,7 +537,7 @@ Agent({
   prompt: `Simplify and refine the following implementation files while preserving functionality.
 
     Worktree path: {WORKTREE_PATH}
-    Implementation files: {implementation_file_paths from step 4}
+    Implementation files: {implementation_file_paths from step 4 + modified_implementation_files from step 5}
     Test files: {test_file_paths from step 4 + added_to_files from step 5}
 
     **Important**: Always run cd {WORKTREE_PATH} before starting work.
