@@ -107,7 +107,7 @@ rm -f git.diff
 | Outcome | Action |
 |---------|--------|
 | All mutants killed | Record `mutation_testing: pass` in completion report |
-| Survived mutants found | Analyze each survived mutant, write additional tests to kill them, then re-run the same `cargo mutants --in-diff git.diff` command (with the same options as above) to verify the survived mutants were actually killed. Record `mutation_testing: pass (N mutants killed after supplement)` |
+| Survived mutants found | Analyze each survived mutant, write additional tests to kill them, then regenerate the diff (`git diff "$BASE_BRANCH" -- '*.rs' > git.diff`) and re-run the same `cargo mutants --in-diff git.diff` command (with the same options as above) to verify the survived mutants were actually killed. Record `mutation_testing: pass (N mutants killed after supplement)` |
 | Supplement retry exhausted (2 attempts) | Record `mutation_testing: warn` with survived mutant details. Do not block — proceed to completion |
 | cargo-mutants not installed | Record `mutation_testing: skip` |
 | Empty diff | Record `mutation_testing: skip (no .rs changes)` |

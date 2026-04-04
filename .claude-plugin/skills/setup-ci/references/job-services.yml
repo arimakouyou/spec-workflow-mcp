@@ -1,7 +1,8 @@
 # Service container snippets — appended by /setup-ci --with-services
-# Add the following entries directly under the job's `services:` key
+# Paste these entries directly under the job-level `services:` key.
+# Indentation assumes `services:` is at 4 spaces (GitHub Actions job level).
 
-    # PostgreSQL
+      # PostgreSQL
       postgres:
         image: postgres:16
         env:

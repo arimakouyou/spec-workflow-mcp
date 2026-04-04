@@ -44,10 +44,17 @@ jobs:
           cargo install cargo-audit --locked
           cargo audit
 
+      - name: Unused dependencies (advisory)
+        continue-on-error: true
+        run: |
+          rustup toolchain install nightly --profile minimal
+          cargo install cargo-udeps --locked
+          cargo +nightly udeps --quiet
+
       - name: Leptos build (SSR + WASM) or WASM clippy fallback
         run: |
-          if cargo install cargo-leptos --locked; then
+          if cargo leptos --version >/dev/null 2>&1 || cargo install cargo-leptos --locked; then
             cargo leptos build
           else
-            cargo clippy --quiet --target wasm32-unknown-unknown -- -D warnings
+            cargo clippy --quiet --target wasm32-unknown-unknown --no-default-features --features hydrate -- -D warnings
           fi
