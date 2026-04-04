@@ -188,7 +188,7 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
 
 ```bash
 # インラインコメントへの返信
-gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments/{comment_id}/replies \
+gh api repos/${OWNER}/${REPO_NAME}/pulls/comments/{comment_id}/replies \
   -f body="{回答内容}"
 
 # 一般コメントへの返信
