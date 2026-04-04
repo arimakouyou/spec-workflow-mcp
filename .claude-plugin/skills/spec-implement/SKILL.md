@@ -267,6 +267,52 @@ cargo test --quiet
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
+#### 3.5.1.6 CVE Audit (依存脆弱性監査)
+
+Expert Team Review の前に、依存ライブラリの脆弱性を機械的に検査する。
+
+**Step A: 監査ツール実行**
+
+| プロジェクトタイプ | 検出条件 | 監査コマンド |
+|----------------|----------|------------|
+| Rust | `Cargo.lock` 存在 | `cargo audit` |
+| Node.js (npm) | `package-lock.json` 存在 | `npm audit` |
+| Node.js (Yarn) | `yarn.lock` 存在 | `yarn audit`（Yarn v1）または `yarn npm audit`（Yarn v2+） |
+| 両方 | Rust + Node.js のロックファイル存在 | 該当する監査コマンドをそれぞれ実行 |
+
+ロックファイルが存在しない場合は SKIP（新規プロジェクトで依存未解決）。
+
+`cargo audit` 未インストールの場合:
+```bash
+cargo audit --version 2>&1 || echo "NOT_INSTALLED"
+```
+未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、Expert Team Review のセキュリティ担当に委ねる。
+
+**Step B: 結果分類**
+
+| 重大度 | アクション |
+|-------|----------|
+| Critical / High | CVE_FOUND リストに追加 |
+| Medium/Moderate / Low | 警告ログに記録 |
+
+※ `cargo audit` の `medium` および `npm audit` の `moderate` は同一の重大度として扱う。
+
+**Step C: 結果の引き渡し**
+
+CVE 監査結果を Expert Team Review の入力に追加する:
+
+```
+CVE Audit Results:
+- cargo audit: {PASS / N件の脆弱性検出 / SKIP}
+- npm audit: {PASS / N件の脆弱性検出 / SKIP / N/A}
+- Critical/High CVEs: {CVE_FOUND リスト or なし}
+  - 各エントリ形式: CVE-ID | パッケージ名 | 現バージョン | 修正済みバージョン | 推奨対応
+```
+
+Expert Team Review のセキュリティ担当がこの結果を踏まえてレビューし、Verdict（PASS / NEEDS_REWORK / BLOCK）を判定する。CVE の深刻度と対応方針の最終判断はセキュリティ担当に委ねる。
+
+CVE 監査結果は統合検証結果と共に 3.5.2 の Expert Team Review に入力として渡すこと。
+
 #### 3.5.2 Expert Team Review (multi-perspective review)
 
 Phase 完了時は、コミット前に専門家チームによる多角的コードレビューを実施する。詳細は `/phase-review-team` スキルを参照。

@@ -122,6 +122,19 @@ find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*
 
 **重要**: E2E テストに必要なツール（Playwright, Chrome等）は必ず Required=Yes とする。design.md の「Excluded Test Environments」で明示的に除外されているテスト以外は、すべて実行必須。
 
+#### 3.3.1 テストツールバージョン検証
+
+Required Test Tools テーブルの各ツールについて、Min Version が最新安定版であることを確認する:
+
+1. 配布元に応じて最新安定版を確認する
+   - crates.io / npm のパッケージの場合のみレジストリ CLI を使ってよい
+     - `npm view {pkg} version`
+     - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` （完全一致を確認）
+   - それ以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認
+2. Min Version を検証済みの最新安定版に更新
+
+Phase 2 step 3.5 と同様、AI の学習データのデフォルト値を使用しない。
+
 ---
 
 ### 4. Generate Test Specifications via Subagents
