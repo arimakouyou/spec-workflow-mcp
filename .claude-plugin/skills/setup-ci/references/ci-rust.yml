@@ -40,8 +40,5 @@ jobs:
 
       - name: Security audit
         run: |
-          if command -v cargo-audit >/dev/null 2>&1; then
-            cargo audit
-          else
-            echo "cargo-audit is not installed; skipping security audit"
-          fi
+          cargo install cargo-audit --locked
+          cargo audit

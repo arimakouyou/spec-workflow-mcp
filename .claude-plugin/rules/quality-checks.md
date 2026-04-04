@@ -9,7 +9,7 @@ paths:
 
 Unified command specification for quality checks run by parallel-worker, review-worker, and other agents. All agents must use the commands defined in this rule.
 
-> **CI Reference**: The `/setup-ci` skill references these commands when generating GitHub Actions CI workflow YAML, but generated workflows may include additional setup or ecosystem-specific commands that are not listed here. Re-run `/setup-ci` after updating this file, then review the generated CI to confirm it still matches the intended checks.
+> **CI Parity**: These commands are also used by the `/setup-ci` skill to generate GitHub Actions CI workflow YAML. CI templates may include additional setup steps (tool installation etc.) as prerequisites, but the quality check commands themselves must be identical. Re-run `/setup-ci` after updating this file to keep CI in sync.
 
 > **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `.claude-plugin/rules/rust-build-cache.md` (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
 

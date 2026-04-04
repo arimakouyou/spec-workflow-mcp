@@ -140,9 +140,9 @@ Next steps:
 
 ## Source of Truth
 
-`.claude-plugin/rules/quality-checks.md` is the baseline source of truth for which quality checks the CI workflow must enforce.
-The generated GitHub Actions workflow should preserve the same effective checks, but it may include minimal CI-specific setup steps or equivalent command adaptations required to run them in CI (for example, tool installation, non-interactive flags, or workflow-specific invocation forms).
-If `quality-checks.md` is updated, re-running `/setup-ci` regenerates the workflow so the enforced checks stay aligned with the updated guidance.
+The CI workflow commands MUST match `.claude-plugin/rules/quality-checks.md` exactly.
+CI-specific setup steps (tool installation etc.) are permitted as prerequisites, but the quality check commands themselves must be identical.
+If `quality-checks.md` is updated, re-running `/setup-ci` regenerates the workflow with updated commands.
 
 ## Notes
 
