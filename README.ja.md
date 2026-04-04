@@ -63,7 +63,7 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > **プラグインに含まれるもの：**
 > - 仕様駆動開発ワークフロー用の MCP サーバー
 > - スキル：spec-request-spec、spec-requirements、spec-design、spec-test-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
-> - エージェント：code-simplifier、review-worker、unit-test-engineer、parallel-worker など
+> - エージェント：code-simplifier、review-worker、unit-test-engineer、frontend-test-engineer、parallel-worker など
 > - ルール：プロジェクトアーキテクチャ、品質チェック、セキュリティ、設計原則など
 > - フック：タスク読み取りガードの自動化
 
@@ -336,7 +336,8 @@ your-project/
   agents/                  # 専門サブエージェント
     code-simplifier.md     # コード簡素化
     review-worker.md       # レビュー自動化
-    unit-test-engineer.md  # ユニットテスト生成
+    unit-test-engineer.md  # Rust ユニットテスト生成
+    frontend-test-engineer.md # Leptos フロントテスト生成
     parallel-worker.md     # 並列タスク実行
     integ-test-worker.md   # 統合テストワーカー
     integ-test-auditor.md  # 統合テスト監査

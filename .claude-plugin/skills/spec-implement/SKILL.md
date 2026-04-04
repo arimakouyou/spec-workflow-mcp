@@ -14,7 +14,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 | Prohibited | Reason |
 |-----------|--------|
 | **Do not write code yourself** | Implementation must always be delegated to `parallel-worker` |
-| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is `unit-test-engineer`'s responsibility |
+| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is the test engineer's (`frontend-test-engineer` or `unit-test-engineer`) responsibility |
 | **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
 | **Do not skip agent calls** | Each step's agent call cannot be skipped |
 
@@ -473,17 +473,31 @@ Branch based on parallel-worker's `status`:
 
 ### 5. Unit Test Quality Verification [AGENT CALL REQUIRED]
 
-> ⛔ **Do not add tests yourself. Always call the `unit-test-engineer` agent.**
+> ⛔ **Do not add tests yourself. Always call the appropriate test engineer agent.**
 
-> **Language note**: `unit-test-engineer` is specialized for Rust. For non-Rust projects (Node.js, Python, etc.), skip this step or use a `general-purpose` subagent with the same test quality criteria (Happy Path / Boundary Values / Error Handling / Edge Cases coverage).
+> **Agent selection**:
+> - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`src/pages/`、`src/components/`）が対象なら `frontend-test-engineer`
+> - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
+> - 非 Rust プロジェクトはこのステップをスキップするか、同じ4カテゴリ基準を満たす汎用サブエージェントを使う
 
 Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
-Pass the implementation files to the `unit-test-engineer` agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
+Pass the implementation files to the selected test engineer agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
+
+Leptos frontend task detection hints:
+- `_Prompt` に `#[component]`、`view!`、signal、memo、`#[server]` が含まれる
+- 対象ファイルが `src/pages/`、`src/components/`、`src/server_fns/` 配下にある
+- `Cargo.toml` に `[package.metadata.leptos]` があり、実装が UI ロジックを含む
+
+Select the test engineer agent based on the detection hints above, then call:
 
 ```javascript
+// Leptos frontend task の場合:
+//   subagent_type: "spec-workflow-mcp:frontend-test-engineer"
+// それ以外の Rust task の場合:
+//   subagent_type: "spec-workflow-mcp:unit-test-engineer"
 Agent({
-  subagent_type: "spec-workflow-mcp:unit-test-engineer",
+  subagent_type: "spec-workflow-mcp:frontend-test-engineer",  // or "spec-workflow-mcp:unit-test-engineer"
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
@@ -498,16 +512,19 @@ Agent({
     and add any missing test cases.
     Be careful not to duplicate existing tests.
     If Test focus areas are specified, prioritize those verification points.
+    If this is a Leptos frontend task, do not test \`view!\` output directly. Extract logic if needed and test the extracted logic instead.
 
     The completion report must include:
     - ut_action: added (tests were added) | verified_sufficient (no additions needed, already sufficient)
     - added_tests: list of added test function names (if added)
     - added_to_files: list of modified test files (if added)
-    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)`
+    - modified_implementation_files: list of implementation files modified during logic extraction (empty if none)
+    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)
+    - excluded_as_e2e: list of concerns intentionally excluded as E2E territory (empty if none)`
 })
 ```
 
-Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**.
+Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **modified_implementation_files**, **coverage_summary**, **excluded_as_e2e**.
 
 - `ut_action: added` → run the tests, confirm all pass, and pass the additional info to step 5.5
 - `ut_action: verified_sufficient` → proceed directly to step 5.5
@@ -526,7 +543,7 @@ Agent({
   prompt: `Simplify and refine the following implementation files while preserving functionality.
 
     Worktree path: {WORKTREE_PATH}
-    Implementation files: {implementation_file_paths from step 4}
+    Implementation files: {implementation_file_paths from step 4 + modified_implementation_files from step 5}
     Test files: {test_file_paths from step 4 + added_to_files from step 5}
 
     **Important**: Always run cd {WORKTREE_PATH} before starting work.
@@ -556,7 +573,7 @@ Agent({
   subagent_type: "spec-workflow-mcp:review-worker",
   description: "Review and commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
-    This code has passed through parallel-worker (TDD), unit-test-engineer, and code-simplifier.
+    This code has passed through parallel-worker (TDD), test engineer (frontend-test-engineer or unit-test-engineer), and code-simplifier.
     However, you MUST NOT assume it is correct because previous steps reported success.
     Previous results are provided as reference ONLY — your independent, critical review is mandatory.
     Treat this as if you are seeing the code for the first time. Your job is to find problems, not confirm success.
@@ -568,7 +585,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
-    Changed files: {changed_files from step 4 + added_to_files from step 5 + changed_files from step 5.5}
+    Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
     **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
@@ -577,15 +594,18 @@ Agent({
     UT quality verification results (step 5):
     - ut_action: {ut_action from step 5}
     - added_tests: {added_tests from step 5}
+    - modified_implementation_files: {modified_implementation_files from step 5}
     - coverage_summary: {coverage_summary from step 5}
+    - excluded_as_e2e: {excluded_as_e2e from step 5}
 
     Simplification results (step 5.5):
     - simplify_result: {simplify_result from step 5.5} (one of: simplified / no_change / reverted)
     - changed_files: {changed_files from step 5.5 (only if simplified)}
 
     Notes:
-    - Tests listed in added_tests have already been quality-verified by unit-test-engineer.
+    - Tests listed in added_tests have already been quality-verified by the appropriate test engineer (frontend-test-engineer or unit-test-engineer).
       In category E (final test verification), do not flag these tests as "insufficient".
+    - excluded_as_e2e lists concerns intentionally deferred to E2E testing. Do not flag these as missing unit test coverage.
       However, style, naming, and sensitive data checks should be performed as usual.
     - Files with simplify_result: simplified have been confirmed by code-simplifier to preserve functionality and pass tests.
       In category A (style), evaluate the simplified code as the final form.
