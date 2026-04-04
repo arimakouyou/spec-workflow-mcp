@@ -26,6 +26,25 @@ argument-hint: "[--title <title>] [--closes <issue-number>] [--spec <spec-name>]
 - `/create-pr --spec user-export --skip-tests`
 - `/create-pr`（引数なし — 全自動）
 
+## 引数パース
+
+`$ARGS` から以下の変数を抽出する:
+
+```bash
+# $ARGS からオプションを解析
+TITLE_ARG=""  CLOSES_ARG=""  SPEC_ARG=""  BASE_ARG=""  SKIP_TESTS=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title)   TITLE_ARG="$2"; shift 2 ;;
+    --closes)  CLOSES_ARG="$2"; shift 2 ;;
+    --spec)    SPEC_ARG="$2"; shift 2 ;;
+    --base)    BASE_ARG="$2"; shift 2 ;;
+    --skip-tests) SKIP_TESTS=true; shift ;;
+    *) shift ;;
+  esac
+done
+```
+
 ## 前提条件チェック（MANDATORY）
 
 以下のチェックを順番に実行する。いずれかが失敗した場合は **STOP** し、対処方法を案内する。
@@ -67,10 +86,14 @@ BASE_BRANCH=${BASE_BRANCH:-main}
 
 ```bash
 BRANCH=$(git branch --show-current)
-COMMIT_COUNT=$(git rev-list --count ${BASE_BRANCH}..HEAD)
+# リモート追跡ブランチを最新化して差分を正確に算出する
+git fetch origin "${BASE_BRANCH}" --quiet 2>/dev/null
+COMMIT_COUNT=$(git rev-list --count "origin/${BASE_BRANCH}..HEAD")
 ```
 
 差分が 0 コミットの場合: 「ベースブランチとの差分がありません」と案内して STOP。
+
+以降のベースブランチとの比較コマンド（`git diff`, `git rev-list`, `git log` 等）でも `origin/${BASE_BRANCH}` を使用する。
 
 ### 6. ブランチ名のサニタイズ
 
@@ -111,6 +134,9 @@ fi
 #### 1.2 ユニットテスト実行・結果キャプチャ
 
 ```bash
+# 変数を明示初期化（環境値の誤拾い防止）
+unset UT_EXIT; UT_RESULT=""; UT_OUTPUT=""
+
 # Rust（rust-api, leptos を含む）
 if [[ "$PROJECT_TYPE" =~ ^(rust-api|leptos)$ ]]; then
   UT_OUTPUT=$(cargo test --quiet 2>&1) ; UT_EXIT=$?
@@ -147,6 +173,9 @@ IT_FILES=$(find tests test __tests__ -type f -name 'integration*' -print -quit 2
 `IT_EXISTS`、`IT_SCRIPT`、`IT_FILES` のいずれかが非空の場合のみテストを実行する:
 
 ```bash
+# 変数を明示初期化
+unset IT_EXIT; IT_RESULT=""; IT_OUTPUT=""
+
 if [ -n "$IT_EXISTS" ]; then
   # Rust
   IT_OUTPUT=$(cargo test --tests --quiet 2>&1) ; IT_EXIT=$?
@@ -174,6 +203,9 @@ fi
 #### 1.4 E2E テスト実行・結果キャプチャ
 
 ```bash
+# 変数を明示初期化
+unset E2E_EXIT; E2E_RESULT=""; E2E_OUTPUT=""
+
 # Playwright
 if test -f playwright.config.ts || test -f playwright.config.js; then
   E2E_OUTPUT=$(npx playwright test 2>&1) ; E2E_EXIT=$?
