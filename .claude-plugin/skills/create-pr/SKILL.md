@@ -31,8 +31,9 @@ argument-hint: "[--title <title>] [--closes <issue-number>] [--spec <spec-name>]
 `$ARGS` から以下の変数を抽出する:
 
 ```bash
-# $ARGS からオプションを解析
+# $ARGS を positional parameters に展開してからオプションを解析
 TITLE_ARG=""  CLOSES_ARG=""  SPEC_ARG=""  BASE_ARG=""  SKIP_TESTS=false
+set -- $ARGS
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --title)   TITLE_ARG="$2"; shift 2 ;;
@@ -267,18 +268,18 @@ fi
 
 ```bash
 # フロントエンド関連ファイルの変更検出
-UI_FILES=$(git diff --name-only ${BASE_BRANCH}...HEAD -- \
+UI_FILES=$(git diff --name-only "origin/${BASE_BRANCH}...HEAD" -- \
   '*.tsx' '*.jsx' '*.vue' '*.svelte' \
   '*.css' '*.scss' '*.less' '*.pcss' '*.html')
 
 # UI 関連ディレクトリ内の変更検出
-UI_DIR_FILES=$(git diff --name-only ${BASE_BRANCH}...HEAD | \
+UI_DIR_FILES=$(git diff --name-only "origin/${BASE_BRANCH}...HEAD" | \
   grep -E '(components|pages|dashboard_frontend|webview|frontend|ui)/')
 
 # Leptos: view! マクロを含む Rust ファイルの変更検出
 if [ "$PROJECT_TYPE" = "leptos" ]; then
   LEPTOS_UI=$(
-    git diff --name-only ${BASE_BRANCH}...HEAD -- '*.rs' | \
+    git diff --name-only "origin/${BASE_BRANCH}...HEAD" -- '*.rs' | \
       while IFS= read -r file; do
         [ -n "$file" ] || continue
         grep -l 'view!' "$file" 2>/dev/null
@@ -361,12 +362,12 @@ fi
 |------|-------------|
 | `--closes` 指定あり | `Issue #{number} の修正。` |
 | `--spec` 指定あり | `Spec: {spec-name} の実装。` |
-| いずれも未指定 | ブランチの変更概要を `git log --oneline ${BASE_BRANCH}..HEAD` から生成 |
+| いずれも未指定 | ブランチの変更概要を `git log --oneline origin/${BASE_BRANCH}..HEAD` から生成 |
 
 #### 4.2 変更内容セクション
 
 ```bash
-git log --oneline ${BASE_BRANCH}..HEAD
+git log --oneline origin/${BASE_BRANCH}..HEAD
 ```
 
 各コミットメッセージを箇条書きで列挙する。

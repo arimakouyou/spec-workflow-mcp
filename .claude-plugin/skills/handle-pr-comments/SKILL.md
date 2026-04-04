@@ -13,9 +13,11 @@ PR のレビューコメントを取得・分類し、体系的に対応する�
 
 - **pr**: PR 番号（例: `#123`, `123`）または PR URL。`$ARGS` の最初の引数として受け取る。
 
-**呼び出し形式**: `/handle-pr-comments <pr-number>` （例: `/handle-pr-comments 123`）
+**呼び出し形式**: `/handle-pr-comments <pr-number>` （例: `/handle-pr-comments 123` または `/handle-pr-comments #123`）
 
 引数が未指定の場合はユーザーに PR 番号を確認する。
+
+**入力の正規化**: 引数が URL 形式（`https://github.com/.../pull/123` 等）の場合は、`gh pr view "$ARG" --json number -q .number` で PR 番号を抽出する。`#123` 形式の場合は `#` を除去して数値のみにする。以降の手順では正規化された数値 PR 番号を `{number}` として使用する。
 
 ## 前提条件チェック（MANDATORY）
 
@@ -32,10 +34,15 @@ gh auth status
 ### 2. リポジトリ確認
 
 ```bash
-gh repo view --json nameWithOwner -q '.nameWithOwner'
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+# API コール用に owner と repo を分割
+OWNER="${REPO%%/*}"
+REPO_NAME="${REPO##*/}"
 ```
 
 失敗時: 「GitHub リポジトリのルートディレクトリで実行してください」と案内して STOP。
+
+以降の API コール（`gh api repos/${OWNER}/${REPO_NAME}/...`）では `${OWNER}/${REPO_NAME}` を使用する。
 
 ### 3. PR 状態確認
 
@@ -73,16 +80,16 @@ gh pr checkout {number}
 gh pr view {number} --json title,body,state,headRefName,baseRefName,reviewDecision,reviews,comments
 
 # インラインコードコメント（レビューコメント）
-gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
+gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments --paginate
 
 # レビューサマリー
-gh api repos/{owner}/{repo}/pulls/{number}/reviews --paginate
+gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/reviews --paginate
 
 # レビュースレッドの resolved 状態（GraphQL 経由）
 gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[] | {id: .id, databaseId: .databaseId, createdAt: .createdAt, path: .path, line: .line, body: .body}]}'
 ```
 
-`{owner}/{repo}` は前提条件チェック 2 で取得した `nameWithOwner` を使用する。
+`${OWNER}/${REPO_NAME}` は前提条件チェック 2 で取得・分割した値を使用する。
 
 **取得する情報**:
 - REST: 各コメントの `id`、`body`、`path`（ファイル）、`line`（行番号）、`user`、`created_at`
@@ -172,11 +179,11 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
 
 ```bash
 # インラインコメントへの返信
-gh api repos/{owner}/{repo}/pulls/{number}/comments/{comment_id}/replies \
+gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments/{comment_id}/replies \
   -f body="{回答内容}"
 
 # 一般コメントへの返信
-gh api repos/{owner}/{repo}/issues/{number}/comments \
+gh api repos/${OWNER}/${REPO_NAME}/issues/{number}/comments \
   -f body="{回答内容}"
 ```
 
@@ -210,7 +217,7 @@ git push
 コード修正を伴うコメントに対し、対応完了を通知する:
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/{number}/comments/{comment_id}/replies \
+gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments/{comment_id}/replies \
   -f body="対応しました。{変更内容の簡潔な説明}"
 ```
 
