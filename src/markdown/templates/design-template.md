@@ -119,7 +119,7 @@ Notes:
 - **Yes**: 実装開始前に必須。未インストール = FAIL。実装を停止しユーザーに報告
 - **Recommended**: 未インストールでも警告のみで続行可能
 - プロジェクトで docker-compose / docker compose を使用する場合は、**必ず本テーブルに Required=Yes として記載**すること（quality-checks / スモークテストでの環境要件と整合させるため）
-- **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch またはレジストリ CLI（`cargo search` / `npm view`）で最新安定版を確認し反映すること（Phase 2 step 3.5 参照）
+- **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch、各レジストリの対象パッケージページ（例: crates.io の該当 crate ページ）、または対象名の完全一致が確認できるレジストリ CLI（例: `npm view {pkg} version`）で最新安定版を確認し反映すること（Phase 2 step 3.5 参照）
 
 ## Excluded Test Environments
 

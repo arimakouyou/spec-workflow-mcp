@@ -126,9 +126,11 @@ find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*
 
 Required Test Tools テーブルの各ツールについて、Min Version が最新安定版であることを確認する:
 
-1. WebSearch またはレジストリ CLI で最新安定版を確認
-   - 検索: "{ツール名} latest version"
-   - CLI: `cargo search {crate}` / `npm view {pkg} version`
+1. 配布元に応じて最新安定版を確認する
+   - crates.io / npm のパッケージの場合のみレジストリ CLI を使ってよい
+     - `npm view {pkg} version`
+     - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` （完全一致を確認）
+   - それ以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認
 2. Min Version を検証済みの最新安定版に更新
 
 Phase 2 step 3.5 と同様、AI の学習データのデフォルト値を使用しない。

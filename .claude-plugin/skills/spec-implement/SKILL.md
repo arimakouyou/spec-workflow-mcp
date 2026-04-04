@@ -276,8 +276,9 @@ Expert Team Review の前に、依存ライブラリの脆弱性を機械的に�
 | プロジェクトタイプ | 検出条件 | 監査コマンド |
 |----------------|----------|------------|
 | Rust | `Cargo.lock` 存在 | `cargo audit` |
-| Node.js | `package-lock.json` / `yarn.lock` 存在 | `npm audit` |
-| 両方 | 両ファイル存在 | 両方実行 |
+| Node.js (npm) | `package-lock.json` 存在 | `npm audit` |
+| Node.js (Yarn) | `yarn.lock` 存在 | `yarn audit`（Yarn v1）または `yarn npm audit`（Yarn v2+） |
+| 両方 | Rust + Node.js のロックファイル存在 | 該当する監査コマンドをそれぞれ実行 |
 
 ロックファイルが存在しない場合は SKIP（新規プロジェクトで依存未解決）。
 
@@ -292,7 +293,9 @@ cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 | 重大度 | アクション |
 |-------|----------|
 | Critical / High | CVE_FOUND リストに追加 |
-| Medium / Low | 警告ログに記録 |
+| Medium/Moderate / Low | 警告ログに記録 |
+
+※ `cargo audit` の `medium` および `npm audit` の `moderate` は同一の重大度として扱う。
 
 **Step C: 結果の引き渡し**
 
@@ -303,6 +306,7 @@ CVE Audit Results:
 - cargo audit: {PASS / N件の脆弱性検出 / SKIP}
 - npm audit: {PASS / N件の脆弱性検出 / SKIP / N/A}
 - Critical/High CVEs: {CVE_FOUND リスト or なし}
+  - 各エントリ形式: CVE-ID | パッケージ名 | 現バージョン | 修正済みバージョン | 推奨対応
 ```
 
 Expert Team Review のセキュリティ担当がこの結果を踏まえてレビューし、Verdict（PASS / NEEDS_REWORK / BLOCK）を判定する。CVE の深刻度と対応方針の最終判断はセキュリティ担当に委ねる。

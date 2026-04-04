@@ -122,13 +122,14 @@ Key Design Decisions セクションから技術名＋バージョンのペア�
    - resolve-library-id でライブラリを特定
    - query-docs で最新バージョンやチェンジログを確認
 
-3. **レジストリ CLI フォールバック**（Web ツール利用不可時）:
+3. **レジストリ CLI フォールバック**（Web ツール利用不可時、crates.io / npm パッケージのみ）:
    ```bash
-   # Rust
-   cargo search {crate_name} --limit 1
    # Node.js
    npm view {package_name} version
+   # Rust（crate 名の完全一致を確認すること）
+   cargo search {crate_name} --limit 1 | grep "^{crate_name} ="
    ```
+   crates.io / npm 以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認する。
 
 #### 3.5.3 バージョン更新
 
