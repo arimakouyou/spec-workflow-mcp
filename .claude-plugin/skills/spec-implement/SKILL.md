@@ -497,7 +497,8 @@ Agent({
     - mutation_testing: pass|warn|skip
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
-    - changed_files: list of all changed files`
+    - changed_files: list of all changed files
+`
 })
 ```
 
