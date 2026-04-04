@@ -15,7 +15,7 @@ argument-hint: "[--title <title>] [--closes <issue-number>] [--spec <spec-name>]
 
 | コンテキスト | コミット/プッシュの責務 |
 |-------------|----------------------|
-| **スタンドアロン実行** (`/create-pr` を直接実行) | このスキ��自身がコミット/プッシュを実行する |
+| **スタンドアロン実行** (`/create-pr` を直接実行) | このスキル自身がコミット/プッシュを実行する |
 | **spec-implement からの呼び出し** (Step 10 経由) | review-worker がこのスキルを実行する。コミット/プッシュは review-worker の責務 |
 
 `/handle-issue` の 4B パスから呼び出される場合はスタンドアロン実行と同じ扱い。
@@ -103,13 +103,16 @@ COMMIT_COUNT=$(git rev-list --count "origin/${BASE_BRANCH}..HEAD")
 
 ### 6. ブランチ名のサニタイズ
 
-ブランチ名に `/` が含まれるとディレクトリパスや URL が壊れるため、パス安全な slug を生成する:
+ブランチ名に `/` が含まれるとディレクトリパスがネストして壊れるため、ファイルシステム用の slug を生成する:
 
 ```bash
 BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-')
 ```
 
-以降、ファイルパスや URL にブランチ名を使う場合は `${BRANCH_SLUG}` を使用する。`gh pr create` や git 操作で実際のブランチ名が必要な場合は `${BRANCH}` を使用する。
+**使い分け:**
+- **ファイルシステムパス**（スクリーンショット保存先等）: `${BRANCH_SLUG}` を使用
+- **GitHub URL の ref 部分**（`blob/{ref}/...`）: `${BRANCH}` を使用（`blob/` 形式では `/` を含む ref を正しく解釈する）
+- **git 操作・`gh pr create`**: `${BRANCH}` を使用
 
 ## 手順
 
@@ -488,7 +491,7 @@ Closes #${CLOSES_ARG}
 
 ### 5. PR 作成
 
-構築した PR ボディを一時ファイルに書き出し、`--body-file` で渡す（改行や引用���を含むボディでもクォート崩れを防止）:
+構築した PR ボディを一時ファイルに書き出し、`--body-file` で渡す（改行や引用符を含むボディでもクォート崩れを防止）:
 
 ```bash
 PR_BODY_FILE="$(mktemp)"
