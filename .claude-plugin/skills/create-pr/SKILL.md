@@ -72,6 +72,16 @@ COMMIT_COUNT=$(git rev-list --count ${BASE_BRANCH}..HEAD)
 
 差分が 0 コミットの場合: 「ベースブランチとの差分がありません」と案内して STOP。
 
+### 6. ブランチ名のサニタイズ
+
+ブランチ名に `/` が含まれるとディレクトリパスや URL が壊れるため、パス安全な slug を生成する:
+
+```bash
+BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-')
+```
+
+以降、ファイルパスや URL にブランチ名を使う場合は `${BRANCH_SLUG}` を使用する。`gh pr create` や git 操作で実際のブランチ名が必要な場合は `${BRANCH}` を使用する。
+
 ## 手順
 
 ### 1. テスト結果の収集
@@ -279,9 +289,9 @@ fi
 dev サーバー起動 → Playwright で変更された UI 画面を巡回しスクリーンショット取得 → dev サーバー停止
 
 ```bash
-# Playwright を使った手動スクリーンショット取得
+# Playwright を使った手動スクリーンショット取得（パスには BRANCH_SLUG を使用）
 npx playwright screenshot --browser chromium "http://localhost:${PORT:-5173}" \
-  "docs/screenshots/pr-evidence/${BRANCH}/page.png"
+  "docs/screenshots/pr-evidence/${BRANCH_SLUG}/page.png"
 ```
 
 **優先度 3: いずれも不可の場合**
@@ -291,18 +301,23 @@ npx playwright screenshot --browser chromium "http://localhost:${PORT:-5173}" \
 #### 3.2 スクリーンショットの保存とコミット
 
 ```bash
-# 保存先ディレクトリ
-SCREENSHOT_DIR="docs/screenshots/pr-evidence/${BRANCH}"
+# 保存先ディレクトリ（パスには BRANCH_SLUG を使用）
+SCREENSHOT_DIR="docs/screenshots/pr-evidence/${BRANCH_SLUG}"
 mkdir -p "$SCREENSHOT_DIR"
 
 # 収集したスクリーンショットをコピー（優先度 1 or 2 の結果）
-cp {collected-screenshots} "$SCREENSHOT_DIR/"
+# ※ スクリーンショットが1枚以上収集できた場合のみ実行
+if [ -n "{collected-screenshots}" ]; then
+  cp {collected-screenshots} "$SCREENSHOT_DIR/"
 
-# コミットとプッシュ
-git add docs/screenshots/pr-evidence/
-git commit -m "docs: PR用スクリーンショットを追加"
-git push
+  # コミットとプッシュ
+  git add docs/screenshots/pr-evidence/
+  git commit -m "docs: PR用スクリーンショットを追加"
+  git push
+fi
 ```
+
+スクリーンショットが 0 枚の場合はコピー・コミット・プッシュを行わず、PR ボディに「UI 変更を検出しましたが、スクリーンショットの自動取得ができませんでした。手動で確認してください。」と注記する（優先度 3 と同じ扱い）。
 
 ### 4. PR ボディ構築
 
@@ -382,7 +397,7 @@ Notes セクションが空または存在しない場合は Notes セクショ�
 ## UI スクリーンショット
 | 画面 | スクリーンショット |
 |------|------------------|
-| {画面名} | ![{画面名}](https://raw.githubusercontent.com/{REPO}/{BRANCH}/docs/screenshots/pr-evidence/{BRANCH}/{filename}.png) |
+| {画面名} | ![{画面名}](https://github.com/{REPO}/blob/{BRANCH}/docs/screenshots/pr-evidence/{BRANCH_SLUG}/{filename}.png?raw=1) |
 ```
 
 スクリーンショット取得がスキップされた場合:
@@ -448,5 +463,6 @@ PR 作成後、**PR の URL をユーザーに報告する**。
 - スクリーンショットは `docs/screenshots/pr-evidence/` に保存する（既存の `docs/screenshots/` は変更しない）
 - 出力が長い場合は末尾 50 行に切り詰め、`<details>` タグで折りたたむ
 - `--skip-tests` 指定時でもテスト結果セクションは省略しない（既存レポートから転記、またはレポートがない場合は「手動確認が必要」と記載）
-- PR ボディ内のスクリーンショット URL にはブランチ名を使用する（PR マージ前に参照可能にするため）
+- PR ボディ内のスクリーンショット URL には `blob/{BRANCH}/...?raw=1` 形式を使用する（`/` を含むブランチ名でも ref が正しく解釈される）
+- ファイルパスにブランチ名を使う場合は `BRANCH_SLUG`（`/` → `-` 置換済み）を使用する
 - プロジェクトタイプの検出は `quality-checks.md` のロジックに準拠する
