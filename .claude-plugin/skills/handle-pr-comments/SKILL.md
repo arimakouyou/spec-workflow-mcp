@@ -17,7 +17,7 @@ PR のレビューコメントを取得・分類し、体系的に対応する�
 
 引数が未指定の場合はユーザーに PR 番号を確認する。
 
-**入力の正規化**: 引数が URL 形式（`https://github.com/.../pull/123` 等）の場合は、`gh pr view "$ARG" --json number -q .number` で PR 番号を抽出する。`#123` 形式の場合は `#` を除去して数値のみにする。以降の手順では正規化された数値 PR 番号を `{number}` として使用する。
+**入力の正規化**: まず `$ARGS` の最初の引数を `PR_INPUT` として取り出す。`PR_INPUT` が URL 形式（`https://github.com/.../pull/123` 等）の場合は、`gh pr view "$PR_INPUT" --json number -q .number` で PR 番号を抽出する。`#123` 形式の場合は `#` を除去して数値のみにする。以降の手順では正規化された数値 PR 番号を `{number}` として使用する。
 
 ## 前提条件チェック（MANDATORY）
 

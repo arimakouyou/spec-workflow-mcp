@@ -246,13 +246,15 @@ fi
 
 #### 1.5 Spec 指定時の既存レポート読み取り
 
-`--spec` が指定されている場合、`final-e2e-gate.md` が存在すれば結果を読み取る:
+`--spec` が指定されている場合（`SPEC_ARG` が非空）、引数パースで得た spec 名を使ってレポートパスを構築し、`final-e2e-gate.md` が存在すれば結果を読み取る:
 
 ```bash
-GATE_REPORT=".spec-workflow/specs/{spec-name}/reviews/final-e2e-gate.md"
-if test -f "$GATE_REPORT"; then
-  # レポートの Results テーブルと Verdict を抽出
-  # テスト再実行の代わりにレポートの内容を PR ボディに転記
+if [ -n "$SPEC_ARG" ]; then
+  GATE_REPORT=".spec-workflow/specs/${SPEC_ARG}/reviews/final-e2e-gate.md"
+  if test -f "$GATE_REPORT"; then
+    # レポートの Results テーブル、Verdict、Notes を抽出
+    # テスト再実行の代わりにレポートの内容を PR ボディに転記
+  fi
 fi
 ```
 
@@ -344,10 +346,16 @@ npx playwright screenshot --browser chromium "http://localhost:${PORT:-5173}" \
 SCREENSHOT_DIR="docs/screenshots/pr-evidence/${BRANCH_SLUG}"
 mkdir -p "$SCREENSHOT_DIR"
 
-# 収集したスクリーンショットをコピー（優先度 1 or 2 の結果）
-# ※ スクリーンショットが1枚以上収集できた場合のみ実行
-if [ -n "{collected-screenshots}" ]; then
-  cp {collected-screenshots} "$SCREENSHOT_DIR/"
+# 収集したスクリーンショットのパスを配列で保持する
+# （優先度 1 or 2 の手順で取得できた実ファイルパスを格納する）
+COLLECTED_SCREENSHOTS=(
+  # 例: "test-results/screenshot-1.png"
+  # 例: "docs/screenshots/pr-evidence/.../page.png"
+)
+
+# スクリーンショットが1枚以上収集できた場合のみコピー・コミット
+if [ "${#COLLECTED_SCREENSHOTS[@]}" -gt 0 ]; then
+  cp "${COLLECTED_SCREENSHOTS[@]}" "$SCREENSHOT_DIR/"
 
   # コミットとプッシュ
   git add docs/screenshots/pr-evidence/
@@ -366,8 +374,8 @@ fi
 
 | 条件 | 概要テキスト |
 |------|-------------|
-| `--closes` 指定あり | `Issue #{number} の修正。` |
-| `--spec` 指定あり | `Spec: {spec-name} の実装。` |
+| `--closes` 指定あり | `Issue #${CLOSES_ARG} の修正。` |
+| `--spec` 指定あり | `Spec: ${SPEC_ARG} の実装。` |
 | いずれも未指定 | ブランチの変更概要を `git log --oneline origin/${BASE_BRANCH}..HEAD` から生成 |
 
 #### 4.2 変更内容セクション
@@ -450,19 +458,21 @@ UI 変更を検出しましたが、スクリーンショットの自動取得�
 
 #### 4.5 Spec ドキュメントセクション（`--spec` 指定時のみ）
 
+引数パースで得た `SPEC_ARG` を使ってリンク先を確定させる:
+
 ```markdown
 ## Spec ドキュメント
-- [Requirements](.spec-workflow/specs/{spec-name}/requirements.md)
-- [Design](.spec-workflow/specs/{spec-name}/design.md)
-- [Test Design](.spec-workflow/specs/{spec-name}/test-design.md)
-- [Tasks](.spec-workflow/specs/{spec-name}/tasks.md)
+- [Requirements](.spec-workflow/specs/${SPEC_ARG}/requirements.md)
+- [Design](.spec-workflow/specs/${SPEC_ARG}/design.md)
+- [Test Design](.spec-workflow/specs/${SPEC_ARG}/test-design.md)
+- [Tasks](.spec-workflow/specs/${SPEC_ARG}/tasks.md)
 ```
 
 #### 4.6 フッター
 
 ```markdown
-{--closes 指定時}
-Closes #{number}
+{CLOSES_ARG が非空の場合}
+Closes #${CLOSES_ARG}
 ```
 
 ### 5. PR 作成
@@ -490,9 +500,9 @@ PR 作成後、**PR の URL をユーザーに報告する**。
 - **テスト結果**: UT={UT_RESULT}, IT={IT_RESULT}, E2E={E2E_RESULT}
 - **UI スクリーンショット**: {あり（N枚）/ なし / スキップ}
 {--closes 指定時}
-- **関連 Issue**: #{number}
+- **関連 Issue**: #${CLOSES_ARG}
 {--spec 指定時}
-- **Spec**: {spec-name}
+- **Spec**: ${SPEC_ARG}
 ```
 
 ## ルール

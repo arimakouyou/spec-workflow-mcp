@@ -13,9 +13,11 @@ GitHub Issue を取得・分析し、変更規模に基づいて最適なワー�
 
 - **issue**: Issue 番号（例: `#42`, `42`）または Issue URL。`$ARGS` の最初の引数として受け取る。
 
-**呼び出し形式**: `/handle-issue <issue-number>` （例: `/handle-issue 42`）
+**呼び出し形式**: `/handle-issue <issue-number>` （例: `/handle-issue 42` または `/handle-issue #42`）
 
 引数が未指定の場合はユーザーに Issue 番号を確認する。
+
+**入力の正規化**: まず `$ARGS` の最初の引数を `ISSUE_INPUT` として取り出す。`ISSUE_INPUT` が URL 形式（`https://github.com/.../issues/42` 等）の場合は、`gh issue view "$ISSUE_INPUT" --json number -q .number` で Issue 番号を抽出する。`#42` 形式の場合は `#` を除去して数値のみにする。以降の手順では正規化された数値 Issue 番号を `{number}` として使用する。
 
 ## 前提条件チェック（MANDATORY）
 
