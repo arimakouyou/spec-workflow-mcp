@@ -35,7 +35,16 @@ Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
 cargo fmt --all -- --check
 cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
+# Dependency Analysis (run if tools are available)
+command -v cargo-audit >/dev/null 2>&1 && cargo audit
+if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
+  cargo +nightly udeps --quiet || true
+fi
 ```
+
+- `cargo audit`: **Blocking** — vulnerabilities found means the check fails. Do not commit
+- `cargo +nightly udeps`: **Advisory** — report warnings but do not block commit (`|| true`)
+- See `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section for detection details
 
 ### Leptos Full-Stack Projects
 
@@ -252,6 +261,8 @@ git commit -m "<scope>: <summary of changes>"
 - tests: pass|fail <details>
 - rustfmt: pass|fail
 - clippy: pass|fail
+- cargo_audit: pass|fail|skip
+- cargo_udeps: pass|warn|skip
 - review: pass|fail
 - review_action: commit|rework|escalate
 - review_details:

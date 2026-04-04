@@ -1,0 +1,43 @@
+# E2E / Integration test job snippet — appended by /setup-ci --with-e2e
+# Customize services and commands to match your project
+
+  e2e:
+    name: E2E / Integration Tests
+    needs: check
+    runs-on: ubuntu-latest
+    # --- Rust API project ---
+    # services:
+    #   postgres:
+    #     image: postgres:16
+    #     env:
+    #       POSTGRES_USER: test
+    #       POSTGRES_PASSWORD: test
+    #       POSTGRES_DB: test
+    #     ports:
+    #       - 5432:5432
+    #     options: >-
+    #       --health-cmd pg_isready
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Rust API project ---
+      # - uses: dtolnay/rust-toolchain@{{TOOLCHAIN}}
+      # - uses: Swatinem/rust-cache@v2
+      # - name: Run integration tests
+      #   run: cargo test --test '*' --quiet
+      #   env:
+      #     DATABASE_URL: postgres://test:test@localhost:5432/test
+
+      # --- Node.js project ---
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '{{NODE_VERSION}}'
+      #     cache: '{{PACKAGE_MANAGER}}'
+      # - run: {{INSTALL_COMMAND}}
+      # - name: Install Playwright browsers
+      #   run: npx playwright install --with-deps chromium
+      # - name: Run E2E tests
+      #   run: npx playwright test
