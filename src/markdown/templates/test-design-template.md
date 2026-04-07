@@ -224,8 +224,8 @@ Notes:
 ### docker-compose.test.yml
 [テスト専用の compose 定義]
 - ポート衝突回避: 5桁のランダムポート（10000-65535）を環境変数で渡す。固定オフセット（5432→15432 等）は他プロセスと競合しやすいため使用しない
-- ポート生成例: `shuf -i 10000-65535 -n 1` または `$((RANDOM % 55536 + 10000))`
-- docker-compose.test.yml ではポートを環境変数で参照する（例: `${TEST_DB_PORT:-15432}:5432`）
+- ポート生成例: `shuf -i 10000-65535 -n 1`、`python3 -c 'import random; print(random.randint(10000, 65535))'`、または `node -e "console.log(Math.floor(Math.random() * (65535 - 10000 + 1)) + 10000)"`
+- docker-compose.test.yml ではポートを環境変数で参照し、未設定時は fail させる（例: `${TEST_DB_PORT:?TEST_DB_PORT must be set}:5432`）
 - DB 初期化: テスト用マイグレーション + シードデータ
 - ボリューム: tmpfs で永続化しない（テストごとにクリーン）
 
