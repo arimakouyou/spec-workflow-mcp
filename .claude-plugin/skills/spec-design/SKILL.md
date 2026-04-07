@@ -168,6 +168,7 @@ Key Design Decisions セクションの各決定事項から ADR (Architecture D
 - ライブラリのバージョン選択（バージョンは Key Design Decisions で管理）
 - 業界標準で代替案のない選択
 
+
 ### 4. Architecture Confirmation (Present to User)
 
 After creating the Wave 1 document, present the following to the user **without using the formal approval tool**:
@@ -278,15 +279,15 @@ Error response format: `{ "error": { "code": "...", "message": "..." } }`
 
 #### Required Build Tools
 
-Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. Search the codebase to detect current tool versions.
+Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. `Min Version` は step 3.5 で検証した最新安定版を採用する。各ツールの `--version` コマンドはインストール済みバージョンの把握（Min Version との比較用）に使い、Min Version の根拠にはしない。Do NOT copy example versions from this skill file or the template — the examples below are format references only.
 
 ```markdown
 ## Required Build Tools
 
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
-| cargo | >= 1.82 | Rust build system | cargo --version | rustup update | Yes |
-| docker | >= 24.0 | Container runtime | docker --version | apt install docker.io | Yes |
+| cargo | >= 1.93 | Rust build system | cargo --version | rustup update | Yes |
+| docker | >= 29.0 | Container runtime | docker --version | apt install docker.io | Yes |
 ```
 
 導出ルール:
@@ -296,6 +297,7 @@ Based on the Key Design Decisions from Wave 1, list all CLI tools needed to buil
 4. Check Command は、ツールがインストール済みなら exit 0 になる単一コマンド
 5. Required 列: `Yes`（必須）または `Recommended`（推奨）のみ。E2E テストに必要なツール（Playwright, Chrome等）は設計時に Required=Yes として明記すること
 6. Min Version は step 3.5 で検証した最新安定版を反映すること。AI の学習データのデフォルト値を使用しない
+7. Container Architecture の Base Image タグ（例: `rust:X.YZ-slim`）は Required Build Tools の Min Version と一致させること。不一致は Wave 2 Self-Review で FAIL
 
 #### Excluded Test Environments
 

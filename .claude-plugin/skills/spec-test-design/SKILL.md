@@ -124,14 +124,18 @@ find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*
 
 #### 3.3.1 テストツールバージョン検証
 
-Required Test Tools テーブルの各ツールについて、Min Version が最新安定版であることを確認する:
+Required Test Tools テーブルの各ツールについて、**「インストール済みバージョンの検出」** と **「最新安定版の調査」** を分けて扱うこと。`Min Version` に採用するのは、前者ではなく**後者で確認した最新安定版**である。
 
-1. 配布元に応じて最新安定版を確認する
+1. WebSearch またはレジストリ CLI で**最新安定版**を確認する
    - crates.io / npm のパッケージの場合のみレジストリ CLI を使ってよい
      - `npm view {pkg} version`
      - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` （完全一致を確認）
    - それ以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認
-2. Min Version を検証済みの最新安定版に更新
+   - Playwright: `npm view playwright version` で最新安定版を確認する
+   - Chromium: Playwright バージョンに対応するバンドル版を使用（`npx playwright install chromium`）。Min Version は `(bundled with playwright)` と記載
+2. 必要に応じて、ローカル環境・プロジェクト依存として**現在インストール済みのバージョン**を別途検出する
+   - Playwright: `npx playwright --version` は最新安定版の調査ではなく、インストール済みバージョンの検出として扱う
+3. `Min Version` は、手順 1 で検証した最新安定版を採用して更新する。手順 2 の結果は差分確認用の参考情報であり、`Min Version` の根拠にしない
 
 Phase 2 step 3.5 と同様、AI の学習データのデフォルト値を使用しない。
 

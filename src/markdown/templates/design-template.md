@@ -84,7 +84,7 @@ graph TD
 ## Container Architecture
 
 ### Application Container
-- **Base Image:** [例: rust:1.82-slim, node:22-alpine]
+- **Base Image:** [例: rust:1.93-slim, node:24-alpine]
 - **Build Strategy:** [multi-stage build / single stage]
 - **Exposed Ports:** [例: 3000 (API), 3001 (frontend)]
 
@@ -110,9 +110,9 @@ graph TD
 
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
-| [例: cargo] | [例: >= 1.82] | [例: Rust build system] | [例: cargo --version] | [例: rustup update] | Yes |
-| [例: docker] | [例: >= 24.0] | [例: Container runtime] | [例: docker --version] | [例: apt install docker.io] | Yes |
-| [例: docker compose] | [例: >= 2.20] | [例: Compose-based local/dev orchestration] | [例: docker compose version] | [例: apt install docker-compose-plugin] | Yes |
+| [例: cargo] | [例: >= 1.93] | [例: Rust build system] | [例: cargo --version] | [例: rustup update] | Yes |
+| [例: docker] | [例: >= 29.0] | [例: Container runtime] | [例: docker --version] | [例: apt install docker.io] | Yes |
+| [例: docker compose] | [例: >= 5.1] | [例: Compose-based local/dev orchestration] | [例: docker compose version] | [例: apt install docker-compose-plugin] | Yes |
 | [例: sccache] | [例: any] | [例: Build cache] | [例: sccache --version] | [例: cargo install sccache] | Recommended |
 
 Notes:
@@ -120,6 +120,7 @@ Notes:
 - **Recommended**: 未インストールでも警告のみで続行可能
 - プロジェクトで docker-compose / docker compose を使用する場合は、**必ず本テーブルに Required=Yes として記載**すること（quality-checks / スモークテストでの環境要件と整合させるため）
 - **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch、各レジストリの対象パッケージページ（例: crates.io の該当 crate ページ）、または対象名の完全一致が確認できるレジストリ CLI（例: `npm view {pkg} version`）で最新安定版を確認し反映すること（Phase 2 step 3.5 参照）
+- **Container Image Consistency**: Base Image のタグ（例: `rust:X.YZ-slim`）は Required Build Tools の Min Version と一致させること
 
 ## Excluded Test Environments
 

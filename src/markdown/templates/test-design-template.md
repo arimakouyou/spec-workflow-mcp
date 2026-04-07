@@ -30,9 +30,9 @@
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
 | [例: cargo] | [(bundled)] | [例: Unit test runner (cargo test)] | [例: cargo --version] | [例: (bundled with rustup)] | Yes |
-| [例: docker] | [例: >= 24.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
-| [例: playwright] | [例: >= 1.42.0] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
-| [例: chromium] | [例: any] | [例: E2E ブラウザエンジン] | [例: node -e "console.log(require('playwright').chromium.executablePath())"] | [例: npx playwright install chromium] | Yes |
+| [例: docker] | [例: >= 29.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
+| [例: playwright] | [例: >= 1.58.0] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
+| [例: chromium] | [例: (bundled with playwright)] | [例: E2E ブラウザエンジン（Playwright バージョンに対応するビルドを使用）] | [例: node -e "const { chromium } = require('playwright'); const fs = require('fs'); const p = chromium.executablePath(); if (!p || !fs.existsSync(p)) process.exit(1); console.log(p);"] | [例: npx playwright install chromium] | Yes |
 
 Notes:
 - **Yes**: テスト実行前に必須。未インストール = FAIL。実装を停止しユーザーに報告
@@ -42,6 +42,7 @@ Notes:
 - 実行不可能なテストがある場合は、design.md の「Excluded Test Environments」セクションで設計時に明示すること
 - design.md の Required Build Tools と重複するツールは、テスト用に異なるバージョン要件がある場合のみ記載
 - **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch またはレジストリ CLI で最新安定版を確認し反映すること
+- **Browser Version**: Chromium/Chrome のバージョンは Playwright のバージョンと連動する。`npx playwright install chromium` で Playwright バージョンに対応する最新ブラウザを取得すること
 
 ---
 
@@ -222,18 +223,25 @@ Notes:
 
 ### docker-compose.test.yml
 [テスト専用の compose 定義]
-- ポート衝突回避: 本番用ポートからオフセット（例: 5432 → 15432）
+- ポート衝突回避: 5桁のランダムポート（10000-65535）を環境変数で渡す。固定オフセット（5432→15432 等）は他プロセスと競合しやすいため使用しない
+- ポート生成例: `shuf -i 10000-65535 -n 1`、`python3 -c 'import random; print(random.randint(10000, 65535))'`、または `node -e "console.log(Math.floor(Math.random() * (65535 - 10000 + 1)) + 10000)"`
+- docker-compose.test.yml ではポートを環境変数で参照し、未設定時は fail させる（例: `${TEST_DB_PORT:?TEST_DB_PORT must be set}:5432`）
 - DB 初期化: テスト用マイグレーション + シードデータ
 - ボリューム: tmpfs で永続化しない（テストごとにクリーン）
 
 ### Test Server Setup
 [テスト時のアプリケーションサーバ起動方法]
-- `docker-compose -f docker-compose.test.yml up -d`
+- ランダムポートを生成してから compose を起動:
+  ```bash
+  export TEST_DB_PORT=$(python3 -c 'import random; print(random.randint(10000, 65535))')
+  export TEST_APP_PORT=$(python3 -c 'import random; print(random.randint(10000, 65535))')
+  docker-compose -f docker-compose.test.yml up -d
+  ```
 - ヘルスチェック待機後にテスト開始
 
 ### Browser Test Configuration (フロントエンドがある場合)
 [Playwright / Cypress の設定]
-- **baseURL:** [例: http://localhost:13000]
+- **baseURL:** [例: http://localhost:${TEST_APP_PORT}]（環境変数で動的に解決）
 - **viewport:** [例: 1280x720]
 - **timeout:** [例: 30000ms]
 - **screenshot:** on failure
