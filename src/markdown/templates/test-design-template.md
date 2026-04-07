@@ -32,7 +32,7 @@
 | [例: cargo] | [(bundled)] | [例: Unit test runner (cargo test)] | [例: cargo --version] | [例: (bundled with rustup)] | Yes |
 | [例: docker] | [例: >= 29.0] | [例: testcontainers 用コンテナランタイム] | [例: docker --version] | [例: apt install docker.io] | Yes |
 | [例: playwright] | [例: >= 1.58.0] | [例: Browser E2E テストランナー] | [例: npx playwright --version] | [例: npx playwright install] | Yes |
-| [例: chromium] | [例: (bundled with playwright)] | [例: E2E ブラウザエンジン（Playwright バージョンに対応するビルドを使用）] | [例: npx playwright --version] | [例: npx playwright install chromium] | Yes |
+| [例: chromium] | [例: (bundled with playwright)] | [例: E2E ブラウザエンジン（Playwright バージョンに対応するビルドを使用）] | [例: node -e "const { chromium } = require('playwright'); const fs = require('fs'); const p = chromium.executablePath(); if (!p || !fs.existsSync(p)) process.exit(1); console.log(p);"] | [例: npx playwright install chromium] | Yes |
 
 Notes:
 - **Yes**: テスト実行前に必須。未インストール = FAIL。実装を停止しユーザーに報告

@@ -279,7 +279,7 @@ Error response format: `{ "error": { "code": "...", "message": "..." } }`
 
 #### Required Build Tools
 
-Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. Run each tool's `--version` command to detect the actually-installed version. Do NOT copy example versions from this skill file or the template — the examples below are format references only.
+Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. `Min Version` は step 3.5 で検証した最新安定版を採用する。各ツールの `--version` コマンドはインストール済みバージョンの把握（Min Version との比較用）に使い、Min Version の根拠にはしない。Do NOT copy example versions from this skill file or the template — the examples below are format references only.
 
 ```markdown
 ## Required Build Tools
