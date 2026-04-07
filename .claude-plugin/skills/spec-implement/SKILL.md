@@ -14,7 +14,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 | Prohibited | Reason |
 |-----------|--------|
 | **Do not write code yourself** | Implementation must always be delegated to `parallel-worker` |
-| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is `unit-test-engineer`'s responsibility |
+| **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is the test engineer's (`frontend-test-engineer` or `unit-test-engineer`) responsibility |
 | **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
 | **Do not skip agent calls** | Each step's agent call cannot be skipped |
 
@@ -267,6 +267,52 @@ cargo test --quiet
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
+#### 3.5.1.6 CVE Audit (依存脆弱性監査)
+
+Expert Team Review の前に、依存ライブラリの脆弱性を機械的に検査する。
+
+**Step A: 監査ツール実行**
+
+| プロジェクトタイプ | 検出条件 | 監査コマンド |
+|----------------|----------|------------|
+| Rust | `Cargo.lock` 存在 | `cargo audit` |
+| Node.js (npm) | `package-lock.json` 存在 | `npm audit` |
+| Node.js (Yarn) | `yarn.lock` 存在 | `yarn audit`（Yarn v1）または `yarn npm audit`（Yarn v2+） |
+| 両方 | Rust + Node.js のロックファイル存在 | 該当する監査コマンドをそれぞれ実行 |
+
+ロックファイルが存在しない場合は SKIP（新規プロジェクトで依存未解決）。
+
+`cargo audit` 未インストールの場合:
+```bash
+cargo audit --version 2>&1 || echo "NOT_INSTALLED"
+```
+未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、Expert Team Review のセキュリティ担当に委ねる。
+
+**Step B: 結果分類**
+
+| 重大度 | アクション |
+|-------|----------|
+| Critical / High | CVE_FOUND リストに追加 |
+| Medium/Moderate / Low | 警告ログに記録 |
+
+※ `cargo audit` の `medium` および `npm audit` の `moderate` は同一の重大度として扱う。
+
+**Step C: 結果の引き渡し**
+
+CVE 監査結果を Expert Team Review の入力に追加する:
+
+```
+CVE Audit Results:
+- cargo audit: {PASS / N件の脆弱性検出 / SKIP}
+- npm audit: {PASS / N件の脆弱性検出 / SKIP / N/A}
+- Critical/High CVEs: {CVE_FOUND リスト or なし}
+  - 各エントリ形式: CVE-ID | パッケージ名 | 現バージョン | 修正済みバージョン | 推奨対応
+```
+
+Expert Team Review のセキュリティ担当がこの結果を踏まえてレビューし、Verdict（PASS / NEEDS_REWORK / BLOCK）を判定する。CVE の深刻度と対応方針の最終判断はセキュリティ担当に委ねる。
+
+CVE 監査結果は統合検証結果と共に 3.5.2 の Expert Team Review に入力として渡すこと。
+
 #### 3.5.2 Expert Team Review (multi-perspective review)
 
 Phase 完了時は、コミット前に専門家チームによる多角的コードレビューを実施する。詳細は `/phase-review-team` スキルを参照。
@@ -432,6 +478,8 @@ Agent({
 
     **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
 
+    Base branch: {BASE_BRANCH}
+
     Steps:
     1. RED: Write failing tests (see /spec-impl-test-write skill)
     2. Confirm all tests fail by running them
@@ -439,19 +487,22 @@ Agent({
     4. Confirm all tests pass by running them (retry up to 3 times on failure)
     5. REFACTOR: Clean up the code (see /spec-impl-review skill)
     6. Confirm all tests still pass after refactoring
-    7. Run quality checks (rustfmt + clippy + cargo test)
+    7. Run the quality checks defined in quality-checks.md (rustfmt, clippy, cargo test, and dependency analysis tools if available)
+    8. Run mutation testing on the diff (if cargo-mutants is installed)
 
     Include the following in the completion report:
     - tests: pass|fail
     - rustfmt: pass|fail
     - clippy: pass|fail
+    - mutation_testing: pass|warn|skip
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
-    - changed_files: list of all changed files`
+    - changed_files: list of all changed files
+`
 })
 ```
 
-Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**.
+Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**.
 
 Branch based on parallel-worker's `status`:
 
@@ -473,17 +524,31 @@ Branch based on parallel-worker's `status`:
 
 ### 5. Unit Test Quality Verification [AGENT CALL REQUIRED]
 
-> ⛔ **Do not add tests yourself. Always call the `unit-test-engineer` agent.**
+> ⛔ **Do not add tests yourself. Always call the appropriate test engineer agent.**
 
-> **Language note**: `unit-test-engineer` is specialized for Rust. For non-Rust projects (Node.js, Python, etc.), skip this step or use a `general-purpose` subagent with the same test quality criteria (Happy Path / Boundary Values / Error Handling / Edge Cases coverage).
+> **Agent selection**:
+> - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`src/pages/`、`src/components/`）が対象なら `frontend-test-engineer`
+> - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
+> - 非 Rust プロジェクトはこのステップをスキップするか、同じ4カテゴリ基準を満たす汎用サブエージェントを使う
 
 Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
-Pass the implementation files to the `unit-test-engineer` agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
+Pass the implementation files to the selected test engineer agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
+
+Leptos frontend task detection hints:
+- `_Prompt` に `#[component]`、`view!`、signal、memo、`#[server]` が含まれる
+- 対象ファイルが `src/pages/`、`src/components/`、`src/server_fns/` 配下にある
+- `Cargo.toml` に `[package.metadata.leptos]` があり、実装が UI ロジックを含む
+
+Select the test engineer agent based on the detection hints above, then call:
 
 ```javascript
+// Leptos frontend task の場合:
+//   subagent_type: "spec-workflow-mcp:frontend-test-engineer"
+// それ以外の Rust task の場合:
+//   subagent_type: "spec-workflow-mcp:unit-test-engineer"
 Agent({
-  subagent_type: "spec-workflow-mcp:unit-test-engineer",
+  subagent_type: "spec-workflow-mcp:frontend-test-engineer",  // or "spec-workflow-mcp:unit-test-engineer"
   description: "UT: Verify test quality",
   prompt: `Verify the unit test quality for the following implementation files.
 
@@ -498,16 +563,19 @@ Agent({
     and add any missing test cases.
     Be careful not to duplicate existing tests.
     If Test focus areas are specified, prioritize those verification points.
+    If this is a Leptos frontend task, do not test \`view!\` output directly. Extract logic if needed and test the extracted logic instead.
 
     The completion report must include:
     - ut_action: added (tests were added) | verified_sufficient (no additions needed, already sufficient)
     - added_tests: list of added test function names (if added)
     - added_to_files: list of modified test files (if added)
-    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)`
+    - modified_implementation_files: list of implementation files modified during logic extraction (empty if none)
+    - coverage_summary: happy path: N cases, boundary values: N cases (+M added), exception handling: N cases (+M added), edge cases: N cases (+M added)
+    - excluded_as_e2e: list of concerns intentionally excluded as E2E territory (empty if none)`
 })
 ```
 
-Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **coverage_summary**.
+Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **modified_implementation_files**, **coverage_summary**, **excluded_as_e2e**.
 
 - `ut_action: added` → run the tests, confirm all pass, and pass the additional info to step 5.5
 - `ut_action: verified_sufficient` → proceed directly to step 5.5
@@ -526,7 +594,7 @@ Agent({
   prompt: `Simplify and refine the following implementation files while preserving functionality.
 
     Worktree path: {WORKTREE_PATH}
-    Implementation files: {implementation_file_paths from step 4}
+    Implementation files: {implementation_file_paths from step 4 + modified_implementation_files from step 5}
     Test files: {test_file_paths from step 4 + added_to_files from step 5}
 
     **Important**: Always run cd {WORKTREE_PATH} before starting work.
@@ -556,7 +624,7 @@ Agent({
   subagent_type: "spec-workflow-mcp:review-worker",
   description: "Review and commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
-    This code has passed through parallel-worker (TDD), unit-test-engineer, and code-simplifier.
+    This code has passed through parallel-worker (TDD), test engineer (frontend-test-engineer or unit-test-engineer), and code-simplifier.
     However, you MUST NOT assume it is correct because previous steps reported success.
     Previous results are provided as reference ONLY — your independent, critical review is mandatory.
     Treat this as if you are seeing the code for the first time. Your job is to find problems, not confirm success.
@@ -568,7 +636,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
-    Changed files: {changed_files from step 4 + added_to_files from step 5 + changed_files from step 5.5}
+    Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
     **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
@@ -577,15 +645,18 @@ Agent({
     UT quality verification results (step 5):
     - ut_action: {ut_action from step 5}
     - added_tests: {added_tests from step 5}
+    - modified_implementation_files: {modified_implementation_files from step 5}
     - coverage_summary: {coverage_summary from step 5}
+    - excluded_as_e2e: {excluded_as_e2e from step 5}
 
     Simplification results (step 5.5):
     - simplify_result: {simplify_result from step 5.5} (one of: simplified / no_change / reverted)
     - changed_files: {changed_files from step 5.5 (only if simplified)}
 
     Notes:
-    - Tests listed in added_tests have already been quality-verified by unit-test-engineer.
+    - Tests listed in added_tests have already been quality-verified by the appropriate test engineer (frontend-test-engineer or unit-test-engineer).
       In category E (final test verification), do not flag these tests as "insufficient".
+    - excluded_as_e2e lists concerns intentionally deferred to E2E testing. Do not flag these as missing unit test coverage.
       However, style, naming, and sensitive data checks should be performed as usual.
     - Files with simplify_result: simplified have been confirmed by code-simplifier to preserve functionality and pass tests.
       In category A (style), evaluate the simplified code as the final form.
@@ -870,8 +941,8 @@ E2E テストファイルが存在しない場合（優先順位順に判定 —
 
 | 結果 | アクション |
 |------|----------|
-| **PASS** | 全ステップが PASS のみ（SKIP なし） → 実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
-| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ。各 SKIP の理由を明示したうえで実装完了をユーザーに報告。`/spec-status` スキルで最終ステータスを表示 |
+| **PASS** | 全ステップが PASS のみ（SKIP なし） → Step 10 (PR 作成) に進む |
+| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ → Step 10 (PR 作成) に進む。各 SKIP の理由を PR ボディの Notes に記載 |
 | **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
 | **FAIL (環境不備)** | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止 |
 | **FAIL (実装漏れ)** | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
@@ -911,18 +982,35 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 {FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
 ```
 
-#### Wave Failure Handling
+#### ウェーブ失敗時の処理
 
-When processing a multi-task wave, if any task results in `retry_exhausted`:
-1. **Continue executing** remaining tasks in the wave — do not abort the entire wave
-2. After all tasks in the wave complete/fail, report a summary to the user:
-   - Succeeded: [task-ids]
-   - Failed: [task-ids with reasons]
-3. Tasks in subsequent waves that depend on a failed task (via `_DependsOn:`):
-   - Add `<!-- BLOCKED: dependency {failed-task-id} failed -->` comment to the task line and ensure its checkbox state is `- [ ]` (do not change the checkbox token itself)
-   - Skip these tasks in subsequent waves
-4. Tasks in subsequent waves with **no dependency** on failed tasks:
-   - Continue execution normally in the next wave
+マルチタスクウェーブの処理中に、いずれかのタスクが `retry_exhausted` になった場合:
+1. ウェーブ内の残りのタスクは**実行を継続**する — ウェーブ全体を中止しない
+2. ウェーブ内の全タスクが完了/失敗した後、ユーザーにサマリーを報告する:
+   - 成功: [task-ids]
+   - 失敗: [task-ids と理由]
+3. 失敗したタスクに依存する後続ウェーブのタスク（`_DependsOn:` 経由）:
+   - タスク行に `<!-- BLOCKED: dependency {failed-task-id} failed -->` コメントを追加し、チェックボックスの状態を `- [ ]` にする（チェックボックストークン自体は変更しない）
+   - 後続ウェーブではこれらのタスクをスキップする
+4. 失敗したタスクに**依存しない**後続ウェーブのタスク:
+   - 次のウェーブで通常通り実行を継続する
+
+### 10. PR 作成（Final E2E Gate PASS 後）
+
+Final E2E Gate が PASS（SKIP 含む場合も）となった場合、PR 作成フェーズに進む。
+FAIL の場合は PR 作成をスキップし、修正フローに進む（9.3 の結果判定に従う）。
+
+**重要:** オーケストレータ自身は `/create-pr` を直接実行してはならない（⛔ `git commit` 禁止ルール）。PR 作成は **review-worker に委譲**する。`/create-pr` 実行中の `git commit` / `git push`（スクリーンショット追加等）も review-worker の責務とする。
+
+review-worker へ以下の引数・情報を渡す:
+- `--spec {spec-name}`
+- `--skip-tests`（Final E2E Gate で全テスト実行済みのため）
+- `--title "{spec-name に基づく機能の要約}"`
+- Final E2E Gate レポート (`final-e2e-gate.md`) の Notes セクションの内容を `/create-pr` に引き継ぎ、PR ボディの Notes セクションに転記する
+
+> review-worker は上記の引数で `/create-pr` スキルを実行する。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。必要なコミット/プッシュも review-worker が担当する。
+
+PR 作成完了後、`/spec-status` スキルで最終ステータスを表示する。
 
 ## Monitoring Progress
 

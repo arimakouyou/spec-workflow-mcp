@@ -117,6 +117,69 @@ design.md の Container Architecture セクションを読み、コンテナセ�
 
 **注意:** Git 初期化タスク (0.0) がある場合、コンテナタスクは 0.1, 0.2 とし、他のセットアップタスクは 0.3 から始める。
 
+### 2.7 Detect CI Workflow Requirements
+
+`.github/workflows/` 配下に PR トリガーの CI ワークフローが存在するか確認し、CI セットアップタスクの要否を判断する。
+
+**検出ロジック:**
+
+```bash
+# PR トリガーの CI ワークフローが存在するか
+# pull_request: (マッピング形式)、- pull_request (リスト形式)、[..., pull_request, ...] (インライン配列) を検出
+if test -d .github/workflows; then
+  grep -rEl '(^\s*pull_request:|^\s*-\s*pull_request|\[\s*.*pull_request)' .github/workflows --include='*.yml' --include='*.yaml'
+  echo $?
+else
+  echo "1"
+fi
+```
+
+| 結果 | 判定 | アクション |
+|------|------|-----------|
+| ファイルが見つかった（exit 0） | PR トリガーの CI ワークフローが既に存在 | CI タスクを追加しない |
+| ファイルが見つからない（exit 1）| PR トリガーの CI ワークフローが未作成 | Phase 0 に CI セットアップタスクを追加 |
+| `.github/workflows/` が存在しない | CI 未構成 | Phase 0 に CI セットアップタスクを追加 |
+
+**PR トリガーの CI ワークフローが存在しない場合**、Phase 0 に以下のタスクを追加する（Git 初期化 → コンテナ → CI の順）:
+
+```markdown
+- [ ] 0.N Create CI workflow
+  - File: .github/workflows/ci.yml
+  - _TDDSkip: true_
+  - _Requirements: REQ-0_
+  - _Prompt: Role: DevOps Engineer | Task: /setup-ci スキルを使用して、プロジェクトタイプに応じた PR トリガーの GitHub Actions CI ワークフローを生成する。.claude-plugin/rules/quality-checks.md に定義された品質チェックコマンドと同一のステップを含めること。design.md に Container Architecture がある場合は --with-services オプションを使用する | Restrictions: シークレットをワークフローにハードコードしない。既存の CI ワークフロー（npm-publish.yml 等）を変更しない | Success: PR 作成時に CI が自動実行され、.claude-plugin/rules/quality-checks.md に定義された品質チェックが通る_
+```
+
+**注意:** タスク番号 `0.N` は Phase 0 内の順序に応じて割り振る（Git 初期化 0.0 → コンテナ 0.1, 0.2 → CI 0.3 の順。コンテナタスクがない場合は繰り上げる）。
+
+### 2.8 Detect ADR Directory
+
+`.claude/_docs/adr/` ディレクトリが存在するか確認し、ADR プロセスの初期化タスクの要否を判断する。
+
+**検出ロジック:**
+
+```bash
+test -d .claude/_docs/adr && test -f .claude/_docs/adr/INDEX.md
+echo $?
+```
+
+| 結果 | 判定 | アクション |
+|------|------|-----------|
+| exit 0 | ADR ディレクトリと INDEX.md が存在 | タスクを追加しない |
+| exit 1 | ADR が未初期化 | Phase 0 に ADR 初期化タスクを追加 |
+
+**ADR が未初期化の場合**、Phase 0 に以下のタスクを追加する（CI タスクの後）:
+
+```markdown
+- [ ] 0.N Initialize ADR directory
+  - File: .claude/_docs/adr/INDEX.md
+  - _TDDSkip: true_
+  - _Requirements: REQ-0_
+  - _Prompt: Role: DevOps Engineer | Task: .claude/_docs/adr/ ディレクトリと INDEX.md を作成する。INDEX.md には ADR テーブルのヘッダー（ADR, Title, Status, Date）のみ記載する。design.md の Key Design Decisions から /adr スキルを使用して初期 ADR を生成する | Restrictions: 既存の .claude/ 配下のファイルを変更しない | Success: .claude/_docs/adr/INDEX.md が存在し、design.md の主要決定に対応する ADR ファイルが作成されている_
+```
+
+**注意:** タスク番号は Phase 0 内の最後のセットアップタスクとする（Git 初期化 → コンテナ → CI → ADR の順）。
+
 ### 3. Create Tasks
 
 Convert the design into atomic tasks. Each task should touch 1-3 files and be independently implementable. Include:

@@ -57,8 +57,13 @@ Security standards to apply during code reviews and implementation. Based on OWA
 
 ## A9: Dependency Vulnerabilities
 
-- Regularly check for known vulnerabilities using `cargo audit`
-- Remove unused dependencies
+- **Vulnerability scanning**: Run `cargo audit` to check dependencies against the RustSec Advisory Database. This is integrated as a **blocking** quality check — see `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section
+- **Unused dependency detection**: Run `cargo +nightly udeps` to identify unnecessary dependencies declared in `Cargo.toml`. Fewer dependencies reduce the attack surface
+- When `cargo audit` reports a vulnerability:
+  1. Check if a patched version exists and update `Cargo.toml`
+  2. If no patch exists, evaluate the severity and whether the vulnerable code path is reachable
+  3. Document accepted risks in comments if a vulnerable dependency cannot be removed
+- Review `Cargo.lock` changes during code review to catch unexpected dependency additions
 
 ## A10: Logging and Monitoring
 

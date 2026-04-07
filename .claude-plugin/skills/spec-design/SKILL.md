@@ -122,13 +122,14 @@ Key Design Decisions セクションから技術名＋バージョンのペア�
    - resolve-library-id でライブラリを特定
    - query-docs で最新バージョンやチェンジログを確認
 
-3. **レジストリ CLI フォールバック**（Web ツール利用不可時）:
+3. **レジストリ CLI フォールバック**（Web ツール利用不可時、crates.io / npm パッケージのみ）:
    ```bash
-   # Rust
-   cargo search {crate_name} --limit 1
    # Node.js
    npm view {package_name} version
+   # Rust（crate 名の完全一致を確認すること）
+   cargo search {crate_name} --limit 1 | grep "^{crate_name} ="
    ```
+   crates.io / npm 以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認する。
 
 #### 3.5.3 バージョン更新
 
@@ -141,6 +142,32 @@ Key Design Decisions セクションから技術名＋バージョンのペア�
 - Key Design Decisions のバージョンを最新安定版に更新
 - **例外**: steering ドキュメント（tech.md 等）が互換性のため特定バージョンを指定している場合は維持し理由を注記
 - **メジャーバージョン変更**: 設計版と最新版のメジャーバージョンが異なる場合、Architecture Confirmation (step 4) でユーザーに報告
+
+### 3.6 Generate ADRs from Key Design Decisions
+
+Key Design Decisions セクションの各決定事項から ADR (Architecture Decision Record) を自動生成する。
+
+1. `.claude/_docs/adr/` ディレクトリが存在するか確認。なければ作成する
+2. Key Design Decisions の各項目について:
+   - 「代替案と比較して選択した」技術・パターン・アプローチを ADR 候補として抽出
+   - 既存の ADR と重複しないか INDEX.md を確認
+3. 各候補について `/adr` スキルの手順に従い ADR ファイルを作成:
+   - `status: Accepted`（設計承認プロセスが意思決定承認を兼ねるため）
+   - **Context**: design.md の該当 Key Design Decision のコンテキスト
+   - **Decision**: 選択した技術・パターン
+   - **Alternatives Considered**: 検討した代替案と棄却理由（Key Design Decisions に記載されていれば転記）
+   - **Consequences**: 設計への影響
+4. INDEX.md を更新
+
+**ADR 生成の判断基準** — 以下に該当する決定のみ ADR を作成:
+- フレームワーク・言語・データベースの選択（例: Axum, PostgreSQL, Leptos）
+- アーキテクチャパターンの選択（例: レイヤードアーキテクチャ、イベント駆動）
+- 重大なトレードオフを伴う決定（例: パフォーマンス vs 保守性）
+
+**ADR 不要な決定** — 以下は ADR を作成しない:
+- ライブラリのバージョン選択（バージョンは Key Design Decisions で管理）
+- 業界標準で代替案のない選択
+
 
 ### 4. Architecture Confirmation (Present to User)
 
@@ -269,7 +296,7 @@ Based on the Key Design Decisions from Wave 1, list all CLI tools needed to buil
 3. Testing Strategy 概要 → ビルドや基本テストに必要なツール（E2E ブラウザテスト用の playwright/chromium 等は test-design.md の Required Test Tools に記載）
 4. Check Command は、ツールがインストール済みなら exit 0 になる単一コマンド
 5. Required 列: `Yes`（必須）または `Recommended`（推奨）のみ。E2E テストに必要なツール（Playwright, Chrome等）は設計時に Required=Yes として明記すること
-6. Min Version はテンプレートや本スキルの例をそのまま使用しない。`cargo --version`, `docker --version` 等を実行して実バージョンを検出し、その値を記載すること
+6. Min Version は step 3.5 で検証した最新安定版を反映すること。AI の学習データのデフォルト値を使用しない
 7. Container Architecture の Base Image タグ（例: `rust:X.YZ-slim`）は Required Build Tools の Min Version と一致させること。不一致は Wave 2 Self-Review で FAIL
 
 #### Excluded Test Environments

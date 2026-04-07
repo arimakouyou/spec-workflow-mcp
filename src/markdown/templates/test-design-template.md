@@ -41,8 +41,8 @@ Notes:
 - E2E テストに必要なツール（Playwright, Chrome等）は **必ず Required=Yes** とする。環境依存によるテストスキップは許可しない
 - 実行不可能なテストがある場合は、design.md の「Excluded Test Environments」セクションで設計時に明示すること
 - design.md の Required Build Tools と重複するツールは、テスト用に異なるバージョン要件がある場合のみ記載
-- **Version Detection (MANDATORY)**: Min Version はテンプレートの例をそのまま使用しない。実行環境で各ツールの Check Command を実行し、検出した値を記載すること
-- **Browser Version**: Chromium/Chrome のバージョンは Playwright のバージョンと連動する。`npx playwright install chromium` で Playwright バージョンに対応する最新ブラウザを取得すること。古い Playwright を使うと古いブラウザエンジンが使用される
+- **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch またはレジストリ CLI で最新安定版を確認し反映すること
+- **Browser Version**: Chromium/Chrome のバージョンは Playwright のバージョンと連動する。`npx playwright install chromium` で Playwright バージョンに対応する最新ブラウザを取得すること
 
 ---
 

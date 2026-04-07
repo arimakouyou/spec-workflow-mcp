@@ -119,8 +119,8 @@ Notes:
 - **Yes**: 実装開始前に必須。未インストール = FAIL。実装を停止しユーザーに報告
 - **Recommended**: 未インストールでも警告のみで続行可能
 - プロジェクトで docker-compose / docker compose を使用する場合は、**必ず本テーブルに Required=Yes として記載**すること（quality-checks / スモークテストでの環境要件と整合させるため）
-- **Version Detection (MANDATORY)**: 上記テーブルの例はフォーマットの参考のみ。実際のバージョンは `cargo --version`, `docker --version`, `docker compose version` 等を実行して検出した値を記載すること。AI の学習データやテンプレートの例をそのまま使用しない
-- **Container Image Consistency**: Base Image のタグ（例: `rust:1.93-slim`）は Required Build Tools の Min Version と一致させること
+- **Version Verification**: Min Version は AI の学習データのデフォルト値を使用しない。WebSearch、各レジストリの対象パッケージページ（例: crates.io の該当 crate ページ）、または対象名の完全一致が確認できるレジストリ CLI（例: `npm view {pkg} version`）で最新安定版を確認し反映すること（Phase 2 step 3.5 参照）
+- **Container Image Consistency**: Base Image のタグ（例: `rust:X.YZ-slim`）は Required Build Tools の Min Version と一致させること
 
 ## Excluded Test Environments
 

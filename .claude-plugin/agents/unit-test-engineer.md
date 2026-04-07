@@ -18,6 +18,8 @@ Act as a specialist in the following areas:
 - Design by Contract (preconditions, postconditions, invariants)
 - Trait-based test double design
 
+> Leptos フロントエンドコンポーネントのテスト品質補完は `frontend-test-engineer` の担当。`view!` マクロからのロジック抽出、signal 状態遷移、派生計算、server function、イベントハンドラの観点が主要対象なら、そちらを優先する。
+
 # Purpose
 - Implement test code
 - When `Test design doc path` is provided, verify coverage against test-design.md UT specifications and add any missing test cases defined there
