@@ -152,18 +152,25 @@ fn extract_dependencies(path: &Path) -> Vec<String> {
     deps
 }
 
-/// レイヤー名からディレクトリのモジュール名群を取得するマップを構築
+/// レイヤー名からディレクトリのトップレベルモジュール名を取得するマップを構築
+/// extract_dependencies が use crate::<first_segment>::... の先頭セグメントのみを
+/// 依存先として抽出するため、ここでも先頭セグメントのみを登録する。
 fn build_layer_modules_map() -> HashMap<&'static str, Vec<&'static str>> {
     let mut map = HashMap::new();
     for layer in LAYERS {
-        // ディレクトリパスからモジュール名を推定
-        // src/handlers/ → "handlers", src/services/directory_scanner → "directory_scanner"
-        let modules: Vec<&str> = layer.dir
+        // ディレクトリパスからトップレベルモジュール名を推定
+        // src/handlers/ → "handlers", src/services/directory_scanner → "services"
+        if let Some(module) = layer.dir
             .trim_start_matches("src/")
             .trim_end_matches('/')
             .split('/')
-            .collect();
-        map.entry(layer.name).or_insert_with(Vec::new).extend(modules);
+            .next()
+            .filter(|s| !s.is_empty())
+        {
+            map.entry(layer.name)
+                .or_insert_with(Vec::new)
+                .push(module);
+        }
     }
     map
 }
