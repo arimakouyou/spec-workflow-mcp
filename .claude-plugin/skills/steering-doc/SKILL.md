@@ -167,6 +167,45 @@ After all requested steering documents are approved:
 - Inform the user: "Steering documents are complete. These will be referenced automatically during spec creation phases."
 - If the user wants to start spec development, suggest: "Ready to create a spec? Use `/spec-request-spec` to begin Phase 0."
 
+### 4. CLAUDE.md 整備ガイダンス（P1-02 対応）
+
+> **P1-02**: harness-maturity-check チェックリスト P1（コンテキストエンジニアリング）の項目 P1-02
+> 「エージェント向けの指示ファイルが整備されている」に対応するステップ。
+
+steering doc 作成完了後、プロジェクトルートの `CLAUDE.md`（または `.cursorrules`, `.github/copilot-instructions.md` 等のエージェント向け指示ファイル）の状態を確認する。
+
+**チェック項目:**
+
+1. **存在確認**: プロジェクトルートにエージェント向け指示ファイルが存在するか
+2. **簡潔さ**: 100行以下を目安とし、詳細は別ファイルへのポインタにする
+3. **ポインタ設計**: 具体的なルールやパターンは `.claude-plugin/rules/` や steering doc への参照で構成する
+
+**推奨構成例:**
+
+```markdown
+# CLAUDE.md
+
+## プロジェクト概要
+{1-2行の概要。詳細は .spec-workflow/steering/product.md を参照}
+
+## アーキテクチャ
+{1-2行の構成概要。詳細は .spec-workflow/steering/structure.md を参照}
+
+## 技術スタック
+{主要技術の列挙。詳細は .spec-workflow/steering/tech.md を参照}
+
+## コーディングルール
+- ルール一覧: `.claude-plugin/rules/INDEX.md`
+- スタイル: `.claude-plugin/rules/rust-style.md`
+- セキュリティ: `.claude-plugin/rules/security.md`
+
+## ワークフロー
+- spec-workflow によるスペック駆動開発を採用
+- 実装前に必ず設計承認を取得すること
+```
+
+CLAUDE.md が未作成の場合は上記の構成をユーザーに提案する。既存の場合は簡潔さとポインタ設計を確認し、改善を提案する。
+
 ## Rules
 
 - Create documents in sequence: product.md → tech.md → structure.md

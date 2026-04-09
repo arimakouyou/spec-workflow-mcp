@@ -482,6 +482,17 @@ UI 変更を検出しましたが、スクリーンショットの自動取得�
 - [Tasks](.spec-workflow/specs/${SPEC_ARG}/tasks.md)
 ```
 
+#### 4.5.5 CI フィードバックセクション
+
+`.github/workflows/ci.yml` が存在する場合のみ表示:
+
+```markdown
+## CI フィードバック
+CI テスト結果は PR コメントに自動投稿されます（sticky comment 方式）。詳細はコメント欄を確認してください。
+```
+
+`.github/workflows/ci.yml` が存在しない場合はこのセクションを省略する。
+
 #### 4.6 フッター
 
 ```markdown

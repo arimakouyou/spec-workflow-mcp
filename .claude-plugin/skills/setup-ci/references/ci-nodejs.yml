@@ -9,6 +9,10 @@ on:
   push:
     branches: [main, master]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -29,16 +33,93 @@ jobs:
         run: {{INSTALL_COMMAND}}
 
       - name: Type check
+        id: typecheck
         run: npx tsc --noEmit
 
       - name: Lint
+        id: lint
         run: npx eslint . --max-warnings=0
 
       - name: Format check
+        id: format-check
         run: npx prettier --check .
 
       - name: Tests
-        run: {{PACKAGE_MANAGER}} test
+        id: tests
+        run: {{PACKAGE_MANAGER}} test 2>&1 | tee /tmp/test-output.txt
 
       - name: Build
+        id: build
         run: {{PACKAGE_MANAGER}} run build
+
+      # --- SAST: セキュリティ特化 lint (P6-04) ---
+      # - name: Security lint (eslint-plugin-security)
+      #   continue-on-error: true
+      #   run: npx eslint --plugin security --rule 'security/detect-object-injection: warn' .
+
+      # --- Flaky test リトライ (P6-08/P6-09) ---
+      # - name: Tests (with retry)
+      #   id: tests-retry
+      #   uses: nick-fields/retry@v3
+      #   with:
+      #     max_attempts: 3
+      #     command: {{PACKAGE_MANAGER}} test 2>&1 | tee /tmp/test-output.txt
+
+      # --- ドキュメント Lint (QC10 / P5-03) ---
+      # - name: Markdown lint
+      #   continue-on-error: true
+      #   run: npx markdownlint-cli2 "**/*.md" "#node_modules" "#target" "#dist"
+
+      - name: Post CI results to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          TYPECHECK_RESULT: ${{ steps.typecheck.outcome }}
+          LINT_RESULT: ${{ steps.lint.outcome }}
+          FMT_RESULT: ${{ steps.format-check.outcome }}
+          TEST_RESULT: ${{ steps.tests.outcome }}
+          BUILD_RESULT: ${{ steps.build.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            const testOutput = fs.existsSync('/tmp/test-output.txt')
+              ? fs.readFileSync('/tmp/test-output.txt', 'utf8').trim().split('\n').slice(-20).join('\n')
+              : 'No test output';
+            const icon = (r) => r === 'success' ? ':white_check_mark:' : ':x:';
+            const tag = '<!-- ci-check-result -->';
+            const allPass = [process.env.TYPECHECK_RESULT, process.env.LINT_RESULT,
+                             process.env.FMT_RESULT, process.env.TEST_RESULT,
+                             process.env.BUILD_RESULT]
+                            .every(r => r === 'success');
+            const body = [
+              tag,
+              `## ${allPass ? ':white_check_mark:' : ':x:'} CI Quality Checks`,
+              '',
+              '| Check | Result |',
+              '|-------|--------|',
+              `| Type Check | ${icon(process.env.TYPECHECK_RESULT)} |`,
+              `| Lint (ESLint) | ${icon(process.env.LINT_RESULT)} |`,
+              `| Format (Prettier) | ${icon(process.env.FMT_RESULT)} |`,
+              `| Tests | ${icon(process.env.TEST_RESULT)} |`,
+              `| Build | ${icon(process.env.BUILD_RESULT)} |`,
+              '',
+              '<details><summary>Test output (last 20 lines)</summary>',
+              '', '```', testOutput, '```', '',
+              '</details>',
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(tag));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }

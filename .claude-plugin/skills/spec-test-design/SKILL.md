@@ -381,22 +381,18 @@ Same strict process — verbal approval is never accepted.
 
 1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only. Save the returned `approvalId`.
 
-2. **Automatic polling**: Start automatic status checking:
+2. **Automatic polling with auto-transition**: Start automatic status checking:
    ```
-   /loop 1m /check-approval <approvalId>
+   /loop 1m /check-approval <approvalId> next:/spec-tasks
    ```
    The loop will automatically check approval status every minute and handle the result:
    - **pending**: Continue polling (no action needed)
-   - **approved**: Cleanup is performed automatically, loop stops
+   - **approved**: Cleanup is performed automatically, loop stops, and check-approval automatically invokes `/spec-tasks`
    - **needs-revision**: Loop stops, reviewer comments are displayed
 
 3. **Handle needs-revision** (if loop stopped with revision request):
    - Update test-design using reviewer comments, spawn the review subagent again
-   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
-
-4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 4 (Tasks).
-   Tell the user: "test-design.md has been approved. Proceeding to task breakdown."
-   Load the `/spec-tasks` skill and begin immediately — do not wait for user input.
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId> next:/spec-tasks`
 
 ## Rules
 

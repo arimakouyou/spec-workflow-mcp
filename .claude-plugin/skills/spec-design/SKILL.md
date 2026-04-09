@@ -29,6 +29,18 @@ If `requirements.md` is missing — **STOP immediately.** Inform the user: "requ
 
 Requirements must be approved and cleaned up (Phase 1 complete). If not, use `/spec-requirements` first.
 
+### Steering Documents Check (推奨)
+
+以下の steering doc が存在するか確認する。存在しない場合はユーザーに `/steering-doc` の実行を推奨する（ブロックはしない）:
+
+| ファイル | 目的 | 必須度 |
+|---------|------|--------|
+| `.spec-workflow/steering/structure.md` | アーキテクチャ概要（モジュール構成・リクエストフロー） | 強く推奨 |
+| `.spec-workflow/steering/tech.md` | 技術スタック・環境変数・ビルドツール | 推奨 |
+| `.spec-workflow/steering/product.md` | プロダクト方針・ユーザーストーリー | 任意 |
+
+> **P1-01 対応**: アーキテクチャ概要（`structure.md`）が存在することで、エージェントがコードベース全体像を把握できる。未作成の場合は `/steering-doc` で生成すること。
+
 ## Inputs
 
 The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`).
@@ -227,12 +239,28 @@ Describe each component in this format:
 
 Describe all entities in type definition or schema format.
 
+> **バリデーションガイダンス**: リクエスト DTO は `#[serde(deny_unknown_fields)]` を付与し、未知フィールドを拒否すること（`api-validation.md` AV-R1 参照）。各フィールドの必須/任意（`Option<T>`）、文字列長制限、Enum 許容値を設計段階で定義しておくこと。
+
 #### API Design (if applicable)
 
 For each endpoint, describe:
 - HTTP method, path, and description
 - Request / response types (fields, types, required / optional)
 - Error responses
+
+> **OpenAPI 生成ガイダンス**: OpenAPI スキーマの自動生成（`/generate-api-docs`）のため、リクエスト/レスポンス型の各フィールドにはフィールドレベルの説明を doc comment で記述すること。設計段階で説明を定義しておくことで、実装時の doc comment と OpenAPI の `description` フィールドが一貫する。
+>
+> 記述例:
+> ```rust
+> struct UserResponse {
+>     /// ユーザーの一意識別子
+>     id: Uuid,
+>     /// 表示用ユーザー名（2-50文字）
+>     display_name: String,
+>     /// アカウント作成日時（UTC）
+>     created_at: DateTime<Utc>,
+> }
+> ```
 
 #### Code Reuse Analysis Format
 
@@ -276,6 +304,42 @@ Error response format: `{ "error": { "code": "...", "message": "..." } }`
 | Conflict | 409 | Duplicate key, optimistic lock conflict |
 | Internal | 500 | Unexpected internal error |
 ```
+
+#### Module Boundaries
+
+プロジェクトのレイヤー構造と依存方向ルールを定義する。`/generate-arch-tests` によるアーキテクチャ不変条件テストの自動生成に使用される。
+
+> **アーキテクチャテスト連携**: このセクションを記述することで、実装フェーズ後に `/generate-arch-tests` を実行してレイヤー間の依存方向違反を機械的に検出できる。
+
+> **P5-06**: Module Boundaries セクションの共有型定義テーブルを必ず埋めること。
+> モジュール間で共有される型の配置先・管理方法を明示することで、型の重複定義を防ぐ。
+
+```markdown
+## Module Boundaries
+
+### レイヤー定義
+
+| Layer | Directory | Description |
+|-------|-----------|-------------|
+| handlers | src/handlers/ | HTTP ハンドラ層（最上位） |
+| services | src/services/ | ビジネスロジック層（中間） |
+| infra | src/infra/ | インフラ層（最下層・横断的関心事） |
+
+### 依存方向ルール
+
+| From (依存元) | Allowed Dependencies (許可) | Forbidden (禁止) |
+|--------------|---------------------------|-----------------|
+| handlers | services, infra | — |
+| services | infra | handlers |
+| infra | — | handlers, services |
+```
+
+記述ルール:
+1. `Layer` 名はソースコード上のモジュール名（ディレクトリ名）と一致させる
+2. `Directory` は `src/` からの相対パスで記述する
+3. 依存方向は**上位 → 下位**のみ許可。逆方向（下位 → 上位）を `Forbidden` に明記する
+4. 横断的関心事（error, config 等）は最下層に配置し、全レイヤーからの参照を許可する
+5. レイヤー定義がない場合（小規模プロジェクト等）はセクション自体を省略してよい
 
 #### Required Build Tools
 
@@ -386,21 +450,18 @@ Formal approval — verbal approval is not accepted.
 
 1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content). Save the returned `approvalId`.
 
-2. **Automatic polling**: Start automatic status checking:
+2. **Automatic polling with auto-transition**: Start automatic status checking:
    ```
-   /loop 1m /check-approval <approvalId>
+   /loop 1m /check-approval <approvalId> next:/spec-test-design
    ```
    The loop will automatically check approval status every minute and handle the result:
    - **pending**: Continue polling (no action needed)
-   - **approved**: Cleanup is performed automatically, loop stops
+   - **approved**: Cleanup is performed automatically, loop stops, and check-approval automatically invokes `/spec-test-design`
    - **needs-revision**: Loop stops, reviewer comments are displayed
 
 3. **Handle needs-revision** (if loop stopped with revision request):
    - Read the review comments, update the document, re-run the subagent review
-   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
-
-4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 3 (Test Design).
-   Load the `/spec-test-design` skill and begin immediately — do not wait for user input.
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId> next:/spec-test-design`
 
 ## Rules
 

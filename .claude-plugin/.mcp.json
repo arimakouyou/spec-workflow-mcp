@@ -3,6 +3,10 @@
     "spec-workflow": {
       "command": "npx",
       "args": ["-y", "@arimakouyou/spec-workflow-mcp@latest", "."]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
     }
   }
 }

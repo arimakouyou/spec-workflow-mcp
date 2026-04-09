@@ -1,0 +1,139 @@
+# Weekly scheduled quality check job — appended by /setup-ci --with-scheduled
+# Runs quality checks on a schedule and creates GitHub Issues on violations
+
+  scheduled-quality:
+    name: Weekly Quality Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --- Rust project ---
+      # - uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     toolchain: {{TOOLCHAIN}}
+      #     components: rustfmt, clippy
+      # - uses: Swatinem/rust-cache@v2
+
+      # --- Node.js project ---
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '{{NODE_VERSION}}'
+      #     cache: '{{PACKAGE_MANAGER}}'
+      # - run: {{INSTALL_COMMAND}}
+
+      # --- Quality checks ---
+      # - name: Lint check
+      #   id: lint
+      #   continue-on-error: true
+      #   run: cargo clippy --quiet --all-targets -- -D warnings 2>&1 | tee /tmp/lint-output.txt
+
+      # - name: Security audit
+      #   id: audit
+      #   continue-on-error: true
+      #   run: |
+      #     cargo install cargo-audit --locked
+      #     cargo audit 2>&1 | tee /tmp/audit-output.txt
+
+      # - name: Unused dependencies
+      #   id: unused-deps
+      #   continue-on-error: true
+      #   run: |
+      #     rustup toolchain install nightly --profile minimal
+      #     cargo install cargo-udeps --locked
+      #     cargo +nightly udeps --quiet 2>&1 | tee /tmp/udeps-output.txt
+
+      # - name: Code duplication check
+      #   id: duplication
+      #   continue-on-error: true
+      #   run: |
+      #     npx jscpd --min-lines 10 --min-tokens 50 --reporters consoleFull \
+      #       --ignore '**/target/**,**/node_modules/**,**/dist/**' \
+      #       . 2>&1 | tee /tmp/duplication-output.txt
+
+      # --- Document freshness check ---
+      - name: Document freshness check
+        id: doc-freshness
+        continue-on-error: true
+        run: |
+          STALE_THRESHOLD_DAYS=90
+          STALE_FILES=""
+          NOW=$(date +%s)
+
+          # Check rule files, ADRs, steering docs
+          for pattern in ".claude-plugin/rules/*.md" ".claude/_docs/adr/*.md" ".spec-workflow/steering/*.md"; do
+            for file in $pattern; do
+              [ -f "$file" ] || continue
+              LAST_MOD=$(git log -1 --format="%at" -- "$file" 2>/dev/null || echo "0")
+              if [ "$LAST_MOD" != "0" ]; then
+                AGE_DAYS=$(( (NOW - LAST_MOD) / 86400 ))
+                if [ "$AGE_DAYS" -gt "$STALE_THRESHOLD_DAYS" ]; then
+                  LAST_DATE=$(git log -1 --format="%ci" -- "$file" | cut -d' ' -f1)
+                  STALE_FILES="$STALE_FILES\n| $file | $LAST_DATE | ${AGE_DAYS}d |"
+                fi
+              fi
+            done
+          done
+
+          if [ -n "$STALE_FILES" ]; then
+            echo "STALE_FOUND=true" >> "$GITHUB_ENV"
+            printf "| File | Last Modified | Age |\n|------|--------------|-----|\n%b\n" "$STALE_FILES" > /tmp/stale-docs.txt
+          else
+            echo "STALE_FOUND=false" >> "$GITHUB_ENV"
+            echo "No stale documents found." > /tmp/stale-docs.txt
+          fi
+
+      # --- Create issue on violations ---
+      - name: Create quality issue
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          # LINT_RESULT: ${{ steps.lint.outcome }}
+          # AUDIT_RESULT: ${{ steps.audit.outcome }}
+          DOC_FRESHNESS_RESULT: ${{ steps.doc-freshness.outcome }}
+          STALE_FOUND: ${{ env.STALE_FOUND }}
+        with:
+          script: |
+            const fs = require('fs');
+            const sections = [];
+
+            // Document freshness
+            const staleOutput = fs.existsSync('/tmp/stale-docs.txt')
+              ? fs.readFileSync('/tmp/stale-docs.txt', 'utf8').trim()
+              : '';
+            if (process.env.STALE_FOUND === 'true') {
+              sections.push(`### :warning: Stale Documents (>${process.env.STALE_THRESHOLD_DAYS || 90} days)\n\n${staleOutput}`);
+            }
+
+            // Uncomment and add other check results as needed:
+            // const lintOutput = fs.existsSync('/tmp/lint-output.txt')
+            //   ? fs.readFileSync('/tmp/lint-output.txt', 'utf8').trim().split('\n').slice(-30).join('\n')
+            //   : '';
+            // if (process.env.LINT_RESULT !== 'success') {
+            //   sections.push(`### :x: Lint Violations\n\n\`\`\`\n${lintOutput}\n\`\`\``);
+            // }
+
+            if (sections.length === 0) {
+              console.log('No quality issues found. Skipping issue creation.');
+              return;
+            }
+
+            const date = new Date().toISOString().split('T')[0];
+            const body = [
+              `## Weekly Quality Scan — ${date}`,
+              '',
+              ...sections,
+              '',
+              '---',
+              'Auto-generated by weekly quality scan workflow.',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Quality] Weekly scan — ${date}`,
+              body,
+              labels: ['quality', 'automated'],
+            });

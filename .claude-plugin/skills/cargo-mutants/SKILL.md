@@ -174,11 +174,42 @@ Report results in the following format:
 {For each survived mutant, suggest what test to add}
 ```
 
+## Mutation Score Threshold（P3-08/P3-11 対応）
+
+ミューテーションスコアの最低閾値を定義する。閾値未達は品質不足を示す。
+
+### 閾値設定
+
+| レベル | 閾値 | 適用場面 | 動作 |
+|--------|------|---------|------|
+| Advisory | 60% | TDD 実装時（parallel-worker） | 警告のみ、ブロックしない |
+| Blocking | 70% | CI 週次チェック（`--with-scheduled`） | Issue 作成 |
+| Strict | 80% | Phase Review 時 | Expert Team Review の品質担当が判定 |
+
+### CI 統合（P3-11）
+
+`/setup-ci --with-scheduled` で生成される週次 CI に以下のステップを追加可能:
+
+```yaml
+# --- Mutation testing (weekly) ---
+# - name: Mutation testing
+#   id: mutation
+#   continue-on-error: true
+#   run: |
+#     cargo install cargo-mutants --locked
+#     cargo mutants --no-shuffle -vV --timeout 300 2>&1 | tee /tmp/mutation-output.txt
+#     # Extract mutation score
+#     SCORE=$(grep "mutation score" /tmp/mutation-output.txt | grep -oP '\d+\.\d+' | tail -1)
+#     echo "MUTATION_SCORE=$SCORE" >> "$GITHUB_ENV"
+```
+
+閾値判定は週次 Issue 作成ステップで実施する。
+
 ## Integration with Other Workflows
 
 - **TDD implementation** (`parallel-worker`): Automatically runs `cargo mutants --no-shuffle -vV --in-diff git.diff` after quality checks pass. Survived mutants trigger supplementary test writing (up to 2 retries)
 - **Standalone invocation**: Run `/cargo-mutants --base-branch main` to verify test quality for recent changes
-- **Periodic audit**: Run on the full codebase periodically to find coverage gaps
+- **Periodic audit**: Run on the full codebase periodically to find coverage gaps（`--with-scheduled` で自動化可能）
 
 ## Troubleshooting
 
