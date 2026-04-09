@@ -95,3 +95,6 @@
 
 - [Limitation 1]: [Impact and potential future solutions]
 - [Limitation 2]: [Why it exists and when it might be addressed]
+
+> **P5-02 対応**: 詳細な技術的負債の追跡は `.claude/_docs/tech-debt/INDEX.md` で管理する。
+> このセクションは概要のみ記載し、個別の負債エントリは `/tech-debt add` で作成すること。

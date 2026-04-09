@@ -50,7 +50,7 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 2. **Start the Task:**
    - Edit .spec-workflow/specs/${specName}/tasks.md directly
    - Change the task marker from [ ] to [-] for the task you're starting
-   - Only one task should be in-progress at a time
+   - Only one task should be in-progress at a time (exception: multi-task wave in /spec-implement where parallel execution is intended)
 
 3. **Read Task Guidance:**
    - Look for the _Prompt field in the task - it contains structured guidance:

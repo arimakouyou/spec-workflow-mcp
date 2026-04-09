@@ -81,6 +81,48 @@ graph TD
    - **Handling:** [How to handle]
    - **User Impact:** [What user sees]
 
+## Module Boundaries
+
+プロジェクトのレイヤー構造と依存方向ルールを定義する。
+
+### レイヤー定義
+
+| Layer | Directory | 責務 |
+|-------|-----------|------|
+| [例: handlers] | [例: src/handlers/] | [例: HTTP リクエスト処理、バリデーション] |
+| [例: services] | [例: src/services/] | [例: ビジネスロジック、ドメインルール] |
+| [例: infra] | [例: src/infra/] | [例: DB アクセス、外部 API 呼び出し] |
+
+### 依存方向ルール
+
+| From (依存元) | Allowed (許可) | Forbidden (禁止) |
+|--------------|---------------|-----------------|
+| [例: handlers] | [例: services, infra] | [例: —] |
+| [例: services] | [例: infra] | [例: handlers] |
+| [例: infra] | [例: —] | [例: handlers, services] |
+
+> **structure.md との整合**: ここで定義したレイヤーは `.spec-workflow/steering/structure.md` の
+> Directory Organization および File Placement Rules と一致していること。
+> `/generate-arch-tests` を使用するとこの定義に基づくアーキテクチャテストを自動生成できる。
+
+### 共有型定義
+
+モジュール間で共有される型定義の管理方針を定義する。
+
+| 共有型カテゴリ | 配置先 | 管理方法 | 例 |
+|--------------|--------|---------|-----|
+| [例: API リクエスト/レスポンス型] | [例: src/types/ or src/models/] | [例: 手動定義、OpenAPI から生成] | [例: CreateUserRequest] |
+| [例: DB モデル型] | [例: src/models/] | [例: ORM schema から derive] | [例: User, Post] |
+| [例: 共有ドメイン型] | [例: src/domain/] | [例: 手動定義] | [例: UserId, Email] |
+| [例: フロントエンド↔バックエンド共有型] | [例: shared/types/] | [例: 手動定義 or 型生成ツール] | [例: ApiResponse<T>] |
+
+**型共有の原則:**
+- 共有型は依存方向ルールの最下層に配置し、全レイヤーからアクセス可能にする
+- API 境界の型は OpenAPI 定義（`/generate-api-docs`）と整合させる
+- 型の重複定義を避け、単一の定義元（Single Source of Truth）を維持する
+
+> **P5-06 対応**: このテーブルが埋められていることで、モジュール間の型定義が管理されていることを示す。
+
 ## Container Architecture
 
 ### Application Container

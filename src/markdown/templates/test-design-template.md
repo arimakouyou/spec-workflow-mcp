@@ -174,6 +174,82 @@ Notes:
 
 ---
 
+## Visual Regression Test Specifications
+
+> **適用条件**: UI を持つプロジェクト（フロントエンド、デスクトップアプリ等）のみ。
+> UI を持たないプロジェクト（API サーバー、CLI ツール、ライブラリ等）はこのセクションを「N/A — UI コンポーネントなし」と記載して省略する。
+
+### VRT ツール設定
+
+| 設定項目 | 値 |
+|---------|-----|
+| ツール | [例: Playwright screenshot comparison / Percy / Chromatic / BackstopJS] |
+| ベースライン管理 | [例: スナップショットを Git 管理 / クラウドサービスで管理] |
+| 許容閾値 | [例: ピクセル差分 0.1% 以下] |
+| 対象ビューポート | [例: 1280x720 (Desktop), 375x812 (Mobile)] |
+
+### VRT-1: [ビジュアルテストシナリオ名]
+- **対象ページ/コンポーネント:** [例: ログインページ, ダッシュボード]
+- **状態:** [例: 初期表示、データ読み込み済み、エラー表示]
+- **ビューポート:** [例: Desktop + Mobile]
+- **スナップショット比較:** [例: ベースライン画像との全体比較]
+
+### Playwright VRT 設定例（参考）
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.001,  // 0.1% 以下の差分を許容
+    },
+  },
+});
+
+// テスト例
+test('login page visual regression', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page).toHaveScreenshot('login-page.png');
+});
+```
+
+### CI 統合
+
+- **PR CI**: VRT を実行し、差分がある場合は PR コメントにスクリーンショット差分を投稿
+- **ベースライン更新**: `npx playwright test --update-snapshots` でベースラインを更新し commit
+- **失敗時**: 意図的なデザイン変更なら `--update-snapshots` で更新、意図しない変更ならバグとして修正
+
+### DOM スナップショット・アクセシビリティツリー検証
+
+> **適用条件**: Browser E2E テストを持つプロジェクトのみ。API のみのプロジェクトは「N/A — ブラウザテストなし」と記載。
+
+#### 検証手法
+
+| 手法 | ツール | 用途 |
+|------|--------|------|
+| DOM スナップショット | Playwright `page.content()` / Playwright MCP `browser_snapshot` | ページ構造の変更検出 |
+| アクセシビリティツリー | Playwright `page.accessibility.snapshot()` / Playwright MCP `browser_snapshot` | a11y 構造の検証 |
+| スクリーンショット比較 | Playwright `page.screenshot()` / Playwright MCP `browser_take_screenshot` | ビジュアル差分検出 |
+
+#### Playwright MCP を使ったランタイム検証（参考）
+
+エージェントが Playwright MCP サーバー経由で CDP (Chrome DevTools Protocol) を使用し、
+ランタイムでブラウザ操作・DOM 検査・スクリーンショット取得を行うことができる。
+
+- `.mcp.json` に `@playwright/mcp` が設定されている場合、エージェントは `browser_snapshot` でアクセシビリティツリーを取得し DOM 構造を意味的に検証できる
+- `browser_take_screenshot` で VRT ベースラインとの比較用スクリーンショットを取得できる
+- `browser_evaluate` で CDP 経由の JavaScript 実行（パフォーマンス計測、DOM 操作等）が可能
+
+#### DOM-1: [DOM スナップショットシナリオ名]
+- **対象ページ:** [例: ダッシュボード]
+- **検証内容:** [例: 主要なセマンティック要素（nav, main, aside）の存在と構造]
+- **キャプチャタイミング:** [例: データ読み込み完了後]
+- **比較方法:** [例: アクセシビリティツリーのスナップショット比較]
+
+[必要なシナリオ分だけ繰り返す]
+
+---
+
 ## Requirements-Test Traceability Matrix
 
 | Requirement ID | UT Specs | IT Specs | E2E Specs | Notes |
@@ -245,3 +321,18 @@ Notes:
 - **viewport:** [例: 1280x720]
 - **timeout:** [例: 30000ms]
 - **screenshot:** on failure
+
+### ランタイムブラウザ操作（Playwright MCP / CDP）
+
+エージェントが UI 検証を行う場合、Playwright MCP サーバーを使用してランタイムでブラウザを操作できる。
+プラグインの `.mcp.json` に Playwright MCP サーバーが設定されている場合、以下のツールが利用可能:
+
+| ツール | 用途 |
+|--------|------|
+| `browser_navigate` | ページ遷移 |
+| `browser_snapshot` | DOM スナップショット・アクセシビリティツリー取得 |
+| `browser_take_screenshot` | スクリーンショット取得 |
+| `browser_click` / `browser_fill_form` | UI 操作 |
+| `browser_evaluate` | JavaScript 実行（CDP 経由） |
+
+> **N/A 条件**: UI を持たないプロジェクトでは不要。test-design.md で「N/A — UI コンポーネントなし」と記載。
