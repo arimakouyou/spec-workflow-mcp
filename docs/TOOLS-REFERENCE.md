@@ -1,18 +1,37 @@
 # Tools Reference
 
-Complete documentation for all MCP tools provided by Spec Workflow MCP.
+Complete documentation for all MCP interfaces provided by Spec Workflow MCP.
 
 ## Overview
 
-Spec Workflow MCP provides specialized tools for structured software development. These tools are accessible to AI assistants through the Model Context Protocol.
+Spec Workflow MCP provides specialized interfaces for structured software development, accessible through the Model Context Protocol.
 
-## Tool Categories
+### Architecture Note
 
-1. **Workflow Guides** - Documentation and guidance
-2. **Spec Management** - Create and manage specifications
-3. **Context Tools** - Retrieve project information
-4. **Steering Tools** - Project-level guidance
-5. **Approval Tools** - Document approval workflow
+MCP defines two interface types — **Tools** and **Prompts** — plus the plugin system provides **Skills**:
+
+| Interface | Description | Registration |
+|-----------|-------------|-------------|
+| **MCP Tool** | AI が直接呼び出す操作（副作用あり） | `src/tools/index.ts` — `approvals` のみ |
+| **MCP Prompt** | AI にワークフロー指示を提供するテンプレート | `src/prompts/index.ts` — 7 prompts |
+| **Plugin Skill** | Claude Code プラグインのスラッシュコマンド | `.claude-plugin/skills/` — 30+ skills |
+
+**登録済み MCP Tool**: `approvals`（承認リクエスト・ステータス確認・削除を `action` パラメータで切替）
+
+**登録済み MCP Prompts**: `create-spec`, `create-steering-doc`, `implement-task`, `spec-status`, `inject-spec-workflow-guide`, `inject-steering-guide`, `refresh-tasks`
+
+> **Note**: このドキュメントでは概念的な操作を「ツール」として説明していますが、
+> 実装上は MCP Prompt として提供されているものがあります（AI が `prompts/get` で取得し指示に従って動作）。
+> プラグインとして使用する場合、対応するスキル（`/spec-requirements`, `/spec-design` 等）が
+> これらの操作をより高レベルでオーケストレートします。
+
+## Interface Categories
+
+1. **Workflow Guides** - Documentation and guidance (MCP Prompts)
+2. **Spec Management** - Create and manage specifications (MCP Prompts)
+3. **Context Tools** - Retrieve project information (MCP Prompts)
+4. **Steering Tools** - Project-level guidance (MCP Prompts)
+5. **Approval Tools** - Document approval workflow (MCP Tool: `approvals`)
 
 ## Workflow Guide Tools
 
@@ -474,20 +493,26 @@ Spec Workflow MCP provides specialized tools for structured software development
 
 ### Sequential Workflow
 
-Tools are designed to work in sequence:
+Interfaces are designed to work in sequence:
 
-1. `steering-guide` → Learn about steering
-2. `create-steering-doc` → Create steering documents
-3. `spec-workflow-guide` → Learn workflow
-4. `create-spec-doc` → Create requirements
-5. `request-approval` → Request review
-6. `get-approval-status` → Check status
-7. `create-spec-doc` → Create design (after approval)
-8. `request-approval` → Request design review
-9. `create-spec-doc` → Create test design (after design approval)
-10. `request-approval` → Request test design review
-11. `create-spec-doc` → Create tasks (after test design approval)
-12. `manage-tasks` → Track implementation
+**Plugin Skills (recommended)**:
+1. `/steering-doc` → Create project steering documents
+2. `/spec-request-spec` → Phase 0: Define scope and tech stack
+3. `/spec-requirements` → Phase 1: Create requirements
+4. `/spec-design` → Phase 2: Technical design
+5. `/spec-test-design` → Phase 3: Test design
+6. `/spec-tasks` → Phase 4: Break down into tasks
+7. `/spec-implement` → Phase 5: Implementation
+
+**Manual MCP (without plugin)**:
+1. `inject-steering-guide` prompt → Learn about steering
+2. `create-steering-doc` prompt → Create steering documents
+3. `inject-spec-workflow-guide` prompt → Learn workflow
+4. `create-spec` prompt → Create spec documents
+5. `approvals` tool (action: request) → Request review
+6. `approvals` tool (action: status) → Check approval status
+7. `implement-task` prompt → Get implementation guidance
+8. `spec-status` prompt → Track progress
 
 ### Parallel Operations
 
