@@ -97,6 +97,125 @@ impl Article<Draft> {
 // Article<Published> には publish() がない — 二重公開を防止
 ```
 
+## C# 型安全性
+
+C# は .NET の型システムと Nullable Reference Types (NRT) により強い型安全性を提供する。以下のパターンで更に安全性を高める。
+
+### TS-C1: Nullable Reference Types (NRT)
+
+プロジェクト全体で NRT を有効化し、null 安全性をコンパイラで検証する:
+
+```xml
+<!-- Directory.Build.props -->
+<PropertyGroup>
+  <Nullable>enable</Nullable>
+</PropertyGroup>
+```
+
+```csharp
+// NG: null-forgiving operator をプロダクションコードで使用
+var user = repository.FindById(id)!;
+
+// OK: null チェックを明示
+var user = await repository.FindByIdAsync(id)
+    ?? throw new NotFoundException($"User {id} not found");
+
+// OK: nullable 型で明示
+public async Task<User?> FindByIdAsync(UserId id);
+```
+
+`!` null-forgiving operator はテストコードでのみ許可。プロダクションコードでは `??`、`?.`、`??=` を使用する。
+
+### TS-C2: Strong Typing（readonly record struct）
+
+ドメイン固有の値には readonly record struct を使用し、型の取り違えを防止する:
+
+```csharp
+// NG: 生の型をそのまま使用
+public User GetUser(int id) { ... }
+public Order GetOrder(int id) { ... }
+// GetUser(orderId) がコンパイル可能 — 危険
+
+// OK: readonly record struct で区別
+public readonly record struct UserId(int Value);
+public readonly record struct OrderId(int Value);
+public User GetUser(UserId id) { ... }
+public Order GetOrder(OrderId id) { ... }
+// GetUser(orderId) はコンパイルエラー
+```
+
+適用対象: ID、金額、メールアドレス等のドメイン値
+
+### TS-C3: 網羅的パターンマッチ（switch expression）
+
+switch expression は全パターンを網羅し、`_` ワイルドカードは避ける:
+
+```csharp
+// NG: 新しいバリアント追加時にコンパイル警告にならない
+var message = status switch
+{
+    Status.Active => "Active",
+    _ => "Unknown",  // 新バリアントが暗黙的にここに落ちる
+};
+
+// OK: 明示的に全バリアントを列挙
+var message = status switch
+{
+    Status.Active => "Active",
+    Status.Inactive => "Inactive",
+    Status.Suspended => "Suspended",
+};
+// 新バリアント追加時にコンパイラ警告 CS8509
+```
+
+`<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` と併用し、網羅漏れをビルドエラーにする。
+
+### TS-C4: Result パターン
+
+予期されるエラーには例外ではなく Result パターンを使用する:
+
+```csharp
+// NG: 業務エラーに例外を使用
+public User CreateUser(CreateUserRequest req)
+{
+    if (string.IsNullOrEmpty(req.Name))
+        throw new ValidationException("Name is required");
+    // ...
+}
+
+// OK: OneOf / カスタム Result で表現
+public OneOf<User, ValidationError> CreateUser(CreateUserRequest req)
+{
+    if (string.IsNullOrEmpty(req.Name))
+        return new ValidationError("Name is required");
+    // ...
+    return user;
+}
+```
+
+例外は真に例外的な状況（ネットワーク障害、DB 接続断等）にのみ使用する。
+
+### TS-C5: Immutability Defaults
+
+デフォルトで不変を志向し、可変は必要な場合のみ許可する:
+
+```csharp
+// OK: record で不変データ型
+public record UserResponse(string Name, string Email, DateTime CreatedAt);
+
+// OK: init-only property
+public class AppConfig
+{
+    public required string DatabaseUrl { get; init; }
+    public required int Port { get; init; }
+}
+
+// OK: readonly コレクション
+public IReadOnlyList<User> GetUsers() => users.AsReadOnly();
+```
+
+`record`、`init`、`required`、`IReadOnlyList<T>`、`IReadOnlyDictionary<K,V>` を活用する。
+
 ## TypeScript 型安全性（将来対応）
 
 TypeScript プロジェクトでは以下の設定を必須とする:
@@ -133,10 +252,18 @@ function parse(data: unknown): User {
 
 review-worker のカテゴリ B（Design and Structure）で以下を確認:
 
+### Rust
 - TS-R1: ドメイン値に newtype が使用されているか
 - TS-R2: `as` キャストに正当な理由があるか
 - TS-R3: `match` が `_ =>` ワイルドカードを避けているか
 - TS-R4: `unwrap()` がプロダクションコードで使用されていないか
+
+### C#
+- TS-C1: NRT が有効で `!` null-forgiving operator がプロダクションコードで使用されていないか
+- TS-C2: ドメイン値に readonly record struct が使用されているか
+- TS-C3: switch expression が網羅的か（`_` ワイルドカードを避けているか）
+- TS-C4: 業務エラーに Result パターンが使用されているか
+- TS-C5: デフォルトで不変（record, init, IReadOnlyList）が使用されているか
 
 ## 執行レベル
 
@@ -147,3 +274,8 @@ review-worker のカテゴリ B（Design and Structure）で以下を確認:
 | TS-R3 (網羅的 match) | L5 コンパイラ（`#[deny(unreachable_patterns)]`） | L5 維持 |
 | TS-R4 (unwrap 禁止) | L2 AI レビュー | L3 CI (`clippy::unwrap_used`) |
 | TS-R5 (PhantomData) | L1 ドキュメント | L2 AI レビュー |
+| TS-C1 (NRT 有効化) | L5 コンパイラ（`<Nullable>enable</Nullable>`） | L5 維持 |
+| TS-C2 (Strong Typing) | L1 ドキュメント | L2 AI レビュー |
+| TS-C3 (網羅的 switch) | L3 CI（CS8509 + TreatWarningsAsErrors） | L3 維持 |
+| TS-C4 (Result パターン) | L1 ドキュメント | L2 AI レビュー |
+| TS-C5 (Immutability) | L1 ドキュメント | L2 AI レビュー |

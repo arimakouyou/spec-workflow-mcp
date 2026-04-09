@@ -99,6 +99,124 @@ struct UpdateUserRequest {
 
 `Option<T>` のないフィールドは必須。リクエストに含まれなければ 400 エラー。
 
+## C# (ASP.NET Core) バリデーションパターン
+
+### AV-C1: [ApiController] + Model Validation
+
+`[ApiController]` 属性で自動モデルバリデーションを有効化する:
+
+```csharp
+// OK: [ApiController] により ModelState 自動検証 + ProblemDetails レスポンス
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    [HttpPost]
+    public async Task<IActionResult> CreateUser(CreateUserRequest request)
+    {
+        // ここに到達した時点で request は ModelState 検証済み
+        var user = await _service.CreateUserAsync(request);
+        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+    }
+}
+```
+
+Minimal API の場合は `[AsParameters]` または手動バリデーションを使用:
+
+```csharp
+app.MapPost("/users", async ([FromBody] CreateUserRequest request, IValidator<CreateUserRequest> validator) =>
+{
+    var result = validator.Validate(request);
+    if (!result.IsValid)
+        return Results.ValidationProblem(result.ToDictionary());
+    // ...
+});
+```
+
+### AV-C2: Data Annotations + FluentValidation
+
+型レベルバリデーションは Data Annotations、ビジネスルールは FluentValidation で分離する:
+
+```csharp
+// Data Annotations: 型レベル制約
+public class CreateUserRequest
+{
+    [Required]
+    [StringLength(50, MinimumLength = 2)]
+    public required string Name { get; init; }
+
+    [Required]
+    [EmailAddress]
+    public required string Email { get; init; }
+}
+
+// FluentValidation: ビジネスルール
+public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
+{
+    public CreateUserRequestValidator(IUserRepository repository)
+    {
+        RuleFor(x => x.Email)
+            .MustAsync(async (email, ct) => !await repository.ExistsAsync(email, ct))
+            .WithMessage("Email already registered");
+    }
+}
+```
+
+### AV-C3: 未知フィールド拒否
+
+ASP.NET Core ではデフォルトで未知 JSON プロパティを無視する。拒否するには `JsonSerializerOptions` を設定する:
+
+```csharp
+// Program.cs
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+});
+```
+
+> **注意**: レスポンス DTO には適用しない。リクエスト DTO のみ対象。
+
+### AV-C4: Enum バリデーション
+
+JSON 文字列と Enum の変換には `JsonStringEnumConverter` を使用し、未定義値を拒否する:
+
+```csharp
+[JsonConverter(typeof(JsonStringEnumConverter<UserRole>))]
+public enum UserRole
+{
+    Admin,
+    Editor,
+    Viewer,
+}
+// "Admin" → OK, "SuperAdmin" → デシリアライズエラー (400)
+```
+
+### AV-C5: Required / Optional の明示
+
+`required` keyword と nullability で必須/任意を型レベルで明示する:
+
+```csharp
+public class UpdateUserRequest
+{
+    /// 更新する場合のみ指定
+    public string? Name { get; init; }
+
+    /// 更新する場合のみ指定
+    public string? Email { get; init; }
+}
+
+public class CreateUserRequest
+{
+    /// 必須（required + non-nullable）
+    public required string Name { get; init; }
+
+    /// 必須
+    public required string Email { get; init; }
+}
+```
+
+`required` + non-nullable = 必須。`nullable (?)` = 任意。
+
 ## バリデーションエラーレスポンス
 
 エラーレスポンス形式は design.md の Error Handling セクションに準拠する:
@@ -127,15 +245,23 @@ design.md の Data Models セクションで DTO を定義する際に、以下�
 - 各フィールドの必須/任意
 - 文字列フィールドの長さ制限
 - Enum フィールドの許容値
-- `deny_unknown_fields` の適用対象（リクエスト DTO）
+- Rust: `deny_unknown_fields` の適用対象（リクエスト DTO）
+- C#: `UnmappedMemberHandling.Disallow` の適用対象（リクエスト DTO）
 
 ## review-worker との連携
 
 review-worker のカテゴリ C（Security）で以下を確認:
 
+### Rust
 - AV-R1: リクエスト DTO に `deny_unknown_fields` が付与されているか
 - AV-R3: ビジネスバリデーションがサービス層で実行されているか
 - AV-R5: 必須/任意フィールドが型で明示されているか
+
+### C#
+- AV-C1: `[ApiController]` またはバリデータが適用されているか
+- AV-C2: 型制約と業務ルールが分離されているか（Data Annotations + FluentValidation）
+- AV-C3: リクエスト DTO で未知フィールドが拒否されているか
+- AV-C5: `required` / nullable で必須/任意が明示されているか
 
 ## 執行レベル
 
@@ -146,3 +272,8 @@ review-worker のカテゴリ C（Security）で以下を確認:
 | AV-R3 (ビジネスバリデーション) | L2 AI レビュー | L2 維持 |
 | AV-R4 (Enum バリデーション) | L5 型システム（serde） | L5 維持 |
 | AV-R5 (Optional 明示) | L5 型システム（Rust Option） | L5 維持 |
+| AV-C1 (ApiController 自動検証) | L5 フレームワーク（ASP.NET Core） | L5 維持 |
+| AV-C2 (FluentValidation) | L2 AI レビュー | L3 CI（バリデータ登録テスト） |
+| AV-C3 (未知フィールド拒否) | L1 ドキュメント | L4 構造テスト |
+| AV-C4 (Enum バリデーション) | L5 型システム（JsonStringEnumConverter） | L5 維持 |
+| AV-C5 (Required/Optional 明示) | L5 型システム（required + NRT） | L5 維持 |

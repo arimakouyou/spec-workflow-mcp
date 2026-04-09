@@ -27,7 +27,9 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 ## Quality Checks (all must pass)
 
-Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
+Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`. Detect the project type first, then run the appropriate commands.
+
+### Rust
 
 > **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `.claude-plugin/rules/rust-build-cache.md`.
 
@@ -45,6 +47,23 @@ fi
 - `cargo audit`: **Blocking** — vulnerabilities found means the check fails. Do not commit
 - `cargo +nightly udeps`: **Advisory** — report warnings but do not block commit (`|| true`)
 - See `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section for detection details
+
+### .NET (.csproj / .sln detected, no Cargo.toml)
+
+```bash
+dotnet restore
+dotnet format --verify-no-changes
+dotnet build --no-restore -warnaserror
+dotnet test --no-build --verbosity quiet
+# Dependency Analysis
+dotnet list package --vulnerable --include-transitive
+if dotnet tool list | grep -q snitch; then
+  dotnet tool run snitch 2>&1 | head -30 || true
+fi
+```
+
+- `dotnet list package --vulnerable`: **Blocking** — high/critical vulnerabilities means check fails
+- `dotnet tool run snitch`: **Advisory** — report redundant references but do not block commit
 
 ### Leptos Full-Stack Projects
 
@@ -77,9 +96,19 @@ Inspect the diff with `git diff` and check all of the following aspects in order
 - **義務**: 各カテゴリ (A-G) で最低1つの具体的な確認ポイントを observations に記録すること。問題がなくても「何を確認して問題なしと判断したか」を明示する
 - **再確認**: レビュー結果が「全パス、問題なし」になった場合、もう一度 diff を読み直し見落としがないか確認する
 
+### .NET Blazor Projects
+
+`*.csproj` に `Microsoft.AspNetCore.Components.WebAssembly` パッケージ参照がある場合:
+
+```bash
+dotnet publish -c Release -p:PublishTrimmed=true
+```
+
 ### A. Style and Conventions
 
-Refer to `.claude-plugin/rules/rust-style.md` and the relevant framework rules.
+Refer to the language-specific style rules and relevant framework rules:
+- **Rust**: `.claude-plugin/rules/rust-style.md`, `axum.md`, `diesel.md`, `leptos.md`
+- **C#/.NET**: `.claude-plugin/rules/csharp-style.md`, `aspnet-core.md`, `entity-framework-core.md`, `blazor.md`
 
 - Compliance with project rules
 - Validity of naming (whether types, functions, and variables accurately express their intent)

@@ -29,11 +29,17 @@ if [ -f Cargo.toml ] && grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/
 # Priority 2: Rust
 elif [ -f Cargo.toml ]; then
   PROJECT_TYPE="rust"
-# Priority 3: Node.js
+# Priority 3: .NET Blazor (Leptos equivalent full-stack)
+elif find . -maxdepth 2 -name '*.csproj' -exec grep -l 'BlazorWebAssembly\|Microsoft.AspNetCore.Components.WebAssembly' {} + 2>/dev/null | head -1 | grep -q .; then
+  PROJECT_TYPE="dotnet-blazor"
+# Priority 4: .NET API
+elif ls *.sln 2>/dev/null | head -1 | grep -q . || find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
+  PROJECT_TYPE="dotnet"
+# Priority 5: Node.js
 elif [ -f package.json ]; then
   PROJECT_TYPE="nodejs"
 else
-  echo "Error: Supported project type not detected (Cargo.toml or package.json required)"
+  echo "Error: Supported project type not detected (Cargo.toml, *.csproj, *.sln, or package.json required)"
   exit 1
 fi
 ```
@@ -68,6 +74,14 @@ fi
 | `package-lock.json` | `npm` | `npm ci` |
 | None | `npm` | `npm install` |
 
+#### .NET / .NET Blazor
+
+| Setting | Detection | Default |
+|---------|-----------|---------|
+| .NET version | `<TargetFramework>` in .csproj or `global.json` の `sdk.version` | `10.0` |
+| Solution file | `*.sln` の存在 | single project |
+| Blazor WASM | .csproj に `Microsoft.AspNetCore.Components.WebAssembly` | false |
+
 #### Common
 
 Read `.spec-workflow/steering/tech.md` if it exists for additional context (language versions, framework choices).
@@ -84,12 +98,16 @@ Read the reference templates matching the detected project type. **5 ファイ�
 | 4 | `.github/dependabot.yml` | `references/dependabot.yml` | 依存関係自動更新 |
 | 5 | `.github/workflows/release.yml` | `references/release.yml` | リリース / パブリッシュ |
 
-`{type}` は `rust` / `leptos` / `nodejs` に置換。
+`{type}` は `rust` / `leptos` / `dotnet` / `nodejs` に置換（`dotnet-blazor` は `dotnet` テンプレートを使用し、Blazor 固有ステップを追加）。
 
 Replace placeholders with the values gathered in Step 2:
 
 **Rust / Leptos:**
 - `{{TOOLCHAIN}}` → detected toolchain (e.g., `stable`, `nightly`, `1.82`)
+
+**.NET / .NET Blazor:**
+- `{{DOTNET_VERSION}}` → detected .NET version (e.g., `10.0`)
+- `{{SOLUTION_PATH}}` → path to .sln file (if exists, otherwise empty)
 
 **Node.js:**
 - `{{NODE_VERSION}}` → detected Node version (e.g., `20`)
@@ -135,6 +153,8 @@ PR コメントフィードバックステップを削除する:
 セキュリティ特化の静的解析（SAST）を有効化する（P6-04）:
 - **Rust / Leptos**: `ci.yml` のセキュリティ特化 clippy lint セクションをアンコメント
   (`-W clippy::suspicious -W clippy::correctness -W clippy::complexity`)
+- **.NET / .NET Blazor**: `ci.yml` に `AnalysisLevel=latest-all` セキュリティ Analyzer ステップを追加
+  (`CA2xxx` セキュリティ系、`CA3xxx` セキュリティ設計ガイドライン）。CodeQL C# も利用可能
 - **Node.js**: `codeql.yml` ワークフローファイルを追加生成（`javascript-typescript`）
   - CodeQL は GitHub の無料 SAST ツールで、公開リポジトリでは無制限に使用可能
   - Rust 向け CodeQL は 2025 年時点でベータ段階のため、clippy security lints を推奨
