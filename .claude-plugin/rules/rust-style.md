@@ -8,7 +8,7 @@ paths:
 Follow the official Rust Style Guide (https://doc.rust-lang.org/style-guide/).
 Use `rustfmt` defaults as the baseline and adhere to the rules below.
 
-## Formatting Basics
+## RS1: Formatting Basics
 
 - Indentation: 4 spaces (no tabs)
 - Max line width: 100 characters
@@ -17,7 +17,7 @@ Use `rustfmt` defaults as the baseline and adhere to the rules below.
 - No trailing whitespace
 - Newline at end of file
 
-## Trailing Commas
+## RS2: Trailing Commas
 
 Use trailing commas in multi-line comma-separated lists. Omit them on single lines.
 
@@ -32,7 +32,7 @@ function_call(
 function_call(argument, another_argument)
 ```
 
-## Naming Conventions
+## RS3: Naming Conventions
 
 | Item | Style | Example |
 |---|---|---|
@@ -47,14 +47,14 @@ function_call(argument, another_argument)
 
 When a reserved word is needed as a name, use raw identifiers (`r#type`) or a trailing underscore (`type_`). Avoid misspelling (`typ`).
 
-## Item Order in Files
+## RS4: Item Order in Files
 
 1. `extern crate` statements
 2. `use` statements (`self`/`super` first, glob imports last)
 3. Module declarations (`mod foo;`)
 4. Other items
 
-## Function Definitions
+## RS5: Function Definitions
 
 ```rust
 // Fits on one line
@@ -74,7 +74,7 @@ fn foo(
 - No comments inside signatures
 - When the argument list is multi-line, place each argument on its own line with a trailing comma
 
-## Structs and Enums
+## RS6: Structs and Enums
 
 ```rust
 struct Foo {
@@ -95,7 +95,7 @@ enum FooBar {
 - Prefer unit structs: `struct Foo;` over `struct Foo {}` or `struct Foo()`
 - When a field type is long, break after `:` with block indent
 
-## Traits and Impls
+## RS7: Traits and Impls
 
 ```rust
 trait Foo: Debug + Bar {}
@@ -107,7 +107,7 @@ impl Bar for Foo {
 
 - When trait bounds are long, break before `+` with block indent
 
-## Where Clauses
+## RS8: Where Clauses
 
 ```rust
 fn function<T, U>(args)
@@ -123,7 +123,7 @@ where
 - Each constraint on its own line with block indent
 - Use trailing commas
 
-## Use Statements
+## RS9: Use Statements
 
 ```rust
 use std::collections::HashMap;
@@ -134,7 +134,7 @@ use std::io::{self, Read, Write};
 - Place `self` and `super` before other names
 - Normalize unnecessary nesting: `use a::{b};` → `use a::b;`
 
-## Expressions
+## RS10: Expressions
 
 ### Block Expressions
 - Empty blocks: `{}`
@@ -180,7 +180,7 @@ let x;
 if y { x = 1; } else { x = 0; }
 ```
 
-## Types
+## RS11: Types
 
 - Break type expressions at the outermost scope
 - Break trait bounds before `+`
@@ -199,7 +199,7 @@ Foo<Bar, Baz<
 >>
 ```
 
-## Let Statements
+## RS12: Let Statements
 
 ```rust
 let pattern: Type = expr;
@@ -214,13 +214,13 @@ let pattern:
     expr;
 ```
 
-## Comments
+## RS13: Comments
 
 - Prefer line comments (`//`) over block comments (`/* */`)
 - Use `///` for doc comments (outer) and `//!` for module/crate-level docs only
 - Single space after `//`
 
-## Attributes
+## RS14: Attributes
 
 - Place each attribute on its own line
 - Merge multiple `#[derive(...)]` into one
@@ -231,11 +231,11 @@ let pattern:
 struct Foo { ... }
 ```
 
-## Extern
+## RS15: Extern
 
 - Always specify the ABI explicitly: `extern "C" fn` (avoid bare `extern fn`)
 
-## General Advice
+## RS16: General Advice
 
 - Avoid `#[path]` attribute on modules
 - Leverage expression-oriented programming (return values from `if`, `match`, etc.)

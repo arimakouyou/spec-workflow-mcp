@@ -12,14 +12,14 @@ Rules to prevent deviations from the approved design.md.
 
 ## Prohibited Actions During Implementation
 
-### DB Schema
+### DC1: DB Schema
 - Do not add tables or columns not defined in design.md
 - Do not change the type or constraints of already-defined columns
 - Do not add or remove indexes without authorization
 - **Implement FK ON DELETE behavior exactly as defined in design.md** (do not change or add CASCADE / RESTRICT / SET NULL without authorization)
 - Follow design.md for NULL / NOT NULL definitions
 
-### API
+### DC2: API
 - Do not add endpoints not defined in design.md
 - Do not change defined HTTP methods, paths, or status codes
 - Do not add, remove, or change the type of request/response fields
@@ -28,7 +28,7 @@ Rules to prevent deviations from the approved design.md.
   1. Consider whether an error code already defined in design.md can serve as a substitute (e.g., if `Conflict` is undefined, substitute with `BadRequest("duplicate key")`)
   2. If substitution is not possible, escalate and confirm with the user
 
-### Data Model
+### DC3: Data Model
 - Do not add fields to Model / DTO that are not defined in design.md
 - Do not create mismatches between DTO and API definitions
 

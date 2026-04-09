@@ -13,7 +13,13 @@ Unified command specification for quality checks run by parallel-worker, review-
 
 > **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `.claude-plugin/rules/rust-build-cache.md` (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
 
-## rustfmt
+---
+
+## タスクレベルチェック（QC1〜QC6, QC8〜QC9）
+
+コミット前・PR 単位で実行するチェック。`/setup-ci` が生成する `ci.yml` および `scheduled-quality.yml` に組み込まれる。
+
+## QC1: rustfmt
 
 ```bash
 cargo fmt --all -- --check
@@ -22,7 +28,7 @@ cargo fmt --all -- --check
 - Targets both `src` and `tests` (do not check only one of them)
 - To auto-fix, run without `--check`: `cargo fmt --all`
 
-## clippy
+## QC2: clippy
 
 ```bash
 cargo clippy --quiet --all-targets -- -D warnings
@@ -32,7 +38,7 @@ cargo clippy --quiet --all-targets -- -D warnings
 - `-D warnings`: Treats all warnings as errors
 - `--quiet`: Suppresses progress output
 
-## test
+## QC3: test
 
 ```bash
 cargo test --quiet
@@ -41,7 +47,18 @@ cargo test --quiet
 - Runs all tests (unit + integration)
 - To run a specific test only: `cargo test --test {test_name} -- --nocapture`
 
-## Dependency Analysis (Optional Tools)
+## QC3.5: Doc Comment Coverage (Advisory)
+
+```bash
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --quiet 2>&1 | head -20
+```
+
+- `pub` なアイテム（関数、構造体、フィールド等）に doc comment (`///`) が欠けている場合に警告を出す
+- **Advisory**: 警告は報告するがコミットをブロックしない（`|| true`）
+- review-worker のカテゴリ A（Style）で doc comment の有無を確認する際の補助情報として使用
+- `/generate-api-docs` の doc comment ギャップ分析と併用することで、API スキーマの自然言語説明カバレッジを向上させる
+
+## QC4: Dependency Analysis (Optional Tools)
 
 Additional checks for dependency hygiene and security. These tools are optional — they run when installed and are skipped when unavailable. Agents must detect availability before running.
 
@@ -93,7 +110,7 @@ fi
 | cargo-udeps | Yes | No | Skip with log: "nightly toolchain unavailable, skipping udeps" |
 | cargo-udeps | No | — | Skip silently |
 
-## Leptos Full-Stack (WASM Frontend) Build Verification
+## QC5: Leptos Full-Stack (WASM Frontend) Build Verification
 
 When the project uses `cargo-leptos` (detected by `[package.metadata.leptos]` in `Cargo.toml`), the following additional checks are **required** after the standard checks above.
 
@@ -144,7 +161,7 @@ The full check order becomes:
 5. `cargo +nightly udeps --quiet` (if installed — advisory only)
 6. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
 
-## Node.js Task-Level Quality Checks
+## QC6: Node.js Task-Level Quality Checks
 
 When the project is Node.js-based (detected by `package.json` existence without Rust indicators), use the following task-level quality checks.
 
@@ -199,8 +216,197 @@ The full check order for Node.js projects:
 3. `npm test`
 4. `npx tsc --noEmit` (if TypeScript configured and not already run as lint fallback)
 5. `npm run build` (if build script exists)
+6. `npm audit --audit-level=high` (if `package-lock.json` exists — blocking on high/critical)
 
-## Integration Verification (Phase Review / Final E2E Gate)
+### dependency audit (Node.js)
+
+```bash
+npm audit --audit-level=high
+```
+
+- `package-lock.json` が存在する場合のみ実行
+- **Blocking**: high / critical の脆弱性が検出された場合は失敗
+- `yarn.lock` の場合は `yarn audit --level high`（Yarn v1）または `yarn npm audit`（Yarn v2+）
+
+### unused code detection (Node.js — advisory)
+
+```bash
+npx knip --no-progress 2>&1 | head -50
+```
+
+- `knip` がプロジェクトに設定されている場合のみ実行
+- **Advisory**: 未使用ファイル・エクスポートを報告するがブロックしない
+- 未導入の場合はスキップ（`npx knip` が失敗したら無視）
+
+## QC8: Code Duplication Detection (Advisory)
+
+コード重複を検出する。全プロジェクトタイプに適用可能。
+
+```bash
+npx jscpd --min-lines 10 --min-tokens 50 \
+  --ignore '**/target/**,**/node_modules/**,**/dist/**' \
+  --reporters consoleFull .
+```
+
+- **Advisory**: 重複は報告するがコミットをブロックしない
+- 検出ツール未インストール時はスキップ
+- 週次定期チェック（`--with-scheduled`）で Issue 作成と組み合わせて使用
+- Rust プロジェクトでも `jscpd` は有効（テキストベースの重複検出）
+
+代替ツール:
+- Rust: `cargo install cargo-clone-detection`（利用可能な場合）
+- Python: `pylint --disable=all --enable=duplicate-code`
+
+## QC9: Lockfile Verification (P4-03)
+
+パッケージマネージャの lockfile がリポジトリにコミットされていることを検証する。
+lockfile の欠如は再現不可能なビルドにつながるため、**Blocking** チェックとする。
+
+### 検出対象
+
+| パッケージマネージャ | マニフェスト | lockfile |
+|-------------------|------------|---------|
+| npm | `package.json` | `package-lock.json` |
+| yarn | `package.json` | `yarn.lock` |
+| pnpm | `package.json` | `pnpm-lock.yaml` |
+| Cargo (Rust) | `Cargo.toml` | `Cargo.lock` |
+| Go | `go.mod` | `go.sum` |
+| Poetry (Python) | `pyproject.toml` | `poetry.lock` |
+| Bundler (Ruby) | `Gemfile` | `Gemfile.lock` |
+
+### チェックコマンド
+
+```bash
+# マニフェストファイルと対応する lockfile の存在を確認
+FAIL=false
+
+# Node.js (いずれか 1 つで OK)
+if [ -f package.json ]; then
+  if [ ! -f package-lock.json ] && [ ! -f yarn.lock ] && [ ! -f pnpm-lock.yaml ]; then
+    echo "FAIL: package.json exists but no lockfile found (package-lock.json, yarn.lock, pnpm-lock.yaml)"
+    FAIL=true
+  fi
+fi
+
+# Rust
+if [ -f Cargo.toml ] && [ ! -f Cargo.lock ]; then
+  echo "FAIL: Cargo.toml exists but Cargo.lock not found"
+  FAIL=true
+fi
+
+# Go
+if [ -f go.mod ] && [ ! -f go.sum ]; then
+  echo "FAIL: go.mod exists but go.sum not found"
+  FAIL=true
+fi
+
+# .gitignore で除外されていないことを確認
+for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poetry.lock Gemfile.lock; do
+  if [ -f "$lockfile" ] && git check-ignore -q "$lockfile" 2>/dev/null; then
+    echo "FAIL: $lockfile is gitignored — lockfile must be committed for reproducible builds"
+    FAIL=true
+  fi
+done
+```
+
+| 条件 | 判定 | アクション |
+|------|------|-----------|
+| lockfile が存在し git 管理下にある | PASS | — |
+| lockfile が `.gitignore` で除外されている | FAIL | `.gitignore` から除外を解除し commit |
+| lockfile が存在しない（マニフェストあり） | FAIL | install コマンドを実行し lockfile を生成・commit |
+| マニフェスト自体が存在しない | SKIP | 対象外 |
+
+> **CI 連携**: `scheduled-quality-standalone.yml` にこのチェックが組み込まれている。
+> lockfile 未コミットの場合は週次スキャンで Issue が自動作成される。
+
+> **執行レベル**:
+> - **エージェント/ローカル**: Blocking — lockfile 未コミットの場合はコミットをブロックする
+> - **PR CI (`ci.yml`)**: Blocking — lockfile 未コミットの場合は CI を失敗させる
+> - **週次スキャン (`scheduled-quality.yml`)**: Advisory (`continue-on-error: true`) — 検出時に Issue を自動作成するが、ワークフロー全体は停止しない
+
+## QC10: Documentation Lint (P5-03)
+
+Markdown ファイルのフォーマット整合性とリンク健全性を検証する。全プロジェクトタイプ共通。
+
+### markdownlint（フォーマットチェック）
+
+```bash
+npx markdownlint-cli2 "**/*.md" "#node_modules" "#target" "#dist"
+```
+
+- `.markdownlint.yaml` が存在すればそのルールに従う
+- 未設定時はデフォルトルール適用（推奨: MD013 line-length を無効化）
+- 自動修正: `npx markdownlint-cli2 --fix "**/*.md" "#node_modules" "#target" "#dist"`
+
+### markdown-link-check（リンク検証）
+
+```bash
+find . -name '*.md' -not -path '*/node_modules/*' -not -path '*/target/*' -not -path '*/.spec-workflow/*' | \
+  xargs -I {} npx markdown-link-check {} --config .markdown-link-check.json 2>&1 | tee /tmp/link-check-output.txt
+```
+
+- `.markdown-link-check.json` が存在すればその config に従う
+- 未設定時はデフォルト（外部リンクの 429 Too Many Requests は無視推奨）
+
+| 条件 | 判定 | アクション |
+|------|------|-----------|
+| フォーマット違反なし & リンク切れなし | PASS | — |
+| フォーマット違反あり | WARN | `markdownlint-cli2 --fix` で自動修正可 |
+| リンク切れあり | WARN | リンク先を更新 or 削除 |
+
+> **執行レベル**:
+> - **エージェント/ローカル**: Advisory — 報告するがコミットはブロックしない
+> - **PR CI (`ci.yml`)**: Advisory (`continue-on-error: true`) — PR コメントで報告
+> - **週次スキャン (`scheduled-quality.yml`)**: Advisory — 検出時に Issue 作成
+>
+> **doc-crossref.md との関係**: QC10 は機械的なフォーマット検証とリンク切れ検出を担当。
+> `doc-crossref.md` は spec-workflow 固有のセマンティック参照整合性（Requirements Traceability 等）を対象とする。
+
+## QC11: SAST / Security-Focused Static Analysis (P6-04)
+
+セキュリティに特化した静的コード解析を実行する。QC2 (clippy) の一般 lint に加えて、
+セキュリティ関連の lint グループを明示的に有効化する。
+
+### Rust / Leptos
+
+```bash
+cargo clippy --all-targets -- -W clippy::suspicious -W clippy::correctness -W clippy::complexity
+```
+
+- `clippy::suspicious`: 疑わしいコードパターン（意図しない動作の兆候）
+- `clippy::correctness`: 正確性に関する問題（バグの可能性が高い）
+- `clippy::complexity`: 不必要な複雑性（攻撃面の拡大につながる）
+
+### Node.js
+
+```bash
+# ESLint + security plugin
+npx eslint --plugin security --rule 'security/detect-object-injection: warn' .
+
+# または CodeQL（GitHub Actions 経由）
+# codeql.yml ワークフローで自動実行
+```
+
+### 他の SAST ツール（代替）
+
+| ツール | 対応言語 | 特徴 |
+|--------|---------|------|
+| CodeQL | JS/TS, Python, Go, Java | GitHub 組込み、公開リポジトリ無料 |
+| Semgrep | 多言語 | ルールベース、OSS |
+| SonarQube | 多言語 | エンタープライズ向け |
+
+> **執行レベル**:
+> - **エージェント/ローカル**: Advisory — 報告するがコミットはブロックしない
+> - **PR CI (`ci.yml`)**: Advisory (`continue-on-error: true`)
+> - **週次スキャン**: CodeQL の schedule トリガーで自動実行
+
+---
+
+## 統合レベル検証（QC7）
+
+Phase Review および Final E2E Gate で実行する統合レベルの検証。タスクレベルチェック（QC1〜QC6, QC8〜QC9）とは独立したステップとして、Phase 完了時にのみ実行する。
+
+## QC7: Integration Verification (Phase Review / Final E2E Gate)
 
 Phase Review (3.5.1.5) および全Phase完了後の Final E2E Gate (セクション9) で実行する統合レベルの検証。
 タスク単位の品質チェック（rustfmt, clippy, cargo test）とは独立したステップとして実行する。
