@@ -42,7 +42,9 @@ jobs:
       - uses: actions/checkout@v4
 
       # --- Rust プロジェクト ---
-      # - uses: dtolnay/rust-toolchain@{{TOOLCHAIN}}
+      # - uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     toolchain: {{TOOLCHAIN}}
       # - uses: Swatinem/rust-cache@v2
       # - name: Run integration tests
       #   id: e2e-tests

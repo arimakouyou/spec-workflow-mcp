@@ -24,7 +24,9 @@
       - uses: actions/checkout@v4
 
       # --- Rust API project ---
-      # - uses: dtolnay/rust-toolchain@{{TOOLCHAIN}}
+      # - uses: dtolnay/rust-toolchain@stable
+      #   with:
+      #     toolchain: {{TOOLCHAIN}}
       # - uses: Swatinem/rust-cache@v2
       # - name: Run integration tests
       #   id: e2e-tests

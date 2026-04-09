@@ -62,7 +62,7 @@ NEXT_ID=$(printf "%04d" $((${MAX_ID:-0} + 1)))
 
 ### Step 3: ファイル作成
 
-`.claude/_docs/tech-debt/references/tech-debt-template.md` のテンプレートに従い、
+`.claude-plugin/skills/tech-debt/references/tech-debt-template.md` のテンプレートに従い、
 `.claude/_docs/tech-debt/TD-{NEXT_ID}-{slug}.md` を作成する。
 
 slug はタイトルを kebab-case に変換して生成する（例: "古い認証ミドルウェア" → `legacy-auth-middleware`）。
