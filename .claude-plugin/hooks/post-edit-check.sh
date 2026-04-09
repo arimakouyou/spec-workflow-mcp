@@ -7,8 +7,13 @@
 
 set -euo pipefail
 
+# jq が利用できない場合はスキップ
+if ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
+
 # stdin から PostToolUse ペイロードを読み取り、編集対象ファイルパスを取得
-FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null || echo '')
+FILE_PATH=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty' 2>/dev/null || echo '')
 if [ -z "$FILE_PATH" ]; then
   exit 0
 fi

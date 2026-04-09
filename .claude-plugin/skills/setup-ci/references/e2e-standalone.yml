@@ -46,7 +46,9 @@ jobs:
       # - uses: Swatinem/rust-cache@v2
       # - name: Run integration tests
       #   id: e2e-tests
-      #   run: cargo test --test '*' --quiet 2>&1 | tee /tmp/e2e-output.txt
+      #   run: |
+      #     set -o pipefail
+      #     cargo test --test '*' --quiet 2>&1 | tee /tmp/e2e-output.txt
       #   env:
       #     DATABASE_URL: postgres://test:test@localhost:5432/test
 
@@ -60,7 +62,9 @@ jobs:
       #   run: npx playwright install --with-deps chromium
       # - name: Run E2E tests
       #   id: e2e-tests
-      #   run: npx playwright test 2>&1 | tee /tmp/e2e-output.txt
+      #   run: |
+      #     set -o pipefail
+      #     npx playwright test 2>&1 | tee /tmp/e2e-output.txt
 
       # --- PR コメント: E2E 結果 ---
       # - name: Post E2E results to PR

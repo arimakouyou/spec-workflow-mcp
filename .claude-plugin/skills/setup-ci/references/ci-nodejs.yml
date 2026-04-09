@@ -46,11 +46,17 @@ jobs:
 
       - name: Tests
         id: tests
-        run: {{PACKAGE_MANAGER}} test 2>&1 | tee /tmp/test-output.txt
+        run: |
+          set -o pipefail
+          {{PACKAGE_MANAGER}} test 2>&1 | tee /tmp/test-output.txt
 
       - name: Build
         id: build
         run: {{PACKAGE_MANAGER}} run build
+
+      - name: Security audit
+        id: security-audit
+        run: npm audit --audit-level=high
 
       # --- SAST: セキュリティ特化 lint (P6-04) ---
       # - name: Security lint (eslint-plugin-security)
@@ -63,7 +69,9 @@ jobs:
       #   uses: nick-fields/retry@v3
       #   with:
       #     max_attempts: 3
-      #     command: {{PACKAGE_MANAGER}} test 2>&1 | tee /tmp/test-output.txt
+      #     command: |
+      #       set -o pipefail
+      #       {{PACKAGE_MANAGER}} test 2>&1 | tee /tmp/test-output.txt
 
       # --- ドキュメント Lint (QC10 / P5-03) ---
       # - name: Markdown lint
@@ -72,6 +80,7 @@ jobs:
 
       - name: Post CI results to PR
         if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/github-script@v7
         env:
           TYPECHECK_RESULT: ${{ steps.typecheck.outcome }}
@@ -79,6 +88,7 @@ jobs:
           FMT_RESULT: ${{ steps.format-check.outcome }}
           TEST_RESULT: ${{ steps.tests.outcome }}
           BUILD_RESULT: ${{ steps.build.outcome }}
+          AUDIT_RESULT: ${{ steps.security-audit.outcome }}
         with:
           script: |
             const fs = require('fs');
@@ -89,7 +99,7 @@ jobs:
             const tag = '<!-- ci-check-result -->';
             const allPass = [process.env.TYPECHECK_RESULT, process.env.LINT_RESULT,
                              process.env.FMT_RESULT, process.env.TEST_RESULT,
-                             process.env.BUILD_RESULT]
+                             process.env.BUILD_RESULT, process.env.AUDIT_RESULT]
                             .every(r => r === 'success');
             const body = [
               tag,
@@ -102,6 +112,7 @@ jobs:
               `| Format (Prettier) | ${icon(process.env.FMT_RESULT)} |`,
               `| Tests | ${icon(process.env.TEST_RESULT)} |`,
               `| Build | ${icon(process.env.BUILD_RESULT)} |`,
+              `| Security Audit | ${icon(process.env.AUDIT_RESULT)} |`,
               '',
               '<details><summary>Test output (last 20 lines)</summary>',
               '', '```', testOutput, '```', '',
