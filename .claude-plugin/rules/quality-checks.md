@@ -50,7 +50,7 @@ cargo test --quiet
 ## QC3.5: Doc Comment Coverage (Advisory)
 
 ```bash
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --quiet 2>&1 | head -20
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --quiet 2>&1 | head -20 || true
 ```
 
 - `pub` なアイテム（関数、構造体、フィールド等）に doc comment (`///`) が欠けている場合に警告を出す

@@ -1,9 +1,10 @@
 ---
 name: setup-ci
 description: >
-  Generate GitHub Actions CI/CD workflows for the project (5 files, P4-02 compliant).
+  Generate GitHub Actions CI/CD workflows for the project (base 5 files + optional extras, P4-02 compliant).
   Detects project type (Rust/Leptos/Node.js) and creates ci.yml, e2e.yml,
   scheduled-quality.yml, dependabot.yml, release.yml mirroring quality-checks.md.
+  Options like --with-sast, --with-auto-merge, --with-auto-fix generate additional workflow files.
   Triggers: 'setup CI', 'add CI workflow', 'create GitHub Actions', 'PR checks',
   'CI/CD を追加', 'CI ワークフロー', 'GitHub Actions を設定'.
 argument-hint: "[--with-e2e] [--with-services] [--with-scheduled] [--no-pr-comments] [--with-docs-lint] [--with-sast] [--with-flaky-detection] [--with-auto-merge] [--with-auto-fix]"
@@ -14,7 +15,7 @@ user-invokable: true
 
 Generate GitHub Actions CI/CD workflows that mirror the quality check commands defined in `.claude-plugin/rules/quality-checks.md`. Ensures parity between local agent-chain quality checks and external CI.
 
-**P4-02 準拠**: このスキルは 5 つの CI/CD 設定ファイルを生成し、harness-maturity-check P4-02 の要件（CI/CD 設定ファイル 5 個以上）を満たす。
+**P4-02 準拠**: このスキルは基本 5 つの CI/CD 設定ファイルを生成し、harness-maturity-check P4-02 の要件（CI/CD 設定ファイル 5 個以上）を満たす。オプション（`--with-sast` 等）で追加ファイルも生成される。
 
 ## Process
 

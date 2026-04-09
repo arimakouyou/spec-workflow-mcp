@@ -56,7 +56,14 @@ jobs:
 
       - name: Security audit
         id: security-audit
-        run: npm audit --audit-level=high
+        run: |
+          if [ "{{PACKAGE_MANAGER}}" = "yarn" ]; then
+            yarn npm audit --severity high
+          elif [ "{{PACKAGE_MANAGER}}" = "pnpm" ]; then
+            pnpm audit --severity high
+          else
+            npm audit --audit-level=high
+          fi
 
       # --- SAST: セキュリティ特化 lint (P6-04) ---
       # - name: Security lint (eslint-plugin-security)
