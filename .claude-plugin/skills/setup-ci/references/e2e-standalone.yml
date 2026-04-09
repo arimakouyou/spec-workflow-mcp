@@ -5,13 +5,14 @@
 name: E2E Tests
 
 on:
-  pull_request:
-    branches: [main, master]
+  # --with-e2e でテストステップを有効化した後にアンコメントすること
+  # pull_request:
+  #   branches: [main, master]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
+  # pull-requests: write  # PR コメントステップ有効化時にアンコメント
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -27,6 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lockfile verification (QC9)
+        run: |
+          if [ ! -f Cargo.lock ]; then
+            echo "::error::Cargo.lock not found — reproducible builds require a committed lockfile"
+            exit 1
+          fi
+          if git check-ignore -q Cargo.lock 2>/dev/null; then
+            echo "::error::Cargo.lock is gitignored — lockfiles must be tracked"
+            exit 1
+          fi
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: {{TOOLCHAIN}}

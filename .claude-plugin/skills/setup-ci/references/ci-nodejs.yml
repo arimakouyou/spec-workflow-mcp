@@ -24,6 +24,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lockfile verification (QC9)
+        run: |
+          LOCKFILE=""
+          if [ -f package-lock.json ]; then LOCKFILE="package-lock.json";
+          elif [ -f yarn.lock ]; then LOCKFILE="yarn.lock";
+          elif [ -f pnpm-lock.yaml ]; then LOCKFILE="pnpm-lock.yaml";
+          fi
+          if [ -z "$LOCKFILE" ]; then
+            echo "::error::No lockfile found — reproducible builds require a committed lockfile"
+            exit 1
+          fi
+          if git check-ignore -q "$LOCKFILE" 2>/dev/null; then
+            echo "::error::$LOCKFILE is gitignored — lockfiles must be tracked"
+            exit 1
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: '{{NODE_VERSION}}'

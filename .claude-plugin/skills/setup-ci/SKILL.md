@@ -115,7 +115,8 @@ Replace placeholders with the values gathered in Step 2:
 `e2e-standalone.yml` テンプレート内の、検出されたプロジェクトタイプに該当するセクションをアンコメントし、プレースホルダを置換する。
 - Node.js: setup-node → install → Playwright install → Playwright test → PR コメント
 - Rust: rust-toolchain → cargo test --test → PR コメント
-- このオプションが**指定されない場合**も `e2e.yml` は生成されるが、テスト実行ステップはコメントアウトのままとなる
+- `pull_request` トリガーと `pull-requests: write` 権限もアンコメントする
+- このオプションが**指定されない場合**も `e2e.yml` は生成されるが、テスト実行ステップ・`pull_request` トリガー・PR コメント権限はコメントアウトのままとなる（`workflow_dispatch` のみ有効）
 
 #### `--with-services`
 
