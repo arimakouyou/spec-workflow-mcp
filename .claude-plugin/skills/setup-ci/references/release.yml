@@ -58,9 +58,11 @@ jobs:
       #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # --- GitHub Release 作成 ---
+      # tag push または workflow_dispatch で tag が指定された場合のみ実行
+      # （tag 未指定の手動実行ではブランチ名が使われるのを防止）
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || inputs.tag != ''
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           generate_release_notes: true
