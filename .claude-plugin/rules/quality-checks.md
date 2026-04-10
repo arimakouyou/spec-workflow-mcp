@@ -698,9 +698,9 @@ docker-compose down
 # プロジェクトタイプに応じてサーバ起動コマンドを切り替え
 if [ -f Cargo.toml ]; then
   START_CMD="cargo run"
-elif ls *.sln 2>/dev/null | head -1 | grep -q .; then
+elif SLN=$(ls *.sln 2>/dev/null | head -1) && [ -n "$SLN" ]; then
   # .sln がルートに存在する前提（単一 .sln）
-  ENTRY_PROJECT=$(dotnet sln list 2>/dev/null | tail -n +3 | head -1)
+  ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | head -1)
   START_CMD="dotnet run --project ${ENTRY_PROJECT:-.}"
 elif [ -f package.json ]; then
   # package.json に dev スクリプトがあれば優先的に使用し、なければ start スクリプトを確認

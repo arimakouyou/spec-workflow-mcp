@@ -73,9 +73,9 @@ jobs:
       - name: Redundant dependency check (advisory)
         continue-on-error: true
         run: |
-          if dotnet tool list | grep -q snitch; then
+          if [ -f .config/dotnet-tools.json ] && dotnet tool list 2>/dev/null | grep -q snitch; then
             dotnet tool run snitch 2>&1 | head -30
-          elif dotnet tool list -g | grep -q snitch; then
+          elif dotnet tool list -g 2>/dev/null | grep -q snitch; then
             snitch 2>&1 | head -30
           else
             echo "Snitch not installed, skipping redundant dependency check"
