@@ -181,7 +181,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 JSON 文字列と Enum の変換には `JsonStringEnumConverter` を使用し、未定義値を拒否する:
 
 ```csharp
-[JsonConverter(typeof(JsonStringEnumConverter<UserRole>))]
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum UserRole
 {
     Admin,

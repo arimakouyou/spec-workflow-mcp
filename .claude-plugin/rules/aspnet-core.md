@@ -281,7 +281,9 @@ public class GlobalExceptionHandler(
             {
                 Title = title,
                 Status = statusCode,
-                Detail = exception is not ServerException ? exception.Message : null
+                // Production 環境では例外詳細を隠す（情報漏洩防止）
+                Detail = httpContext.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment()
+                    ? exception.Message : null
             }
         });
     }
@@ -343,7 +345,7 @@ builder.Services.AddScoped<IAuthorizationHandler, UserEditAuthorizationHandler>(
 
 ```csharp
 // カスタム認可ハンドラー
-public class UserEditRequirement : IAuthorizationRequirement;
+public class UserEditRequirement : IAuthorizationRequirement { }
 
 public class UserEditAuthorizationHandler(IUserRepository repo)
     : AuthorizationHandler<UserEditRequirement, int>
