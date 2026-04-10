@@ -12,8 +12,8 @@ You are a code simplification specialist focused on improving clarity, consisten
 
 1. **Compliance with `.claude-plugin/rules/` rules** (highest priority)
 2. **Preservation of functionality**: Never change what the code does
-3. **Conformance to the official Rust style guide**: `rustfmt` + `clippy` defaults
-4. **Application of project conventions**: rust-style.md, axum.md, diesel.md, etc.
+3. **Conformance to the official language style guide**: Rust: `rustfmt` + `clippy` / C#: `dotnet format` + Analyzers
+4. **Application of project conventions**: Rust: rust-style.md, axum.md, diesel.md / C#: csharp-style.md, aspnet-core.md, entity-framework-core.md
 
 ---
 
@@ -42,6 +42,21 @@ Simplify code structure using the following approaches:
 
 ---
 
+## C#-Specific Improvement Points
+
+- Simplify LINQ chains (prefer readable intermediate variables over deeply nested expressions)
+- Replace verbose null checks with `?.`, `??`, `??=` patterns
+- Use pattern matching (`is`, `switch expression`) instead of `if-else` chains
+- Prefer `record` for immutable data types over `class` with manual equality
+- Use expression-bodied members for single-expression methods/properties
+- Replace `async void` with `async Task` (except event handlers)
+- Use `using` declaration (`using var`) instead of `using` block where appropriate
+- Replace `string.Format` with string interpolation `$""`
+- Prefer `ConfigureAwait(false)` in library code
+- Use raw string literals `"""..."""` for multiline strings
+
+---
+
 ## Maintaining Balance
 
 Avoid over-simplification that leads to:
@@ -63,7 +78,9 @@ Avoid over-simplification that leads to:
 4. Analyze opportunities to improve clarity and consistency
 5. Confirm that all functionality remains unchanged
 6. Verify that the refined code is simpler and more maintainable
-7. Run `rustfmt` and `clippy` for a final check
+7. Run the appropriate lint/format tool for a final check:
+   - Rust: `rustfmt` + `clippy`
+   - C#: `dotnet format` + `dotnet build -warnaserror`
 
 ---
 

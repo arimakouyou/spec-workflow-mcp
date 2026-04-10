@@ -51,7 +51,9 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 ## Quality Checks (all must pass)
 
-Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
+Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`. Detect the project type first, then run the appropriate commands.
+
+### Rust Projects
 
 > **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `.claude-plugin/rules/rust-build-cache.md`.
 
@@ -61,9 +63,22 @@ cargo clippy --quiet --all-targets -- -D warnings
 cargo test --quiet
 ```
 
+### .NET Projects (.csproj / .sln detected, no Cargo.toml)
+
+> **Note**: .NET uses MSBuild incremental builds and NuGet cache automatically. See `.claude-plugin/rules/dotnet-build-cache.md`. Use `--no-restore` / `--no-build` flags to chain commands efficiently.
+
+```bash
+dotnet restore
+dotnet format --verify-no-changes --no-restore
+dotnet build --no-restore -warnaserror
+dotnet test --no-build --verbosity quiet
+```
+
 ### Dependency Analysis (after core checks, before mutation testing)
 
 quality-checks.md で定義されたオプショナルツールを利用可能時に実行する。mutation testing より先に実行し、ブロッキング脆弱性がある場合は早期に検出する。
+
+#### Rust
 
 ```bash
 # cargo-audit (blocking — 脆弱性検出時は停止)
@@ -74,6 +89,23 @@ fi
 # cargo-udeps (advisory — 警告のみ)
 if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
   cargo +nightly udeps --quiet || true
+fi
+```
+
+#### .NET
+
+```bash
+# Security audit (blocking — high/critical 脆弱性検出時は停止)
+OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
+echo "$OUTPUT"
+if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
+  echo "Critical or high severity vulnerabilities found"
+  exit 1
+fi
+
+# Snitch (advisory — 冗長参照の警告のみ)
+if dotnet tool list | grep -q snitch; then
+  dotnet tool run snitch 2>&1 | head -30 || true
 fi
 ```
 
@@ -92,6 +124,33 @@ fi
 ```
 
 Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
+
+### .NET Blazor Projects
+
+`*.csproj` に `Microsoft.AspNetCore.Components.WebAssembly` パッケージ参照がある場合、WASM ビルド検証が **必須**:
+
+```bash
+# Trim/AOT 有効で publish 検証（Leptos の cargo leptos build 相当）
+dotnet publish -c Release -p:PublishTrimmed=true
+```
+
+このステップなしでは、Trim/AOT 互換性の問題が検出されない（`dotnet build` はトリミングを実行しない）。
+
+### .NET Task Detection
+
+タスクの `_Prompt` が .NET 関心事（`.cs`、`.csproj`、`DbContext`、`Controller`、`Endpoint`、ASP.NET Core パターン）を含む場合:
+
+- **RED phase**: `.claude-plugin/skills/tdd-skills-dotnet/` のパターンに従い、xUnit テストを記述する
+- **GREEN phase**: テスト対象の実装を記述する
+- **Quality checks**: `dotnet test` 通過後、Blazor プロジェクトでは `dotnet publish -p:PublishTrimmed=true` で WASM コンパイルを検証する
+
+### Blazor Frontend Task Detection
+
+タスクの `_Prompt` が Blazor フロントエンド関心事（`.razor`、`@bind`、`RenderMode`、`pages/`・`components/` ディレクトリ）を含む場合:
+
+- **RED phase**: `.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md` のパターンに従い、code-behind からロジックを抽出しテストを記述する。`.razor` レンダリング出力のテストは書かない
+- **GREEN phase**: テスト対象の抽出ロジック関数を先に実装し、次に `.razor` コンポーネントに配線する
+- **Quality checks**: `dotnet test` 通過後、`dotnet publish -c Release -p:PublishTrimmed=true` で WASM コンパイルを検証する
 
 ### Mutation Testing (post-quality check)
 
@@ -128,6 +187,28 @@ rm -f git.diff
 | cargo-mutants not installed | Record `mutation_testing: skip` |
 | Empty diff | Record `mutation_testing: skip (no .rs changes)` |
 
+#### .NET: Stryker.NET (post-quality check)
+
+After all quality checks pass, run mutation testing with Stryker.NET. This step runs only when `dotnet-stryker` is installed. **Recommended for nightly/scheduled runs** due to long execution times.
+
+```bash
+# Stryker.NET mutation testing (only if installed and .cs changes exist)
+if dotnet tool list | grep -q dotnet-stryker && git diff "$BASE_BRANCH" -- '*.cs' | grep -q .; then
+  dotnet stryker --since:"$BASE_BRANCH"
+  STRYKER_EXIT=$?
+else
+  STRYKER_EXIT=skip
+fi
+```
+
+| Outcome | Action |
+|---------|--------|
+| All mutants killed | Record `stryker: pass` in completion report |
+| Survived mutants found | Analyze each survived mutant, write additional tests. Record `stryker: pass (N mutants killed after supplement)` |
+| Supplement retry exhausted (2 attempts) | Record `stryker: warn` with survived mutant details. Do not block |
+| dotnet-stryker not installed | Record `stryker: skip` |
+| No .cs changes | Record `stryker: skip (no .cs changes)` |
+
 > **Note**: If the base branch is not `main`, the orchestrator must specify the correct base branch in the prompt (e.g., `Base branch: develop`). Default to `main`.
 
 ## Retry Policy
@@ -142,13 +223,21 @@ Apply a uniform limit to all phases. If the limit is exceeded, stop the fix and 
 | GREEN | Implementation fixes for failing tests | 3 | Stop and report |
 | REFACTOR | Tests broken by refactoring | 2 | Revert refactoring, restore GREEN state |
 
-### Quality Checks
+### Quality Checks (Rust)
 
 | Check | Max retries | Action |
 |-------|:-----------:|--------|
 | rustfmt | 1 | Attempt one auto-fix with `rustfmt`. If `--check` still fails → stop and report |
 | clippy | 3 | Read warnings and fix. If not resolved in 3 attempts → stop and report |
 | cargo test | 2 | Analyze test failures and fix. If not resolved in 2 attempts → stop and report |
+
+### Quality Checks (.NET)
+
+| Check | Max retries | Action |
+|-------|:-----------:|--------|
+| dotnet format | 1 | Attempt one auto-fix with `dotnet format`. If `--verify-no-changes` still fails → stop and report |
+| dotnet build -warnaserror | 3 | Read analyzer warnings and fix. If not resolved in 3 attempts → stop and report |
+| dotnet test | 2 | Analyze test failures and fix. If not resolved in 2 attempts → stop and report |
 
 ### Report Format on Stop
 
@@ -157,13 +246,15 @@ When the retry limit is reached, return the following instead of a normal comple
 ```
 - status: retry_exhausted
 - phase: RED|GREEN|REFACTOR|quality_check
-- check: rustfmt|clippy|cargo_test (for quality_check phase)
+- check: rustfmt|clippy|cargo_test|dotnet_format|dotnet_build|dotnet_test (for quality_check phase)
 - attempts: <number of attempts>
 - last_error: <content of the last error>
 - changed_files: <files created/modified up to that point>
 ```
 
 ## Completion Report Format (on success, must include the following keys)
+
+### Rust Projects
 
 ```
 - status: completed
@@ -173,6 +264,20 @@ When the retry limit is reached, return the following instead of a normal comple
 - rustfmt: pass|fail
 - clippy: pass|fail
 - mutation_testing: pass|warn|skip <details>
+- changed_files: <list>
+```
+
+### .NET Projects
+
+```
+- status: completed
+- worktree_path: <path>
+- branch: <branch>
+- tests: pass|fail <details>
+- dotnet_format: pass|fail
+- dotnet_build: pass|fail
+- dotnet_test: pass|fail
+- stryker: pass|warn|skip <details>
 - changed_files: <list>
 ```
 

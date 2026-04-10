@@ -1,7 +1,10 @@
 ---
 paths:
   - "**/*.rs"
+  - "**/*.cs"
   - "**/Cargo.toml"
+  - "**/*.csproj"
+  - "**/*.sln"
   - "**/package.json"
 ---
 
@@ -238,6 +241,171 @@ npx knip --no-progress 2>&1 | head -50
 - **Advisory**: 未使用ファイル・エクスポートを報告するがブロックしない
 - 未導入の場合はスキップ（`npx knip` が失敗したら無視）
 
+## QC12: .NET Task-Level Quality Checks
+
+When the project is .NET-based (detected by `*.sln` or `*.csproj` existence without Rust indicators), use the following task-level quality checks. Target: **.NET 10**.
+
+> **Build Cache**: .NET uses MSBuild incremental builds and NuGet package cache automatically. See `.claude-plugin/rules/dotnet-build-cache.md` for details. Use `--no-restore` / `--no-build` flags to skip redundant steps in the chain.
+
+> **Analyzers**: Projects should include .NET Analyzers (CAxxxx), Roslynator, and StyleCop.Analyzers via `Directory.Build.props`. Analyzer warnings are caught by `dotnet build -warnaserror`. See `.claude-plugin/rules/csproj.md`.
+
+### format
+
+```bash
+dotnet format --verify-no-changes --no-restore
+```
+
+- Uses `.editorconfig` rules (must be present at solution root)
+- `--no-restore`: `dotnet restore` が別途実行済みの前提（チェーン内での冗長 restore を回避）
+- To auto-fix: `dotnet format` (without `--verify-no-changes`)
+- Covers both formatting and code style analyzers
+
+### build (lint + compile)
+
+```bash
+dotnet build --no-restore -warnaserror
+```
+
+- `--no-restore`: Skip restore if already run
+- `-warnaserror`: Treat all warnings as errors (Analyzers: CAxxxx + Roslynator + StyleCop.Analyzers + Meziantou.Analyzer)
+- Catches compile errors, analyzer violations, and code quality issues in a single pass
+- This is the C# equivalent of `cargo clippy`
+
+### test
+
+```bash
+dotnet test --no-build --verbosity quiet
+```
+
+- Runs all tests (unit + integration) via xUnit
+- `--no-build`: Skip build if already run
+- To run a specific test: `dotnet test --filter "FullyQualifiedName~TestClassName.TestMethodName"`
+
+### doc comment coverage (advisory)
+
+```bash
+# CS1591 warnings indicate missing XML doc comments on public APIs
+dotnet build --no-restore -p:DocumentationFile=docs.xml 2>&1 | grep -c "CS1591" || true
+```
+
+- **Advisory**: Reports missing doc comments but does not block commits
+- Requires `<DocumentationFile>` in .csproj for full coverage
+- DocFX can be used for documentation generation
+
+### dependency analysis
+
+#### Security audit (blocking)
+
+```bash
+# dotnet list package --vulnerable は常に exit code 0 を返すため、出力をパースする
+OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
+echo "$OUTPUT"
+if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
+  echo "Critical or high severity vulnerabilities found"
+  exit 1
+fi
+```
+
+- **Blocking**: If high/critical vulnerabilities are found, the check **fails**
+- `--include-transitive`: Checks both direct and transitive dependencies
+- `cargo audit` と異なり exit code で判定できないため、出力の grep が必須
+
+#### Redundant dependency detection (advisory)
+
+```bash
+# Snitch: detects redundant direct package references (transitive already provides them)
+if dotnet tool list | grep -q snitch; then
+  dotnet tool run snitch 2>&1 | head -30
+fi
+```
+
+- **Advisory**: Reports redundant references but does not block commits
+- This is the partial C# equivalent of `cargo +nightly udeps`
+
+#### License audit (advisory)
+
+```bash
+# dotnet-project-licenses: reports all dependency licenses
+if command -v dotnet-project-licenses >/dev/null 2>&1; then
+  dotnet-project-licenses --input . 2>&1 | head -30
+fi
+```
+
+- **Advisory**: Reports license information but does not block commits
+- This is the C# equivalent of `cargo deny`
+
+### Detection and availability check
+
+```bash
+# Snitch
+SNITCH_AVAILABLE=false
+if dotnet tool list | grep -q snitch; then
+  SNITCH_AVAILABLE=true
+fi
+
+# dotnet-project-licenses
+LICENSES_AVAILABLE=false
+if command -v dotnet-project-licenses >/dev/null 2>&1; then
+  LICENSES_AVAILABLE=true
+fi
+```
+
+| Tool | Installed | Action |
+|------|-----------|--------|
+| dotnet list package --vulnerable | Always available | Run. Fail on high/critical |
+| Snitch | Yes | Run `dotnet tool run snitch`. Warn on findings |
+| Snitch | No | Skip with log: "snitch not installed, skipping redundant dependency check" |
+| dotnet-project-licenses | Yes | Run. Report licenses |
+| dotnet-project-licenses | No | Skip silently |
+
+### QC12.6: Blazor Build Verification (Blazor projects only)
+
+When the project uses Blazor WebAssembly (detected by `Microsoft.AspNetCore.Components.WebAssembly` in .csproj), the following additional checks are **required** after the standard checks above. This is the C# equivalent of QC5 (Leptos WASM verification).
+
+#### dotnet publish with Trim (preferred)
+
+```bash
+dotnet publish -c Release -p:PublishTrimmed=true
+```
+
+- Builds the WASM output with trimming enabled
+- Catches trimming-incompatible code (reflection, dynamic loading) that `dotnet build` alone cannot detect
+- Must pass before any commit
+
+#### Trim/AOT warning detection (advisory)
+
+```bash
+dotnet publish -c Release -p:PublishTrimmed=true -p:RunAOTCompilation=true 2>&1 | grep -E "(IL2[0-9]{3}|IL3[0-9]{3})" || true
+```
+
+- **Advisory**: Reports Trim/AOT warnings (IL2xxx linker warnings, IL3xxx AOT warnings)
+- These indicate reflection-dependent code that may break at runtime
+
+### Detection and Blazor check for agents
+
+```bash
+# Step 1: Detect Blazor WebAssembly project
+BLAZOR_WASM=false
+if find . -maxdepth 2 -name '*.csproj' -exec grep -l 'Microsoft.AspNetCore.Components.WebAssembly' {} + 2>/dev/null | head -1 | grep -q .; then
+  BLAZOR_WASM=true
+fi
+```
+
+| Blazor WASM detected | Action |
+|---------------------|--------|
+| No | Skip Blazor checks |
+| Yes | Run `dotnet publish -c Release -p:PublishTrimmed=true` |
+
+The full check order for .NET projects:
+
+1. `dotnet restore`
+2. `dotnet format --verify-no-changes`
+3. `dotnet build --no-restore -warnaserror` (Analyzers: CAxxxx + Roslynator + StyleCop)
+4. `dotnet test --no-build --verbosity quiet`
+5. `dotnet list package --vulnerable --include-transitive` (blocking on high/critical)
+6. `dotnet tool run snitch` (if installed — advisory)
+7. `dotnet publish -c Release -p:PublishTrimmed=true` (Blazor projects only — required)
+
 ## QC8: Code Duplication Detection (Advisory)
 
 コード重複を検出する。全プロジェクトタイプに適用可能。
@@ -271,6 +439,7 @@ lockfile の欠如は再現不可能なビルドにつながるため、**Blocki
 | pnpm | `package.json` | `pnpm-lock.yaml` |
 | Cargo (Rust) | `Cargo.toml` | `Cargo.lock` |
 | Go | `go.mod` | `go.sum` |
+| NuGet (.NET) | `*.csproj` | `packages.lock.json` |
 | Poetry (Python) | `pyproject.toml` | `poetry.lock` |
 | Bundler (Ruby) | `Gemfile` | `Gemfile.lock` |
 
@@ -300,8 +469,19 @@ if [ -f go.mod ] && [ ! -f go.sum ]; then
   FAIL=true
 fi
 
+# .NET (packages.lock.json は RestorePackagesWithLockFile 有効時のみ生成される)
+# Central Package Management 使用時は Directory.Packages.props の存在を確認
+if find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
+  if find . -maxdepth 3 \( -name '*.csproj' -o -name 'Directory.Build.props' -o -name 'Directory.*.props' \) -exec grep -lq 'RestorePackagesWithLockFile' {} + 2>/dev/null; then
+    if [ ! -f packages.lock.json ] && ! find . -maxdepth 3 -name 'packages.lock.json' -print -quit 2>/dev/null | grep -q .; then
+      echo "FAIL: RestorePackagesWithLockFile enabled but packages.lock.json not found"
+      FAIL=true
+    fi
+  fi
+fi
+
 # .gitignore で除外されていないことを確認
-for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poetry.lock Gemfile.lock; do
+for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poetry.lock Gemfile.lock packages.lock.json; do
   if [ -f "$lockfile" ] && git check-ignore -q "$lockfile" 2>/dev/null; then
     echo "FAIL: $lockfile is gitignored — lockfile must be committed for reproducible builds"
     FAIL=true
@@ -387,6 +567,19 @@ npx eslint --plugin security --rule 'security/detect-object-injection: warn' .
 # codeql.yml ワークフローで自動実行
 ```
 
+### .NET
+
+```bash
+# .NET Analyzers (CAxxxx) + Roslynator + StyleCop — QC12.2 の dotnet build -warnaserror で実行済み
+# 追加のセキュリティ重点チェック:
+dotnet build --no-restore -p:AnalysisLevel=latest-all 2>&1 | grep -E "(CA2[0-9]{3}|CA3[0-9]{3})" || true
+```
+
+- `CA2xxx`: Security-related analyzers (SQL injection, XSS, etc.)
+- `CA3xxx`: Security design guidelines
+- `AnalysisLevel=latest-all`: 全カテゴリの最新ルールを有効化
+- CodeQL は GitHub Actions 経由で自動実行（C# 対応）
+
 ### 他の SAST ツール（代替）
 
 | ツール | 対応言語 | 特徴 |
@@ -422,10 +615,16 @@ if grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/null; then
 # 2. Rust API 検出（axum, actix-web, rocket 等）
 elif grep -qE '(axum|actix-web|rocket)' Cargo.toml 2>/dev/null; then
   echo "rust-api"
-# 3. Node.js 検出
+# 3. .NET Blazor フルスタック検出（Leptos 相当）
+elif find . -maxdepth 2 -name '*.csproj' -exec grep -l 'BlazorWebAssembly\|Microsoft.AspNetCore.Components.WebAssembly' {} + 2>/dev/null | head -1 | grep -q .; then
+  echo "dotnet-blazor"
+# 4. .NET API 検出
+elif ls *.sln 2>/dev/null | head -1 | grep -q . || find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
+  echo "dotnet"
+# 5. Node.js 検出
 elif test -f package.json; then
   echo "nodejs"
-# 4. いずれにも該当しない
+# 6. いずれにも該当しない
 else
   echo "generic"
 fi
@@ -439,8 +638,10 @@ fi
 |--------|---------|------|
 | Leptos | `cargo leptos build` | SSR + WASM 両方をビルド |
 | Rust API | `cargo build` | リリースビルドは不要（デバッグビルドで十分） |
+| .NET Blazor | `dotnet publish -c Release -p:PublishTrimmed=true` | WASM + Trim 検証を含む |
+| .NET API | `dotnet build --no-restore -warnaserror` | Analyzer 警告をエラー化 |
 | Node.js | `npm run build` | `build` スクリプトが package.json に存在する場合のみ。存在しない場合は SKIP（FAIL ではない）とし、ログに「build スクリプトなし」と記録 |
-| Generic | `cargo build` or `npm run build` | 検出可能なビルドコマンドを実行。該当コマンドがない場合は SKIP とする |
+| Generic | `cargo build` or `dotnet build` or `npm run build` | 検出可能なビルドコマンドを実行。該当コマンドがない場合は SKIP とする |
 
 ### Step C: 統合テスト実行
 
@@ -459,6 +660,9 @@ fi
 # 検出対象: tests/integration*/ 配下の .rs ファイル、または tests/ 直下の .rs ファイル
 find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*' -print -quit 2>/dev/null
 
+# .NET: 統合テストプロジェクトの存在確認
+find . -maxdepth 3 \( -name '*Integration*Tests*.csproj' -o -name '*IntegrationTests*.csproj' \) -print -quit 2>/dev/null
+
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 grep -q '"test:integration"' package.json 2>/dev/null || \
   find tests test __tests__ -type f -name 'integration*' -print -quit 2>/dev/null
@@ -467,6 +671,7 @@ grep -q '"test:integration"' package.json 2>/dev/null || \
 | タイプ | コマンド |
 |--------|---------|
 | Rust | `cargo test --tests --quiet` |
+| .NET | `dotnet test --filter "Category=Integration" --no-build --verbosity quiet`（テストに `[Trait("Category","Integration")]` 必須） |
 | Node.js（スクリプトあり） | `npm run test:integration` |
 | Node.js（ファイルのみ） | `npm test -- --testPathPattern=integration` |
 
@@ -493,6 +698,15 @@ docker-compose down
 # プロジェクトタイプに応じてサーバ起動コマンドを切り替え
 if [ -f Cargo.toml ]; then
   START_CMD="cargo run"
+elif SLN=$(ls *.sln 2>/dev/null | head -1) && [ -n "$SLN" ]; then
+  # .sln がルートに存在する前提（単一 .sln）
+  # Web SDK プロジェクトを優先（クラスライブラリは dotnet run 不可）
+  ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | while read -r proj; do
+    [ -f "$proj" ] && grep -q 'Microsoft.NET.Sdk.Web' "$proj" && echo "$proj" && break
+  done)
+  # Web SDK が見つからなければ先頭プロジェクトにフォールバック
+  [ -z "$ENTRY_PROJECT" ] && ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | head -1)
+  START_CMD="dotnet run --project ${ENTRY_PROJECT:-.}"
 elif [ -f package.json ]; then
   # package.json に dev スクリプトがあれば優先的に使用し、なければ start スクリプトを確認
   if command -v node >/dev/null 2>&1 && \
@@ -506,7 +720,7 @@ elif [ -f package.json ]; then
     exit 0
   fi
 else
-  echo "Step D: 対応するプロジェクトタイプ（Rust/Node.js）が見つからないため、スモークテストをスキップします。" >&2
+  echo "Step D: 対応するプロジェクトタイプ（Rust/.NET/Node.js）が見つからないため、スモークテストをスキップします。" >&2
   exit 0
 fi
 
@@ -541,13 +755,13 @@ fi
 - ヘルスチェックエンドポイントが設計書に未定義
 - サーバ起動コマンドが不明（Cargo.toml に `[[bin]]` セクションがない等）
 - Node.js プロジェクトで `start` / `dev` スクリプトが存在しない
-- 対応するプロジェクトタイプ（Rust/Node.js）が検出されない
+- 対応するプロジェクトタイプ（Rust/.NET/Node.js）が検出されない
 
 **環境不備の FAIL 条件**（ツール・ランタイム不足の場合 — 環境依存のスキップは一切許可しない）:
 - Docker/コンテナランタイムが未インストール、または `docker` / `docker-compose` コマンドが存在しない・権限不足で実行できない（`docker-compose up` の起動失敗を含む）
 - Chrome/ブラウザが未インストール
 - DB/キャッシュ起動に必要なツールが未インストール
-- サーバ起動に必要なランタイム（cargo, node 等）が未インストール
+- サーバ起動に必要なランタイム（cargo, dotnet, node 等）が未インストール
 - 外部依存（DB、キャッシュ等）が必要でローカル起動できない（Docker/testcontainers で起動できるようにするのが設計の責務）
 
 環境不備 FAIL 時は、不足ツールを明示してユーザーにエスカレートする。design.md / test-design.md の Required Tools テーブルの Install Command を提示すること。特に `docker-compose.yml` が存在しスモークテストで `docker-compose up` を実行する場合、コマンド未存在・実行権限不足・起動失敗はいずれも FAIL（環境不備）として直ちに STOP し、SKIP/PASS として扱わないこと。

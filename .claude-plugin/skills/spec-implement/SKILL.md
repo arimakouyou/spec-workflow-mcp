@@ -211,8 +211,16 @@ If the task has `_PhaseReview: true_`, **skip the TDD cycle (steps 4-5)** and in
 
 #### 3.5.1 Run Tests
 
+Run the test command appropriate for the detected project type (see quality-checks.md):
+
 ```bash
+# Rust / Leptos
 cargo test --quiet
+
+# .NET
+dotnet restore
+dotnet build --no-restore -warnaserror
+dotnet test --no-build --verbosity quiet
 ```
 
 - **All pass** → proceed to 3.5.2
@@ -231,6 +239,8 @@ cargo test --quiet
 |----------|--------|
 | `Cargo.toml` に `[package.metadata.leptos]` | Leptos フルスタック |
 | `Cargo.toml` に `axum` / `actix-web` / `rocket` 依存 | Rust API |
+| `*.csproj` に `BlazorWebAssembly` / `Microsoft.AspNetCore.Components.WebAssembly` | .NET Blazor フルスタック |
+| `*.sln` or `*.csproj` 存在（Cargo.toml なし） | .NET API |
 | `package.json` 存在 | Node.js |
 | いずれにも該当しない | Generic（ビルドのみ検証） |
 
@@ -267,7 +277,7 @@ cargo test --quiet
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
-> **アーキテクチャ不変条件テスト**: `tests/architecture.rs`（`/generate-arch-tests` で生成）が存在する場合、step 3.5.1 の `cargo test` で自動実行される。依存方向違反が検出された場合はテスト失敗として扱い、根本原因タスクの特定と差し戻しを行う。`tests/architecture.rs` が存在しない場合、かつ design.md に `## Module Boundaries` セクションが存在する場合は、`/generate-arch-tests` の実行をユーザーに提案する。
+> **アーキテクチャ不変条件テスト**: Rust: `tests/architecture.rs`（`/generate-arch-tests` で生成）が存在する場合、step 3.5.1 の `cargo test` で自動実行される。.NET: NetArchTest.Rules / ArchUnitNET によるアーキテクチャテストが存在する場合、`dotnet test` で自動実行される。依存方向違反が検出された場合はテスト失敗として扱い、根本原因タスクの特定と差し戻しを行う。テストが存在しない場合、かつ design.md に `## Module Boundaries` セクションが存在する場合は、アーキテクチャテストの追加をユーザーに提案する。
 
 #### 3.5.1.6 CVE Audit (依存脆弱性監査)
 
@@ -278,9 +288,10 @@ Expert Team Review の前に、依存ライブラリの脆弱性を機械的に�
 | プロジェクトタイプ | 検出条件 | 監査コマンド |
 |----------------|----------|------------|
 | Rust | `Cargo.lock` 存在 | `cargo audit` |
+| .NET | `*.csproj` 存在 | `dotnet list package --vulnerable --include-transitive` |
 | Node.js (npm) | `package-lock.json` 存在 | `npm audit` |
 | Node.js (Yarn) | `yarn.lock` 存在 | `yarn audit`（Yarn v1）または `yarn npm audit`（Yarn v2+） |
-| 両方 | Rust + Node.js のロックファイル存在 | 該当する監査コマンドをそれぞれ実行 |
+| 複合 | 複数のロックファイル/プロジェクトファイル存在 | 該当する監査コマンドをそれぞれ実行 |
 
 ロックファイルが存在しない場合は SKIP（新規プロジェクトで依存未解決）。
 
@@ -493,14 +504,23 @@ Agent({
     4. Confirm all tests pass by running them (retry up to 3 times on failure)
     5. REFACTOR: Clean up the code (see /spec-impl-review skill)
     6. Confirm all tests still pass after refactoring
-    7. Run the quality checks defined in quality-checks.md (rustfmt, clippy, cargo test, and dependency analysis tools if available)
-    8. Run mutation testing on the diff (if cargo-mutants is installed)
+    7. Run the quality checks defined in quality-checks.md for the detected project type:
+       - Rust: rustfmt, clippy, cargo test, dependency analysis tools
+       - .NET: dotnet format, dotnet build -warnaserror, dotnet test, dotnet list package --vulnerable
+    8. Run mutation testing on the diff (Rust: cargo-mutants, .NET: Stryker.NET — if installed)
 
     Include the following in the completion report:
+    For Rust projects:
     - tests: pass|fail
     - rustfmt: pass|fail
     - clippy: pass|fail
     - mutation_testing: pass|warn|skip
+    For .NET projects:
+    - tests: pass|fail
+    - dotnet_format: pass|fail
+    - dotnet_build: pass|fail
+    - dotnet_test: pass|fail
+    - stryker: pass|warn|skip
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
     - changed_files: list of all changed files
@@ -535,7 +555,8 @@ Branch based on parallel-worker's `status`:
 > **Agent selection**:
 > - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`src/pages/`、`src/components/`）が対象なら `frontend-test-engineer`
 > - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
-> - 非 Rust プロジェクトはこのステップをスキップするか、同じ4カテゴリ基準を満たす汎用サブエージェントを使う
+> - C#/.NET プロジェクト（`.cs`、`.csproj` 存在）は `unit-test-engineer`（C#/xUnit セクション対応済み）。Blazor code-behind テストも同エージェントが対応
+> - 上記いずれにも該当しないプロジェクトは同じ4カテゴリ基準を満たす汎用サブエージェントを使う
 
 Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
