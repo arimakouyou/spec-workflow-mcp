@@ -26,7 +26,7 @@ Spec Workflow MCP is a Model Context Protocol server that provides structured, s
 9. **Implement tasks** (Phase 5) - Execute the implementation plan
 10. **Track progress** - Monitor completion status
 
-> **Prerequisite**: Before starting the per-spec workflow, create project-level steering documents with `/steering-doc` (product.md, tech.md, structure.md). These are referenced by all subsequent phases.
+> **Recommended**: Per-spec ワークフロー開始前に `/steering-doc` でプロジェクトレベルのステアリングドキュメント（product.md, tech.md, structure.md）を作成することを推奨。各フェーズで参照されるが、未作成でもワークフローはブロックされない。
 
 ## Creating Specifications
 
