@@ -108,7 +108,7 @@ Replace placeholders with the values gathered in Step 2:
 
 **.NET / .NET Blazor:**
 - `{{DOTNET_VERSION}}` → detected .NET version (e.g., `10.0`)
-- `{{SOLUTION_PATH}}` → path to .sln file (if exists, otherwise empty)
+- 前提: リポジトリルートに `.sln` が1つ存在すること（コマンドは `.sln` パスを指定せず実行）
 
 **Node.js:**
 - `{{NODE_VERSION}}` → detected Node version (e.g., `20`)

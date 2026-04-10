@@ -11,7 +11,7 @@ description: >
 
 > For foundational principles, see the language-agnostic `/tdd-skills`. This skill focuses on .NET-specific implementation patterns.
 
-Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with .NET 10 / C# 13 language features.
+Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with .NET 10 language features.
 
 ## Pre-check: Know-how Reference
 
