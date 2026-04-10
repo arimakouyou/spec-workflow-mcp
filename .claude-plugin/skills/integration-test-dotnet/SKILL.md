@@ -434,8 +434,8 @@ Main loop: monitor until all tasks are complete.
 dotnet test tests/<ProjectName>.IntegrationTests/ --no-build --verbosity normal
 
 # Code quality
-dotnet format tests/<ProjectName>.IntegrationTests/ --verify-no-changes
-dotnet build tests/<ProjectName>.IntegrationTests/ --warnaserror
+dotnet format tests/<ProjectName>.IntegrationTests/ --verify-no-changes --no-restore
+dotnet build tests/<ProjectName>.IntegrationTests/ --no-restore -warnaserror
 ```
 
 If verification fails, Command fixes it directly.

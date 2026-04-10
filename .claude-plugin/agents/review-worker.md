@@ -52,7 +52,7 @@ fi
 
 ```bash
 dotnet restore
-dotnet format --verify-no-changes
+dotnet format --verify-no-changes --no-restore
 dotnet build --no-restore -warnaserror
 dotnet test --no-build --verbosity quiet
 # Dependency Analysis (blocking — exit code 0 のため出力をパースする)

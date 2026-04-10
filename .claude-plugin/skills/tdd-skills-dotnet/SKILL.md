@@ -137,7 +137,7 @@ Testing strategy for Blazor components (parameters, event callbacks, render frag
 - **Test logic, not rendering**: Extract business logic from `.razor` into code-behind `.razor.cs` or service classes, and test with `[Fact]`
 - **bUnit for component tests**: Render components in a test context, assert markup, trigger events
 - **Validation logic**: Extract validators into pure C# classes; test independently
-- **`dotnet test` = server-side only**: After GREEN, run `dotnet publish -p:PublishTrimmed=true` for WASM verification
+- **`dotnet test` = server-side only**: After GREEN, run `dotnet publish -c Release -p:PublishTrimmed=true` for WASM verification
 
 Details: [references/blazor-testing.md](references/blazor-testing.md)
 

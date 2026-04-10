@@ -69,7 +69,7 @@ cargo test --quiet
 
 ```bash
 dotnet restore
-dotnet format --verify-no-changes
+dotnet format --verify-no-changes --no-restore
 dotnet build --no-restore -warnaserror
 dotnet test --no-build --verbosity quiet
 ```

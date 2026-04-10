@@ -43,7 +43,7 @@ All items must PASS for approval; any single FAIL results in rejection.
 - [ ] `IClassFixture<T>` / `ICollectionFixture<T>` is used appropriately for shared state
 - [ ] FluentAssertions is used consistently (no mix of `Assert.*` and `.Should()`)
 - [ ] `dotnet format` produces no changes
-- [ ] Build completes with no warnings (`--warnaserror`)
+- [ ] Build completes with no warnings (`-warnaserror`)
 - [ ] `using` / `await using` is used correctly for disposable resources
 
 ## Judgment Flow

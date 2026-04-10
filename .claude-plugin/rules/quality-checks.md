@@ -472,7 +472,7 @@ fi
 # .NET (packages.lock.json は RestorePackagesWithLockFile 有効時のみ生成される)
 # Central Package Management 使用時は Directory.Packages.props の存在を確認
 if find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
-  if grep -rq 'RestorePackagesWithLockFile' Directory.Build.props 2>/dev/null; then
+  if grep -rq 'RestorePackagesWithLockFile' Directory.Build.props *.csproj Directory.*.props 2>/dev/null; then
     if [ ! -f packages.lock.json ] && ! find . -maxdepth 3 -name 'packages.lock.json' -print -quit 2>/dev/null | grep -q .; then
       echo "FAIL: RestorePackagesWithLockFile enabled but packages.lock.json not found"
       FAIL=true
@@ -481,7 +481,7 @@ if find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; the
 fi
 
 # .gitignore で除外されていないことを確認
-for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poetry.lock Gemfile.lock; do
+for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poetry.lock Gemfile.lock packages.lock.json; do
   if [ -f "$lockfile" ] && git check-ignore -q "$lockfile" 2>/dev/null; then
     echo "FAIL: $lockfile is gitignored — lockfile must be committed for reproducible builds"
     FAIL=true
