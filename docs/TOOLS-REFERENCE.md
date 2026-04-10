@@ -433,7 +433,8 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 | title | string | Yes (request) | 承認対象の簡潔なタイトル |
 | filePath | string | Yes (request) | プロジェクトルートからの相対パス（content は渡さない） |
 | type | string | Yes (request) | "document" または "action" |
-| category | string | No | 承認カテゴリ |
+| category | string | Yes (request) | 承認カテゴリ: "spec" または "steering" |
+| categoryName | string | Yes (request) | スペック名（例: "user-auth"）、steering の場合は "steering" |
 | approvalId | string | Yes (status/delete) | 承認リクエストの ID |
 | projectPath | string | No | プロジェクトルートの絶対パス |
 
@@ -445,7 +446,9 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
   action: "request",
   title: "User Authentication Requirements",
   filePath: ".spec-workflow/specs/user-auth/requirements.md",
-  type: "document"
+  type: "document",
+  category: "spec",
+  categoryName: "user-auth"
 }
 ```
 

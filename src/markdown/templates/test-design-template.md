@@ -198,6 +198,8 @@ Notes:
 
 ```typescript
 // playwright.config.ts
+import { defineConfig } from '@playwright/test';
+
 export default defineConfig({
   expect: {
     toHaveScreenshot: {
@@ -206,7 +208,9 @@ export default defineConfig({
   },
 });
 
-// テスト例
+// tests/vrt/login.spec.ts
+import { test, expect } from '@playwright/test';
+
 test('login page visual regression', async ({ page }) => {
   await page.goto('/login');
   await expect(page).toHaveScreenshot('login-page.png');
