@@ -1,0 +1,459 @@
+From 726488bc33c1c0263ce0bddd03b7e35b7681900f Mon Sep 17 00:00:00 2001
+From: Hitoshi Oyama <hitoshi-oyama@internet.gmo>
+Date: Thu, 2 Apr 2026 15:58:58 +0900
+Subject: [PATCH 1/4] =?UTF-8?q?feat:=20cargo-udeps,=20cargo-audit,=20cargo?=
+ =?UTF-8?q?-mutants=20=E3=82=92=E3=83=AF=E3=83=BC=E3=82=AF=E3=83=95?=
+ =?UTF-8?q?=E3=83=AD=E3=83=BC=E3=81=AB=E7=B5=B1=E5=90=88?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+品質チェックパイプラインに依存関係の衛生管理とミューテーションテストを追加:
+
+- quality-checks.md: Dependency Analysis セクション追加（cargo-audit=blocking, cargo-udeps=advisory）
+- security.md: A9 に脆弱性トリアージフローとクロスリファレンス追加
+- cargo-toml.md: Dependency Hygiene セクション追加
+- cargo-mutants/SKILL.md: 新スキル作成（--no-shuffle -vV --in-diff git.diff パターン）
+- parallel-worker.md: TDD 品質チェック後にミューテーションテスト実行ステップ追加
+- review-worker.md: 依存分析コマンドとレポートフィールド追加
+- spec-implement/SKILL.md: Step 4 に mutation testing ステップとレポート追加
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+---
+ .claude-plugin/agents/parallel-worker.md      |  37 ++++
+ .claude-plugin/agents/review-worker.md        |  11 +
+ .claude-plugin/rules/cargo-toml.md            |   5 +
+ .claude-plugin/rules/quality-checks.md        |  56 +++++-
+ .claude-plugin/rules/security.md              |   9 +-
+ .claude-plugin/skills/cargo-mutants/SKILL.md  | 190 ++++++++++++++++++
+ .claude-plugin/skills/spec-implement/SKILL.md |   6 +-
+ 7 files changed, 310 insertions(+), 4 deletions(-)
+ create mode 100644 .claude-plugin/skills/cargo-mutants/SKILL.md
+
+diff --git a/.claude-plugin/agents/parallel-worker.md b/.claude-plugin/agents/parallel-worker.md
+index 221b4c8..9d98b8b 100644
+--- a/.claude-plugin/agents/parallel-worker.md
++++ b/.claude-plugin/agents/parallel-worker.md
+@@ -77,6 +77,42 @@ fi
+ 
+ Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
+ 
++### Mutation Testing (post-quality check)
++
++After all quality checks pass, run mutation testing on the diff to verify that unit tests actually detect code changes. This step runs only when `cargo-mutants` is installed.
++
++```bash
++# Generate diff against base branch
++git diff main -- '*.rs' > git.diff
++
++# Run mutation testing (only if cargo-mutants is installed and diff is non-empty)
++if command -v cargo-mutants >/dev/null 2>&1 && [ -s git.diff ]; then
++  cargo mutants --no-shuffle -vV --in-diff git.diff
++  MUTANTS_EXIT=$?
++else
++  MUTANTS_EXIT=skip
++fi
++
++# Clean up
++rm -f git.diff
++```
++
++- `--no-shuffle`: Deterministic execution order for reproducibility
++- `-vV`: Verbose output (both mutant list and test output)
++- `--in-diff git.diff`: Limit mutations to only the changed lines
++
++**Result handling**:
++
++| Outcome | Action |
++|---------|--------|
++| All mutants killed | Record `mutation_testing: pass` in completion report |
++| Survived mutants found | Analyze each survived mutant, write additional tests to kill them, then re-run `cargo test --quiet`. Record `mutation_testing: pass (N mutants killed after supplement)` |
++| Supplement retry exhausted (2 attempts) | Record `mutation_testing: warn` with survived mutant details. Do not block — proceed to completion |
++| cargo-mutants not installed | Record `mutation_testing: skip` |
++| Empty diff | Record `mutation_testing: skip (no .rs changes)` |
++
++> **Note**: If the base branch is not `main`, the orchestrator must specify the correct base branch in the prompt (e.g., `Base branch: develop`). Default to `main`.
++
+ ## Retry Policy
+ 
+ Apply a uniform limit to all phases. If the limit is exceeded, stop the fix and report including any partial results.
+@@ -119,6 +155,7 @@ When the retry limit is reached, return the following instead of a normal comple
+ - tests: pass|fail <details>
+ - rustfmt: pass|fail
+ - clippy: pass|fail
++- mutation_testing: pass|warn|skip <details>
+ - changed_files: <list>
+ ```
+ 
+diff --git a/.claude-plugin/agents/review-worker.md b/.claude-plugin/agents/review-worker.md
+index e1f7ae8..ea56256 100644
+--- a/.claude-plugin/agents/review-worker.md
++++ b/.claude-plugin/agents/review-worker.md
+@@ -35,8 +35,17 @@ Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`.
+ cargo fmt --all -- --check
+ cargo clippy --quiet --all-targets -- -D warnings
+ cargo test --quiet
++# Dependency Analysis (run if tools are available)
++command -v cargo-audit >/dev/null 2>&1 && cargo audit
++if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
++  cargo +nightly udeps --quiet || true
++fi
+ ```
+ 
++- `cargo audit`: **Blocking** — vulnerabilities found means the check fails. Do not commit
++- `cargo udeps`: **Advisory** — report warnings but do not block commit (`|| true`)
++- See `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section for detection details
++
+ ### Leptos Full-Stack Projects
+ 
+ If `Cargo.toml` contains `[package.metadata.leptos]`, WASM frontend build verification is **required**:
+@@ -252,6 +261,8 @@ git commit -m "<scope>: <summary of changes>"
+ - tests: pass|fail <details>
+ - rustfmt: pass|fail
+ - clippy: pass|fail
++- cargo_audit: pass|fail|skip
++- cargo_udeps: pass|warn|skip
+ - review: pass|fail
+ - review_action: commit|rework|escalate
+ - review_details:
+diff --git a/.claude-plugin/rules/cargo-toml.md b/.claude-plugin/rules/cargo-toml.md
+index 85635e0..df80739 100644
+--- a/.claude-plugin/rules/cargo-toml.md
++++ b/.claude-plugin/rules/cargo-toml.md
+@@ -61,3 +61,8 @@ version = "4.5.6"
+ - `authors`: use `Full Name <email@address>` format
+ - `license`: use valid SPDX expressions (e.g., `MIT OR Apache-2.0`)
+ - `description`: wrap at 80 columns, do not start with the crate name
++
++## Dependency Hygiene
++
++- Remove unused dependencies. Use `cargo +nightly udeps` to detect them (see `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section)
++- Prefer dependencies with active maintenance and no known vulnerabilities (verified by `cargo audit`)
+diff --git a/.claude-plugin/rules/quality-checks.md b/.claude-plugin/rules/quality-checks.md
+index 980c2ae..afd7a7b 100644
+--- a/.claude-plugin/rules/quality-checks.md
++++ b/.claude-plugin/rules/quality-checks.md
+@@ -39,6 +39,58 @@ cargo test --quiet
+ - Runs all tests (unit + integration)
+ - To run a specific test only: `cargo test --test {test_name} -- --nocapture`
+ 
++## Dependency Analysis (Optional Tools)
++
++Additional checks for dependency hygiene and security. These tools are optional — they run when installed and are skipped when unavailable. Agents must detect availability before running.
++
++> **Note**: sccache (`RUSTC_WRAPPER`) is **not** applied to these commands. `cargo audit` does not invoke the compiler, and `cargo-udeps` uses `+nightly` which has unreliable sccache compatibility.
++
++### cargo-audit (Security — blocking)
++
++```bash
++cargo audit
++```
++
++- Checks dependencies against the RustSec Advisory Database
++- **Blocking**: If installed and vulnerabilities are found, the check **fails**. Agents must report findings and stop
++- Fast execution (database lookup only, no compilation)
++- See also: `.claude-plugin/rules/security.md` section A9
++
++### cargo-udeps (Unused dependencies — advisory)
++
++```bash
++cargo +nightly udeps --quiet
++```
++
++- Detects unused dependencies declared in `Cargo.toml`
++- **Advisory**: Results are reported as warnings but **do not block** commits
++- Requires nightly toolchain (`rustup run nightly`)
++- Runs the compiler internally, so the project must compile successfully first (place after `cargo test`)
++
++### Detection and availability check
++
++```bash
++# cargo-audit
++AUDIT_AVAILABLE=false
++if command -v cargo-audit >/dev/null 2>&1; then
++  AUDIT_AVAILABLE=true
++fi
++
++# cargo-udeps (requires nightly)
++UDEPS_AVAILABLE=false
++if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
++  UDEPS_AVAILABLE=true
++fi
++```
++
++| Tool | Installed | Nightly available | Action |
++|------|-----------|-------------------|--------|
++| cargo-audit | Yes | — | Run `cargo audit`. Fail on vulnerabilities |
++| cargo-audit | No | — | Skip with log: "cargo-audit not installed, skipping vulnerability check" |
++| cargo-udeps | Yes | Yes | Run `cargo +nightly udeps --quiet`. Warn on findings |
++| cargo-udeps | Yes | No | Skip with log: "nightly toolchain unavailable, skipping udeps" |
++| cargo-udeps | No | — | Skip silently |
++
+ ## Leptos Full-Stack (WASM Frontend) Build Verification
+ 
+ When the project uses `cargo-leptos` (detected by `[package.metadata.leptos]` in `Cargo.toml`), the following additional checks are **required** after the standard checks above.
+@@ -86,7 +138,9 @@ The full check order becomes:
+ 1. `cargo fmt --all -- --check`
+ 2. `cargo clippy --quiet --all-targets -- -D warnings`
+ 3. `cargo test --quiet`
+-4. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
++4. `cargo audit` (if installed — blocking on vulnerabilities)
++5. `cargo +nightly udeps --quiet` (if installed — advisory only)
++6. `cargo leptos build` OR WASM-specific clippy fallback (Leptos projects only)
+ 
+ ## Node.js Task-Level Quality Checks
+ 
+diff --git a/.claude-plugin/rules/security.md b/.claude-plugin/rules/security.md
+index 7974ca5..404c70e 100644
+--- a/.claude-plugin/rules/security.md
++++ b/.claude-plugin/rules/security.md
+@@ -57,8 +57,13 @@ Security standards to apply during code reviews and implementation. Based on OWA
+ 
+ ## A9: Dependency Vulnerabilities
+ 
+-- Regularly check for known vulnerabilities using `cargo audit`
+-- Remove unused dependencies
++- **Vulnerability scanning**: Run `cargo audit` to check dependencies against the RustSec Advisory Database. This is integrated as a **blocking** quality check — see `.claude-plugin/rules/quality-checks.md` "Dependency Analysis" section
++- **Unused dependency detection**: Run `cargo +nightly udeps` to identify unnecessary dependencies declared in `Cargo.toml`. Fewer dependencies reduce the attack surface
++- When `cargo audit` reports a vulnerability:
++  1. Check if a patched version exists and update `Cargo.toml`
++  2. If no patch exists, evaluate the severity and whether the vulnerable code path is reachable
++  3. Document accepted risks in comments if a vulnerable dependency cannot be removed
++- Review `Cargo.lock` changes during code review to catch unexpected dependency additions
+ 
+ ## A10: Logging and Monitoring
+ 
+diff --git a/.claude-plugin/skills/cargo-mutants/SKILL.md b/.claude-plugin/skills/cargo-mutants/SKILL.md
+new file mode 100644
+index 0000000..c3bdc0c
+--- /dev/null
++++ b/.claude-plugin/skills/cargo-mutants/SKILL.md
+@@ -0,0 +1,190 @@
++---
++name: cargo-mutants
++description: >
++  Mutation testing with cargo-mutants. Introduces small code changes (mutants) and verifies
++  that tests detect them. Survived mutants indicate weak test coverage. Long-running — invoke
++  explicitly when you want to validate test quality for specific modules or recent changes.
++  Use for: mutation testing, test quality analysis, coverage gaps, survived mutants.
++argument-hint: "[--package <crate>] [--file <path>] [--in-diff <base-branch>] [--timeout <secs>]"
++user-invokable: true
++---
++
++# cargo-mutants — Mutation Testing
++
++Runs mutation testing to assess the quality of your test suite. Unlike code coverage,
++mutation testing verifies that tests actually *detect* changes to the code.
++
++> **Warning**: Mutation testing is slow. It re-runs the test suite once per mutant
++> (potentially hundreds of times). Use targeted options to limit scope.
++
++## Prerequisites
++
++```bash
++command -v cargo-mutants >/dev/null 2>&1 || {
++  echo "cargo-mutants is not installed. Install with: cargo install cargo-mutants"
++  exit 1
++}
++```
++
++## Arguments
++
++| Argument | Required | Description |
++|----------|:--------:|-------------|
++| `--package <crate>` | — | Limit to a specific crate in a workspace |
++| `--file <path>` | — | Limit to mutations in a specific source file |
++| `--in-diff <base-branch>` | — | Only mutate lines changed since `<base-branch>` (e.g., `main`). **Recommended** |
++| `--timeout <secs>` | — | Per-mutant timeout (default: 300s). Prevents runaway tests |
++| `--jobs <N>` | — | Number of parallel test jobs (default: auto-detect from CPU cores) |
++
++### Usage Examples
++
++```bash
++# Mutation test only the code changed since main
++/cargo-mutants --in-diff main
++
++# Target a specific source file
++/cargo-mutants --file src/db/repository/users.rs
++
++# Target a specific workspace crate with custom timeout
++/cargo-mutants --package my-server --timeout 120
++```
++
++## Core Command Pattern
++
++The standard invocation uses `--no-shuffle -vV --in-diff` with a diff file:
++
++```bash
++# Generate diff against base branch (default: main)
++BASE_BRANCH="${BASE_BRANCH:-main}"
++git diff "$BASE_BRANCH" -- '*.rs' > git.diff
++
++# Run mutation testing
++cargo mutants --no-shuffle -vV --in-diff git.diff
++
++# Clean up
++rm -f git.diff
++```
++
++- `--no-shuffle`: Deterministic execution order for reproducibility
++- `-vV`: Verbose output — shows both the mutant list and per-mutant test output
++- `--in-diff git.diff`: Limit mutations to only the changed lines in the diff file
++
++When additional filters are specified, append them:
++
++```bash
++# With package filter
++cargo mutants --no-shuffle -vV --in-diff git.diff --package my-crate
++
++# With file filter
++cargo mutants --no-shuffle -vV --in-diff git.diff --file src/handler.rs
++
++# With timeout
++cargo mutants --no-shuffle -vV --in-diff git.diff --timeout 120
++```
++
++## Execution Steps
++
++### 1. Parse Arguments and Detect Environment
++
++```bash
++# Detect workspace vs single crate
++if cargo metadata --format-version=1 2>/dev/null | grep -q '"workspace_members"'; then
++  echo "Workspace detected"
++fi
++
++# Build base command
++BASE_BRANCH="${BASE_BRANCH:-main}"
++git diff "$BASE_BRANCH" -- '*.rs' > git.diff
++
++CMD="cargo mutants --no-shuffle -vV --in-diff git.diff --timeout ${TIMEOUT:-300}"
++
++# Add filters from arguments
++# --package <crate>  -> CMD="$CMD --package <crate>"
++# --file <path>      -> CMD="$CMD --file <path>"
++# --jobs <N>         -> CMD="$CMD --jobs <N>"
++```
++
++### 2. Run Baseline Test
++
++Before running mutations, verify that the test suite passes without any mutations:
++
++```bash
++cargo test --quiet
++```
++
++If baseline tests fail, **abort**. Mutation testing requires a green test suite.
++
++### 3. Execute Mutation Testing
++
++```bash
++# Check diff is non-empty
++if [ ! -s git.diff ]; then
++  echo "No .rs changes in diff — skipping mutation testing"
++  rm -f git.diff
++  exit 0
++fi
++
++# Run with sccache if available (cargo-mutants invokes cargo build/test internally)
++if command -v sccache >/dev/null 2>&1; then
++  RUSTC_WRAPPER=sccache $CMD
++else
++  $CMD
++fi
++
++rm -f git.diff
++```
++
++Expected duration: minutes to hours depending on codebase size and test suite speed.
++
++### 4. Parse and Report Results
++
++cargo-mutants outputs results to `mutants.out/` directory. Parse the outcomes:
++
++| Outcome | Meaning | Action |
++|---------|---------|--------|
++| **Killed** | Test suite detected the mutant | Good — tests are effective |
++| **Survived** | Mutant was NOT detected by tests | **Action needed** — tests are insufficient |
++| **Timeout** | Test exceeded the timeout limit | Review if timeout is too short, or test is slow |
++| **Unviable** | Mutant caused a build error | Ignore — not a meaningful mutation |
++
++### 5. Output Summary
++
++Report results in the following format:
++
++```
++## Mutation Testing Results
++
++- **Scope**: {description of what was tested}
++- **Total mutants**: {N}
++- **Killed**: {N} ({percentage}%)
++- **Survived**: {N} ({percentage}%)
++- **Timeout**: {N}
++- **Unviable**: {N}
++- **Mutation score**: {killed / (killed + survived)}%
++
++### Survived Mutants (action required)
++
++| # | File | Line | Mutation | Description |
++|---|------|------|----------|-------------|
++| 1 | src/handler.rs | 42 | Replace `>` with `>=` | Boundary condition not tested |
++| ... | | | | |
++
++### Recommendations
++
++{For each survived mutant, suggest what test to add}
++```
++
++## Integration with Other Workflows
++
++- **TDD implementation** (`parallel-worker`): Automatically runs `cargo mutants --no-shuffle -vV --in-diff git.diff` after quality checks pass. Survived mutants trigger supplementary test writing (up to 2 retries)
++- **Standalone invocation**: Run `/cargo-mutants --in-diff main` to verify test quality for recent changes
++- **Periodic audit**: Run on the full codebase periodically to find coverage gaps
++
++## Troubleshooting
++
++| Problem | Solution |
++|---------|----------|
++| Very slow execution | Use `--file` or `--in-diff` to limit scope |
++| Too many unviable mutants | Normal for some code patterns. Focus on survived count |
++| OOM during parallel runs | Reduce `--jobs` to 1 or 2 |
++| `mutants.out/` clutters repo | Add `mutants.out/` to `.gitignore` |
+diff --git a/.claude-plugin/skills/spec-implement/SKILL.md b/.claude-plugin/skills/spec-implement/SKILL.md
+index c91fe2f..c4eec67 100644
+--- a/.claude-plugin/skills/spec-implement/SKILL.md
++++ b/.claude-plugin/skills/spec-implement/SKILL.md
+@@ -432,6 +432,8 @@ Agent({
+ 
+     **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
+ 
++    Base branch: main
++
+     Steps:
+     1. RED: Write failing tests (see /spec-impl-test-write skill)
+     2. Confirm all tests fail by running them
+@@ -440,18 +442,20 @@ Agent({
+     5. REFACTOR: Clean up the code (see /spec-impl-review skill)
+     6. Confirm all tests still pass after refactoring
+     7. Run quality checks (rustfmt + clippy + cargo test)
++    8. Run mutation testing on the diff (if cargo-mutants is installed)
+ 
+     Include the following in the completion report:
+     - tests: pass|fail
+     - rustfmt: pass|fail
+     - clippy: pass|fail
++    - mutation_testing: pass|warn|skip
+     - test_file_paths: list of test files
+     - implementation_file_paths: list of implementation files
+     - changed_files: list of all changed files`
+ })
+ ```
+ 
+-Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**.
++Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**.
+ 
+ Branch based on parallel-worker's `status`:
+ 
+-- 
+2.47.3
+

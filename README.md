@@ -33,6 +33,7 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 - **Approval Workflow** - Complete approval process with revisions
 - **Task Progress Tracking** - Visual progress bars and detailed status
 - **Implementation Logs** - Searchable logs of all task implementations with code statistics
+- **CI/CD Generation** - `/setup-ci` generates 5 GitHub Actions workflow files (ci, e2e, scheduled-quality, dependabot, release)
 - **Multi-Language Support** - Available in 11 languages
 
 ## 🌍 Supported Languages
@@ -57,10 +58,10 @@ Two plugin variants are available:
 
 | Plugin | Description |
 |--------|-------------|
-| `spec-workflow-mcp` | MCP server + skills/agents/rules/hooks |
-| `spec-workflow-mcp-with-dashboard` | MCP server only (lightweight, no skills/agents/rules/hooks) |
+| `spec-workflow-mcp` | Full plugin — MCP server + 30 skills + 8 agents + rules + hooks (recommended) |
+| `spec-workflow-mcp-with-dashboard` | MCP server only — skills/agents/rules/hooks なし（手動 MCP 構成用の軽量版） |
 
-> **Note**: The `spec-workflow-mcp-with-dashboard` variant is a minimal configuration containing only the MCP server. To use the dashboard, start it separately with `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard`.
+> **Note**: `spec-workflow-mcp-with-dashboard` は名称に反して軽量版です（MCP サーバーのみ）。名称は「MCP + Dashboard の手動構成」を意味します。Dashboard は別途起動が必要です: `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard`。フルプラグインが推奨です。
 
 > **What the plugin includes:**
 > - MCP server for spec-driven development workflow

@@ -15,16 +15,18 @@ Spec Workflow MCP is a Model Context Protocol server that provides structured, s
 
 ### Basic Workflow
 
-1. **Create a spec** - Define what you want to build
-2. **Review requirements** - Ensure specifications meet requirements
+1. **Create request spec** (Phase 0) - Define scope, use cases, and tech stack (`/spec-request-spec`)
+2. **Create requirements** (Phase 1) - Define what needs to be built
 3. **Approve requirements** - Sign off on the requirements document
-4. **Create design** - Design the technical approach
+4. **Create design** (Phase 2) - Design the technical approach
 5. **Approve design** - Sign off on the design document
-6. **Create test design** - Define test strategies, cases, and acceptance criteria
+6. **Create test design** (Phase 3) - Define test strategies, cases, and acceptance criteria
 7. **Approve test design** - Sign off on the test design document
-8. **Create tasks** - Break down implementation into actionable tasks
-9. **Implement tasks** - Execute the implementation plan
+8. **Create tasks** (Phase 4) - Break down implementation into actionable tasks
+9. **Implement tasks** (Phase 5) - Execute the implementation plan
 10. **Track progress** - Monitor completion status
+
+> **Recommended**: Per-spec ワークフロー開始前に `/steering-doc` でプロジェクトレベルのステアリングドキュメント（product.md, tech.md, structure.md）を作成することを推奨。各フェーズで参照されるが、未作成でもワークフローはブロックされない。
 
 ## Creating Specifications
 
@@ -36,11 +38,14 @@ Ask your AI assistant to create a spec:
 "Create a spec for user authentication"
 ```
 
-The AI will automatically:
-1. Create a requirements document
-2. Design the technical approach
-3. Create a test design with test strategies and cases
-4. Break down implementation into tasks
+The AI will guide you through each phase:
+1. Create a request spec (Phase 0) — scope and tech stack
+2. Create a requirements document (Phase 1)
+3. Design the technical approach (Phase 2)
+4. Create a test design with test strategies and cases (Phase 3)
+5. Break down implementation into tasks (Phase 4)
+
+Each phase requires approval before proceeding to the next.
 
 ### Detailed Spec Creation
 

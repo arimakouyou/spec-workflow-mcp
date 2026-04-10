@@ -7,12 +7,16 @@ This guide explains the complete spec-driven development workflow and best pract
 The spec-driven workflow follows a structured approach:
 
 ```
-Steering → Requirements → Design → Test Design → Tasks → Implementation → Verification
+[Project Setup] Steering Documents
+        ↓
+[Per-Spec Workflow]
+  Phase 0: Request Spec → Phase 1: Requirements → Phase 2: Design
+    → Phase 3: Test Design → Phase 4: Tasks → Phase 5: Implementation → Verification
 ```
 
 Each phase builds on the previous, ensuring systematic and well-documented development.
 
-## Phase 0: Project Setup with Steering Documents
+## Project Setup: Steering Documents (recommended)
 
 ### Why Steering Documents?
 
@@ -54,14 +58,31 @@ This generates three key documents:
 3. **Reference often** - Use for decision making
 4. **Share widely** - Ensure team alignment
 
-## Phases 1–4: Specification Creation
+## Per-Spec Workflow: Phase 0–4
 
-### The Four-Document System
+### Phase 0: Request Spec (spec-request-spec)
 
-Each spec consists of four sequential documents:
+**Purpose**: Define the scope, use cases, and technology stack for a new spec
+
+**Contents**:
+- Use case overview
+- Technology stack and execution environment
+- Scope boundaries (in-scope / out-of-scope)
+- References to steering documents
+
+**Example Creation**:
+```
+"Create a request spec for user authentication"
+```
+
+> **Note**: Phase 0 is the required entry point for each spec. `spec-requirements` (Phase 1) will check for the existence of `request-spec.md` before proceeding.
+
+### The Five-Document System (Phase 0–4)
+
+Each spec consists of five sequential documents:
 
 ```
-Requirements → Design → Test Design → Tasks
+Request Spec → Requirements → Design → Test Design → Tasks
 ```
 
 ### Phase 1: Requirements Document (spec-requirements)
@@ -231,26 +252,23 @@ When blocked:
 3. Move to parallel tasks if possible
 4. Update task status to "blocked"
 
-## Final E2E Gate: Verification
+## Testing Strategy (embedded in the workflow)
 
-### Testing Strategy
+Testing is NOT a separate post-implementation activity. It is integrated throughout the workflow:
 
-After implementation:
+### Unit Tests (TDD — during implementation)
 
-1. **Unit Testing**
-   ```
-   "Create unit tests for the notification service"
-   ```
+Unit tests are designed in Phase 3 (test-design.md) and implemented as part of each task's TDD RED phase during `/spec-implement`. Each task's `_TestFocus` field specifies the test cases. There are no standalone "write unit tests" tasks.
 
-2. **Integration Testing**
-   ```
-   "Create integration tests for the API endpoints"
-   ```
+### Integration / E2E Tests (parallel or post-implementation)
 
-3. **End-to-End Testing**
-   ```
-   "Create E2E tests for the complete notification flow"
-   ```
+IT and E2E tests are designed in Phase 3 (test-design.md) and implemented via `/spec-e2e-implement`. This skill can run **in parallel** with `/spec-implement` as components become available:
+- IT tests can begin once the target components are implemented
+- E2E tests run after all components are complete
+
+### Final E2E Gate
+
+`/spec-implement` includes a Final E2E Gate step that runs all tests (unit, integration, and E2E) to verify the complete implementation before marking the spec as done.
 
 ### Documentation Updates
 
@@ -273,11 +291,13 @@ your-project/
 │   │   └── structure.md
 │   ├── specs/
 │   │   ├── user-auth/
+│   │   │   ├── request-spec.md
 │   │   │   ├── requirements.md
 │   │   │   ├── design.md
 │   │   │   ├── test-design.md
 │   │   │   └── tasks.md
 │   │   └── payment-gateway/
+│   │       ├── request-spec.md
 │   │       ├── requirements.md
 │   │       ├── design.md
 │   │       ├── test-design.md
@@ -298,7 +318,7 @@ your-project/
 - Avoid versions: `user-profile` not `user-profile-v2`
 
 **Document Names**:
-- Always: `requirements.md`, `design.md`, `test-design.md`, `tasks.md`
+- Always: `request-spec.md`, `requirements.md`, `design.md`, `test-design.md`, `tasks.md`
 - Consistent across all specs
 
 ## Advanced Workflows
@@ -386,6 +406,7 @@ Example:
 ### 2. Sequential Document Creation
 
 Always follow the order:
+0. Request Spec (scope and tech stack)
 1. Requirements (what)
 2. Design (how)
 3. Test Design (how to test)
@@ -395,6 +416,7 @@ Never skip ahead.
 
 ### 3. Complete Approval Before Implementation
 
+- ✅ Request spec approved → Create requirements
 - ✅ Requirements approved → Create design
 - ✅ Design approved → Create test design
 - ✅ Test design approved → Create tasks

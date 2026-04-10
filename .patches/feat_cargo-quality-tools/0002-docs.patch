@@ -1,0 +1,214 @@
+From a5f7897c7de0c9c5de496d1f2d8e726640d03bd7 Mon Sep 17 00:00:00 2001
+From: Hitoshi Oyama <hitoshi-oyama@internet.gmo>
+Date: Thu, 2 Apr 2026 18:07:04 +0900
+Subject: [PATCH 2/4] =?UTF-8?q?docs:=20=E3=83=8F=E3=83=BC=E3=83=8D?=
+ =?UTF-8?q?=E3=82=B9=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=83=AA?=
+ =?UTF-8?q?=E3=83=B3=E3=82=B0=E6=88=90=E7=86=9F=E5=BA=A6=E3=83=81=E3=82=A7?=
+ =?UTF-8?q?=E3=83=83=E3=82=AF=E3=83=AA=E3=82=B9=E3=83=88=E3=81=AE=E3=82=AB?=
+ =?UTF-8?q?=E3=83=90=E3=83=AC=E3=83=83=E3=82=B8=E5=88=86=E6=9E=90=E3=82=92?=
+ =?UTF-8?q?=E8=BF=BD=E5=8A=A0?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+全71項目(P1-P9)に対するspec-workflow-mcpプラグイン・ワークフローの
+カバレッジ状況を評価。総合カバー率50%、強み(P4/P5: 75%)と
+改善領域(P3/P6: 23%)を特定し、優先度付き改善提案を記載。
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+---
+ docs/HARNESS-MATURITY-ASSESSMENT.md | 182 ++++++++++++++++++++++++++++
+ 1 file changed, 182 insertions(+)
+ create mode 100644 docs/HARNESS-MATURITY-ASSESSMENT.md
+
+diff --git a/docs/HARNESS-MATURITY-ASSESSMENT.md b/docs/HARNESS-MATURITY-ASSESSMENT.md
+new file mode 100644
+index 0000000..84a218b
+--- /dev/null
++++ b/docs/HARNESS-MATURITY-ASSESSMENT.md
+@@ -0,0 +1,182 @@
++# Harness Engineering Maturity Assessment
++
++Assessment of spec-workflow-mcp plugin & workflow coverage against the 71-item Harness Engineering Maturity Checklist.
++
++**Assessment date**: 2026-04-02
++**Checklist version**: 71 items across 9 pillars (P1-P9)
++
++---
++
++## Summary
++
++| Pillar | Items | OK | PARTIAL | NG | N/A | Coverage |
++|--------|:-----:|:--:|:-------:|:--:|:---:|:--------:|
++| P1 Context Engineering | 9 | 3 | 5 | 1 | 0 | 61% |
++| P2 Architecture Constraints | 12 | 4 | 5 | 3 | 0 | 54% |
++| P3 Garbage Collection | 11 | 2 | 1 | 8 | 0 | 23% |
++| P4 Repository Structure | 4 | 3 | 0 | 1 | 0 | 75% |
++| P5 Documentation & Knowledge | 6 | 3 | 3 | 0 | 0 | 75% |
++| P6 CI/CD | 11 | 0 | 5 | 6 | 0 | 23% |
++| P7 Testing & Quality | 6 | 3 | 1 | 1 | 1 | 58% |
++| P8 Agent Operations | 7 | 4 | 1 | 2 | 0 | 64% |
++| P9 Operational Economics | 5 | 1 | 4 | 0 | 0 | 60% |
++| **Total** | **71** | **23** | **25** | **22** | **1** | **50%** |
++
++Coverage formula: (OK + PARTIAL * 0.5) / (Total - N/A)
++
++---
++
++## P1: Context Engineering (3 OK / 5 PARTIAL / 1 NG)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P1-01 | Architecture overview exists and allows agents to grasp the big picture from the codebase alone | **OK** | `docs/technical-documentation/architecture.md` with Mermaid diagrams. Module structure and request flow documented |
++| P1-02 | Agent instruction files are concise (not a single massive file) | **OK** | `AGENTS.md` (26 lines) acts as pointer. Details in `.claude-plugin/rules/` (15 files) and `.claude-plugin/skills/` (22 skills) |
++| P1-03 | Coding patterns are modularized and individually referenceable (10+) | **OK** | 15 rule files + 22 skills = 37 modular pattern files |
++| P1-04 | Coding rules are traceable via an ID system | **NG** | Rules exist in `design-principles.md`, `security.md`, etc. but lack systematic ID tracking (e.g., A-1, B-5 format tables) |
++| P1-05 | Decision records are version-controlled | **PARTIAL** | No dedicated ADR files. `knowhow-capture` skill accumulates decisions in `.claude/_docs/know-how/` under Git, but lacks status fields (Accepted, Superseded, etc.) |
++| P1-06 | API schemas include natural language descriptions for LLMs | **PARTIAL** | MCP tools have descriptions in `docs/technical-documentation/api-reference.md`. Not a formal schema format (OpenAPI/Protobuf) |
++| P1-07 | Source code doc comments are unified in natural language | **PARTIAL** | TypeScript src/ has minimal JSDoc. Type definitions are strong but doc comments are not systematically applied |
++| P1-08 | Telemetry data (logs/metrics/spans) can be dynamically referenced by agents | **PARTIAL** | CI runs tests (`npm test`) but no PR comment feedback mechanism (coverage reports, test reports, etc.) |
++| P1-09 | Agents can perform live environment verification | **PARTIAL** | Playwright E2E tests + `integration-test` skill. No staging environment connection settings defined |
++
++---
++
++## P2: Architecture Constraints (4 OK / 5 PARTIAL / 3 NG)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P2-01 | Module dependency directions are defined and mechanically enforced | **PARTIAL** | `design-principles.md` defines direction rules (handler -> service/repository -> model). No mechanical enforcement tool (dependency-cruiser, etc.); enforced via AI review |
++| P2-02 | Circular dependencies are automatically detected and blocked | **NG** | No circular dependency detection tool. Only prohibited as a rule in `design-principles.md` |
++| P2-03 | A staged enforcement model exists for rule maturity | **PARTIAL** | `knowhow-capture` -> rule promotion concept exists. No explicit staged definition (doc -> AI review -> CI tool -> structural test) |
++| P2-04 | Rule promotion criteria and procedures are documented | **PARTIAL** | `knowhow-capture` mentions "promote to `.claude/rules/`". Promotion criteria (when/under what conditions) not sufficiently documented |
++| P2-05 | Code style/format is mechanically unified | **OK** | Rust: `rustfmt` + `clippy` / Node.js: `ESLint` + `Prettier`. Unified commands in `quality-checks.md` |
++| P2-06 | Strict type checking is enabled | **OK** | Rust (compiler-level type safety) + TypeScript (`tsconfig.json`). `clippy -- -D warnings` treats warnings as errors |
++| P2-07 | API request validation schemas are strictly defined | **PARTIAL** | `design-conformance.md` requires API definition compliance verified by review-worker. Not a mechanical runtime validation (zod, etc.) |
++| P2-08 | Architecture invariants are auto-verified by test code | **NG** | No architecture test files (architecture.test.*, ArchUnit, etc.). Invariants enforced through rules + AI review |
++| P2-09 | Deterministic rules and LLM-based semantic inspection coexist | **OK** | Deterministic: `rustfmt`, `clippy`, `cargo test` / LLM: `review-worker`, `phase-review-team` (6-category A-F review) |
++| P2-10 | Subjective quality criteria (taste) are included in AI review | **PARTIAL** | `design-principles.md` has quality principles. review-worker references them. Not documented as standalone "taste invariants" |
++| P2-11 | Guardrails for agent editing operations are configured | **OK** | `spec-workflow-enforcement.md` + PostToolUse Hook (`tasks-read-guard.sh`) + 15 rule files covering prohibited operations |
++| P2-12 | Auto-fix/check runs on file save or session end | **PARTIAL** | PostToolUse Hook (Read guard) exists. Quality checks run in agent chain. No file-save-triggered auto lint/format |
++
++---
++
++## P3: Garbage Collection (2 OK / 1 PARTIAL / 8 NG)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P3-01 | Weekly quality checks auto-run with Issue creation on violations | **NG** | No scheduled/cron CI workflows. Only `npm-publish.yml` (main push trigger) |
++| P3-02 | Document staleness is automatically detected | **NG** | No document freshness check mechanism |
++| P3-03 | Update dates are monitored against thresholds | **NG** | No git update date threshold checking |
++| P3-04 | Enforcement level promotion is auto-proposed based on violation accumulation | **NG** | No metrics aggregation or automatic proposal mechanism |
++| P3-05 | Unused code (files/exports) is automatically detected | **PARTIAL** | `cargo-udeps` (unused dependency detection) integrated as advisory. No file/export-level dead code detection (knip, etc.) |
++| P3-06 | Code duplication is automatically detected and reported | **NG** | No code duplication detection tool (jscpd, CPD, etc.) |
++| P3-07 | Dependency package vulnerabilities are automatically detected | **OK** | `cargo-audit` integrated as BLOCKING in `quality-checks.md`. References RustSec Advisory DB |
++| P3-08 | Test quality (mutation score) is quantitatively measured | **OK** | `cargo-mutants` integrated in `parallel-worker.md`. Diff-based mutation testing with `--in-diff` |
++| P3-09 | Cross-references between documents are auto-verified | **NG** | No cross-reference validation scripts/tests |
++| P3-10 | Entropy detection results are auto-fixed by agents | **NG** | No automatic fix-PR creation mechanism |
++| P3-11 | Mutation test threshold is CI-required (blocking) | **NG** | `cargo-mutants` is advisory (`warn`). Survived mutants do not block; recorded only |
++
++---
++
++## P4: Repository Structure (3 OK / 0 PARTIAL / 1 NG)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P4-01 | Directory structure is templated and reproducible | **OK** | `structure-template.md` documents directory layout rules + `project-architecture.md` defines layer structure |
++| P4-02 | CI configuration is managed as code | **NG** | Only `.github/workflows/npm-publish.yml` (1 file). Below the 5+ threshold |
++| P4-03 | Package manager lockfile is committed | **OK** | `package-lock.json` committed at root + `vscode-extension/` |
++| P4-04 | Domain/package boundaries are explicitly defined | **OK** | `AGENTS.md` + `docs/technical-documentation/architecture.md` define module structure. src/ split into core/, tools/, prompts/, dashboard/ |
++
++---
++
++## P5: Documentation & Knowledge (3 OK / 3 PARTIAL)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P5-01 | Product spec exists in the repo | **OK** | `README.md` + 14 files in `docs/` + 11 files in `docs/technical-documentation/`. API reference, workflow spec included |
++| P5-02 | Technical debt is tracked in the repo | **PARTIAL** | `tech-template.md` has tech-decisions/constraints sections. No dedicated tech-debt tracking file or registry |
++| P5-03 | Docs lint (broken links/format) runs in CI | **PARTIAL** | `npm run validate:mdx`, `npm run validate:i18n` in build process. Not an independent CI job; no broken link verification |
++| P5-04 | Tacit knowledge is identified and documented | **PARTIAL** | `knowhow-capture` skill + `feedback-loop.md` rule for detecting and documenting tacit knowledge. Not documented as standalone "taste invariants" |
++| P5-05 | API definitions are managed in the repo | **OK** | `docs/technical-documentation/api-reference.md` with all 13 MCP tool definitions |
++| P5-06 | Cross-module type definitions are shared | **OK** | `src/types.ts` with shared interfaces (SpecDocument, Task, AutomationJob, SecurityConfig, etc.) |
++
++---
++
++## P6: CI/CD (0 OK / 5 PARTIAL / 6 NG)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P6-01 | Tests auto-run per PR | **PARTIAL** | `npm-publish.yml` triggers on main push only. No `pull_request` trigger. Tests run in agent chain as compensation |
++| P6-02 | Build verification auto-runs per PR | **PARTIAL** | Same issue; build runs on main push but not per PR |
++| P6-03 | CI results are readable/auto-fixable by agents | **PARTIAL** | Agent chain (parallel-worker -> review-worker) reads/fixes test results internally. No direct GitHub Actions result reading |
++| P6-04 | Static code analysis runs in CI | **PARTIAL** | `clippy` runs in agent chain. Not an independent CI pipeline job |
++| P6-05 | Lint error messages include fix instructions | **PARTIAL** | `quality-checks.md` lists auto-fix commands (`cargo fmt --all`, etc.). No custom rule error message design |
++| P6-06 | CI failure messages are agent-interpretable | **NG** | Single CI workflow with basic step names. No structured output design for agents |
++| P6-07 | Flaky test definition/classification criteria exist | **NG** | No flaky test documentation |
++| P6-08 | Flaky test detection/tracking mechanism exists | **NG** | No test instability tracking |
++| P6-09 | Flaky test countermeasures are operationalized | **PARTIAL** | Playwright config has CI retries (2x). No flaky test isolation tags or classification |
++| P6-10 | Human approval wait steps are minimized | **NG** | No Dependabot/Renovate. No auto-merge settings |
++| P6-11 | Auto-merge conditions are defined | **NG** | No auto-merge condition definitions |
++
++---
++
++## P7: Testing & Quality (3 OK / 1 PARTIAL / 1 NG / 1 N/A)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P7-01 | Bug reports are converted to acceptance criteria (test cases) | **PARTIAL** | `.github/ISSUE_TEMPLATE/bug_report.yml` provides structured templates. Bug-to-test conversion workflow not documented |
++| P7-02 | Acceptance criteria are established as regression tests | **N/A** | Operational process; not mechanically determinable |
++| P7-03 | Unit tests exist and run in CI | **OK** | Vitest (`src/**/__tests__`) + `cargo test` in agent chain. CI runs `npm test -- --run` |
++| P7-04 | E2E or integration tests run locally or in CI | **OK** | Playwright E2E (`e2e/`) + `integration-test` skill. `npm run test:e2e` command available |
++| P7-05 | Visual regression testing is introduced | **NG** | Playwright captures screenshots on failure but no visual comparison testing |
++| P7-06 | Integration tests exist and run in CI | **OK** | `integration-test` skill + `integ-test-worker`/`integ-test-auditor` agents. Smoke test included |
++
++---
++
++## P8: Agent Operations (4 OK / 1 PARTIAL / 2 NG)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P8-01 | Agents can directly call gh CLI and standard dev tools | **OK** | parallel-worker has `Bash` tool. `permissionMode: bypassPermissions` enables gh/git execution |
++| P8-02 | Agent scripts/skills are placed in the repo (2+) | **OK** | 22 skills + 7 agents + 15 rules + 1 hook. Far exceeds the 2+ threshold |
++| P8-03 | Agents can execute up to PR creation without CLI copy-paste | **OK** | review-worker handles commits. Agent chain automates worktree creation -> TDD -> review -> commit -> push |
++| P8-04 | Agents can perform browser-based UI verification | **OK** | Playwright dependency (`playwright.config.ts`). E2E tests with Chromium |
++| P8-05 | Agents can capture/interpret DOM snapshots or screenshots | **PARTIAL** | Playwright configured for screenshots (`only-on-failure`), traces (`on-first-retry`). No explicit LLM screenshot interpretation automation |
++| P8-06 | Agents self-review their own changes | **OK** | `review-worker` reviews changes in agent chain. Anti-bias protocol ("assume code has problems") |
++| P8-07 | Deviation detection triggers auto-generated refactor PRs | **NG** | review-worker detects deviations but no auto-PR generation. Rework is handled within the agent chain |
++
++---
++
++## P9: Operational Economics (1 OK / 4 PARTIAL)
++
++| ID | CheckItem | Status | Evidence / Note |
++|----|-----------|--------|-----------------|
++| P9-01 | Agent parallel execution (multiple PRs simultaneously) is possible | **OK** | `parallel-worker` + `wave-harness-worker` + `resource-aware-parallelism.md`. Batch execution based on MAX_LIGHT_AGENTS |
++| P9-02 | Technical debt is repaid via periodic small cleanup PRs | **PARTIAL** | cargo-audit/cargo-udeps run in quality checks. No Dependabot/Renovate for automated PRs |
++| P9-03 | Review comments are fed back into docs/rule updates | **PARTIAL** | `feedback-loop.md` + `knowhow-capture` for detection -> recording flow. Not structured as a formal ADR process |
++| P9-04 | User bugs are converted into tool implementations or lint rules | **PARTIAL** | `knowhow-capture` -> `.claude/rules/` promotion path exists. No violation-metrics-driven auto-promotion |
++| P9-05 | Agent failure patterns are treated as harness improvement input | **PARTIAL** | `knowhow-capture` can record failure patterns. `feedback-loop.md` detects repeated feedback. No systematic retrospective process |
++
++---
++
++## Strengths
++
++1. **P4 Repository Structure** (75%) — Templated scaffolding, lockfile management, domain boundaries
++2. **P5 Documentation** (75%) — Rich product specs, API definitions, shared type definitions
++3. **P8 Agent Operations** (64%) — Comprehensive skill/agent ecosystem, self-review, parallel execution
++4. **P1 Context Engineering** (61%) — Architecture docs, modularized rules and patterns
++
++## Key Gaps
++
++1. **P3 Garbage Collection** (23%) — The largest gap. No scheduled scans, freshness monitoring, or auto-fix mechanisms
++2. **P6 CI/CD** (23%) — Only 1 CI workflow. Missing PR triggers, static analysis jobs, flaky test handling, Dependabot/Renovate
++
++## Recommended Improvements (Priority Order)
++
++1. **Expand CI workflows** — Add PR-triggered test/build/lint workflow (fixes P6-01, P6-02, P6-04)
++2. **Introduce scheduled scans** — Cron workflow for cargo-audit, cargo-udeps, document freshness checks (fixes P3-01, P3-02, strengthens P3-07)
++3. **Add Dependabot/Renovate** — Automated dependency updates (fixes P6-10, P6-11, P9-02)
++4. **Introduce rule ID system** — Add systematic IDs to existing rules (fixes P1-04)
++5. **Establish ADR process** — Create `.claude/_docs/adr/` with status-bearing ADR files (fixes P1-05, improves P9-03)
++6. **Set mutation test threshold** — Configure blocking threshold for cargo-mutants (fixes P3-11)
+-- 
+2.47.3
+

@@ -1,0 +1,491 @@
+From ab46a87161aff1e97f347c3f9596789c235ac354 Mon Sep 17 00:00:00 2001
+From: Hitoshi Oyama <hitoshi-oyama@internet.gmo>
+Date: Thu, 2 Apr 2026 18:29:27 +0900
+Subject: [PATCH 3/4] =?UTF-8?q?feat:=20/setup-ci=20=E3=82=B9=E3=82=AD?=
+ =?UTF-8?q?=E3=83=AB=E3=82=92=E8=BF=BD=E5=8A=A0=E3=81=97=E3=80=81spec-task?=
+ =?UTF-8?q?s=20=E3=81=AB=20CI=20=E8=87=AA=E5=8B=95=E6=A4=9C=E5=87=BA=20(St?=
+ =?UTF-8?q?ep=202.7)=20=E3=82=92=E7=B5=B1=E5=90=88?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+プラグイン消費プロジェクトに対して PR トリガーの GitHub Actions CI
+ワークフローを生成する /setup-ci スキルを新設。Rust / Leptos / Node.js
+の各プロジェクトタイプに応じたテンプレートを提供し、quality-checks.md
+のコマンドと完全一致させることでローカル品質チェックと CI の parity を保証。
+
+また spec-tasks の Phase 0 タスク自動挿入に Step 2.7 (CI 検出) を追加し、
+新規プロジェクトで PR CI が未構成の場合に CI セットアップタスクを自動生成。
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+---
+ .claude-plugin/rules/quality-checks.md        |   2 +
+ .claude-plugin/skills/setup-ci/SKILL.md       | 150 ++++++++++++++++++
+ .../skills/setup-ci/references/ci-leptos.yml  |  51 ++++++
+ .../skills/setup-ci/references/ci-nodejs.yml  |  44 +++++
+ .../skills/setup-ci/references/ci-rust.yml    |  44 +++++
+ .../skills/setup-ci/references/job-e2e.yml    |  43 +++++
+ .../setup-ci/references/job-services.yml      |  29 ++++
+ .claude-plugin/skills/spec-tasks/SKILL.md     |  30 ++++
+ 8 files changed, 393 insertions(+)
+ create mode 100644 .claude-plugin/skills/setup-ci/SKILL.md
+ create mode 100644 .claude-plugin/skills/setup-ci/references/ci-leptos.yml
+ create mode 100644 .claude-plugin/skills/setup-ci/references/ci-nodejs.yml
+ create mode 100644 .claude-plugin/skills/setup-ci/references/ci-rust.yml
+ create mode 100644 .claude-plugin/skills/setup-ci/references/job-e2e.yml
+ create mode 100644 .claude-plugin/skills/setup-ci/references/job-services.yml
+
+diff --git a/.claude-plugin/rules/quality-checks.md b/.claude-plugin/rules/quality-checks.md
+index afd7a7b..77df3c8 100644
+--- a/.claude-plugin/rules/quality-checks.md
++++ b/.claude-plugin/rules/quality-checks.md
+@@ -9,6 +9,8 @@ paths:
+ 
+ Unified command specification for quality checks run by parallel-worker, review-worker, and other agents. All agents must use the commands defined in this rule.
+ 
++> **CI Parity**: These commands are also used by the `/setup-ci` skill to generate GitHub Actions CI workflow YAML. Re-run `/setup-ci` after updating this file to keep CI in sync.
++
+ > **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `.claude-plugin/rules/rust-build-cache.md` (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
+ 
+ ## rustfmt
+diff --git a/.claude-plugin/skills/setup-ci/SKILL.md b/.claude-plugin/skills/setup-ci/SKILL.md
+new file mode 100644
+index 0000000..e9b2cd3
+--- /dev/null
++++ b/.claude-plugin/skills/setup-ci/SKILL.md
+@@ -0,0 +1,150 @@
++---
++name: setup-ci
++description: >
++  Generate a PR-triggered GitHub Actions CI workflow for the project.
++  Detects project type (Rust/Leptos/Node.js) and creates .github/workflows/ci.yml
++  mirroring the quality checks from quality-checks.md.
++  Triggers: 'setup CI', 'add CI workflow', 'create GitHub Actions', 'PR checks',
++  'CI/CD を追加', 'CI ワークフロー', 'GitHub Actions を設定'.
++argument-hint: "[--with-e2e] [--with-services]"
++user-invokable: true
++---
++
++# Setup CI
++
++Generate a PR-triggered GitHub Actions CI workflow that mirrors the quality check commands defined in `.claude-plugin/rules/quality-checks.md`. Ensures parity between local agent-chain quality checks and external CI.
++
++## Process
++
++### 1. Detect Project Type
++
++Use the same priority chain as `quality-checks.md`:
++
++```bash
++# Priority 1: Leptos full-stack (Rust WASM)
++if [ -f Cargo.toml ] && grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/null; then
++  PROJECT_TYPE="leptos"
++# Priority 2: Rust
++elif [ -f Cargo.toml ]; then
++  PROJECT_TYPE="rust"
++# Priority 3: Node.js
++elif [ -f package.json ]; then
++  PROJECT_TYPE="nodejs"
++else
++  echo "Error: Supported project type not detected (Cargo.toml or package.json required)"
++  exit 1
++fi
++```
++
++### 2. Gather Project-Specific Configuration
++
++#### Rust / Leptos
++
++| Setting | Detection | Default |
++|---------|-----------|---------|
++| Toolchain | `rust-toolchain.toml` の `channel` フィールド | `stable` |
++| Workspace | `Cargo.toml` に `[workspace]` セクションがあるか | single crate |
++
++#### Node.js
++
++| Setting | Detection | Default |
++|---------|-----------|---------|
++| Node version | `package.json` の `engines.node` | `20` |
++| Package manager | lockfile 種別で判定 | `npm` |
++| ESLint | `devDependencies` に `eslint` があるか | 未導入ならステップ除外 |
++| Prettier | `devDependencies` に `prettier` があるか | 未導入ならステップ除外 |
++| TypeScript | `devDependencies` に `typescript` があるか | 未導入ならステップ除外 |
++| Build script | `package.json` の `scripts.build` があるか | なければステップ除外 |
++| Test script | `package.json` の `scripts.test` があるか | なければステップ除外 |
++
++**Package manager detection:**
++
++| Lockfile | Package Manager | Install Command |
++|----------|----------------|-----------------|
++| `pnpm-lock.yaml` | `pnpm` | `pnpm install --frozen-lockfile` |
++| `yarn.lock` | `yarn` | `yarn install --frozen-lockfile` |
++| `package-lock.json` | `npm` | `npm ci` |
++| None | `npm` | `npm install` |
++
++#### Common
++
++Read `.spec-workflow/steering/tech.md` if it exists for additional context (language versions, framework choices).
++
++### 3. Select and Customize Template
++
++Read the reference template matching the detected project type:
++
++| Project Type | Template |
++|-------------|----------|
++| `rust` | `.claude-plugin/skills/setup-ci/references/ci-rust.yml` |
++| `leptos` | `.claude-plugin/skills/setup-ci/references/ci-leptos.yml` |
++| `nodejs` | `.claude-plugin/skills/setup-ci/references/ci-nodejs.yml` |
++
++Replace placeholders with the values gathered in Step 2:
++
++**Rust / Leptos:**
++- `{{TOOLCHAIN}}` → detected toolchain (e.g., `stable`, `nightly`, `1.82`)
++
++**Node.js:**
++- `{{NODE_VERSION}}` → detected Node version (e.g., `20`)
++- `{{PACKAGE_MANAGER}}` → detected package manager (e.g., `npm`)
++- `{{INSTALL_COMMAND}}` → detected install command (e.g., `npm ci`)
++
++**Remove steps for unconfigured tools** (Node.js only):
++- No `eslint` in devDependencies → remove "Lint" step
++- No `prettier` in devDependencies → remove "Format check" step
++- No `typescript` in devDependencies → remove "Type check" step
++- No `build` script in package.json → remove "Build" step
++- No `test` script in package.json → remove "Tests" step
++
++### 4. Handle Options
++
++#### `--with-e2e`
++
++Append the E2E test job from `.claude-plugin/skills/setup-ci/references/job-e2e.yml`.
++Uncomment the section matching the detected project type and apply the same placeholder replacements.
++
++#### `--with-services`
++
++Add service containers from `.claude-plugin/skills/setup-ci/references/job-services.yml`.
++Uncomment services that match the project's dependencies (detect from `docker-compose.yml`, `design.md` Container Architecture, or `Cargo.toml` dependencies like `diesel`, `redis`).
++
++### 5. Generate the Workflow File
++
++1. Create `.github/workflows/` directory if it does not exist
++2. If `.github/workflows/ci.yml` already exists:
++   - Show the diff between existing and new content
++   - Ask the user for confirmation before overwriting
++3. Write the generated YAML to `.github/workflows/ci.yml`
++
++### 6. Verify and Report
++
++After writing the file, report:
++
++```
++CI workflow generated: .github/workflows/ci.yml
++
++Project type: {detected type}
++Triggers: pull_request (main, master) + push (main, master)
++Quality checks:
++  - {list of enabled check steps}
++
++Options applied:
++  - E2E tests: {yes/no}
++  - Service containers: {yes/no}
++
++Next steps:
++  - Commit and push to verify the workflow runs correctly
++  - Configure repository secrets if integration tests require them
++```
++
++## Source of Truth
++
++The CI workflow commands MUST match `.claude-plugin/rules/quality-checks.md` exactly.
++If `quality-checks.md` is updated, re-running `/setup-ci` regenerates the workflow with updated commands.
++
++## Notes
++
++- The generated YAML includes a header comment noting it was generated by `/setup-ci`
++- This skill is also invoked automatically when `/spec-tasks` detects a new project without CI (Step 2.7)
++- GitHub Actions only (V1). GitLab CI / other providers may be added in future versions
+diff --git a/.claude-plugin/skills/setup-ci/references/ci-leptos.yml b/.claude-plugin/skills/setup-ci/references/ci-leptos.yml
+new file mode 100644
+index 0000000..6982b5c
+--- /dev/null
++++ b/.claude-plugin/skills/setup-ci/references/ci-leptos.yml
+@@ -0,0 +1,51 @@
++# Generated by /setup-ci skill — mirrors quality-checks.md commands
++# Re-run /setup-ci to regenerate after updating quality-checks.md
++
++name: CI
++
++on:
++  pull_request:
++    branches: [main, master]
++  push:
++    branches: [main, master]
++
++concurrency:
++  group: ${{ github.workflow }}-${{ github.ref }}
++  cancel-in-progress: true
++
++env:
++  CARGO_TERM_COLOR: always
++
++jobs:
++  check:
++    name: Quality Checks
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: dtolnay/rust-toolchain@{{TOOLCHAIN}}
++        with:
++          components: rustfmt, clippy
++          targets: wasm32-unknown-unknown
++
++      - uses: Swatinem/rust-cache@v2
++
++      - name: Format check
++        run: cargo fmt --all -- --check
++
++      - name: Clippy
++        run: cargo clippy --quiet --all-targets -- -D warnings
++
++      - name: Tests
++        run: cargo test --quiet
++
++      - name: Security audit
++        run: |
++          cargo install cargo-audit --locked 2>/dev/null || true
++          cargo audit
++
++      - name: Install cargo-leptos
++        run: cargo install cargo-leptos --locked
++
++      - name: Leptos build (SSR + WASM)
++        run: cargo leptos build
+diff --git a/.claude-plugin/skills/setup-ci/references/ci-nodejs.yml b/.claude-plugin/skills/setup-ci/references/ci-nodejs.yml
+new file mode 100644
+index 0000000..fd17eea
+--- /dev/null
++++ b/.claude-plugin/skills/setup-ci/references/ci-nodejs.yml
+@@ -0,0 +1,44 @@
++# Generated by /setup-ci skill — mirrors quality-checks.md commands
++# Re-run /setup-ci to regenerate after updating quality-checks.md
++
++name: CI
++
++on:
++  pull_request:
++    branches: [main, master]
++  push:
++    branches: [main, master]
++
++concurrency:
++  group: ${{ github.workflow }}-${{ github.ref }}
++  cancel-in-progress: true
++
++jobs:
++  check:
++    name: Quality Checks
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: actions/setup-node@v4
++        with:
++          node-version: '{{NODE_VERSION}}'
++          cache: '{{PACKAGE_MANAGER}}'
++
++      - name: Install dependencies
++        run: {{INSTALL_COMMAND}}
++
++      - name: Type check
++        run: npx tsc --noEmit
++
++      - name: Lint
++        run: npx eslint . --max-warnings=0
++
++      - name: Format check
++        run: npx prettier --check .
++
++      - name: Tests
++        run: npm test -- --run
++
++      - name: Build
++        run: npm run build
+diff --git a/.claude-plugin/skills/setup-ci/references/ci-rust.yml b/.claude-plugin/skills/setup-ci/references/ci-rust.yml
+new file mode 100644
+index 0000000..1276ef9
+--- /dev/null
++++ b/.claude-plugin/skills/setup-ci/references/ci-rust.yml
+@@ -0,0 +1,44 @@
++# Generated by /setup-ci skill — mirrors quality-checks.md commands
++# Re-run /setup-ci to regenerate after updating quality-checks.md
++
++name: CI
++
++on:
++  pull_request:
++    branches: [main, master]
++  push:
++    branches: [main, master]
++
++concurrency:
++  group: ${{ github.workflow }}-${{ github.ref }}
++  cancel-in-progress: true
++
++env:
++  CARGO_TERM_COLOR: always
++
++jobs:
++  check:
++    name: Quality Checks
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: dtolnay/rust-toolchain@{{TOOLCHAIN}}
++        with:
++          components: rustfmt, clippy
++
++      - uses: Swatinem/rust-cache@v2
++
++      - name: Format check
++        run: cargo fmt --all -- --check
++
++      - name: Clippy
++        run: cargo clippy --quiet --all-targets -- -D warnings
++
++      - name: Tests
++        run: cargo test --quiet
++
++      - name: Security audit
++        run: |
++          cargo install cargo-audit --locked 2>/dev/null || true
++          cargo audit
+diff --git a/.claude-plugin/skills/setup-ci/references/job-e2e.yml b/.claude-plugin/skills/setup-ci/references/job-e2e.yml
+new file mode 100644
+index 0000000..42dc7af
+--- /dev/null
++++ b/.claude-plugin/skills/setup-ci/references/job-e2e.yml
+@@ -0,0 +1,43 @@
++# E2E / Integration test job snippet — appended by /setup-ci --with-e2e
++# Customize services and commands to match your project
++
++  e2e:
++    name: E2E / Integration Tests
++    needs: check
++    runs-on: ubuntu-latest
++    # --- Rust API project ---
++    # services:
++    #   postgres:
++    #     image: postgres:16
++    #     env:
++    #       POSTGRES_USER: test
++    #       POSTGRES_PASSWORD: test
++    #       POSTGRES_DB: test
++    #     ports:
++    #       - 5432:5432
++    #     options: >-
++    #       --health-cmd pg_isready
++    #       --health-interval 10s
++    #       --health-timeout 5s
++    #       --health-retries 5
++    steps:
++      - uses: actions/checkout@v4
++
++      # --- Rust API project ---
++      # - uses: dtolnay/rust-toolchain@{{TOOLCHAIN}}
++      # - uses: Swatinem/rust-cache@v2
++      # - name: Run integration tests
++      #   run: cargo test --test '*' --quiet
++      #   env:
++      #     DATABASE_URL: postgres://test:test@localhost:5432/test
++
++      # --- Node.js project ---
++      # - uses: actions/setup-node@v4
++      #   with:
++      #     node-version: '{{NODE_VERSION}}'
++      #     cache: '{{PACKAGE_MANAGER}}'
++      # - run: {{INSTALL_COMMAND}}
++      # - name: Install Playwright browsers
++      #   run: npx playwright install --with-deps chromium
++      # - name: Run E2E tests
++      #   run: npx playwright test
+diff --git a/.claude-plugin/skills/setup-ci/references/job-services.yml b/.claude-plugin/skills/setup-ci/references/job-services.yml
+new file mode 100644
+index 0000000..92c7c03
+--- /dev/null
++++ b/.claude-plugin/skills/setup-ci/references/job-services.yml
+@@ -0,0 +1,29 @@
++# Service container snippets — appended by /setup-ci --with-services
++# Add under the `services:` key of any job that needs external dependencies
++
++    # PostgreSQL
++    services:
++      postgres:
++        image: postgres:16
++        env:
++          POSTGRES_USER: test
++          POSTGRES_PASSWORD: test
++          POSTGRES_DB: test
++        ports:
++          - 5432:5432
++        options: >-
++          --health-cmd pg_isready
++          --health-interval 10s
++          --health-timeout 5s
++          --health-retries 5
++
++      # Valkey (Redis-compatible)
++      # valkey:
++      #   image: valkey/valkey:8
++      #   ports:
++      #     - 6379:6379
++      #   options: >-
++      #     --health-cmd "valkey-cli ping"
++      #     --health-interval 10s
++      #     --health-timeout 5s
++      #     --health-retries 5
+diff --git a/.claude-plugin/skills/spec-tasks/SKILL.md b/.claude-plugin/skills/spec-tasks/SKILL.md
+index 407e967..14be139 100644
+--- a/.claude-plugin/skills/spec-tasks/SKILL.md
++++ b/.claude-plugin/skills/spec-tasks/SKILL.md
+@@ -117,6 +117,36 @@ design.md の Container Architecture セクションを読み、コンテナセ
+ 
+ **注意:** Git 初期化タスク (0.0) がある場合、コンテナタスクは 0.1, 0.2 とし、他のセットアップタスクは 0.3 から始める。
+ 
++### 2.7 Detect CI Workflow Requirements
++
++`.github/workflows/` 配下に PR トリガーの CI ワークフローが存在するか確認し、CI セットアップタスクの要否を判断する。
++
++**検出ロジック:**
++
++```bash
++# PR トリガーの CI ワークフローが存在するか
++grep -rl 'pull_request' .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null
++echo $?
++```
++
++| 結果 | 判定 | アクション |
++|------|------|-----------|
++| ファイルが見つかった（exit 0） | PR トリガーの CI ワークフローが既に存在 | CI タスクを追加しない |
++| ファイルが見つからない（exit 1）| PR トリガーの CI ワークフローが未作成 | Phase 0 に CI セットアップタスクを追加 |
++| `.github/workflows/` が存在しない | CI 未構成 | Phase 0 に CI セットアップタスクを追加 |
++
++**PR トリガーの CI ワークフローが存在しない場合**、Phase 0 に以下のタスクを追加する（Git 初期化 → コンテナ → CI の順）:
++
++```markdown
++- [ ] 0.N Create CI workflow
++  - File: .github/workflows/ci.yml
++  - _TDDSkip: true_
++  - _Requirements: REQ-0_
++  - _Prompt: Role: DevOps Engineer | Task: /setup-ci スキルを使用して、プロジェクトタイプに応じた PR トリガーの GitHub Actions CI ワークフローを生成する。quality-checks.md に定義された品質チェックコマンドと同一のステップを含めること。design.md に Container Architecture がある場合は --with-services オプションを使用する | Restrictions: シークレットをワークフローにハードコードしない。既存の CI ワークフロー（npm-publish.yml 等）を変更しない | Success: PR 作成時に CI が自動実行され、品質チェック（lint, test, build）が通る_
++```
++
++**注意:** タスク番号 `0.N` は Phase 0 内の順序に応じて割り振る（Git 初期化 0.0 → コンテナ 0.1, 0.2 → CI 0.3 の順。コンテナタスクがない場合は繰り上げる）。
++
+ ### 3. Create Tasks
+ 
+ Convert the design into atomic tasks. Each task should touch 1-3 files and be independently implementable. Include:
+-- 
+2.47.3
+

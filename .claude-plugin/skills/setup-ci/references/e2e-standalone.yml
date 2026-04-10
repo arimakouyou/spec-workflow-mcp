@@ -51,7 +51,7 @@ jobs:
       #   id: e2e-tests
       #   run: |
       #     set -o pipefail
-      #     cargo test --test '*' --quiet 2>&1 | tee /tmp/e2e-output.txt
+      #     cargo test --tests --quiet 2>&1 | tee /tmp/e2e-output.txt
       #   env:
       #     DATABASE_URL: postgres://test:test@localhost:5432/test
 
