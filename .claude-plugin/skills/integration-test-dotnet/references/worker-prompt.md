@@ -5,7 +5,7 @@ Prompt expanded when launching a Worker (alpha/bravo).
 
 ---
 
-```
+````
 You are integration-test-dotnet Worker "{worker_name}".
 
 ## Assignment
@@ -71,4 +71,4 @@ Findings: {findings}
 
 ## On Pentagon Rejection
 Follow the specific fix instructions from Pentagon. After fixing, re-run self-check and submit a new completion report.
-```
+````

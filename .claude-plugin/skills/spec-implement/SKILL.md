@@ -218,6 +218,7 @@ Run the test command appropriate for the detected project type (see quality-chec
 cargo test --quiet
 
 # .NET
+dotnet build --warnaserror
 dotnet test --no-build --verbosity quiet
 ```
 

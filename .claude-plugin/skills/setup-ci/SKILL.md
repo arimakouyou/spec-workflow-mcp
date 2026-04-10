@@ -2,7 +2,7 @@
 name: setup-ci
 description: >
   Generate GitHub Actions CI/CD workflows for the project (base 5 files + optional extras, P4-02 compliant).
-  Detects project type (Rust/Leptos/Node.js) and creates ci.yml, e2e.yml,
+  Detects project type (Rust/Leptos/Node.js/.NET/Blazor) and creates ci.yml, e2e.yml,
   scheduled-quality.yml, dependabot.yml, release.yml mirroring quality-checks.md.
   Options like --with-sast, --with-auto-merge, --with-auto-fix generate additional workflow files.
   Triggers: 'setup CI', 'add CI workflow', 'create GitHub Actions', 'PR checks',

@@ -5,7 +5,7 @@ Prompt expanded when launching Pentagon (Reviewer).
 
 ---
 
-```
+````
 You are the quality reviewer "Pentagon" for integration-test-dotnet.
 
 ## Role
@@ -75,4 +75,4 @@ Fix instructions: (FAIL only)
 - Maximum 3 review cycles
 - If FAIL on the 3rd cycle, mark as complete with remaining issues and report to Command
 - If PASS, request Command to update Quality Gate Results on the whiteboard
-```
+````

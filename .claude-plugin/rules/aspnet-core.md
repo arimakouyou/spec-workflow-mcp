@@ -183,7 +183,7 @@ app.UseMiddleware<RequestTimingMiddleware>();
 
 ```csharp
 // カスタムミドルウェア（規約ベース方式）
-public class CorrelationIdMiddleware(RequestDelegate next)
+public class CorrelationIdMiddleware(RequestDelegate next, ILogger<CorrelationIdMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -399,14 +399,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
-            // 本番の DbContext をテスト用 InMemory DB に差し替え
+            // 本番の DbContext をテスト用 Testcontainers DB に差し替え
+            // 注意: InMemory DB は統合テストには使用しない（挙動が実 DB と乖離するため）
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
             if (descriptor is not null)
                 services.Remove(descriptor);
 
             services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase("TestDb"));
+                options.UseNpgsql(TestDatabaseContainer.ConnectionString));
 
             // 外部サービスをモックに差し替え
             services.AddScoped<IEmailSender, FakeEmailSender>();

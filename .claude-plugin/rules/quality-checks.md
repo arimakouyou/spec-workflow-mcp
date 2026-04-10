@@ -252,10 +252,11 @@ When the project is .NET-based (detected by `*.sln` or `*.csproj` existence with
 ### format
 
 ```bash
-dotnet format --verify-no-changes
+dotnet format --verify-no-changes --no-restore
 ```
 
 - Uses `.editorconfig` rules (must be present at solution root)
+- `--no-restore`: `dotnet restore` が別途実行済みの前提（チェーン内での冗長 restore を回避）
 - To auto-fix: `dotnet format` (without `--verify-no-changes`)
 - Covers both formatting and code style analyzers
 
