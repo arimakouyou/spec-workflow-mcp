@@ -67,7 +67,7 @@ Follow this workflow exactly to avoid errors.
 - One spec at a time, kebab-case names
 - Verbal approval is NEVER accepted — dashboard or VS Code extension only
 - Never proceed if approval delete fails
-- **Auto-transition**: After each phase's approval is approved and cleaned up, automatically proceed to the next phase. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension)
+- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension)
 - Every task marked [x] MUST have log-implementation called first
 - Steering docs are optional — only create when explicitly requested
 

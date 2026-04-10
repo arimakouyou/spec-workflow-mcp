@@ -74,7 +74,7 @@ Inspect the diff with `git diff` and check all of the following aspects in order
 
 - **前提**: コードには問題がある。あなたの仕事はそれを見つけること
 - **禁止**: 「3段階通過しているから大丈夫」「TDD で書かれているから品質は高い」という推論
-- **義務**: 各カテゴリ (A-F) で最低1つの具体的な確認ポイントを observations に記録すること。問題がなくても「何を確認して問題なしと判断したか」を明示する
+- **義務**: 各カテゴリ (A-G) で最低1つの具体的な確認ポイントを observations に記録すること。問題がなくても「何を確認して問題なしと判断したか」を明示する
 - **再確認**: レビュー結果が「全パス、問題なし」になった場合、もう一度 diff を読み直し見落としがないか確認する
 
 ### A. Style and Conventions
@@ -152,6 +152,16 @@ Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design
 
 If a deviation from the design is detected, escalate to the user with `review_action: escalate`. Implementers are not permitted to change the design on their own.
 
+### G. API Documentation Conformance (conditional)
+
+`docs/openapi.yaml` が存在するプロジェクトの場合のみ確認する。存在しない場合はスキップ。
+
+- API 関連ファイル（ハンドラ、ルーター、リクエスト/レスポンス型）に変更がある場合、`docs/openapi.yaml` が更新されているか
+- 新規エンドポイントが `docs/openapi.yaml` の paths に追加されているか
+- 変更されたリクエスト/レスポンス型が components/schemas に反映されているか
+
+**Severity**: Minor（`/generate-api-docs` の実行を推奨する報告とし、auto-fix は行わない）
+
 ## Processing Flow for Findings
 
 Branch processing based on the severity of findings. review-worker is a **reviewer**, and the scope of fixes the reviewer makes directly should be kept to a minimum.
@@ -160,7 +170,7 @@ Branch processing based on the severity of findings. review-worker is a **review
 
 | Severity | Relevant aspects | Action |
 |----------|----------------|--------|
-| **Minor** | A (Style and conventions) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues |
+| **Minor** | A (Style and conventions), G (API Docs) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues. G は `/generate-api-docs` の実行を推奨として報告 |
 | **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction |
 | **Critical** | D (Spec non-conformance), F (Design conformance violation) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer |
 
@@ -168,7 +178,7 @@ Branch processing based on the severity of findings. review-worker is a **review
 
 レビュー中に確認したすべての事項を記録する。自動修正した Minor 含め、レビューの透明性を確保するために **必須**。
 
-各カテゴリ (A-F) について、以下のいずれかを記録する:
+各カテゴリ (A-G) について、以下のいずれかを記録する:
 - **finding**: 問題を発見した（severity + 詳細）
 - **auto-fixed**: Minor 問題を自動修正した（何を修正したか記録）
 - **checked-ok**: 確認したが問題なし（**何を確認したか具体的に記載**）
@@ -184,6 +194,7 @@ observations:
   - D: checked-ok — Success 基準3項目: (1) ユーザー作成API ✓ (2) バリデーション ✓ (3) 重複チェック ✓
   - E: checked-ok — テストが実装と同期、具体値の検証あり（is_ok()だけでない）
   - F: checked-ok — design.md 定義外のフィールド/エンドポイント追加なし
+  - G: checked-ok — openapi.yaml 未存在のためスキップ
 ```
 
 ### Report Format for Sending Back
@@ -273,7 +284,8 @@ git commit -m "<scope>: <summary of changes>"
     - test_quality: pass|fail
     - tdd_compliance: pass|fail
     - design_conformance: pass|fail
-- observations: <レビュー観察ログ — 全カテゴリ (A-F) の確認結果を review_action に関係なく常に記録>
+    - api_docs: pass|skip|advisory
+- observations: <レビュー観察ログ — 全カテゴリ (A-G) の確認結果を review_action に関係なく常に記録>
 - auto_fixed: <自動修正した Minor 問題のリスト (0件でも空リスト [] として記載)>
 - integration-verification: <PhaseReview のみ必須。通常タスクレビューでは省略>
     - build: pass|fail|skip

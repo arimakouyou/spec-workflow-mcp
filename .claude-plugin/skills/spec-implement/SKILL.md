@@ -267,6 +267,8 @@ cargo test --quiet
 
 統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
 
+> **アーキテクチャ不変条件テスト**: `tests/architecture.rs`（`/generate-arch-tests` で生成）が存在する場合、step 3.5.1 の `cargo test` で自動実行される。依存方向違反が検出された場合はテスト失敗として扱い、根本原因タスクの特定と差し戻しを行う。`tests/architecture.rs` が存在しない場合、かつ design.md に `## Module Boundaries` セクションが存在する場合は、`/generate-arch-tests` の実行をユーザーに提案する。
+
 #### 3.5.1.6 CVE Audit (依存脆弱性監査)
 
 Expert Team Review の前に、依存ライブラリの脆弱性を機械的に検査する。
@@ -387,8 +389,10 @@ Agent({
 
     Expert team review report: .spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md (reference only).
     Focus on final quality checks (rustfmt, clippy, tests) and commit.
-    Review across all aspects (A–F) and report review_action as commit / rework / escalate.
+    Review across all aspects (A–G) and report review_action as commit / rework / escalate.
     Include integration-verification results in your completion report.
+    G: API Documentation — docs/openapi.yaml が存在し、API関連ファイルに変更がある場合、
+    openapi.yaml が更新されているか確認。未更新の場合は /generate-api-docs の実行を推奨として報告。
     The commit message should summarize the Phase's deliverables.`
 })
 ```
@@ -396,6 +400,8 @@ Agent({
 - **review_action: commit** → proceed to 3.5.4
 - **review_action: rework** → follow the normal rework flow (identify the root cause task and send it back to that task's parallel-worker)
 - **review_action: escalate** → follow the normal escalate flow
+
+> **CI フィードバック**: CI ワークフローが `/setup-ci` で構成されている場合、テスト結果サマリーが PR コメントに自動投稿される（sticky comment 方式で更新）。Phase Review 後に `/create-pr` で PR を作成した際、CI 実行結果を PR コメントから確認可能。`--no-pr-comments` で無効化されている場合はコメント投稿なし。
 
 #### 3.5.4 Complete
 
@@ -670,6 +676,7 @@ Agent({
     **D: Spec** — _Prompt の Success 基準を1つずつ確認し、各基準の充足/不足を明示すること
     **E: Tests** — テストは実装と同期しているか? 値の検証（is_ok() だけでなく具体値の確認）があるか?
     **F: Design Conformance** — design.md に未定義のフィールド/エンドポイントが追加されていないか?
+    **G: API Documentation** — API変更（エンドポイント追加・変更・型変更）がある場合、`docs/openapi.yaml` の更新を確認。openapi.yaml が存在しない場合はスキップ
 
     ⚠️ 各カテゴリの observations を完了レポートに必ず含めること。
     「問題なし」の場合でも、何を確認して問題なしと判断したかを記載する。

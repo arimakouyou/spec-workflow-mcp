@@ -28,6 +28,27 @@ Common patterns:
 - Flat structure for simple projects
 ```
 
+## File Placement Rules
+
+新規ファイルを追加する際の配置先ルール。種別ごとに配置先ディレクトリと命名規則を定義し、
+開発者や AI エージェントが配置先を一意に判断できるようにする。
+
+| ファイル種別 | 配置先ディレクトリ | 命名規則 | 例 |
+|-------------|-------------------|---------|-----|
+| [例: ハンドラ/コントローラ] | [例: src/handlers/] | [例: snake_case.rs] | [例: user_handler.rs] |
+| [例: サービス/ビジネスロジック] | [例: src/services/] | [例: snake_case.rs] | [例: auth_service.rs] |
+| [例: データモデル] | [例: src/models/] | [例: snake_case.rs] | [例: user.rs] |
+| [例: ユニットテスト] | [例: ソースと同階層] | [例: *_test.rs / *.test.ts] | [例: user_test.rs] |
+| [例: 統合テスト] | [例: tests/] | [例: test_*.rs / *.test.ts] | [例: test_api.rs] |
+| [例: E2E テスト] | [例: e2e/ or tests/e2e/] | [例: *.spec.ts] | [例: login.spec.ts] |
+| [例: CI ワークフロー] | [例: .github/workflows/] | [例: kebab-case.yml] | [例: ci.yml] |
+| [例: ドキュメント] | [例: docs/] | [例: kebab-case.md] | [例: api-guide.md] |
+| [例: 設定ファイル] | [例: config/] | [例: kebab-case.toml] | [例: database.toml] |
+| [例: ユーティリティスクリプト] | [例: scripts/] | [例: kebab-case.{sh,js}] | [例: seed-db.sh] |
+
+> **P4-01 準拠**: このテーブルが埋められていることで、新規ファイルの配置先が一意に決定可能になる。
+> プロジェクト固有のパターンに合わせて行を追加・修正すること。
+
 ## Naming Conventions
 
 ### Files

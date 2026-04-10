@@ -180,7 +180,13 @@ Agent({
     - Use page.goto(), page.click(), page.fill() for user interactions
     - Use page.waitForSelector() for dynamic content
     - Use expect(page).toHaveURL() for navigation assertions
-    - Use expect(locator).toHaveText() for content assertions`
+    - Use expect(locator).toHaveText() for content assertions
+
+    Playwright MCP 連携（CDP 経由、.mcp.json に設定がある場合）:
+    - browser_snapshot で DOM スナップショット・アクセシビリティツリーを取得し構造検証に使用
+    - browser_take_screenshot でランタイムスクリーンショットを取得し VRT に使用
+    - browser_evaluate で CDP 経由の JavaScript 実行（パフォーマンス計測等）
+    - これらは標準の Playwright テストアサーションを補完するもので、置き換えではない`
 })
 ```
 

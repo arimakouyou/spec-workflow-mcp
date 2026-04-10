@@ -115,22 +115,19 @@ This is a strict, automated process. Verbal approval from the user is never acce
 
 1. **Request approval**: Use the `approvals` MCP tool with `action: 'request'`. Pass `filePath` only — never include content in the request. Save the returned `approvalId`.
 
-2. **Automatic polling**: Start automatic status checking:
+2. **Automatic polling with auto-transition**: Start automatic status checking:
    ```
-   /loop 1m /check-approval <approvalId>
+   /loop 1m /check-approval <approvalId> next:/spec-requirements
    ```
    The loop will automatically check approval status every minute and handle the result:
    - **pending**: Continue polling (no action needed)
-   - **approved**: Cleanup is performed automatically, loop stops
+   - **approved**: Cleanup is performed automatically, loop stops, and check-approval automatically invokes `/spec-requirements`
    - **needs-revision**: Loop stops, reviewer comments are displayed
 
 3. **Handle needs-revision** (if loop stopped with revision request):
    - Read the reviewer's comments, update the document accordingly
    - Spawn the review subagent again (Step A + B)
-   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
-
-4. **Next phase**: After approval and cleanup succeed, **automatically** proceed to Phase 1 (Requirements).
-   Load the `/spec-requirements` skill and begin immediately — do not wait for user input.
+   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId> next:/spec-requirements`
 
 ## Rules
 

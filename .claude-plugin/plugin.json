@@ -8,5 +8,6 @@
   "homepage": "https://github.com/arimakouyou/spec-workflow-mcp",
   "license": "GPL-3.0",
   "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "hooks": "./hooks/hooks.json",
+  "rules": "./rules/"
 }

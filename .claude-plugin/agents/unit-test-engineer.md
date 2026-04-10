@@ -28,6 +28,7 @@ Act as a specialist in the following areas:
 - Tests must verify the preconditions, postconditions, and invariants of methods
 - Implement following the Given-When-Then pattern
 - Do not modify the production code under test
+- Assertion messages must follow EM1 format: include what went wrong, expected behavior, and fix instruction (see `.claude-plugin/rules/error-message-guidelines.md`)
 
 ---
 
