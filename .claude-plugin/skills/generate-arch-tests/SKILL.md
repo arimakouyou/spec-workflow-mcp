@@ -135,35 +135,92 @@ fn collect_rs_files(dir: &Path) -> Vec<std::path::PathBuf> {
     files
 }
 
+/// `use crate::...` 形式の 1 行からトップレベルモジュール名を抽出する
+/// 通常の `use crate::module::...` とグループ import `use crate::{a::..., b::...}` の両方に対応
+fn extract_use_crate_modules(trimmed: &str) -> Vec<String> {
+    let Some(rest) = trimmed.strip_prefix("use crate::") else {
+        return Vec::new();
+    };
+
+    let rest = rest.trim().trim_end_matches(';').trim();
+
+    // use crate::{handlers::..., infra::...}; のようなグループ import に対応
+    if let Some(group) = rest.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
+        let mut modules = Vec::new();
+        let mut current = String::new();
+        let mut brace_depth = 0usize;
+
+        for ch in group.chars() {
+            match ch {
+                '{' => { brace_depth += 1; current.push(ch); }
+                '}' => { brace_depth = brace_depth.saturating_sub(1); current.push(ch); }
+                ',' if brace_depth == 0 => {
+                    if let Some(m) = extract_top_level_module(&current) {
+                        modules.push(m);
+                    }
+                    current.clear();
+                }
+                _ => current.push(ch),
+            }
+        }
+        if let Some(m) = extract_top_level_module(&current) {
+            modules.push(m);
+        }
+        return modules;
+    }
+
+    // 通常の use crate::module::... 形式
+    rest.split("::")
+        .next()
+        .and_then(|s| s.split_whitespace().next())
+        .filter(|s| !s.is_empty() && *s != "self")
+        .map(|s| vec![s.to_string()])
+        .unwrap_or_default()
+}
+
+/// グループ import の 1 要素からトップレベルモジュール名を抽出する
+fn extract_top_level_module(entry: &str) -> Option<String> {
+    let entry = entry.trim();
+    if entry.is_empty() { return None; }
+    entry.split("::")
+        .next()
+        .and_then(|s| s.split_whitespace().next())
+        .map(|s| s.trim_matches('{').trim_matches('}'))
+        .filter(|s| !s.is_empty() && *s != "self")
+        .map(|s| s.to_string())
+}
+
 /// ソースファイルから use / mod 文を抽出し、依存先モジュール名を返す
 fn extract_dependencies(path: &Path) -> Vec<String> {
     let content = fs::read_to_string(path).unwrap_or_default();
     let mut deps = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
-        // use crate::module_name::... の形式を検出
-        if let Some(rest) = trimmed.strip_prefix("use crate::") {
-            if let Some(module) = rest.split("::").next() {
-                deps.push(module.to_string());
-            }
-        }
+        deps.extend(extract_use_crate_modules(trimmed));
         // mod module_name; の外部モジュール参照は除外（同一レイヤー内の構造定義）
     }
     deps
 }
 
-/// レイヤー名からディレクトリのモジュール名群を取得するマップを構築
+/// レイヤー名からディレクトリのトップレベルモジュール名を取得するマップを構築
+/// extract_dependencies が use crate::<first_segment>::... の先頭セグメントのみを
+/// 依存先として抽出するため、ここでも先頭セグメントのみを登録する。
 fn build_layer_modules_map() -> HashMap<&'static str, Vec<&'static str>> {
     let mut map = HashMap::new();
     for layer in LAYERS {
-        // ディレクトリパスからモジュール名を推定
-        // src/handlers/ → "handlers", src/services/directory_scanner → "directory_scanner"
-        let modules: Vec<&str> = layer.dir
+        // ディレクトリパスからトップレベルモジュール名を推定
+        // src/handlers/ → "handlers", src/services/directory_scanner → "services"
+        if let Some(module) = layer.dir
             .trim_start_matches("src/")
             .trim_end_matches('/')
             .split('/')
-            .collect();
-        map.entry(layer.name).or_insert_with(Vec::new).extend(modules);
+            .next()
+            .filter(|s| !s.is_empty())
+        {
+            map.entry(layer.name)
+                .or_insert_with(Vec::new)
+                .push(module);
+        }
     }
     map
 }

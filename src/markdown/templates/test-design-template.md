@@ -309,8 +309,8 @@ test('login page visual regression', async ({ page }) => {
 [テスト時のアプリケーションサーバ起動方法]
 - ランダムポートを生成してから compose を起動:
   ```bash
-  export TEST_DB_PORT=$(shuf -i 10000-65535 -n 1)
-  export TEST_APP_PORT=$(shuf -i 10000-65535 -n 1)
+  export TEST_DB_PORT=$(python3 -c 'import random; print(random.randint(10000, 65535))')
+  export TEST_APP_PORT=$(python3 -c 'import random; print(random.randint(10000, 65535))')
   docker-compose -f docker-compose.test.yml up -d
   ```
 - ヘルスチェック待機後にテスト開始

@@ -1,6 +1,6 @@
 {
   "name": "spec-workflow-mcp-with-dashboard",
-  "version": "2.2.22",
+  "version": "2.2.25",
   "description": "MCP server only (lightweight variant — skills/agents/rules/hooks なし). Dashboard は --dashboard フラグで別途起動. 名前の 'with-dashboard' は MCP + Dashboard の手動構成を意味する（プラグイン自体にスキル等は含まれない）.",
   "author": {
     "name": "arimakouyou"

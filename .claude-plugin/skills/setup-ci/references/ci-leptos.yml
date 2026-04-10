@@ -27,6 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lockfile verification (QC9)
+        run: |
+          if [ ! -f Cargo.lock ]; then
+            echo "::error::Cargo.lock not found — reproducible builds require a committed lockfile"
+            exit 1
+          fi
+          if git check-ignore -q Cargo.lock 2>/dev/null; then
+            echo "::error::Cargo.lock is gitignored — lockfiles must be tracked"
+            exit 1
+          fi
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: {{TOOLCHAIN}}
@@ -45,7 +56,9 @@ jobs:
 
       - name: Tests
         id: tests
-        run: cargo test --quiet 2>&1 | tee /tmp/test-output.txt
+        run: |
+          set -o pipefail
+          cargo test --quiet 2>&1 | tee /tmp/test-output.txt
 
       - name: Security audit
         id: security-audit
@@ -80,7 +93,9 @@ jobs:
       #   uses: nick-fields/retry@v3
       #   with:
       #     max_attempts: 3
-      #     command: cargo test --quiet 2>&1 | tee /tmp/test-output.txt
+      #     command: |
+      #       set -o pipefail
+      #       cargo test --quiet 2>&1 | tee /tmp/test-output.txt
 
       # --- ドキュメント Lint (QC10 / P5-03) ---
       # - name: Markdown lint
@@ -89,6 +104,7 @@ jobs:
 
       - name: Post CI results to PR
         if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/github-script@v7
         env:
           FMT_RESULT: ${{ steps.format-check.outcome }}
@@ -127,6 +143,7 @@ jobs:
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number,
+              per_page: 100,
             });
             const existing = comments.find(c => c.body.includes(tag));
             if (existing) {

@@ -4,7 +4,7 @@ description: >
   ソースコードからOpenAPI 3.1ドキュメントを自動生成する。APIルート定義の解析、
   ハンドラシグネチャ・型定義・doc comment収集、OpenAPI YAML生成、doc comment改善提案を行う。
   Triggers: 'generate API docs', 'OpenAPI生成', 'APIドキュメント生成', '/generate-api-docs'.
-argument-hint: "[--output <path>] [--framework <axum|express|auto>]"
+argument-hint: "[--output <path>] [--framework <axum|actix-web|express|fastify|auto>]"
 user-invokable: true
 ---
 
