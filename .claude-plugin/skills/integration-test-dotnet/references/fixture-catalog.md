@@ -74,11 +74,12 @@ Utility methods for seeding test data and verifying DB state:
 ```csharp
 public static class DatabaseHelper
 {
-    /// Create a scoped DbContext from the factory
-    public static AppDbContext CreateDbContext(WebApplicationFactory<Program> factory)
+    /// Create a scoped DbContext from the factory（スコープも一緒に返し、呼び出し側で Dispose する）
+    public static (AppDbContext Db, IServiceScope Scope) CreateDbContext(WebApplicationFactory<Program> factory)
     {
         var scope = factory.Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return (db, scope);
     }
 
     /// Seed a single entity and return it (with generated ID)

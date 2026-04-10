@@ -384,7 +384,7 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
 
 ### P2: Launch Agents
 
-Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.claude/agents/` via `subagent_type`.
+Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.claude-plugin/agents/` via `subagent_type`.
 
 **Resource-adaptive parallel control**: Limit Worker count based on `MAX_HEAVY_AGENTS` obtained in P0. Log the resource detection result:
 ```

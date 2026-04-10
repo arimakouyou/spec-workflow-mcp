@@ -96,7 +96,12 @@ fi
 
 ```bash
 # Security audit (blocking — high/critical 脆弱性検出時は停止)
-dotnet list package --vulnerable --include-transitive
+OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
+echo "$OUTPUT"
+if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
+  echo "Critical or high severity vulnerabilities found"
+  exit 1
+fi
 
 # Snitch (advisory — 冗長参照の警告のみ)
 if dotnet tool list | grep -q snitch; then

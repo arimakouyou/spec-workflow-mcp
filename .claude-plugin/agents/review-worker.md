@@ -55,8 +55,13 @@ dotnet restore
 dotnet format --verify-no-changes
 dotnet build --no-restore -warnaserror
 dotnet test --no-build --verbosity quiet
-# Dependency Analysis
-dotnet list package --vulnerable --include-transitive
+# Dependency Analysis (blocking — exit code 0 のため出力をパースする)
+OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
+echo "$OUTPUT"
+if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
+  echo "Critical or high severity vulnerabilities found"
+  exit 1
+fi
 if dotnet tool list | grep -q snitch; then
   dotnet tool run snitch 2>&1 | head -30 || true
 fi
@@ -295,6 +300,8 @@ git commit -m "<scope>: <summary of changes>"
 
 ## Completion Report Format (must include the following keys)
 
+### Rust Projects
+
 ```
 - worktree_path: <path>
 - branch: <branch>
@@ -303,6 +310,40 @@ git commit -m "<scope>: <summary of changes>"
 - clippy: pass|fail
 - cargo_audit: pass|fail|skip
 - cargo_udeps: pass|warn|skip
+- review: pass|fail
+- review_action: commit|rework|escalate
+- review_details:
+    - style: pass|fail
+    - design: pass|fail
+    - security: pass|fail
+    - spec_compliance: pass|fail
+    - test_quality: pass|fail
+    - tdd_compliance: pass|fail
+    - design_conformance: pass|fail
+    - api_docs: pass|skip|advisory
+- observations: <レビュー観察ログ — 全カテゴリ (A-G) の確認結果を review_action に関係なく常に記録>
+- auto_fixed: <自動修正した Minor 問題のリスト (0件でも空リスト [] として記載)>
+- integration-verification: <PhaseReview のみ必須。通常タスクレビューでは省略>
+    - build: pass|fail|skip
+    - integration-tests: pass|fail|skip
+    - smoke-test: pass|fail|skip
+- observations_summary: "<N> 項目確認、<M> 件 auto-fixed、<K> 件 finding"
+- findings: <list of findings (rework/escalate の場合のみ)>
+- commit: <hash (only for commit)>
+- changed_files: <list>
+```
+
+### .NET Projects
+
+```
+- worktree_path: <path>
+- branch: <branch>
+- tests: pass|fail <details>
+- dotnet_format: pass|fail
+- dotnet_build: pass|fail
+- dotnet_test: pass|fail
+- dotnet_audit: pass|fail|skip
+- stryker: pass|warn|skip
 - review: pass|fail
 - review_action: commit|rework|escalate
 - review_details:

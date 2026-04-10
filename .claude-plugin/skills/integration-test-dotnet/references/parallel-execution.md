@@ -41,7 +41,7 @@ Worker assignment:
 
 ### P2: Launch Agents
 
-Launch Workers and Pentagon as sub-agents using agent definitions under `.claude/agents/`.
+Launch Workers and Pentagon as sub-agents using agent definitions under `.claude-plugin/agents/`.
 
 **Launch order:**
 1. Pentagon (`subagent_type: "spec-workflow-mcp:integ-test-dotnet-auditor"`) — waits for review requests after launch

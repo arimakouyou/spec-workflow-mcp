@@ -296,12 +296,18 @@ dotnet build --no-restore -p:DocumentationFile=docs.xml 2>&1 | grep -c "CS1591" 
 #### Security audit (blocking)
 
 ```bash
-dotnet list package --vulnerable --include-transitive
+# dotnet list package --vulnerable は常に exit code 0 を返すため、出力をパースする
+OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
+echo "$OUTPUT"
+if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
+  echo "Critical or high severity vulnerabilities found"
+  exit 1
+fi
 ```
 
 - **Blocking**: If high/critical vulnerabilities are found, the check **fails**
 - `--include-transitive`: Checks both direct and transitive dependencies
-- This is the C# equivalent of `cargo audit`
+- `cargo audit` と異なり exit code で判定できないため、出力の grep が必須
 
 #### Redundant dependency detection (advisory)
 
@@ -654,7 +660,7 @@ fi
 find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*' -print -quit 2>/dev/null
 
 # .NET: 統合テストプロジェクトの存在確認
-find . -maxdepth 3 -name '*Integration*Tests*.csproj' -o -name '*IntegrationTests*.csproj' -print -quit 2>/dev/null
+find . -maxdepth 3 \( -name '*Integration*Tests*.csproj' -o -name '*IntegrationTests*.csproj' \) -print -quit 2>/dev/null
 
 # Node.js: 統合テストスクリプトまたはファイルの存在確認
 grep -q '"test:integration"' package.json 2>/dev/null || \
