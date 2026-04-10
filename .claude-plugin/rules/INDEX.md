@@ -7,7 +7,7 @@
 | ファイル | ID プレフィックス | 件数 | 説明 |
 |---------|-----------------|------|------|
 | `rust-style.md` | RS1〜RS16 | 16 | Rust コードスタイル・フォーマット規約 |
-| `quality-checks.md` | QC1〜QC12 | 13+ | 品質チェックコマンド定義（タスクレベル: QC1〜QC6, QC8〜QC12 / 統合レベル: QC7）。QC12: .NET |
+| `quality-checks.md` | QC1〜QC12, QC3.5 | 14 | 品質チェックコマンド定義（タスクレベル: QC1〜QC6, QC3.5, QC8〜QC12 / 統合レベル: QC7）。QC12: .NET |
 | `design-principles.md` | D1〜D7 | 7 | 設計原則（Taste Invariants） |
 | `design-conformance.md` | DC1〜DC3 | 3 | 実装時の設計適合ルール |
 | `security.md` | A1〜A10 | 10 | OWASP Top 10 + 認証/認可セキュリティ |

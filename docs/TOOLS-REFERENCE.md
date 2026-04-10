@@ -75,9 +75,9 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 
 ## Spec Management Tools
 
-### create-spec-doc
+### create-spec
 
-**Purpose**: Creates or updates specification documents (requirements, design, test-design, tasks).
+**Purpose**: Creates or updates specification documents (requirements, design, test-design, tasks). MCP Prompt として登録されている。
 
 **Parameters**:
 
@@ -114,7 +114,10 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 - Validates markdown format
 - Preserves existing documents when creating new types
 
-### spec-list
+### spec-list (概念的操作)
+
+> **Architecture Note**: この操作は独立した MCP Tool/Prompt としては存在しない。
+> `spec-status` prompt または `/spec-implement` スキルのコンテキスト内で同等の機能が提供される。
 
 **Purpose**: Lists all specifications with their current status.
 
@@ -205,7 +208,10 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 "Show me the status of user-authentication spec"
 ```
 
-### manage-tasks
+### manage-tasks (概念的操作)
+
+> **Architecture Note**: この操作は独立した MCP Tool としては存在しない。
+> タスク管理は `refresh-tasks` prompt と `/spec-implement` スキルで処理される。
 
 **Purpose**: Comprehensive task management including updates, status changes, and progress tracking.
 
@@ -261,7 +267,10 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 
 ## Context Tools
 
-### get-template-context
+### get-template-context (概念的操作)
+
+> **Architecture Note**: この操作は独立した MCP Tool としては存在しない。
+> テンプレートは `create-spec` prompt が内部的にロードする。
 
 **Purpose**: Retrieves markdown templates for all document types.
 
@@ -286,7 +295,10 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 "Get all document templates"
 ```
 
-### get-steering-context
+### get-steering-context (概念的操作)
+
+> **Architecture Note**: この操作は独立した MCP Tool としては存在しない。
+> ステアリングコンテキストは `inject-steering-guide` prompt で提供される。
 
 **Purpose**: Retrieves project steering documents and guidance.
 
@@ -314,7 +326,10 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 }
 ```
 
-### get-spec-context
+### get-spec-context (概念的操作)
+
+> **Architecture Note**: この操作は独立した MCP Tool としては存在しない。
+> スペックコンテキストは `spec-status` prompt で取得できる。
 
 **Purpose**: Retrieves complete context for a specific spec.
 
@@ -406,26 +421,34 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 
 ## Approval System Tools
 
-### request-approval
+### approvals
 
-**Purpose**: Requests user approval for a document.
+**Purpose**: ダッシュボードインターフェースを通じた承認リクエストの管理。
 
 **Parameters**:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| specName | string | Yes | Name of the spec |
-| docType | string | Yes | Document type to approve |
-| documentId | string | Yes | Unique ID for tracking |
-| content | string | Yes | Document content for review |
+| action | string | Yes | 操作: "request", "status", "delete" |
+| title | string | Yes (request) | 承認対象の簡潔なタイトル |
+| filePath | string | Yes (request) | プロジェクトルートからの相対パス（content は渡さない） |
+| type | string | Yes (request) | "document" または "action" |
+| category | string | Yes (request) | 承認カテゴリ: "spec" または "steering" |
+| categoryName | string | Yes (request) | スペック名（例: "user-auth"）、steering の場合は "steering" |
+| approvalId | string | Yes (status/delete) | 承認リクエストの ID |
+| projectPath | string | No | プロジェクトルートの絶対パス |
+
+**重要**: `filePath` のみを指定し、ドキュメント内容 (`content`) は渡さないこと（ダッシュボードがファイルを直接読み取る）。
 
 **Usage Example**:
 ```typescript
 {
-  specName: "user-auth",
-  docType: "requirements",
-  documentId: "user-auth-req-v1",
-  content: "# Requirements\n\n..."
+  action: "request",
+  title: "User Authentication Requirements",
+  filePath: ".spec-workflow/specs/user-auth/requirements.md",
+  type: "document",
+  category: "spec",
+  categoryName: "user-auth"
 }
 ```
 
@@ -433,7 +456,7 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 ```typescript
 {
   success: true,
-  approvalId: "user-auth-req-v1",
+  approvalId: "...",
   message: "Approval requested. Check dashboard to review."
 }
 ```
