@@ -80,7 +80,7 @@ fi
 | Setting | Detection | Default |
 |---------|-----------|---------|
 | .NET version | `<TargetFramework>` in .csproj or `global.json` の `sdk.version` | `10.0` |
-| Solution file | `*.sln` の存在 | single project |
+| Solution file | リポジトリルートの `*.sln`（**必須** — 未存在時は `dotnet new sln` + `dotnet sln add` を指示） | — |
 | Blazor WASM | .csproj に `Microsoft.AspNetCore.Components.WebAssembly` | false |
 
 #### Common
