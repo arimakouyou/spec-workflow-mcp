@@ -79,7 +79,7 @@ fi
 
 | Setting | Detection | Default |
 |---------|-----------|---------|
-| .NET version | `<TargetFramework>` in .csproj or `global.json` の `sdk.version` | `10.0` |
+| .NET version | `<TargetFramework>` in .csproj or `global.json` の `sdk.version` | `10.0.x` |
 | Solution file | リポジトリルートの `*.sln`（**必須** — 未存在時は `dotnet new sln` + `dotnet sln add` を指示） | — |
 | Blazor WASM | .csproj に `Microsoft.AspNetCore.Components.WebAssembly` | false |
 
@@ -107,7 +107,7 @@ Replace placeholders with the values gathered in Step 2:
 - `{{TOOLCHAIN}}` → detected toolchain (e.g., `stable`, `nightly`, `1.82`)
 
 **.NET / .NET Blazor:**
-- `{{DOTNET_VERSION}}` → detected .NET version (e.g., `10.0`)
+- `{{DOTNET_VERSION}}` → detected .NET version (e.g., `10.0.x`)
 - 前提: リポジトリルートに `.sln` が1つ存在すること（コマンドは `.sln` パスを指定せず実行）
 
 **Node.js:**

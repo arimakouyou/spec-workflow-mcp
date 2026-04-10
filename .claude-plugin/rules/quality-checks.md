@@ -671,7 +671,7 @@ grep -q '"test:integration"' package.json 2>/dev/null || \
 | タイプ | コマンド |
 |--------|---------|
 | Rust | `cargo test --tests --quiet` |
-| .NET | `dotnet test --filter "Category=Integration" --no-build --verbosity quiet` |
+| .NET | `dotnet test --filter "Category=Integration" --no-build --verbosity quiet`（テストに `[Trait("Category","Integration")]` 必須） |
 | Node.js（スクリプトあり） | `npm run test:integration` |
 | Node.js（ファイルのみ） | `npm test -- --testPathPattern=integration` |
 
@@ -700,7 +700,12 @@ if [ -f Cargo.toml ]; then
   START_CMD="cargo run"
 elif SLN=$(ls *.sln 2>/dev/null | head -1) && [ -n "$SLN" ]; then
   # .sln がルートに存在する前提（単一 .sln）
-  ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | head -1)
+  # Web SDK プロジェクトを優先（クラスライブラリは dotnet run 不可）
+  ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | while read -r proj; do
+    [ -f "$proj" ] && grep -q 'Microsoft.NET.Sdk.Web' "$proj" && echo "$proj" && break
+  done)
+  # Web SDK が見つからなければ先頭プロジェクトにフォールバック
+  [ -z "$ENTRY_PROJECT" ] && ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | head -1)
   START_CMD="dotnet run --project ${ENTRY_PROJECT:-.}"
 elif [ -f package.json ]; then
   # package.json に dev スクリプトがあれば優先的に使用し、なければ start スクリプトを確認
@@ -715,7 +720,7 @@ elif [ -f package.json ]; then
     exit 0
   fi
 else
-  echo "Step D: 対応するプロジェクトタイプ（Rust/Node.js）が見つからないため、スモークテストをスキップします。" >&2
+  echo "Step D: 対応するプロジェクトタイプ（Rust/.NET/Node.js）が見つからないため、スモークテストをスキップします。" >&2
   exit 0
 fi
 
