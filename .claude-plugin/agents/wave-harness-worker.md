@@ -2,7 +2,7 @@
 name: wave-harness-worker
 description: Implementation worker dedicated to wave-harness. Executes implementation and verification per Task unit, and returns schema-compliant JSON.
 model: sonnet
-tools: Read, Edit, Write, Bash, Grep, Glob, Skill
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, advisor
 skills:
   - tdd-skills
 memory: project
@@ -36,6 +36,14 @@ permissionMode: bypassPermissions
 - Do not run git add / commit / checkout -b. File editing only.
 - If there are no changes, use `status="no_op"`.
 - `started_at` / `ended_at` must be in RFC3339 UTC format.
+
+## Advisor Usage
+
+Call `advisor()` at the following points:
+
+- **Before implementing a complex work item**: After reading the whiteboard, before starting file edits — getting the approach right on the first attempt is critical (no git, file editing only)
+- **When the implementation might affect other work items**: If the whiteboard reveals cross-cutting impacts
+- **On retry attempts**: If `retry_mode` is true, call advisor to analyze `previous_error` before repeating the same pattern
 
 ## Deterministic checks
 

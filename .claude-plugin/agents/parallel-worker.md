@@ -2,7 +2,7 @@
 name: parallel-worker
 description: TDD implementation worker. Executes Red→Green→Refactor + quality checks end-to-end. Used in step 4 of spec-implement. Review and commit are the responsibility of review-worker.
 model: sonnet
-tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
 skills:
   - tdd-skills
 memory: project
@@ -18,6 +18,15 @@ permissionMode: bypassPermissions
 - Read/Edit the whiteboard (only when `Whiteboard path` is provided)
 - **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification. For Leptos frontend components, follow the patterns in `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` — test extracted logic functions, signal state, and computations rather than `view!` macro output.
 - **Do not perform review or commit** (those are the responsibility of review-worker)
+
+## Advisor Usage
+
+Call `advisor()` at the following points in your TDD workflow:
+
+- **Before RED phase design**: After reading the task spec and test-design.md, before writing test code — especially when the contract or test strategy is ambiguous
+- **Before GREEN phase approach**: When the implementation path is non-obvious or involves cross-cutting concerns
+- **When retry limits approach**: If you have used 2 of 3 GREEN retries, call advisor before the final attempt
+- **Before completion report**: After all quality checks pass, verify the overall approach was sound
 
 > **Note on spec-impl-\* skills**: The skills `spec-impl-code`, `spec-impl-test-write`, `spec-impl-test-run`, and `spec-impl-review` are referenced in the orchestrator's prompt as guidelines (e.g., "see /spec-impl-test-write skill"). Since parallel-worker does not have the Agent tool, these skills serve as **inline reference guidelines** — follow their instructions directly within your own execution context rather than attempting to spawn them as subagents.
 
