@@ -31,8 +31,12 @@ fi
 # --- Node.js: npm audit ---
 if [ -f package.json ] && [ -f package-lock.json ]; then
   if command -v npm >/dev/null 2>&1; then
-    if ! npm audit --audit-level=high --omit=dev 2>&1 | tail -5; then
+    # 出力をキャプチャし、失敗時のみ表示（成功時のノイズを抑制）
+    AUDIT_OUTPUT=$(npm audit --audit-level=high --omit=dev 2>&1) || AUDIT_EXIT=$?
+    AUDIT_EXIT=${AUDIT_EXIT:-0}
+    if [ "$AUDIT_EXIT" -ne 0 ]; then
       echo "⛔ [security-audit] npm audit: 高/重大な脆弱性が検出されました"
+      echo "$AUDIT_OUTPUT" | grep -iE '(high|critical)' | head -5
       echo "   修正: npm audit fix を実行するか、脆弱なパッケージを更新してください"
       FAIL=true
     fi

@@ -32,7 +32,7 @@ if [[ "$FILE_PATH" == *.rs ]]; then
   exit 0
 fi
 
-# --- Node.js (.js/.ts/.tsx/.jsx/.css/.json — prettier 対象) ---
+# --- Node.js (.js/.ts/.tsx/.jsx/.css — prettier 対象) ---
 if [[ "$FILE_PATH" =~ \.(js|ts|tsx|jsx|css)$ ]]; then
   # package.json が存在し、prettier が利用可能な場合のみ実行
   if [ -f "package.json" ] && command -v npx >/dev/null 2>&1; then
