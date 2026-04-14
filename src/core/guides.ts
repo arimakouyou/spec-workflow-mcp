@@ -55,11 +55,11 @@ Follow this workflow exactly to avoid errors.
 ## Approval Workflow (all phases)
 
 1. \`approvals\` action:'request' — filePath only, never content
-2. Start automated polling: \`/loop 1m /check-approval <approvalId>\`
-3. The check-approval skill handles status polling, cleanup on approval, and loop termination
-4. If needs-revision: update doc, create NEW approval with new \`/loop\`
-5. If approved: check-approval automatically runs \`approvals\` action:'delete' and stops the loop
-6. If delete fails: check-approval retries on next loop iteration
+2. Run: \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
+3. check-approval handles polling, cleanup on approval, and result handling
+4. If needs-revision: update doc, create NEW approval and run \`/check-approval\` again
+5. If approved: check-approval automatically runs \`approvals\` action:'delete'
+6. If delete fails: report error and ask user to retry
 
 ## Key Rules
 
@@ -67,7 +67,7 @@ Follow this workflow exactly to avoid errors.
 - One spec at a time, kebab-case names
 - Verbal approval is NEVER accepted — dashboard or VS Code extension only
 - Never proceed if approval delete fails
-- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension)
+- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension). Polling uses a Bash script with 60-minute timeout — no \`/loop\` required
 - Every task marked [x] MUST have log-implementation called first
 - Steering docs are optional — only create when explicitly requested
 

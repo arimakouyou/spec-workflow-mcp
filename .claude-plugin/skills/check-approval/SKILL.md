@@ -1,20 +1,19 @@
 ---
 name: check-approval
-description: "Check the status of a pending approval request. Designed to be called by /loop for automatic polling. Triggers on: 'check approval', 'poll approval status', or when called via /loop during spec workflow approval waiting."
+description: "Check the status of a pending approval request. Polls via Bash script with configurable timeout. Triggers on: 'check approval', 'poll approval status', or when called during spec workflow approval waiting."
 ---
 
 # Check Approval Status
 
-Check the status of a pending approval and take appropriate action based on the result. This skill is designed to be called repeatedly by `/loop` during the spec workflow.
+Poll the status of a pending approval and take appropriate action based on the result. This skill uses a Bash polling script that monitors the approval JSON file directly, with a configurable timeout (default: 60 minutes).
 
 ## Usage
 
-Called automatically by `/loop` during the approval workflow:
 ```
-/loop 1m /check-approval <approvalId> next:/spec-requirements
+/check-approval <approvalId> next:/spec-requirements
 ```
 
-The `next:` parameter is optional. When provided, check-approval will automatically invoke the specified skill after successful approval and cleanup. When omitted, check-approval will stop the loop and report success without auto-transitioning.
+The `next:` parameter is optional. When provided, check-approval will automatically invoke the specified skill after successful approval and cleanup. When omitted, check-approval will report success without auto-transitioning.
 
 ## Process
 
@@ -24,47 +23,51 @@ Extract the following from the invocation:
 - `<approvalId>` — the approval ID to check (required)
 - `next:<skill-name>` — the skill to invoke after approval (optional). Format: `next:/skill-name`
 
-### 2. Check Status
+### 2. Run Polling Script
 
-Call the `approvals` MCP tool:
+Execute the Bash polling script to wait for the approval status to change:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/poll-approval.sh" <approvalId> .spec-workflow --timeout 3600
 ```
-approvals action: 'status', approvalId: '<approvalId>'
-```
+
+The script polls the approval JSON file every 15 seconds and exits when:
+- The status changes from `pending` (outputs JSON to stdout, exit 0)
+- The timeout is reached (outputs error to stderr, exit 1)
 
 ### 3. Handle Result
 
-#### If `pending`:
-Report: "Approval still pending. Waiting for review on dashboard/VS Code extension..."
-The loop will call this skill again at the next interval.
+Parse the JSON output from the script and act based on the `status` field:
 
 #### If `approved`:
 1. Report: "Approval granted!"
 2. **Immediately run cleanup**: `approvals action:"delete" approvalId:"<approvalId>"`
-   - If delete fails: report error and retry on next loop iteration
+   - If delete fails: report error and ask user to retry
    - If delete succeeds: report "Cleanup complete."
-3. **Stop the loop.**
-4. **Auto-transition** (if `next:` parameter was provided):
+3. **Auto-transition** (if `next:` parameter was provided):
    - Report: "Proceeding to next phase: `{skill-name}`"
    - Immediately invoke the next skill using the Skill tool. For example, if the parameter was `next:/spec-requirements`, invoke the skill `spec-requirements`.
    - **Do NOT wait for user input** between cleanup and invoking the next skill.
-5. **No auto-transition** (if `next:` parameter was omitted):
+4. **No auto-transition** (if `next:` parameter was omitted):
    - Report: "Approval approved and cleaned up. Ready for next steps."
 
 #### If `needs-revision`:
-1. **Stop the loop.**
-2. Report the reviewer's comments from the approval response.
-3. Tell the user: "Revision requested. Please review the comments above."
-4. Do NOT auto-transition — the calling skill should update the document based on review comments, re-run self-review, and submit a NEW approval request with a new `/loop`.
+1. Report the reviewer's comments from the approval response.
+2. Tell the user: "Revision requested. Please review the comments above."
+3. Do NOT auto-transition — the calling skill should update the document based on review comments, re-run self-review, and submit a NEW approval request with a new `/check-approval`.
 
 #### If `rejected`:
-1. **Stop the loop.**
-2. Report the rejection reason.
-3. Tell the user: "Approval was rejected. Please review the feedback."
+1. Report the rejection reason.
+2. Tell the user: "Approval was rejected. Please review the feedback."
+
+#### If timeout (exit code 1):
+1. Report: "Approval polling timed out after 60 minutes."
+2. Tell the user they can re-run `/check-approval <approvalId>` to resume polling, or check the dashboard directly.
 
 ## Rules
 
 - This skill only checks status and performs cleanup — it does not modify spec documents
 - Verbal approval is NEVER accepted — only dashboard/VS Code extension approval counts
 - The `approvals action:'delete'` must succeed before the workflow can proceed
-- If delete fails, do not proceed — retry on the next loop iteration
+- If delete fails, do not proceed — ask user to retry
 - The `next:` parameter triggers auto-transition ONLY on the `approved` path — never on `needs-revision` or `rejected`

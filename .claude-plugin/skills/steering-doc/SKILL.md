@@ -145,19 +145,19 @@ This is a strict, automated process. Verbal approval from the user is never acce
 
 1. **Request approval**: Use the `approvals` MCP tool with `action: 'request'`. Pass `filePath` only — never include content in the request. Save the returned `approvalId`.
 
-2. **Automatic polling**: Start automatic status checking:
+2. **Automatic polling**: Start approval polling (Bash script with 60-minute timeout):
    ```
-   /loop 1m /check-approval <approvalId>
+   /check-approval <approvalId>
    ```
-   The loop will automatically check approval status every minute and handle the result:
-   - **pending**: Continue polling (no action needed)
-   - **approved**: Cleanup is performed automatically, loop stops
-   - **needs-revision**: Loop stops, reviewer comments are displayed
+   The polling script will automatically check approval status and handle the result:
+   - **approved**: Cleanup is performed automatically
+   - **needs-revision**: Reviewer comments are displayed
+   - **timeout**: Reported to user, can re-run to resume
 
 3. **Handle needs-revision** (if loop stopped with revision request):
    - Read the reviewer's comments, update the document accordingly
    - Re-run the review subagent (fix + check)
-   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId>`
+   - Submit a NEW approval request and run `/check-approval <newApprovalId>`
 
 4. **Next document**: After approval and cleanup succeed, proceed to the next document in sequence (product → tech → structure). If this was the last document, inform the user that steering docs are complete.
 
