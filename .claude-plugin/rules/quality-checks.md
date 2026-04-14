@@ -16,6 +16,13 @@ Unified command specification for quality checks run by parallel-worker, review-
 
 > **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `.claude-plugin/rules/rust-build-cache.md` (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
 
+> **Hook Enforcement**: The following checks are also enforced via plugin hooks (`.claude-plugin/hooks/`):
+> - **Auto-format (PostToolUse)**: `post-edit-check.sh` — QC1 rustfmt, QC6 prettier, QC12 dotnet format (auto-fix on Edit/Write)
+> - **Markdown lint (PostToolUse)**: `post-edit-markdownlint.sh` — QC10 markdownlint (auto-fix on Edit/Write)
+> - **Format guard (PreToolUse)**: `format-check-guard.sh` — QC1/QC6/QC12 format check (blocking on git commit)
+> - **Lockfile guard (PreToolUse)**: `lockfile-guard.sh` — QC9 lockfile verification (blocking on git commit)
+> - **Security audit (PreToolUse)**: `security-audit-guard.sh` — QC4/QC6/QC12 vulnerability audit (blocking on git commit)
+
 ---
 
 ## タスクレベルチェック（QC1〜QC6, QC8〜QC9）
@@ -23,6 +30,8 @@ Unified command specification for quality checks run by parallel-worker, review-
 コミット前・PR 単位で実行するチェック。`/setup-ci` が生成する `ci.yml` および `scheduled-quality.yml` に組み込まれる。
 
 ## QC1: rustfmt
+
+> 🔗 **Hook**: `post-edit-check.sh` (PostToolUse — auto-fix), `format-check-guard.sh` (PreToolUse — commit gate)
 
 ```bash
 cargo fmt --all -- --check
@@ -68,6 +77,8 @@ Additional checks for dependency hygiene and security. These tools are optional 
 > **Note**: sccache (`RUSTC_WRAPPER`) is **not** applied to these commands. `cargo audit` does not invoke the compiler, and `cargo-udeps` uses `+nightly` which has unreliable sccache compatibility.
 
 ### cargo-audit (Security — blocking)
+
+> 🔗 **Hook**: `security-audit-guard.sh` (PreToolUse — commit gate)
 
 ```bash
 cargo audit
@@ -166,6 +177,8 @@ The full check order becomes:
 
 ## QC6: Node.js Task-Level Quality Checks
 
+> 🔗 **Hook**: `post-edit-check.sh` (PostToolUse — prettier auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — npm audit commit gate)
+
 When the project is Node.js-based (detected by `package.json` existence without Rust indicators), use the following task-level quality checks.
 
 ### lint
@@ -242,6 +255,8 @@ npx knip --no-progress 2>&1 | head -50
 - 未導入の場合はスキップ（`npx knip` が失敗したら無視）
 
 ## QC12: .NET Task-Level Quality Checks
+
+> 🔗 **Hook**: `post-edit-check.sh` (PostToolUse — dotnet format auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — dotnet vulnerable commit gate)
 
 When the project is .NET-based (detected by `*.sln` or `*.csproj` existence without Rust indicators), use the following task-level quality checks. Target: **.NET 10**.
 
@@ -427,6 +442,8 @@ npx jscpd --min-lines 10 --min-tokens 50 \
 
 ## QC9: Lockfile Verification (P4-03)
 
+> 🔗 **Hook**: `lockfile-guard.sh` (PreToolUse — commit gate)
+
 パッケージマネージャの lockfile がリポジトリにコミットされていることを検証する。
 lockfile の欠如は再現不可能なビルドにつながるため、**Blocking** チェックとする。
 
@@ -505,6 +522,8 @@ done
 > - **週次スキャン (`scheduled-quality.yml`)**: Advisory (`continue-on-error: true`) — 検出時に Issue を自動作成するが、ワークフロー全体は停止しない
 
 ## QC10: Documentation Lint (P5-03)
+
+> 🔗 **Hook**: `post-edit-markdownlint.sh` (PostToolUse — markdownlint auto-fix)
 
 Markdown ファイルのフォーマット整合性とリンク健全性を検証する。全プロジェクトタイプ共通。
 
