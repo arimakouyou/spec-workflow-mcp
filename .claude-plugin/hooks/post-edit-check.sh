@@ -50,8 +50,8 @@ fi
 
 # --- .NET (.cs) ---
 if [[ "$FILE_PATH" == *.cs ]]; then
-  # .sln ファイルがルートに存在する場合のみ実行
-  if ls *.sln >/dev/null 2>&1 && command -v dotnet >/dev/null 2>&1; then
+  # .sln または .csproj が存在する場合に実行
+  if { ls *.sln >/dev/null 2>&1 || find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; } && command -v dotnet >/dev/null 2>&1; then
     dotnet format --include "$FILE_PATH" --no-restore >/dev/null 2>&1 || true
   fi
   exit 0

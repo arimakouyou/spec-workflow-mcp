@@ -52,7 +52,7 @@ if [ -f package.json ] && command -v npx >/dev/null 2>&1; then
 fi
 
 # --- .NET: dotnet format --verify-no-changes ---
-if ls *.sln >/dev/null 2>&1; then
+if ls *.sln >/dev/null 2>&1 || find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
   if command -v dotnet >/dev/null 2>&1; then
     if ! dotnet format --verify-no-changes --no-restore >/dev/null 2>&1; then
       echo "⛔ [format-check] dotnet format: フォーマット違反が検出されました"

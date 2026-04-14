@@ -77,12 +77,16 @@ check_sync() {
   local manifest="$1"
   local lockfiles="$2"
   local fix_cmd="$3"
+  # ドットをエスケープして正規表現の末尾アンカー付きでマッチ
+  local manifest_re
+  manifest_re=$(printf '%s' "$manifest" | sed 's/\./\\./g')
 
-  # commit 対象ファイルにマニフェストが含まれるか（固定文字列マッチ）
-  if echo "$STAGED" | grep -Fqx "$manifest" || echo "$STAGED" | grep -Fq "/$manifest"; then
+  if echo "$STAGED" | grep -qE "(^|/)${manifest_re}$"; then
     local found=false
     for lf in $lockfiles; do
-      if echo "$STAGED" | grep -Fqx "$lf" || echo "$STAGED" | grep -Fq "/$lf"; then
+      local lf_re
+      lf_re=$(printf '%s' "$lf" | sed 's/\./\\./g')
+      if echo "$STAGED" | grep -qE "(^|/)${lf_re}$"; then
         found=true
         break
       fi
@@ -104,7 +108,9 @@ if [ -n "$STAGED" ]; then
       if echo "$PKG_DIFF" | grep -qE '"(dependencies|devDependencies|peerDependencies|optionalDependencies|overrides|resolutions)"'; then
         local_found=false
         for lf in package-lock.json yarn.lock pnpm-lock.yaml; do
-          if echo "$STAGED" | grep -Fqx "$lf" || echo "$STAGED" | grep -Fq "/$lf"; then
+          local lf_re
+          lf_re=$(printf '%s' "$lf" | sed 's/\./\\./g')
+          if echo "$STAGED" | grep -qE "(^|/)${lf_re}$"; then
             local_found=true
             break
           fi
@@ -123,7 +129,7 @@ if [ -n "$STAGED" ]; then
     if [ -n "$cargo" ]; then
       CARGO_DIFF=$(git diff --cached -- "$cargo" 2>/dev/null || true)
       if echo "$CARGO_DIFF" | grep -qE '^\+.*(dependencies|\.version\s*=)'; then
-        if ! echo "$STAGED" | grep -Fqx "Cargo.lock" && ! echo "$STAGED" | grep -Fq "/Cargo.lock"; then
+        if ! echo "$STAGED" | grep -qE '(^|/)Cargo\.lock$'; then
           echo "⛔ [lockfile-guard] $cargo の依存関係が変更されていますが、Cargo.lock がステージされていません"
           echo "   修正: cargo generate-lockfile を実行し、Cargo.lock を git add してください"
           FAIL=true

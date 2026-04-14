@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # セキュリティ監査コミットガード — git commit 時に依存パッケージの脆弱性をチェック
-# ブロッキング: 高/重大な脆弱性検出時は exit 2 でコミットを阻止
-# 参照 QC: QC4 (cargo audit), QC6 (npm audit), QC12 (dotnet list package --vulnerable)
+# ブロッキング: Rust は cargo audit の終了コードに従い脆弱性が1件でもあれば、Node/.NET は高/重大な脆弱性検出時に
+# exit 2 でコミットを阻止
+# 参照 QC: QC4 (cargo audit: 脆弱性検出時にブロック), QC6 (npm audit), QC12 (dotnet list package --vulnerable)
 #
 # 参考パターン: docker-env-guard.sh + arch-lint-guard.sh (wingrs-paas-front-api)
 
@@ -32,7 +33,7 @@ fi
 if [ -f package.json ] && [ -f package-lock.json ]; then
   if command -v npm >/dev/null 2>&1; then
     # 出力をキャプチャし、失敗時のみ表示（成功時のノイズを抑制）
-    AUDIT_OUTPUT=$(npm audit --audit-level=high --omit=dev 2>&1) || AUDIT_EXIT=$?
+    AUDIT_OUTPUT=$(npm audit --audit-level=high 2>&1) || AUDIT_EXIT=$?
     AUDIT_EXIT=${AUDIT_EXIT:-0}
     if [ "$AUDIT_EXIT" -ne 0 ]; then
       echo "⛔ [security-audit] npm audit: 高/重大な脆弱性が検出されました"
