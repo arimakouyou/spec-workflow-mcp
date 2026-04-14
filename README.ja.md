@@ -51,15 +51,6 @@ Claude Code プラグインとして直接インストールできます。ス�
 claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 ```
 
-2つのプラグインバリアントが利用可能です：
-
-| プラグイン | 説明 |
-|--------|-------------|
-| `spec-workflow-mcp` | MCP サーバー + スキル/エージェント/ルール/フック |
-| `spec-workflow-mcp-with-dashboard` | MCP サーバーのみ（軽量版、スキル/エージェント/ルール/フックなし） |
-
-> **注意**: `spec-workflow-mcp-with-dashboard` バリアントは MCP サーバーのみを含む最小構成です。ダッシュボードを使用するには、`npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard` で別途起動してください。
-
 > **プラグインに含まれるもの：**
 > - 仕様駆動開発ワークフロー用の MCP サーバー
 > - スキル：spec-request-spec、spec-requirements、spec-design、spec-test-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
@@ -346,9 +337,6 @@ your-project/
     security.md            # セキュリティガイドライン
     design-principles.md   # 設計原則
     ...
-  with-dashboard/          # ダッシュボードバリアント
-    plugin.json
-    .mcp.json
 ```
 
 ## 🛠️ 開発

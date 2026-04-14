@@ -54,15 +54,6 @@ Install directly as a Claude Code plugin — skills, agents, rules, hooks, and M
 claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 ```
 
-Two plugin variants are available:
-
-| Plugin | Description |
-|--------|-------------|
-| `spec-workflow-mcp` | Full plugin — MCP server + 32 skills + 8 agents + rules + hooks (recommended) |
-| `spec-workflow-mcp-with-dashboard` | MCP server only — skills/agents/rules/hooks なし（手動 MCP 構成用の軽量版） |
-
-> **Note**: `spec-workflow-mcp-with-dashboard` は名称に反して軽量版です（MCP サーバーのみ）。名称は「MCP + Dashboard の手動構成」を意味します。Dashboard は別途起動が必要です: `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard`。フルプラグインが推奨です。
-
 > **What the plugin includes:**
 > - MCP server for spec-driven development workflow
 > - Skills: spec-request-spec, spec-requirements, spec-design, spec-test-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
@@ -404,9 +395,6 @@ your-project/
     security.md            # Security guidelines
     design-principles.md   # Design principles
     ...
-  with-dashboard/          # Dashboard variant plugin
-    plugin.json
-    .mcp.json
 ```
 
 ## 🛠️ Development

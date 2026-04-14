@@ -104,8 +104,7 @@ spec-workflow-mcp/
 │   ├── hooks/             # プラグインフック
 │   ├── skills/            # ワークフロースキル（spec-requirements、spec-design など）
 │   ├── agents/            # 専門サブエージェント
-│   ├── rules/             # プロジェクトルールと規約
-│   └── with-dashboard/    # ダッシュボードバリアント
+│   └── rules/             # プロジェクトルールと規約
 ├── dashboard/             # Webダッシュボードファイル
 │   ├── index.html         # ダッシュボードUI
 │   ├── styles.css         # ダッシュボードスタイル

@@ -23,7 +23,6 @@ const __dirname = path.dirname(__filename);
 const PLUGIN_FILES = [
   '.claude-plugin/plugin.json',
   '.claude-plugin/marketplace.json',
-  '.claude-plugin/with-dashboard/plugin.json',
 ];
 
 function getPackageVersion() {

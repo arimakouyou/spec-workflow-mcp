@@ -67,15 +67,6 @@ Claude Code プラグインとしてインストールする場合、設定は�
 claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 ```
 
-### プラグインバリアント
-
-| バリアント | MCP サーバー | スキル/エージェント/ルール | フック | ダッシュボード自動起動 |
-|---------|:----------:|:-------------------:|:-----:|:--------------:|
-| `spec-workflow-mcp` | あり | あり | あり | なし |
-| `spec-workflow-mcp-with-dashboard` | あり | なし | なし | なし |
-
-> **注意**: `spec-workflow-mcp-with-dashboard` バリアントは `.claude-plugin/with-dashboard/` の MCP サーバー設定のみを含みます。スキル、エージェント、ルール、フック、ダッシュボード自動起動は含まれ**ません**。ダッシュボードは `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard` で別途起動してください。
-
 ### プラグイン設定ファイル
 
 | ファイル | 用途 |

@@ -104,8 +104,7 @@ spec-workflow-mcp/
 │   ├── hooks/             # Plugin hooks
 │   ├── skills/            # Workflow skills (spec-requirements, spec-design, etc.)
 │   ├── agents/            # Specialized sub-agents
-│   ├── rules/             # Project rules and conventions
-│   └── with-dashboard/    # Dashboard variant plugin
+│   └── rules/             # Project rules and conventions
 ├── dashboard/             # Web dashboard files
 │   ├── index.html         # Dashboard UI
 │   ├── styles.css         # Dashboard styles
