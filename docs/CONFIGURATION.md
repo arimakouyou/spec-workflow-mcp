@@ -69,15 +69,6 @@ When installed as a Claude Code plugin, configuration is handled automatically. 
 claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 ```
 
-### Plugin Variants
-
-| Variant | MCP Server | Skills/Agents/Rules | Hooks | Auto Dashboard |
-|---------|:----------:|:-------------------:|:-----:|:--------------:|
-| `spec-workflow-mcp` | Yes | Yes | Yes | No |
-| `spec-workflow-mcp-with-dashboard` | Yes | No | No | No |
-
-> **Note**: The `spec-workflow-mcp-with-dashboard` variant packages only the MCP server configuration from `.claude-plugin/with-dashboard/`. It does **not** include skills, agents, rules, hooks, or automatic dashboard startup. Run the dashboard separately using `npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard`.
-
 ### Plugin Configuration Files
 
 | File | Purpose |
