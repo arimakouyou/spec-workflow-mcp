@@ -108,7 +108,6 @@ if [ -n "$STAGED" ]; then
       if echo "$PKG_DIFF" | grep -qE '"(dependencies|devDependencies|peerDependencies|optionalDependencies|overrides|resolutions)"'; then
         local_found=false
         for lf in package-lock.json yarn.lock pnpm-lock.yaml; do
-          local lf_re
           lf_re=$(printf '%s' "$lf" | sed 's/\./\\./g')
           if echo "$STAGED" | grep -qE "(^|/)${lf_re}$"; then
             local_found=true
