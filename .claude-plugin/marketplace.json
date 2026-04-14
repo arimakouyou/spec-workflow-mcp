@@ -17,17 +17,6 @@
       "license": "GPL-3.0",
       "homepage": "https://github.com/arimakouyou/spec-workflow-mcp",
       "source": "./.claude-plugin"
-    },
-    {
-      "name": "spec-workflow-mcp-with-dashboard",
-      "version": "2.2.28",
-      "description": "Lightweight MCP server for structured spec-driven development (no skills/agents/rules/hooks). Start the dashboard separately with --dashboard.",
-      "author": {
-        "name": "arimakouyou"
-      },
-      "license": "GPL-3.0",
-      "homepage": "https://github.com/arimakouyou/spec-workflow-mcp",
-      "source": "./.claude-plugin/with-dashboard"
     }
   ]
 }
