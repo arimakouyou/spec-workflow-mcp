@@ -124,7 +124,7 @@ This is a strict, automated process. Verbal approval from the user is never acce
    - **needs-revision**: Reviewer comments are displayed
    - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if loop stopped with revision request):
+3. **Handle needs-revision** (if polling ends with needs-revision):
    - Read the reviewer's comments, update the document accordingly
    - Spawn the review subagent again (Step A + B)
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-requirements`

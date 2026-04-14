@@ -107,36 +107,36 @@ flowchart TD
     P1_Template --> P1_Generate[Generate vision & goals]
     P1_Generate --> P1_Create[Create file:<br/>.spec-workflow/steering/<br/>product.md]
     P1_Create --> P1_Approve[approvals<br/>action: request<br/>filePath only]
-    P1_Approve --> P1_Status[approvals<br/>action: status<br/>poll status]
+    P1_Approve --> P1_Status[/check-approval<br/>Bash script polling]
     P1_Status --> P1_Check{Status?}
     P1_Check -->|needs-revision| P1_Update[Update document using user comments for guidance]
     P1_Update --> P1_Create
     P1_Check -->|approved| P1_Clean[approvals<br/>action: delete]
-    P1_Clean -->|failed| P1_Status
+    P1_Clean -->|failed| P1_Error[Report error to user]
 
     %% Phase 2: Tech
     P1_Clean -->|success| P2_Template[Check user-templates first,<br/>then read template:<br/>tech-template.md]
     P2_Template --> P2_Analyze[Analyze tech stack]
     P2_Analyze --> P2_Create[Create file:<br/>.spec-workflow/steering/<br/>tech.md]
     P2_Create --> P2_Approve[approvals<br/>action: request<br/>filePath only]
-    P2_Approve --> P2_Status[approvals<br/>action: status<br/>poll status]
+    P2_Approve --> P2_Status[/check-approval<br/>Bash script polling]
     P2_Status --> P2_Check{Status?}
     P2_Check -->|needs-revision| P2_Update[Update document using user comments for guidance]
     P2_Update --> P2_Create
     P2_Check -->|approved| P2_Clean[approvals<br/>action: delete]
-    P2_Clean -->|failed| P2_Status
+    P2_Clean -->|failed| P2_Error[Report error to user]
 
     %% Phase 3: Structure
     P2_Clean -->|success| P3_Template[Check user-templates first,<br/>then read template:<br/>structure-template.md]
     P3_Template --> P3_Analyze[Analyze codebase structure]
     P3_Analyze --> P3_Create[Create file:<br/>.spec-workflow/steering/<br/>structure.md]
     P3_Create --> P3_Approve[approvals<br/>action: request<br/>filePath only]
-    P3_Approve --> P3_Status[approvals<br/>action: status<br/>poll status]
+    P3_Approve --> P3_Status[/check-approval<br/>Bash script polling]
     P3_Status --> P3_Check{Status?}
     P3_Check -->|needs-revision| P3_Update[Update document using user comments for guidance]
     P3_Update --> P3_Create
     P3_Check -->|approved| P3_Clean[approvals<br/>action: delete]
-    P3_Clean -->|failed| P3_Status
+    P3_Clean -->|failed| P3_Error[Report error to user]
 
     P3_Clean -->|success| Complete([Steering docs complete])
 
@@ -168,10 +168,10 @@ flowchart TD
 4. Generate product vision and goals
 5. Create \`product.md\` at \`.spec-workflow/steering/product.md\`
 6. Request approval using approvals tool with action:'request' (filePath only)
-7. Poll status using approvals with action:'status' until approved/needs-revision (NEVER accept verbal approval)
+7. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout (NEVER accept verbal approval)
 8. If needs-revision: update document using comments, create NEW approval, do NOT proceed
 9. Once approved: use approvals with action:'delete' (must succeed) before proceeding
-10. If delete fails: STOP - return to polling
+10. If delete fails: STOP — report error and ask user to retry
 
 ### Phase 2: Tech Document
 **Purpose**: Document project-level technology stack and architecture. Technology selection rationale and decision history should be recorded in \`.spec-workflow/steering/logs/tech-decisions.md\`, not in the tech.md document itself.
@@ -191,10 +191,10 @@ flowchart TD
 4. Document architectural decisions and patterns
 5. Create \`tech.md\` at \`.spec-workflow/steering/tech.md\`
 6. Request approval using approvals tool with action:'request'
-7. Poll status using approvals with action:'status' until approved/needs-revision
+7. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
 8. If needs-revision: update document using comments, create NEW approval, do NOT proceed
 9. Once approved: use approvals with action:'delete' (must succeed) before proceeding
-10. If delete fails: STOP - return to polling
+10. If delete fails: STOP — report error and ask user to retry
 
 ### Phase 3: Structure Document
 **Purpose**: Map codebase organization and patterns.
@@ -214,10 +214,10 @@ flowchart TD
 4. Document coding patterns and conventions
 5. Create \`structure.md\` at \`.spec-workflow/steering/structure.md\`
 6. Request approval using approvals tool with action:'request'
-7. Poll status using approvals with action:'status' until approved/needs-revision
+7. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
 8. If needs-revision: update document using comments, create NEW approval, do NOT proceed
 9. Once approved: use approvals with action:'delete' (must succeed) before proceeding
-10. If delete fails: STOP - return to polling
+10. If delete fails: STOP — report error and ask user to retry
 11. After successful cleanup: "Steering docs complete. Ready for spec creation?"
 
 ## Workflow Rules

@@ -390,7 +390,7 @@ Same strict process — verbal approval is never accepted.
    - **needs-revision**: Reviewer comments are displayed
    - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if loop stopped with revision request):
+3. **Handle needs-revision** (if polling ends with needs-revision):
    - Update test-design using reviewer comments, spawn the review subagent again
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-tasks`
 

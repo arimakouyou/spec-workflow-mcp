@@ -89,6 +89,12 @@ if [[ ${#POSITIONAL_ARGS[@]} -ge 2 ]]; then
   WORKFLOW_ROOT="${POSITIONAL_ARGS[1]}"
 fi
 
+# --- approvalId のバリデーション（glob 文字を拒否）---
+if [[ "$APPROVAL_ID" =~ [\*\?\[\]] ]]; then
+  echo "{\"error\":\"approvalId contains invalid glob characters\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
+  exit 2
+fi
+
 # --- jq の存在確認 ---
 if ! command -v jq &>/dev/null; then
   echo '{"error":"jq is required but not installed"}' >&2
@@ -101,8 +107,8 @@ find_approval_file() {
   if [[ ! -d "$approvals_dir" ]]; then
     return 1
   fi
-  # approvals/{categoryName}/{approvalId}.json を再帰検索
-  find "$approvals_dir" -name "${APPROVAL_ID}.json" -type f 2>/dev/null | head -1
+  # approvals/{categoryName}/{approvalId}.json を再帰検索（-print -quit で SIGPIPE 回避）
+  find "$approvals_dir" -name "${APPROVAL_ID}.json" -type f -print -quit 2>/dev/null
 }
 
 APPROVAL_FILE=""
@@ -115,6 +121,8 @@ fi
 
 # --- ポーリングループ ---
 ELAPSED=0
+PARSE_FAILURES=0
+MAX_PARSE_FAILURES=3
 
 while [[ $ELAPSED -lt $TIMEOUT ]]; do
   if [[ ! -f "$APPROVAL_FILE" ]]; then
@@ -122,11 +130,23 @@ while [[ $ELAPSED -lt $TIMEOUT ]]; do
     exit 2
   fi
 
-  STATUS=$(jq -r '.status // "unknown"' "$APPROVAL_FILE" 2>/dev/null || echo "unknown")
+  if STATUS=$(jq -r '.status // "unknown"' "$APPROVAL_FILE" 2>/dev/null); then
+    PARSE_FAILURES=0
+  else
+    PARSE_FAILURES=$((PARSE_FAILURES + 1))
+    if [[ $PARSE_FAILURES -ge $MAX_PARSE_FAILURES ]]; then
+      echo "{\"error\":\"approval file parse failed after ${MAX_PARSE_FAILURES} consecutive attempts\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
+      exit 2
+    fi
+    STATUS="unknown"
+  fi
 
   if [[ "$STATUS" != "pending" && "$STATUS" != "unknown" ]]; then
     # ステータスが変更された — JSON 全体を出力して終了
-    jq '.' "$APPROVAL_FILE"
+    if ! jq '.' "$APPROVAL_FILE" 2>/dev/null; then
+      echo "{\"error\":\"failed to read approval result\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
+      exit 2
+    fi
     exit 0
   fi
 

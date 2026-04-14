@@ -459,7 +459,7 @@ Formal approval — verbal approval is not accepted.
    - **needs-revision**: Reviewer comments are displayed
    - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if loop stopped with revision request):
+3. **Handle needs-revision** (if polling ends with needs-revision):
    - Read the review comments, update the document, re-run the subagent review
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-test-design`
 
