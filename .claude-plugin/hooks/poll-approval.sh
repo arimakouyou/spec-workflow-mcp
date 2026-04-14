@@ -7,6 +7,11 @@ TIMEOUT=3600      # 60分
 INTERVAL=15       # 15秒
 WORKFLOW_ROOT=".spec-workflow"
 
+# --- 終了コード ---
+# 0: 承認ステータス変更（approved/needs-revision/rejected）
+# 1: タイムアウト
+# 2: エラー（引数不正、ファイル未検出、jq 未インストール等）
+
 # --- 使い方 ---
 usage() {
   cat >&2 <<EOF
@@ -19,8 +24,13 @@ Arguments:
 Options:
   --timeout N   タイムアウト秒数（デフォルト: 3600）
   --interval N  ポーリング間隔秒数（デフォルト: 15）
+
+Exit codes:
+  0  承認ステータスが変更された（stdout に JSON 出力）
+  1  タイムアウト
+  2  エラー
 EOF
-  exit 1
+  exit 2
 }
 
 # --- 引数パース ---
@@ -30,10 +40,18 @@ POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --timeout)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "--timeout requires a numeric value" >&2
+        usage
+      fi
       TIMEOUT="$2"
       shift 2
       ;;
     --interval)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        echo "--interval requires a numeric value" >&2
+        usage
+      fi
       INTERVAL="$2"
       shift 2
       ;;
@@ -53,7 +71,17 @@ done
 
 if [[ ${#POSITIONAL_ARGS[@]} -lt 1 ]]; then
   echo '{"error":"approvalId is required"}' >&2
-  exit 1
+  exit 2
+fi
+
+# --- 数値バリデーション ---
+if ! [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TIMEOUT" -le 0 ]]; then
+  echo "--timeout must be a positive integer, got: $TIMEOUT" >&2
+  exit 2
+fi
+if ! [[ "$INTERVAL" =~ ^[0-9]+$ ]] || [[ "$INTERVAL" -le 0 ]]; then
+  echo "--interval must be a positive integer, got: $INTERVAL" >&2
+  exit 2
 fi
 
 APPROVAL_ID="${POSITIONAL_ARGS[0]}"
@@ -64,7 +92,7 @@ fi
 # --- jq の存在確認 ---
 if ! command -v jq &>/dev/null; then
   echo '{"error":"jq is required but not installed"}' >&2
-  exit 1
+  exit 2
 fi
 
 # --- 承認ファイルの検索 ---
@@ -82,7 +110,7 @@ APPROVAL_FILE=$(find_approval_file || true)
 
 if [[ -z "$APPROVAL_FILE" ]]; then
   echo "{\"error\":\"approval file not found\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
-  exit 1
+  exit 2
 fi
 
 # --- ポーリングループ ---
@@ -91,7 +119,7 @@ ELAPSED=0
 while [[ $ELAPSED -lt $TIMEOUT ]]; do
   if [[ ! -f "$APPROVAL_FILE" ]]; then
     echo "{\"error\":\"approval file disappeared\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
-    exit 1
+    exit 2
   fi
 
   STATUS=$(jq -r '.status // "unknown"' "$APPROVAL_FILE" 2>/dev/null || echo "unknown")

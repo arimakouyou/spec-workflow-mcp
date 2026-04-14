@@ -31,9 +31,10 @@ Execute the Bash polling script to wait for the approval status to change:
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/poll-approval.sh" <approvalId> .spec-workflow --timeout 3600
 ```
 
-The script polls the approval JSON file every 15 seconds and exits when:
-- The status changes from `pending` (outputs JSON to stdout, exit 0)
-- The timeout is reached (outputs error to stderr, exit 1)
+The script polls the approval JSON file every 15 seconds and exits with:
+- **Exit 0**: Status changed from `pending` (outputs JSON to stdout)
+- **Exit 1**: Timeout reached (error to stderr)
+- **Exit 2**: Error — missing file, invalid arguments, jq not installed, etc. (error to stderr)
 
 ### 3. Handle Result
 
@@ -63,6 +64,11 @@ Parse the JSON output from the script and act based on the `status` field:
 #### If timeout (exit code 1):
 1. Report: "Approval polling timed out after 60 minutes."
 2. Tell the user they can re-run `/check-approval <approvalId>` to resume polling, or check the dashboard directly.
+
+#### If error (exit code 2):
+1. Read the stderr output for the specific error (e.g., approval file not found, jq not installed, invalid arguments).
+2. Report the error details to the user.
+3. Do NOT auto-transition — resolve the error before retrying.
 
 ## Rules
 
