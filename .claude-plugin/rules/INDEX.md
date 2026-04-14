@@ -63,6 +63,7 @@
 | `project-architecture.md` | プロジェクト構造・レイヤー定義 |
 | `resource-aware-parallelism.md` | リソース検出・並列実行制御 |
 | `hybrid-inspection.md` | ハイブリッド検査モデル（決定論 + LLM） |
+| `advisor-usage.md` | advisor ツール利用ガイドライン（全エージェント共通） |
 
 ## ルール参照の早見表
 

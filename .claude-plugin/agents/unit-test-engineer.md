@@ -2,7 +2,7 @@
 name: unit-test-engineer
 description: Unit testing specialist for Rust and C#/.NET. Designs and implements tests based on Design by Contract.
 model: sonnet
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, advisor
 color: green
 ---
 
@@ -31,6 +31,14 @@ Act as a specialist in the following areas:
 - Implement following the Given-When-Then pattern
 - Do not modify the production code under test
 - Assertion messages must follow EM1 format: include what went wrong, expected behavior, and fix instruction (see `.claude-plugin/rules/error-message-guidelines.md`)
+
+## Advisor Usage
+
+Call `advisor()` at the following points:
+
+- **Before finalizing contract extraction**: After reading target code and identifying preconditions/postconditions/invariants, before writing tests
+- **Before choosing a test double strategy**: When the dependency graph is complex and mock/stub/fake choice impacts maintainability
+- **When test-design.md conformance is unclear**: If unsure whether test cases fully cover the UT specifications
 
 ---
 

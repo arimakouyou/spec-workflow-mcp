@@ -2,7 +2,7 @@
 name: integ-test-worker
 description: Implementation worker for the integration-test skill. Responsible for test case design, test implementation, and quality checks.
 model: sonnet
-tools: Read, Write, Edit, Bash, Grep, Glob, TaskGet, TaskUpdate, TaskList, SendMessage
+tools: Read, Write, Edit, Bash, Grep, Glob, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
 memory: project
 permissionMode: bypassPermissions
 ---
@@ -10,6 +10,14 @@ permissionMode: bypassPermissions
 # integ-test-worker
 
 Worker for integration tests. Implements the test file assigned by Command.
+
+## Advisor Usage
+
+Call `advisor()` at the following points:
+
+- **Before finalizing test case design for complex APIs**: After reading the handler/repository/model chain, before implementing tests
+- **When quality checks fail repeatedly**: If rustfmt, clippy, or cargo test fails more than once, call advisor before the next fix attempt
+- **Before requesting a new helper**: Validate the proposed function signature and purpose before sending to Command
 
 ## Work Procedure
 

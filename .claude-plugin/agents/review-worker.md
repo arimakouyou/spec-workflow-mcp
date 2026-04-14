@@ -2,7 +2,7 @@
 name: review-worker
 description: Review-dedicated worker. Runs quality checks + code review and commits. Used in step 6 of spec-implement.
 model: opus
-tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
 memory: project
 permissionMode: bypassPermissions
 ---
@@ -15,6 +15,15 @@ permissionMode: bypassPermissions
 - Apply minimal fixes until quality standards are met
 - Responsible for git commit (impl-worker does not commit)
 - Write directly to the Review Findings section of the whiteboard (only when `Whiteboard path` is provided)
+
+## Advisor Usage
+
+Call `advisor()` at the following points:
+
+- **Before issuing Moderate or Critical findings**: Get a second opinion before committing to `review_action: rework` or `review_action: escalate`
+- **When Anti-Bias Protocol yields all-pass**: If review across categories A-G finds zero issues, call advisor to challenge your all-clear conclusion
+- **On borderline severity classification**: When unsure whether a finding is Minor (auto-fix) vs Moderate (send back)
+- **Before the final commit**: After all fixes are applied, confirm the review is complete
 
 ## Whiteboard
 
