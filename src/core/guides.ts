@@ -55,11 +55,12 @@ Follow this workflow exactly to avoid errors.
 ## Approval Workflow (all phases)
 
 1. \`approvals\` action:'request' — filePath only, never content
-2. Run: \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
+2. Run: \`/check-approval <approvalId> next:/next-phase\` — polls via Bash script with 60-minute timeout
 3. check-approval handles polling, cleanup on approval, and result handling
-4. If needs-revision: update doc, create NEW approval and run \`/check-approval\` again
-5. If approved: check-approval automatically runs \`approvals\` action:'delete'
-6. If delete fails: report error and ask user to retry
+4. If needs-revision: update doc, request NEW approval (new approvalId), run \`/check-approval <newApprovalId> next:/next-phase\`
+5. If rejected: revise doc, request NEW approval, run \`/check-approval <newApprovalId> next:/next-phase\`
+6. If approved: check-approval automatically runs \`approvals\` action:'delete' and invokes the next phase via \`next:\`
+7. If delete fails: report error and ask user to retry
 
 ## Key Rules
 

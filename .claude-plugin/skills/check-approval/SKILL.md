@@ -38,9 +38,13 @@ The script polls the approval JSON file every 15 seconds and exits with:
 
 ### 3. Handle Result
 
-Parse the JSON output from the script and act based on the `status` field:
+Branch on the script's **exit code** first, then parse output:
 
-#### If `approved`:
+#### Exit 0 — Status changed
+
+Parse the JSON from **stdout** and act based on the `status` field:
+
+**If `approved`:**
 1. Report: "Approval granted!"
 2. **Immediately run cleanup**: `approvals action:"delete" approvalId:"<approvalId>"`
    - If delete fails: report error and ask user to retry
@@ -52,23 +56,27 @@ Parse the JSON output from the script and act based on the `status` field:
 4. **No auto-transition** (if `next:` parameter was omitted):
    - Report: "Approval approved and cleaned up. Ready for next steps."
 
-#### If `needs-revision`:
+**If `needs-revision`:**
 1. Report the reviewer's comments from the approval response.
 2. Tell the user: "Revision requested. Please review the comments above."
-3. Do NOT auto-transition — the calling skill should update the document based on review comments, re-run self-review, and submit a NEW approval request with a new `/check-approval`.
+3. Do NOT auto-transition — the calling skill should update the document, re-run self-review, request a NEW approval (obtaining a new approvalId), then run `/check-approval <newApprovalId>` (include `next:` if auto-transition is needed).
 
-#### If `rejected`:
+**If `rejected`:**
 1. Report the rejection reason.
 2. Tell the user: "Approval was rejected. Please review the feedback."
+3. Do NOT auto-transition — the calling skill should revise the document, request a NEW approval, then run `/check-approval <newApprovalId>`.
 
-#### If timeout (exit code 1):
+#### Exit 1 — Timeout
+
+Stdout is empty. Read **stderr** for the timeout error.
 1. Report: "Approval polling timed out after 60 minutes."
 2. Tell the user they can re-run `/check-approval <approvalId>` to resume polling, or check the dashboard directly.
 
-#### If error (exit code 2):
-1. Read the stderr output for the specific error (e.g., approval file not found, jq not installed, invalid arguments).
-2. Report the error details to the user.
-3. Do NOT auto-transition — resolve the error before retrying.
+#### Exit 2 — Error
+
+Stdout is empty. Read **stderr** for the specific error (e.g., approval file not found, jq not installed, invalid arguments).
+1. Report the error details to the user.
+2. Do NOT auto-transition — resolve the error before retrying.
 
 ## Rules
 
