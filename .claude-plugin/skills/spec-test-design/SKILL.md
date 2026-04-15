@@ -381,18 +381,19 @@ Same strict process — verbal approval is never accepted.
 
 1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only. Save the returned `approvalId`.
 
-2. **Automatic polling with auto-transition**: Start automatic status checking:
+2. **Automatic polling with auto-transition**: Start approval polling (Bash script with 60-minute timeout):
    ```
-   /loop 1m /check-approval <approvalId> next:/spec-tasks
+   /check-approval <approvalId> next:/spec-tasks
    ```
-   The loop will automatically check approval status every minute and handle the result:
-   - **pending**: Continue polling (no action needed)
-   - **approved**: Cleanup is performed automatically, loop stops, and check-approval automatically invokes `/spec-tasks`
-   - **needs-revision**: Loop stops, reviewer comments are displayed
+   The polling script will automatically check approval status and handle the result:
+   - **approved**: Cleanup is performed automatically, and check-approval automatically invokes `/spec-tasks`
+   - **needs-revision**: Reviewer comments are displayed
+   - **rejected**: Rejection reason is displayed — revise and create a new approval
+   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if loop stopped with revision request):
+3. **Handle needs-revision** (if polling ends with needs-revision):
    - Update test-design using reviewer comments, spawn the review subagent again
-   - Submit a NEW approval request and start a new `/loop 1m /check-approval <newApprovalId> next:/spec-tasks`
+   - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-tasks`
 
 ## Rules
 
