@@ -759,7 +759,7 @@ Agent({
 
 The orchestrator maintains a text block called `diagnostic_history` for each task's rework cycle. Follow these steps:
 
-1. **Before the first rework**: Initialize `diagnostic_history` as empty string (`"(First rework — no prior attempts)"`)
+1. **Before the first rework**: Initialize `diagnostic_history` with the marker string `"(First rework — no prior attempts)"` (this marker makes the prompt clearer than an empty field, which an LLM may misread as "forgot to fill in")
 2. **After each rework attempt**: Extract from parallel-worker's completion report:
    - The diagnosis summary (root cause, responsible location, approach)
    - The quality check results (pass/fail)

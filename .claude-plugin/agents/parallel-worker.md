@@ -45,7 +45,7 @@ Before each fix attempt after a failure:
 2. Append a DR2-formatted attempt entry to `diagnosis.md` under the appropriate phase heading (`## GREEN Phase`, `## Quality Checks`, etc.):
 
    ```markdown
-   ## {Phase} Phase
+   ## GREEN Phase
 
    ### Attempt {N}/{max}
    - **Root cause**: {specific analysis — not just the error message}
@@ -53,6 +53,8 @@ Before each fix attempt after a failure:
    - **Expected behavior**: {per design docs / test spec}
    - **Approach**: {what you will do — must differ from prior attempts per DR4}
    ```
+
+   Use `## GREEN Phase`, `## Quality Checks`, or `## Rework Cycle` as the heading depending on which phase you are in.
 
 3. Implement the fix
 4. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line to the current attempt entry

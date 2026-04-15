@@ -8,7 +8,7 @@ Structured diagnosis before every fix attempt, with session state persistence ac
 
 ## DR1: Mandatory Diagnosis Before Fix
 
-Before writing ANY fix (code change intended to resolve a test failure, quality check failure, or review finding), write the diagnosis for the current attempt into `{worktree_path}/diagnosis.md` as that attempt's structured entry (see DR2 for the exact entry format and phase grouping). This `diagnosis.md` entry is the required durable record and must be written before implementing the fix.
+Before writing ANY fix (code change intended to resolve a test failure, quality check failure, or review finding), write the diagnosis for the current attempt into `diagnosis.md` (located in the current worktree root) as that attempt's structured entry (see DR2 for the exact entry format and phase grouping). This `diagnosis.md` entry is the required durable record and must be written before implementing the fix.
 
 The diagnosis entry must contain:
 
@@ -25,7 +25,7 @@ If a worker's completion report / response schema defines a `diagnosis` summary 
 
 ## DR2: Session State Persistence
 
-Persist every fix attempt as a structured entry in `{worktree_path}/diagnosis.md`.
+Persist every fix attempt as a structured entry in `diagnosis.md` (located in the current worktree root).
 
 **File lifecycle**:
 

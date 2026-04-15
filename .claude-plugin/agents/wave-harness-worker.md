@@ -33,10 +33,11 @@ permissionMode: bypassPermissions
 
   ```markdown
   ### Attempt 1
-  - Root cause: missing null check in parse_input()
-  - Responsible: src/parser.rs:42
-  - Approach: Added Option<T> wrapper with .unwrap_or_default()
-  - Result: FAIL — cargo test: thread panicked at 'index out of bounds'
+  - **Root cause**: missing null check in parse_input()
+  - **Responsible**: src/parser.rs:42
+  - **Expected behavior**: parse_input() should handle missing values without panicking and allow tests to complete normally
+  - **Approach**: Added Option<T> wrapper with `.unwrap_or_default()`
+  - **Result**: FAIL — `cargo test`: thread panicked at 'index out of bounds'
   ```
 
 ## Rules
@@ -130,7 +131,7 @@ rustfmt --check ${affected_files}
 }
 ```
 
-`diagnosis` is optional — include it when `retry_mode` was true or when verification required retries. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
+`diagnosis` is optional — include it when `retry_mode` was true. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
 
 ## no_op schema
 
