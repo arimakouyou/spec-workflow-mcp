@@ -25,14 +25,14 @@ Extract the following from the invocation:
 
 ### 2. Run Polling Script
 
-Execute the Bash polling script to wait for the approval status to change:
+Execute the Bash polling script to poll until the approval status is a terminal value:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/poll-approval.sh" <approvalId> .spec-workflow --timeout 3600
 ```
 
 The script polls the approval JSON file every 15 seconds and exits with:
-- **Exit 0**: Status changed from `pending` (outputs JSON to stdout)
+- **Exit 0**: Status is a terminal value (`approved`/`needs-revision`/`rejected`) (outputs JSON to stdout)
 - **Exit 1**: Timeout reached (error to stderr)
 - **Exit 2**: Error — missing file, invalid arguments, jq not installed, etc. (error to stderr)
 
@@ -40,7 +40,7 @@ The script polls the approval JSON file every 15 seconds and exits with:
 
 Branch on the script's **exit code** first, then parse output:
 
-#### Exit 0 — Status changed
+#### Exit 0 — Terminal status
 
 Parse the JSON from **stdout** and act based on the `status` field:
 
