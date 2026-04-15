@@ -28,6 +28,49 @@ Call `advisor()` at the following points in your TDD workflow:
 - **When retry limits approach**: If you have used 2 of 3 GREEN retries, call advisor before the final attempt
 - **Before completion report**: After all quality checks pass, verify the overall approach was sound
 
+## Diagnostic Reasoning Protocol
+
+Apply `diagnostic-reasoning.md` (DR1-DR5) at every retry point in the TDD cycle.
+
+### diagnosis.md Management
+
+- **On task start** (Step 2 / 2.5): Create `{worktree_path}/diagnosis.md` with the header `# Diagnostic Session: {task-id}`.
+- **On compaction recovery** (Step 0pre): If `state.md` exists, also check for `diagnosis.md` and Read it to recover prior diagnostic context.
+
+### Intra-Agent Retries (GREEN phase, quality checks)
+
+Before each fix attempt after a failure:
+
+1. Read `diagnosis.md` to review all prior attempts for this phase
+2. Write a diagnosis entry following DR1 format:
+
+   ```markdown
+   ## {Phase} Phase
+
+   ### Attempt {N}/{max}
+   - **Root cause**: {specific analysis — not just the error message}
+   - **Responsible**: {file:line}
+   - **Expected behavior**: {per design docs / test spec}
+   - **Approach**: {what you will do — must differ from prior attempts per DR4}
+   ```
+
+3. Edit `diagnosis.md` to append this entry
+4. Implement the fix
+5. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line
+
+### Rework Cycles (inter-agent)
+
+When the orchestrator passes `diagnostic_history` in the rework prompt:
+
+1. Read `diagnosis.md` (it contains your earlier TDD-phase diagnostics)
+2. Read the `diagnostic_history` from the prompt (it contains prior rework attempts)
+3. Write your diagnosis under the `## Rework Cycle` heading in `diagnosis.md`, referencing both sources
+4. Your diagnosis MUST explain why your approach differs from all prior attempts (DR3, DR4)
+
+### Integration with Advisor
+
+When retry limits approach (per advisor-usage.md), include your diagnosis AND the content of `diagnosis.md` in the advisor call context. The advisor can validate diagnosis quality (DR5) before you spend the final attempt.
+
 > **Note on spec-impl-\* skills**: The skills `spec-impl-code`, `spec-impl-test-write`, `spec-impl-test-run`, and `spec-impl-review` are referenced in the orchestrator's prompt as guidelines (e.g., "see /spec-impl-test-write skill"). Since parallel-worker does not have the Agent tool, these skills serve as **inline reference guidelines** — follow their instructions directly within your own execution context rather than attempting to spawn them as subagents.
 
 ### Leptos Frontend Task Detection
@@ -258,7 +301,8 @@ When the retry limit is reached, return the following instead of a normal comple
 - check: rustfmt|clippy|cargo_test|dotnet_format|dotnet_build|dotnet_test (for quality_check phase)
 - attempts: <number of attempts>
 - last_error: <content of the last error>
-- changed_files: <files created/modified up to that point>
+- diagnosis: <summary of the last attempt's diagnosis — root_cause, responsible, approach. Per DR2>
+- changed_files: <files created/modified up to that point. Must NOT include `diagnosis.md` or `state.md`>
 ```
 
 ## Completion Report Format (on success, must include the following keys)
@@ -273,7 +317,8 @@ When the retry limit is reached, return the following instead of a normal comple
 - rustfmt: pass|fail
 - clippy: pass|fail
 - mutation_testing: pass|warn|skip <details>
-- changed_files: <list>
+- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible, approach>
+- changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
 ```
 
 ### .NET Projects
@@ -287,10 +332,12 @@ When the retry limit is reached, return the following instead of a normal comple
 - dotnet_build: pass|fail
 - dotnet_test: pass|fail
 - stryker: pass|warn|skip <details>
-- changed_files: <list>
+- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible, approach>
+- changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
 ```
 
 **Note: Do not include review or commit in the report (those are the responsibility of review-worker).**
+**Note: `diagnosis.md` and `state.md` live in the worktree for retry/compaction support but are NOT implementation changes. Exclude them from `changed_files` so that review-worker does not stage them into the commit.**
 
 ## state.md (auto-compaction support)
 
@@ -306,6 +353,7 @@ When the retry limit is reached, return the following instead of a normal comple
 | After Green completed | State: `red→green`, completed files: append implementation file |
 | After Refactor completed | State: `green→done`, next step: quality checks |
 | On significant decisions | Append to the Key Decisions section |
+| After diagnosis.md created | Note diagnosis.md path for compaction recovery |
 
 ## Agent Teams Rules
 
