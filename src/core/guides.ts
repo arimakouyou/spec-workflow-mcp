@@ -55,11 +55,17 @@ Follow this workflow exactly to avoid errors.
 ## Approval Workflow (all phases)
 
 1. \`approvals\` action:'request' — filePath only, never content
-2. Run: \`/check-approval <approvalId> next:/next-phase\` — polls via Bash script with 60-minute timeout
+2. Run \`/check-approval\` with the concrete next phase skill when one exists, for example:
+   - Request Spec -> Requirements: \`/check-approval <approvalId> next:/spec-requirements\`
+   - Requirements -> Design: \`/check-approval <approvalId> next:/spec-design\`
+   - Design -> Test Design: \`/check-approval <approvalId> next:/spec-test-design\`
+   - Test Design -> Tasks: \`/check-approval <approvalId> next:/spec-tasks\`
+   - Tasks -> Implementation: \`/check-approval <approvalId> next:/spec-implementation\`
+   - Final phase with no next phase: run \`/check-approval <approvalId>\` without \`next:\`
 3. check-approval handles polling, cleanup on approval, and result handling
-4. If needs-revision: update doc, request NEW approval (new approvalId), run \`/check-approval <newApprovalId> next:/next-phase\`
-5. If rejected: revise doc, request NEW approval, run \`/check-approval <newApprovalId> next:/next-phase\`
-6. If approved: check-approval automatically runs \`approvals\` action:'delete' and invokes the next phase via \`next:\`
+4. If needs-revision: update doc, request NEW approval (new approvalId), then rerun \`/check-approval\` with the same concrete next phase skill for that phase
+5. If rejected: revise doc, request NEW approval, then rerun \`/check-approval\` with the same concrete next phase skill for that phase
+6. If approved: check-approval automatically runs \`approvals\` action:'delete' and, when a \`next:\` parameter was provided, invokes that concrete next phase skill
 7. If delete fails: report error and ask user to retry
 
 ## Key Rules
@@ -68,7 +74,7 @@ Follow this workflow exactly to avoid errors.
 - One spec at a time, kebab-case names
 - Verbal approval is NEVER accepted — dashboard or VS Code extension only
 - Never proceed if approval delete fails
-- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension). Polling uses a Bash script with 60-minute timeout — no \`/loop\` required
+- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter when there is a next phase. Use the concrete phase skill names listed above; do not use placeholders. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension). Polling uses a Bash script with 60-minute timeout — no \`/loop\` required
 - Every task marked [x] MUST have log-implementation called first
 - Steering docs are optional — only create when explicitly requested
 
