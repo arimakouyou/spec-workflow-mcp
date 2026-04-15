@@ -152,6 +152,7 @@ This is a strict, automated process. Verbal approval from the user is never acce
    The polling script will automatically check approval status and handle the result:
    - **approved**: Cleanup is performed automatically
    - **needs-revision**: Reviewer comments are displayed
+   - **rejected**: Rejection reason is displayed — revise and create a new approval
    - **timeout**: Reported to user, can re-run to resume
 
 3. **Handle needs-revision** (if polling ends with needs-revision):

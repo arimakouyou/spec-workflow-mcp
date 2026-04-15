@@ -1,11 +1,11 @@
 ---
 name: check-approval
-description: "Check the status of a pending approval request. Polls via Bash script with configurable timeout. Triggers on: 'check approval', 'poll approval status', or when called during spec workflow approval waiting."
+description: "Check the status of a pending approval request. Polls via Bash script with 60-minute timeout. Triggers on: 'check approval', 'poll approval status', or when called during spec workflow approval waiting."
 ---
 
 # Check Approval Status
 
-Poll the status of a pending approval and take appropriate action based on the result. This skill uses a Bash polling script that monitors the approval JSON file directly, with a configurable timeout (default: 60 minutes).
+Poll the status of a pending approval and take appropriate action based on the result. This skill uses a Bash polling script that monitors the approval JSON file directly, with a 60-minute timeout.
 
 ## Usage
 

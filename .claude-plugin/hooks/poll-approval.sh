@@ -89,9 +89,9 @@ if [[ ${#POSITIONAL_ARGS[@]} -ge 2 ]]; then
   WORKFLOW_ROOT="${POSITIONAL_ARGS[1]}"
 fi
 
-# --- approvalId のバリデーション（glob 文字を拒否）---
-if [[ "$APPROVAL_ID" =~ [\*\?\[\]] ]]; then
-  echo "{\"error\":\"approvalId contains invalid glob characters\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
+# --- approvalId のバリデーション ---
+if ! [[ "$APPROVAL_ID" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+  echo '{"error":"approvalId contains invalid characters (allowed: a-zA-Z0-9_-)"}' >&2
   exit 2
 fi
 
@@ -141,13 +141,20 @@ while [[ $ELAPSED -lt $TIMEOUT ]]; do
     STATUS="unknown"
   fi
 
-  if [[ "$STATUS" != "pending" && "$STATUS" != "unknown" ]]; then
+  # 既知の終了ステータスをホワイトリストで判定
+  if [[ "$STATUS" == "approved" || "$STATUS" == "needs-revision" || "$STATUS" == "rejected" ]]; then
     # ステータスが変更された — JSON 全体を出力して終了
     if ! jq '.' "$APPROVAL_FILE" 2>/dev/null; then
       echo "{\"error\":\"failed to read approval result\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
       exit 2
     fi
     exit 0
+  fi
+
+  # pending / unknown 以外の未知のステータスはエラー
+  if [[ "$STATUS" != "pending" && "$STATUS" != "unknown" ]]; then
+    echo "{\"error\":\"unexpected approval status\",\"status\":\"${STATUS}\",\"approvalId\":\"${APPROVAL_ID}\"}" >&2
+    exit 2
   fi
 
   sleep "$INTERVAL"

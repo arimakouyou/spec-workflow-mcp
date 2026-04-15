@@ -429,6 +429,7 @@ Same strict process — verbal approval is never accepted.
    The polling script will automatically check approval status and handle the result:
    - **approved**: Cleanup is performed automatically, and check-approval automatically invokes `/spec-implement`
    - **needs-revision**: Reviewer comments are displayed
+   - **rejected**: Rejection reason is displayed — revise and create a new approval
    - **timeout**: Reported to user, can re-run to resume
 
 3. **Handle needs-revision** (if polling ends with needs-revision):
