@@ -16,7 +16,7 @@ Zenn 記事「CoDD活用ガイド #5」の知見を本プラグインに統合�
 | 種類 | 例 | Session State の保持方法 |
 |------|-----|------------------------|
 | **エージェント内リトライ** | GREEN phase 3回、clippy 3回 | エージェントがワークツリー内の `diagnosis.md` に各試行を追記。会話コンパクション耐性＋知見の保存を兼ねる |
-| **エージェント間リトライ** | rework cycle 3回、wave-harness retry | オーケストレーターが `diagnostic_history` 配列を蓄積し、次回プロンプトに注入。加えて `diagnosis.md` にも記録 |
+| **エージェント間リトライ** | rework cycle 3回、wave-harness retry | オーケストレーターが `diagnostic_history` テキストブロック（DR2 形式の markdown 文字列）を蓄積し、次回プロンプトに注入。加えて `diagnosis.md` にも記録 |
 
 ### diagnosis.md ファイル
 
@@ -80,7 +80,7 @@ always_apply: true
 
 | ID | 名称 | 内容 |
 |----|------|------|
-| DR1 | Mandatory Diagnosis Before Fix | 修正コード記述前に `## Diagnosis` セクションを記述（根本原因・責任箇所・期待動作） |
+| DR1 | Mandatory Diagnosis Before Fix | 修正コード記述前に `diagnosis.md` に DR2 形式の Attempt エントリ（根本原因・責任箇所・期待動作・アプローチ）を追記 |
 | DR2 | Session State Persistence | 各試行を `diagnosis.md` ファイルに構造化エントリとして永続化（attempt / root_cause / responsible / expected / approach / result）。エージェント内・間の両方で参照可能 |
 | DR3 | Prior Attempts Review | attempt > 1 の場合、過去の全エントリをレビューし、異なる診断を特定 |
 | DR4 | Non-Repetition Constraint | 失敗したアプローチと同じ手法の禁止。同じ根本原因に到達した場合は深掘り or エスカレーション |
@@ -125,7 +125,7 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
 
 1. **Before the first rework**: Initialize `diagnostic_history` as empty string
 2. **After each rework attempt**: Extract from parallel-worker's completion report:
-   - The `## Diagnosis` section (root cause, responsible location, approach)
+   - The `diagnosis` summary field (root cause, responsible location, approach) — or the latest `### Attempt {N}/3` entry under `## Rework Cycle` in `diagnosis.md` if the summary is absent
    - The quality check results (pass/fail)
 3. **Append to diagnostic_history**:
    ```
@@ -155,7 +155,7 @@ Example after 2 failed rework attempts:
 **変更箇所**:
 
 **(a) Input セクション（L21-31）**
-- `diagnostic_history` (optional) パラメータを追加（DR2 フォーマットの配列）
+- `diagnostic_history` (optional) パラメータを追加（DR2 フォーマットの markdown テキストブロック — 文字列）
 - `previous_error` は後方互換のため残す
 
 **(b) Advisor Usage セクション（L42-46）**

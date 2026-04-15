@@ -34,7 +34,7 @@ Apply `diagnostic-reasoning.md` (DR1-DR5) at every retry point in the TDD cycle.
 
 ### diagnosis.md Management
 
-- **On task start** (Step 2 / 2.5): Create `{worktree_path}/diagnosis.md` with the header `# Diagnostic Session: {task-id}`.
+- **On task start** (Step 2 / 2.5): Create `{Worktree path}/diagnosis.md` with the header `# Diagnostic Session: {Task ID}`.
 - **On compaction recovery** (Step 0pre): If `state.md` exists, also check for `diagnosis.md` and Read it to recover prior diagnostic context.
 
 ### Intra-Agent Retries (GREEN phase, quality checks)
@@ -42,7 +42,7 @@ Apply `diagnostic-reasoning.md` (DR1-DR5) at every retry point in the TDD cycle.
 Before each fix attempt after a failure:
 
 1. Read `diagnosis.md` to review all prior attempts for this phase
-2. Write a diagnosis entry following DR1 format:
+2. Append a DR2-formatted attempt entry to `diagnosis.md` under the appropriate phase heading (`## GREEN Phase`, `## Quality Checks`, etc.):
 
    ```markdown
    ## {Phase} Phase
@@ -54,17 +54,16 @@ Before each fix attempt after a failure:
    - **Approach**: {what you will do — must differ from prior attempts per DR4}
    ```
 
-3. Edit `diagnosis.md` to append this entry
-4. Implement the fix
-5. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line
+3. Implement the fix
+4. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line to the current attempt entry
 
 ### Rework Cycles (inter-agent)
 
-When the orchestrator passes `diagnostic_history` in the rework prompt:
+When the orchestrator passes `diagnostic_history` (a markdown text block) in the rework prompt:
 
 1. Read `diagnosis.md` (it contains your earlier TDD-phase diagnostics)
-2. Read the `diagnostic_history` from the prompt (it contains prior rework attempts)
-3. Write your diagnosis under the `## Rework Cycle` heading in `diagnosis.md`, referencing both sources
+2. Read the `diagnostic_history` text block from the prompt (it contains prior rework attempts from earlier cycles)
+3. Append a DR2-formatted attempt entry under the `## Rework Cycle` heading in `diagnosis.md` (use `### Attempt {N}/3` — do NOT create a separate `## Diagnosis` section), referencing both sources
 4. Your diagnosis MUST explain why your approach differs from all prior attempts (DR3, DR4)
 
 ### Integration with Advisor

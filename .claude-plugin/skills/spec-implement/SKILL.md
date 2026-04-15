@@ -743,7 +743,7 @@ Agent({
     {diagnostic_history — empty on first rework, accumulated on subsequent reworks}
 
     Apply diagnostic-reasoning.md DR1-DR5:
-    - Before writing any fix, read diagnosis.md and write a ## Diagnosis section under "## Rework Cycle"
+    - Before writing any fix, read diagnosis.md and append a DR2-formatted attempt entry (\`### Attempt {N}/3\`) under the \`## Rework Cycle\` heading — do not create a separate \`## Diagnosis\` section
     - Your diagnosis MUST identify a different root cause or approach from the diagnostic history above
     - On the final attempt (3/3), call advisor() with your diagnosis before implementing
 

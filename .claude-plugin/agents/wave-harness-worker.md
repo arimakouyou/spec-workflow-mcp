@@ -29,7 +29,7 @@ permissionMode: bypassPermissions
 - `affected_files`
 - `test_targets` (optional)
 - `previous_error` (optional — legacy; prefer `diagnostic_history`)
-- `diagnostic_history` (optional) — accumulated prior attempt entries per DR2 format. Example:
+- `diagnostic_history` (optional) — a single markdown text block (string, NOT a JSON array) containing accumulated prior attempt entries in DR2 format, produced by the orchestrator by concatenating previous attempts' diagnoses. Example value:
 
   ```markdown
   ### Attempt 1
@@ -92,10 +92,9 @@ rustfmt --check ${affected_files}
 3.5. **Diagnostic Reasoning (retry only)**: If `retry_mode` is true, apply DR1-DR5:
    - Read `{worktree_path}/diagnosis.md` to review all prior attempts
    - If `diagnostic_history` is provided in the prompt, cross-reference it
-   - Write a `## Diagnosis` section per DR1 (root cause, responsible location, expected behavior, approach)
    - Verify your planned approach differs from all prior attempts (DR3, DR4)
-   - Edit `diagnosis.md` to append your diagnosis entry
-   - If on the final attempt, call `advisor()` with your diagnosis (DR5)
+   - Append a DR2-formatted attempt entry to `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, and approach) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
+   - If on the final attempt, call `advisor()` with that diagnosis (DR5)
 4. Implement (file editing only).
 5. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).
 6. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.

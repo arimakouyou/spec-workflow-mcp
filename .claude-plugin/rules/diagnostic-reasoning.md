@@ -8,7 +8,9 @@ Structured diagnosis before every fix attempt, with session state persistence ac
 
 ## DR1: Mandatory Diagnosis Before Fix
 
-Before writing ANY fix (code change intended to resolve a test failure, quality check failure, or review finding), write a `## Diagnosis` section containing:
+Before writing ANY fix (code change intended to resolve a test failure, quality check failure, or review finding), write the diagnosis for the current attempt into `{worktree_path}/diagnosis.md` as that attempt's structured entry (see DR2 for the exact entry format and phase grouping). This `diagnosis.md` entry is the required durable record and must be written before implementing the fix.
+
+The diagnosis entry must contain:
 
 1. **Root cause**: What is the actual cause of the failure? (Not just "the test failed" but WHY it failed)
 2. **Responsible**: Which file(s) and line(s) are responsible?
@@ -18,6 +20,8 @@ Before writing ANY fix (code change intended to resolve a test failure, quality 
 This applies to: GREEN phase retries, quality check retries (clippy, cargo test, dotnet build, dotnet test), rework cycles, and wave-harness retries.
 
 On the first attempt for a given phase, the diagnosis serves as upfront reasoning. On subsequent attempts, it also serves as differentiation from prior failed approaches (see DR3, DR4).
+
+If a worker's completion report / response schema defines a `diagnosis` summary field (e.g., parallel-worker, wave-harness-worker), you may also summarize the diagnosis there, but that summary is optional and does NOT replace the required `diagnosis.md` entry.
 
 ## DR2: Session State Persistence
 
@@ -76,4 +80,4 @@ A diagnosis is **insufficient** if it:
 - Names no specific file or line
 - Proposes the same approach that already failed
 
-When retry limits are approaching (penultimate attempt), call `advisor()` with your diagnosis for validation before implementing the fix. Include the `diagnosis.md` content in your advisor context so the reviewer can assess diagnosis quality.
+Before the final allowed attempt — when you have one attempt remaining — call `advisor()` with your diagnosis for validation before implementing the fix. Include the `diagnosis.md` content in your advisor context so the reviewer can assess diagnosis quality.
