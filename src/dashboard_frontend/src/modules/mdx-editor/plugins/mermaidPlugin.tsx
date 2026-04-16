@@ -12,20 +12,84 @@ interface MermaidRenderOptions {
   mermaidThemeVariables: Record<string, string>;
 }
 
-export async function renderMermaidSvg(
-  code: string,
-  { mermaidTheme, mermaidThemeVariables }: MermaidRenderOptions
-): Promise<string> {
+let mermaidRenderCounter = 0;
+let lastMermaidConfigKey: string | null = null;
+
+function initializeMermaidOnce({ mermaidTheme, mermaidThemeVariables }: MermaidRenderOptions): void {
+  const configKey = JSON.stringify({
+    mermaidTheme,
+    mermaidThemeVariables,
+  });
+
+  if (lastMermaidConfigKey === configKey) {
+    return;
+  }
+
   mermaid.initialize({
     startOnLoad: false,
     theme: mermaidTheme,
     themeVariables: mermaidThemeVariables,
-    securityLevel: 'loose',
+    securityLevel: 'strict',
   });
 
-  const uniqueId = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
+  lastMermaidConfigKey = configKey;
+}
+
+function createMermaidRenderId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `mermaid-${crypto.randomUUID()}`;
+  }
+
+  mermaidRenderCounter += 1;
+  return `mermaid-${mermaidRenderCounter}`;
+}
+
+function sanitizeMermaidSvg(svg: string): string {
+  if (typeof DOMParser === 'undefined' || typeof XMLSerializer === 'undefined') {
+    return svg;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svg, 'image/svg+xml');
+  const root = doc.documentElement;
+
+  if (!root || root.nodeName.toLowerCase() === 'parsererror') {
+    throw new Error('Failed to parse Mermaid SVG');
+  }
+
+  root.querySelectorAll('script, foreignObject, iframe, object, embed').forEach((node) => {
+    node.remove();
+  });
+
+  root.querySelectorAll('*').forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+
+      if (name.startsWith('on')) {
+        element.removeAttribute(attribute.name);
+        return;
+      }
+
+      if ((name === 'href' || name === 'xlink:href') &&
+          (value.startsWith('javascript:') || value.startsWith('data:'))) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  return new XMLSerializer().serializeToString(root);
+}
+
+export async function renderMermaidSvg(
+  code: string,
+  { mermaidTheme, mermaidThemeVariables }: MermaidRenderOptions
+): Promise<string> {
+  initializeMermaidOnce({ mermaidTheme, mermaidThemeVariables });
+
+  const uniqueId = createMermaidRenderId();
   const { svg } = await mermaid.render(uniqueId, code);
-  return svg;
+  return sanitizeMermaidSvg(svg);
 }
 
 export function MermaidRenderer({ code }: MermaidRendererProps) {
