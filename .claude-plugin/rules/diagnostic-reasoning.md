@@ -47,7 +47,7 @@ Persist every fix attempt as a structured entry in `diagnosis.md` (located in th
 
 Group entries under phase headings: `## GREEN Phase`, `## Quality Checks`, `## Rework Cycle`.
 
-**Write-order (two-step)**: Write the entry without the `Result` line before implementing the fix (per DR1 — the entry must be committed before the fix). After running verification, Edit the same entry to append the `Result` line with the outcome. This keeps DR1's "diagnose before fix" timing consistent with DR2's complete entry format.
+**Write-order (two-step)**: Write the entry without the `Result` line before implementing the fix (per DR1 — the entry must be written and saved to `diagnosis.md` before implementing the fix; "committed" here means persisted to the file, NOT a git commit — `diagnosis.md` itself must never be git-committed per the File lifecycle above). After running verification, Edit the same entry to append the `Result` line with the outcome. This keeps DR1's "diagnose before fix" timing consistent with DR2's complete entry format.
 
 For inter-agent retries (rework cycles, wave-harness), the orchestrator also passes `diagnostic_history` in the prompt. Write to `diagnosis.md` regardless — it serves as the durable record.
 

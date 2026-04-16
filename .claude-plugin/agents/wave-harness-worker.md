@@ -131,7 +131,7 @@ rustfmt --check ${affected_files}
 }
 ```
 
-`diagnosis` is optional — include it when `retry_mode` was true. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
+`diagnosis` is optional — include it when `retry_mode` was true (i.e., `attempt >= 2`, matching the schema examples above for `completed` and `failed`). Omit on the initial attempt (`attempt == 1`) unless explicitly useful for the orchestrator's next attempt. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
 
 ## no_op schema
 
@@ -163,7 +163,7 @@ rustfmt --check ${affected_files}
   "schema_version": "taskflow-worker.v3",
   "worker": "wave-harness-worker",
   "session_id": "wh-20260226T190000",
-  "attempt": 1,
+  "attempt": 2,
   "work_item_id": "issue-123",
   "status": "failed",
   "changed_files": [],

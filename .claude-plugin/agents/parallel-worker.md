@@ -302,7 +302,7 @@ When the retry limit is reached, return the following instead of a normal comple
 - check: rustfmt|clippy|cargo_test|dotnet_format|dotnet_build|dotnet_test (for quality_check phase)
 - attempts: <number of attempts>
 - last_error: <content of the last error>
-- diagnosis: <summary of the last attempt's diagnosis — root_cause, responsible, approach. Per DR2>
+- diagnosis: <summary of the last attempt's diagnosis — root_cause, responsible_files (list), approach. Per DR2>
 - changed_files: <files created/modified up to that point. Must NOT include `diagnosis.md` or `state.md`>
 ```
 
@@ -318,7 +318,7 @@ When the retry limit is reached, return the following instead of a normal comple
 - rustfmt: pass|fail
 - clippy: pass|fail
 - mutation_testing: pass|warn|skip <details>
-- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible, approach>
+- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible_files (list), approach>
 - changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
 ```
 
@@ -333,7 +333,7 @@ When the retry limit is reached, return the following instead of a normal comple
 - dotnet_build: pass|fail
 - dotnet_test: pass|fail
 - stryker: pass|warn|skip <details>
-- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible, approach>
+- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible_files (list), approach>
 - changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
 ```
 

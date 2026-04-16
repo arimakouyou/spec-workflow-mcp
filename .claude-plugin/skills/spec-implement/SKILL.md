@@ -526,7 +526,10 @@ Agent({
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
     - changed_files: list of all changed files (MUST NOT include diagnosis.md or state.md)
-    - diagnosis: include when any retry occurred — summary of the final successful approach per DR2 (root_cause, responsible, approach)
+    - diagnosis: include when any retry occurred — summary of the final successful approach per DR2 with fields:
+      - root_cause: string
+      - responsible_files: list of file paths or code locations (e.g., ["src/foo.rs:42"]) — unified across workers
+      - approach: string
 `
 })
 ```
@@ -761,7 +764,7 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
 
 1. **Before the first rework**: Initialize `diagnostic_history` with the marker string `"(First rework — no prior attempts)"` (this marker makes the prompt clearer than an empty field, which an LLM may misread as "forgot to fill in")
 2. **After each rework attempt**: Extract from parallel-worker's completion report:
-   - The diagnosis summary (root cause, responsible location, approach)
+   - The diagnosis summary fields: `root_cause`, `responsible_files` (list), `approach` — these names are unified across parallel-worker and wave-harness-worker outputs
    - The quality check results (pass/fail)
 3. **Append to diagnostic_history**:
    ```
