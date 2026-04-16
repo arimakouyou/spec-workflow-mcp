@@ -67,16 +67,22 @@ From the test output, extract:
 
 **Red mode** (`red`):
 - EXPECTED: All tests fail (passed = 0)
-- **Compile error**: If the test runner fails to build/compile (e.g. unresolved import of not-yet-implemented module), treat this as a hard failure — return `{ status: "fail", message: "Compile error: {error summary}", ... }`. The calling agent must fix the compile error before RED can be validated.
+- **Compile error**: If the test runner fails to build/compile (e.g. unresolved import of not-yet-implemented module), treat this as a hard failure — return `{ status: "fail", failure_category: "compile_error", failure_subcategory: "unresolved_import" | "syntax_error" | "type_error" | "missing_symbol", message: "Compile error: {error summary}", ... }`. The calling agent must fix the compile error before RED can be validated.
 - If any test passes, report it as a problem — this means either:
   - The test is not actually testing new behavior
   - There's already an implementation that satisfies the test
-- Return: `{ status: "pass", ... }` if all failed (and build succeeded), `{ status: "fail", message: "N tests unexpectedly passed", ... }` otherwise
+  - Return `failure_category: "test_failure"` / `failure_subcategory: "unexpected_pass"`
+- Return: `{ status: "pass", ... }` if all failed (and build succeeded), `{ status: "fail", failure_category: ..., message: "N tests unexpectedly passed", ... }` otherwise
 
 **Green mode** (`green`):
 - EXPECTED: All tests pass (failed = 0)
 - If any test fails, report each failure with its error message
-- Return: `{ status: "pass", ... }` if all passed, `{ status: "fail", message: "N tests failed", errors: [...] }` otherwise
+- Classify the first failing test per `failure-taxonomy.md` FC1:
+  - Build/compile failure → `failure_category: "compile_error"`
+  - Assertion failure (expected != actual) → `failure_category: "test_failure"` / `failure_subcategory: "assertion_failure"`
+  - Uncaught exception / panic → `failure_category: "test_failure"` / `failure_subcategory: "panic"`
+  - Test runner timeout → `failure_category: "test_failure"` / `failure_subcategory: "timeout"`
+- Return: `{ status: "pass", ... }` if all passed, `{ status: "fail", failure_category: ..., failure_subcategory: ..., message: "N tests failed", errors: [...] }` otherwise
 
 ## Output Format
 
@@ -90,6 +96,8 @@ Return to the calling agent:
 - **Total**: {N} tests
 - **Passed**: {N}
 - **Failed**: {N}
+- **Failure Category**: {FC1 main category — only when Status=fail; see failure-taxonomy.md FC1}
+- **Failure Subcategory**: {FC1 subcategory — only when Status=fail; optional}
 
 ### Errors (if any)
 - {test name}: {error message}
@@ -97,3 +105,5 @@ Return to the calling agent:
 ### Verdict
 {Description of whether the result matches expectations}
 ```
+
+The `Failure Category` / `Failure Subcategory` fields are required when `Status=fail` per `failure-taxonomy.md` FC2. The calling agent uses these values when writing the DR2 attempt entry (FC4) and when deciding whether DR6 DIVERGENT applies (FC5).

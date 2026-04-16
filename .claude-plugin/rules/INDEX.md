@@ -18,9 +18,10 @@
 | `flaky-test-management.md` | FT1〜FT6 | 6 | Flaky Test 管理ポリシー |
 | `regression-test-policy.md` | RT1〜RT3 | 3 | リグレッションテストポリシー（バグ→テスト変換・受入基準定着） |
 | `csharp-style.md` | CS1〜CS16 | 16 | C# コードスタイル・フォーマット規約（.NET 10） |
-| `diagnostic-reasoning.md` | DR1〜DR5 | 5 | 診断推論プロトコル（リトライ前の構造化診断・セッション状態永続化・繰り返し防止） |
+| `diagnostic-reasoning.md` | DR1〜DR6 | 6 | 診断推論プロトコル（リトライ前の構造化診断・セッション状態永続化・繰り返し防止・DIVERGENT 仮説転換） |
+| `failure-taxonomy.md` | FC1〜FC6 | 6 | 横断的な失敗分類語彙（parallel-worker / review-worker / wave-harness 間の共通キー。DR6 DIVERGENT トリガー判定の入力） |
 
-**合計: 110 ルール（ID 付き）**
+**合計: 117 ルール（ID 付き）**
 
 ## リファレンスガイド（ID なし・パターン集）
 
@@ -64,7 +65,8 @@
 | `resource-aware-parallelism.md` | リソース検出・並列実行制御 |
 | `hybrid-inspection.md` | ハイブリッド検査モデル（決定論 + LLM） |
 | `advisor-usage.md` | advisor ツール利用ガイドライン（全エージェント共通） |
-| `diagnostic-reasoning.md` | 診断推論プロトコル（DR1-DR5: リトライ前診断・セッション状態永続化・非繰り返し制約） |
+| `diagnostic-reasoning.md` | 診断推論プロトコル（DR1-DR6: リトライ前診断・セッション状態永続化・非繰り返し制約・DIVERGENT 仮説転換） |
+| `failure-taxonomy.md` | 横断的な失敗分類語彙（FC1-FC6: 4 主要カテゴリ + Severity マップ + DR6 連携） |
 
 ## ルール参照の早見表
 
@@ -79,7 +81,7 @@
 | DB スキーマ/マイグレーション | DC1, DC3 |
 | テスト記述 | QC3, D6, D7 |
 | セキュリティ確認 | A1-A10, AV-R1 |
-| テスト失敗修正 | DR1-DR5 |
+| テスト失敗修正 | DR1-DR6, FC1-FC6 |
 | コミット前チェック | QC1-QC6, QC8-QC11 |
 
 #### C# (.NET 10)
@@ -91,7 +93,7 @@
 | DB スキーマ/マイグレーション | DC1, DC3 |
 | テスト記述 | QC12, D6, D7 |
 | セキュリティ確認 | A1-A10, AV-C1 |
-| テスト失敗修正 | DR1-DR5 |
+| テスト失敗修正 | DR1-DR6, FC1-FC6 |
 | コミット前チェック | QC12, QC8-QC11 |
 
 ### レビュー時に参照するルール
