@@ -127,26 +127,32 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
 2. **After each rework attempt**: Extract from parallel-worker's completion report:
    - The `diagnosis` summary field (root cause, responsible location, approach) — or the latest `### Attempt {N}/3` entry under `## Rework Cycle` in `diagnosis.md` if the summary is absent
    - The quality check results (pass/fail)
-3. **Append to diagnostic_history**:
+3. **Append to diagnostic_history in DR2 format** (fields come from the worker's completion report):
    ```
    ### Attempt {N}
-   - Diagnosis: {extracted root cause from parallel-worker's report}
-   - Approach: {what parallel-worker changed}
-   - Result: {review-worker's verdict — commit/rework/escalate + specific findings}
+   - **Root cause**: {diagnosis.root_cause from worker's report}
+   - **Responsible**: {diagnosis.responsible_files joined, or "(not reported)"}
+   - **Expected behavior**: {if available, otherwise "(not reported)"}
+   - **Approach**: {diagnosis.approach — what the worker changed}
+   - **Result**: {review-worker's verdict — commit/rework/escalate + specific findings}
    ```
 4. **Pass the accumulated diagnostic_history** in the next rework prompt (see template above)
 
 Example after 2 failed rework attempts:
 ```
 ### Attempt 1
-- Diagnosis: UserRepo.create() returns raw diesel::Error, not AppError
-- Approach: Added From<diesel::Error> impl for AppError
-- Result: rework — B:design: return type still uses String not AppError in update() and delete()
+- **Root cause**: UserRepo.create() returns raw diesel::Error, not AppError
+- **Responsible**: src/repos/user.rs:42
+- **Expected behavior**: All repository methods return Result<T, AppError> per design.md §3.2
+- **Approach**: Added From<diesel::Error> impl for AppError
+- **Result**: rework — B:design: return type still uses String not AppError in update() and delete()
 
 ### Attempt 2
-- Diagnosis: 3 repository methods (create, update, delete) all return String errors; attempt 1 only fixed create
-- Approach: Converted all 3 methods to return AppError, added error mapping in handler layer
-- Result: {pending — will be filled after review}
+- **Root cause**: 3 repository methods (create, update, delete) all return String errors; attempt 1 only fixed create
+- **Responsible**: src/repos/user.rs:42, src/repos/user.rs:58, src/repos/user.rs:73
+- **Expected behavior**: All 3 methods return Result<T, AppError> consistently
+- **Approach**: Converted all 3 methods to return AppError, added error mapping in handler layer
+- **Result**: {pending — will be filled after review}
 ```
 ```
 
