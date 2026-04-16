@@ -493,7 +493,7 @@ Agent({
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
     Test design doc path: {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
 
-    **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
+    **Important**: Always start by running \`cd {WORKTREE_PATH}\` before beginning implementation. Changes directly in the main repository are prohibited.
 
     Base branch: {BASE_BRANCH}
 
@@ -509,7 +509,7 @@ Agent({
        - .NET: dotnet format, dotnet build -warnaserror, dotnet test, dotnet list package --vulnerable
     8. Run mutation testing on the diff (Rust: cargo-mutants, .NET: Stryker.NET — if installed)
 
-    Apply diagnostic-reasoning.md DR1-DR5 throughout retries. Create and maintain `{WORKTREE_PATH}/diagnosis.md` per DR2.
+    Apply diagnostic-reasoning.md DR1-DR5 throughout retries. Create and maintain \`{WORKTREE_PATH}/diagnosis.md\` per DR2.
 
     Include the following in the completion report:
     For Rust projects:
@@ -669,7 +669,7 @@ Agent({
     Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
-    **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
+    **Important**: Always run \`cd {WORKTREE_PATH}\` before reviewing and committing.
 
     Previous step results (reference only — do not let these bias your review):
     UT quality verification results (step 5):
@@ -700,7 +700,7 @@ Agent({
     **D: Spec** — _Prompt の Success 基準を1つずつ確認し、各基準の充足/不足を明示すること
     **E: Tests** — テストは実装と同期しているか? 値の検証（is_ok() だけでなく具体値の確認）があるか?
     **F: Design Conformance** — design.md に未定義のフィールド/エンドポイントが追加されていないか?
-    **G: API Documentation** — API変更（エンドポイント追加・変更・型変更）がある場合、`docs/openapi.yaml` の更新を確認。openapi.yaml が存在しない場合はスキップ
+    **G: API Documentation** — API変更（エンドポイント追加・変更・型変更）がある場合、\`docs/openapi.yaml\` の更新を確認。openapi.yaml が存在しない場合はスキップ
 
     ⚠️ 各カテゴリの observations を完了レポートに必ず含めること。
     「問題なし」の場合でも、何を確認して問題なしと判断したかを記載する。
@@ -740,7 +740,7 @@ Agent({
     {findings from review-worker}
 
     Diagnostic history (prior rework attempts — DO NOT repeat failed approaches):
-    {diagnostic_history — empty on first rework, accumulated on subsequent reworks}
+    {diagnostic_history — use "(First rework — no prior attempts)" on first rework, accumulated on subsequent reworks}
 
     Apply diagnostic-reasoning.md DR1-DR5:
     - Before writing any fix, read diagnosis.md and append a DR2-formatted attempt entry (\`### Attempt {N}/3\`) under the \`## Rework Cycle\` heading — do not create a separate \`## Diagnosis\` section

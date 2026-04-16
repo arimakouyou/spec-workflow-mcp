@@ -17,7 +17,6 @@
 | `error-message-guidelines.md` | EM1〜EM4 | 4 | エラーメッセージ品質ガイドライン |
 | `flaky-test-management.md` | FT1〜FT6 | 6 | Flaky Test 管理ポリシー |
 | `regression-test-policy.md` | RT1〜RT3 | 3 | リグレッションテストポリシー（バグ→テスト変換・受入基準定着） |
-
 | `csharp-style.md` | CS1〜CS16 | 16 | C# コードスタイル・フォーマット規約（.NET 10） |
 | `diagnostic-reasoning.md` | DR1〜DR5 | 5 | 診断推論プロトコル（リトライ前の構造化診断・セッション状態永続化・繰り返し防止） |
 

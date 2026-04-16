@@ -97,7 +97,7 @@ rustfmt --check ${affected_files}
    - Append a DR2-formatted attempt entry to `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, and approach) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
    - If on the final attempt, call `advisor()` with that diagnosis (DR5)
 4. Implement (file editing only).
-5. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).
+5. Verify (run clippy/rustfmt scoped to `affected_files`; run cargo test per the Deterministic checks section above — use `test_targets` when provided, otherwise infer tests from `affected_files` or fall back to `cargo test --lib --quiet`).
 6. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.
 7. Return the `changed_files` list (do not commit). Do not include `whiteboard_path`, `diagnosis.md`, or `state.md` in `changed_files` — those are local working files, not implementation artifacts.
 8. If there are no changes, return `no_op`.
@@ -110,7 +110,7 @@ rustfmt --check ${affected_files}
   "schema_version": "taskflow-worker.v3",
   "worker": "wave-harness-worker",
   "session_id": "wh-20260226T190000",
-  "attempt": 1,
+  "attempt": 2,
   "work_item_id": "issue-123",
   "status": "completed",
   "changed_files": ["src/handlers/users.rs"],
