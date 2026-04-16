@@ -29,7 +29,7 @@ permissionMode: bypassPermissions
 - `affected_files`
 - `test_targets` (optional)
 - `previous_error` (optional — legacy; prefer `diagnostic_history`)
-- `diagnostic_history` (optional) — a single markdown text block (string, NOT a JSON array) containing accumulated prior attempt entries in DR2 format, produced by the orchestrator by concatenating previous attempts' diagnoses. Example value:
+- `diagnostic_history` (optional) — a single markdown text block (string, NOT a JSON array) containing accumulated prior attempt entries in DR2 + FC4 format, produced by the orchestrator by concatenating previous attempts' diagnoses. Each entry includes a `Failure category` line per `failure-taxonomy.md` FC2. Example value:
 
   ```markdown
   ### Attempt 1
@@ -37,6 +37,7 @@ permissionMode: bypassPermissions
   - **Responsible**: src/parser.rs:42
   - **Expected behavior**: parse_input() should handle missing values without panicking and allow tests to complete normally
   - **Approach**: Added Option<T> wrapper with `.unwrap_or_default()`
+  - **Failure category**: `test_failure` / `panic`
   - **Result**: FAIL — `cargo test`: thread panicked at 'index out of bounds'
   ```
 
@@ -53,7 +54,7 @@ Call `advisor()` at the following points:
 
 - **Before implementing a complex work item**: After reading the whiteboard, before starting file edits — getting the approach right on the first attempt is critical (no git, file editing only)
 - **When the implementation might affect other work items**: If the whiteboard reveals cross-cutting impacts
-- **On retry attempts**: If `retry_mode` is true, read `diagnosis.md` and write a DR1 diagnosis referencing `diagnostic_history`, then call advisor to validate the diagnosis before implementing. DO NOT repeat approaches from prior attempts (DR4)
+- **On retry attempts**: If `retry_mode` is true, read `diagnosis.md` and write a DR1 diagnosis referencing `diagnostic_history`, then call advisor to validate the diagnosis before implementing. DO NOT repeat approaches from prior attempts (DR4). For DR6 DIVERGENT, **scope the 2-consecutive-FAIL comparison to the same phase heading** (wave-harness always writes under `## Rework Cycle` in `diagnosis.md` — see Procedure 3.5, so combine only entries under that heading and the `diagnostic_history` prompt field, which by convention represents the same rework phase). If the most recent 2 `Result: FAIL` entries **within that single phase** share the same main `failure_category` per FC5, apply DR6 DIVERGENT — write a Divergent Analysis block before the DR2 attempt entry. Do not trigger DIVERGENT based on FAILs from different phases.
 
 ## Deterministic checks
 
@@ -90,12 +91,13 @@ rustfmt --check ${affected_files}
    - If `attempt == 1`: Create `{worktree_path}/diagnosis.md` with the header `# Diagnostic Session: {work_item_id}`.
 2. When running verification commands, enable the build cache if sccache is available by using a per-command prefix or folding detection into the same Bash block (see `.claude-plugin/rules/rust-build-cache.md`).
 3. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
-3.5. **Diagnostic Reasoning (retry only)**: If `retry_mode` is true, apply DR1-DR5:
-   - Read `{worktree_path}/diagnosis.md` to review all prior attempts
-   - If `diagnostic_history` is provided in the prompt, cross-reference it
+3.5. **Diagnostic Reasoning (retry only)**: If `retry_mode` is true, apply DR1-DR6:
+   - Read `{worktree_path}/diagnosis.md` to review all prior attempts under the `## Rework Cycle` phase heading (wave-harness always writes under this heading)
+   - If `diagnostic_history` is provided in the prompt, cross-reference it — by convention it represents the same `## Rework Cycle` phase carried across attempts by the orchestrator
    - Verify your planned approach differs from all prior attempts (DR3, DR4)
-   - Append a DR2-formatted attempt entry to `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, and approach) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
-   - If on the final attempt, call `advisor()` with that diagnosis (DR5)
+   - **DR6 DIVERGENT check (scoped to the `## Rework Cycle` phase only)**: Consider only the FAIL entries under the `## Rework Cycle` heading in `diagnosis.md` combined with `diagnostic_history`. If the most recent 2 `Result: FAIL` entries **within this single phase** share the same main `failure_category` (per `failure-taxonomy.md` FC5), insert a `### Divergent Analysis (before Attempt {N}/{max})` block before the attempt entry and pick a fundamentally different premise. Do not count FAILs from other phase headings toward the DIVERGENT trigger
+   - Append a DR2 + FC4 formatted attempt entry under the `## Rework Cycle` heading in `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, approach, **failure_category**) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
+   - If on the final attempt, call `advisor()` with that diagnosis (DR5). If DIVERGENT was applied, include the Divergent Analysis block in the advisor context
 4. Implement (file editing only).
 5. Verify (run clippy/rustfmt scoped to `affected_files`; run cargo test per the Deterministic checks section above — use `test_targets` when provided, otherwise infer tests from `affected_files` or fall back to `cargo test --lib --quiet`).
 6. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.
@@ -122,8 +124,11 @@ rustfmt --check ${affected_files}
   "diagnosis": {
     "root_cause": "handler returns raw String error instead of AppError",
     "responsible_files": ["src/handlers/users.rs:42"],
-    "approach": "Implement From<String> for AppError and use ? operator"
+    "approach": "Implement From<String> for AppError and use ? operator",
+    "failure_category": "spec_mismatch",
+    "failure_subcategory": "design_conformance_violation"
   },
+  "divergent_applied": false,
   "no_op_reason": null,
   "started_at": "2026-02-26T19:00:00Z",
   "ended_at": "2026-02-26T19:10:00Z",
@@ -132,6 +137,8 @@ rustfmt --check ${affected_files}
 ```
 
 `diagnosis` is optional — include it when `retry_mode` was true (i.e., `attempt >= 2`, matching the schema examples above for `completed` and `failed`). Omit on the initial attempt (`attempt == 1`) unless explicitly useful for the orchestrator's next attempt. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
+
+The `failure_category` / `failure_subcategory` fields live **inside `diagnosis`** and follow `failure-taxonomy.md` FC1-FC2. `divergent_applied` lives at the **top level** of the response (same location as `parallel-worker`'s retry_exhausted / completion report), so the orchestrator can pick it up uniformly across workers. These fields are optional extensions to the v3 schema — a v3-compatible consumer ignores unknown fields, so no schema version bump is needed.
 
 ## no_op schema
 
@@ -175,8 +182,11 @@ rustfmt --check ${affected_files}
   "diagnosis": {
     "root_cause": "missing null check in parse_input()",
     "responsible_files": ["src/parser.rs:42"],
-    "approach": "Added Option<T> wrapper with .unwrap_or_default()"
+    "approach": "Added Option<T> wrapper with .unwrap_or_default()",
+    "failure_category": "test_failure",
+    "failure_subcategory": "panic"
   },
+  "divergent_applied": false,
   "no_op_reason": null,
   "started_at": "2026-02-26T19:00:00Z",
   "ended_at": "2026-02-26T19:01:00Z",

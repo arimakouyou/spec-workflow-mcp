@@ -509,7 +509,7 @@ Agent({
        - .NET: dotnet format, dotnet build -warnaserror, dotnet test, dotnet list package --vulnerable
     8. Run mutation testing on the diff (Rust: cargo-mutants, .NET: Stryker.NET — if installed)
 
-    Apply diagnostic-reasoning.md DR1-DR5 throughout retries. Create and maintain \`{WORKTREE_PATH}/diagnosis.md\` per DR2.
+    Apply diagnostic-reasoning.md DR1-DR6 and failure-taxonomy.md FC1-FC6 throughout retries. Create and maintain \`{WORKTREE_PATH}/diagnosis.md\` per DR2 + FC4 (each attempt entry carries a \`Failure category\` line). Apply DR6 DIVERGENT if the most recent 2 failed attempts in the current phase share the same main failure_category (FC5).
 
     Include the following in the completion report:
     For Rust projects:
@@ -526,15 +526,18 @@ Agent({
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
     - changed_files: list of all changed files (MUST NOT include diagnosis.md or state.md)
-    - diagnosis: include when any retry occurred — summary of the final successful approach per DR2 with fields:
+    - divergent_applied: true|false (optional — include only when any retry occurred)
+    - diagnosis: include when any retry occurred — summary of the final successful approach per DR2 + FC4 with fields:
       - root_cause: string
       - responsible_files: list of file paths or code locations (e.g., ["src/foo.rs:42"]) — unified across workers
       - approach: string
+      - failure_category: FC1 main category (compile_error | test_failure | quality_check_failure | spec_mismatch)
+      - failure_subcategory: FC1 subcategory (optional)
 `
 })
 ```
 
-Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**, **stryker** (.NET mutation testing result), and **diagnosis** (if present — retain for diagnostic_history accumulation in rework cycles).
+Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**, **stryker** (.NET mutation testing result), **divergent_applied** (if present), and **diagnosis** (if present — retain for diagnostic_history accumulation in rework cycles; failure_category is required in diagnosis per FC2).
 
 Branch based on parallel-worker's `status`:
 
@@ -542,6 +545,8 @@ Branch based on parallel-worker's `status`:
 - **status: retry_exhausted** → parallel-worker has stopped after exhausting retries. Report the following to the user:
   - Which phase (RED/GREEN/REFACTOR/quality_check) failed
   - The last error message
+  - The `failure_category` / `failure_subcategory` (FC1) of the final attempt
+  - Whether DR6 DIVERGENT was applied (`divergent_applied`) — if `true`, note that the worker has already tried a fundamentally different premise
   - Files partially created
 
   User decision: fix manually and resume / skip the task and move on / revisit the design
@@ -745,16 +750,17 @@ Agent({
     Diagnostic history (prior rework attempts — DO NOT repeat failed approaches):
     {diagnostic_history — use "(First rework — no prior attempts)" on first rework, accumulated on subsequent reworks}
 
-    Apply diagnostic-reasoning.md DR1-DR5:
-    - Before writing any fix, read diagnosis.md and append a DR2-formatted attempt entry (\`### Attempt {N}/3\`) under the \`## Rework Cycle\` heading — do not create a separate \`## Diagnosis\` section
-    - Your diagnosis MUST identify a different root cause or approach from the diagnostic history above
-    - On the final attempt (3/3), call advisor() with your diagnosis before implementing
+    Apply diagnostic-reasoning.md DR1-DR6 and failure-taxonomy.md FC1-FC6:
+    - Before writing any fix, read diagnosis.md and append a DR2 + FC4-formatted attempt entry (\`### Attempt {N}/3\`) under the \`## Rework Cycle\` heading — do not create a separate \`## Diagnosis\` section. Include the \`Failure category\` line
+    - Your diagnosis MUST identify a different root cause or approach from the diagnostic history above (DR4)
+    - **DR6 DIVERGENT check**: If the most recent 2 entries in diagnostic_history share the same main \`failure_category\` (per FC5), insert a \`### Divergent Analysis (before Attempt {N}/3)\` block above the Attempt heading, articulating the shared implicit assumption and how this attempt invalidates it. The Approach must fundamentally differ, not be a parameter tweak
+    - On the final attempt (3/3), call advisor() with your diagnosis before implementing (DR5). Include the Divergent Analysis block if applicable
 
     Note: This is rework attempt {N}. The maximum is 3; if unresolved after 3 attempts, the issue will be escalated to the user.
     Fix all findings at once. On the final attempt (3/3), choose the minimum fix that will pass review.
 
     After fixing, run quality checks (rustfmt + clippy + cargo test) to confirm all pass.
-    Include changed_files and your diagnosis summary in the completion report.`
+    Include changed_files, diagnosis summary (with failure_category), and divergent_applied in the completion report.`
 })
 ```
 
@@ -764,26 +770,30 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
 
 1. **Before the first rework**: Initialize `diagnostic_history` with the marker string `"(First rework — no prior attempts)"` (this marker makes the prompt clearer than an empty field, which an LLM may misread as "forgot to fill in")
 2. **After each rework attempt**: Extract from parallel-worker's completion report:
-   - The diagnosis summary fields: `root_cause`, `responsible_files` (list), `approach` — these names are unified across parallel-worker and wave-harness-worker outputs
+   - The diagnosis summary fields: `root_cause`, `responsible_files` (list), `approach`, `failure_category`, `failure_subcategory` (optional) — these names are unified across parallel-worker and wave-harness-worker outputs per `failure-taxonomy.md` FC2
+   - The `divergent_applied` flag (if present)
    - The quality check results (pass/fail)
-3. **Append to diagnostic_history in DR2 format** (fields come from the worker's completion report; if a field is absent, note it as `(not reported)`):
+3. **Append to diagnostic_history in DR2 + FC4 format** (fields come from the worker's completion report; if a field is absent, note it as `(not reported)`):
    ```
    ### Attempt {N}
    - **Root cause**: {diagnosis.root_cause from worker's report}
    - **Responsible**: {diagnosis.responsible_files joined, or "(not reported)"}
    - **Expected behavior**: {if available in the diagnosis or review findings, otherwise "(not reported)"}
    - **Approach**: {diagnosis.approach — what the worker changed}
+   - **Failure category**: `{diagnosis.failure_category}` / `{diagnosis.failure_subcategory or ""}`
    - **Result**: {review-worker's verdict — commit/rework/escalate + specific findings}
    ```
+   If `divergent_applied: true`, add a line `- **Divergent applied**: true` after the `Failure category` line. This lets the next attempt know a DIVERGENT attempt has already been spent.
 4. **Pass the accumulated diagnostic_history** in the next rework prompt (see template above)
 
-Example after 2 failed rework attempts:
+Example after 2 failed rework attempts (same `failure_category` twice → DR6 DIVERGENT required on Attempt 3):
 ```
 ### Attempt 1
 - **Root cause**: UserRepo.create() returns raw diesel::Error, not AppError
 - **Responsible**: src/repos/user.rs:42
 - **Expected behavior**: All repository methods return Result<T, AppError> per design.md §3.2
 - **Approach**: Added From<diesel::Error> impl for AppError
+- **Failure category**: `spec_mismatch` / `design_conformance_violation`
 - **Result**: rework — B:design: return type still uses String not AppError in update() and delete()
 
 ### Attempt 2
@@ -791,6 +801,7 @@ Example after 2 failed rework attempts:
 - **Responsible**: src/repos/user.rs:42, src/repos/user.rs:58, src/repos/user.rs:73
 - **Expected behavior**: All 3 methods return Result<T, AppError> consistently
 - **Approach**: Converted all 3 methods to return AppError, added error mapping in handler layer
+- **Failure category**: `spec_mismatch` / `design_conformance_violation`
 - **Result**: {pending — will be filled after review}
 ```
 

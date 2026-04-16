@@ -79,6 +79,21 @@ The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`)
 Write only the sections listed below and create `.spec-workflow/specs/{spec-name}/design.md`.
 Leave the detail sections (API spec, error handling, traceability, etc.) as `(to be written in Wave 2)` placeholders.
 
+**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
+
+Include the following YAML frontmatter at the top of the file. Populate `depends_on.refs` with the `REQ-N` IDs from requirements.md that this design implements:
+
+```yaml
+---
+spec_id: {spec-name}
+phase: design
+version: 1
+depends_on:
+  - file: requirements.md
+    refs: [REQ-1, REQ-2]  # REQ-N (whole requirement) or REQ-N.M (specific Acceptance Criterion)
+---
+```
+
 **Sections to write in Wave 1:**
 
 1. **Overview** — Summary of the feature and its place in the system
@@ -226,14 +241,18 @@ Fill in all sections left as `(to be written in Wave 2)` from Wave 1.
 
 #### Components and Interfaces
 
-Describe each component in this format:
+Describe each component in this format. Use `### DES-N: ComponentName` headings (per `.claude-plugin/rules/spec-dependency-graph.md` SD1) so downstream specs can reference them:
+
 ```markdown
-### ComponentName
+### DES-1: ComponentName
 - **Purpose:** [Responsibility this component owns]
 - **Interfaces:** [Public method / API signatures]
 - **Dependencies:** [Components / external services depended on]
 - **Reuses:** [Existing code to leverage (with concrete paths)]
+- **Satisfies:** [REQ-N.M list that this component addresses]
 ```
+
+Data Models should use `### MOD-N: ModelName` and API sections (if present) should use `### API-N: EndpointName`.
 
 #### Data Models
 
@@ -436,6 +455,8 @@ Agent({
     5. Error Handling must have a complete table (not just scenario descriptions)
     6. Required Build Tools section must exist with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns)
     7. Excluded Test Environments section must exist (table may be empty if no exclusions, but section must be present)
+    8. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: design, version, depends_on (file: requirements.md, refs: [REQ-...]) must exist at the top of the file
+    9. IDENTIFIERS (spec-dependency-graph.md SD1): Components and Interfaces use '### DES-N: Name' headings, Data Models use '### MOD-N: Name', API sections use '### API-N: Name'. depends_on.refs must point to REQ-N (or REQ-N.M) that exist in requirements.md
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

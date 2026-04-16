@@ -211,11 +211,13 @@ Branch processing based on the severity of findings. review-worker is a **review
 
 ### Severity Classification
 
-| Severity | Relevant aspects | Action |
-|----------|----------------|--------|
-| **Minor** | A (Style and conventions), G (API Docs) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues. G は `/generate-api-docs` の実行を推奨として報告 |
-| **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction |
-| **Critical** | D (Spec non-conformance), F (Design conformance violation) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer |
+| Severity | Relevant aspects | Action | failure_category mapping (FC3) |
+|----------|----------------|--------|--------------------------------|
+| **Minor** | A (Style and conventions), G (API Docs) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues. G は `/generate-api-docs` の実行を推奨として報告 | `quality_check_failure/format_violation`, `quality_check_failure/lint_violation`（警告相当）, `spec_mismatch/api_contract_mismatch` |
+| **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction | `test_failure/*`, `quality_check_failure/lint_violation`（-D warnings 相当）, `quality_check_failure/mutation_survived`, `quality_check_failure/wasm_build_failure`, `quality_check_failure/trim_aot_incompatibility`, `spec_mismatch/test_design_missing` |
+| **Critical** | D (Spec non-conformance), F (Design conformance violation), C (blocking vulnerabilities) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer | `quality_check_failure/dependency_vulnerability`, `spec_mismatch/design_conformance_violation`, `spec_mismatch/requirement_missing`, `spec_mismatch/restriction_violated` |
+
+**Note**: `failure-taxonomy.md` (FC1-FC6) defines the cross-worker shared vocabulary. When authoring `findings`, pick a `severity` that matches FC3. The `failure_category` / `failure_subcategory` fields in each finding must be consistent with the `severity`.
 
 ### Review Observation Log (レビュー観察ログ)
 
@@ -242,27 +244,43 @@ observations:
 
 ### Report Format for Sending Back
 
-When sending back to parallel-worker, return a findings report containing the following:
+When sending back to parallel-worker, return a findings report containing the following. The `severity` value uses the **Minor / Moderate / Critical** vocabulary defined in the Severity Classification table above (not the low / medium / high / critical scale used elsewhere — see the note below):
 
 ```
 review_action: rework
 findings:
   - category: B|C|E|E2
-    severity: medium
+    severity: Moderate
+    failure_category: <FC1 main category — e.g., test_failure, quality_check_failure, spec_mismatch>
+    failure_subcategory: <FC1 subcategory — e.g., assertion_failure, lint_violation, test_design_missing>
     file: <target file>
     line: <line number or range>
     issue: <what the problem is>
     expected: <what it should be>
-    rule_ref: <relevant rule file (e.g., security.md#A3)>
+    rule_ref: <relevant rule file (e.g., security.md#A3, failure-taxonomy.md#FC3)>
 ```
+
+`failure_category` / `failure_subcategory` are **required** per `failure-taxonomy.md` FC2. The `severity` must be consistent with `failure_category` per FC3 — e.g., do not set `failure_category: quality_check_failure/format_violation` with `severity: Critical`.
+
+> **Severity vocabulary note**: this document uses **Minor / Moderate / Critical** throughout. The **authoritative mapping** between this vocabulary and external severity scales lives in `failure-taxonomy.md` FC3 (section "外部 severity スケールとの対応"). The table below is a local restatement for convenience — if the two diverge, FC3 wins.
+>
+> | This doc | Common external scale | CVSS-like |
+> |----------|----------------------|-----------|
+> | Minor | low | informational / low |
+> | Moderate | medium | medium |
+> | Critical | high / critical | high / critical |
+>
+> Emit findings using the Minor / Moderate / Critical labels so the Severity Classification table, findings output, and FC3 stay aligned. When ingesting external tool output (`cargo audit` / `npm audit` / GitHub Advisory), normalize to Minor / Moderate / Critical per FC3.
 
 ### Report Format for User Escalation
 
 ```
 review_action: escalate
 findings:
-  - category: D
-    severity: high
+  - category: D|F|C
+    severity: Critical
+    failure_category: <FC1 main category — typically spec_mismatch or quality_check_failure>
+    failure_subcategory: <FC1 subcategory — e.g., design_conformance_violation, requirement_missing, dependency_vulnerability>
     issue: <description of the spec non-conformance>
     prompt_success_criteria: <the Success criteria that was checked>
     question: <items to confirm with the user>

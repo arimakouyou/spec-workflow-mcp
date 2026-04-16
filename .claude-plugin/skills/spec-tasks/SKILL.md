@@ -324,6 +324,25 @@ Write the tasks document to:
 .spec-workflow/specs/{spec-name}/tasks.md
 ```
 
+**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2, SD6):**
+
+以下の YAML frontmatter をファイル冒頭に追加する。これは tasks.md **全体**が依存する上流仕様書 ID の宣言であり、タスク個別の `_Requirements:` / `_DependsOn:` メタデータとは粒度が異なる直交情報:
+
+```yaml
+---
+spec_id: {spec-name}
+phase: tasks
+version: 1
+depends_on:
+  - file: design.md
+    refs: [DES-1, DES-2]  # 実装対象のコンポーネント
+  - file: test-design.md
+    refs: [UT-1.1, IT-1]  # 満たすべきテスト仕様
+---
+```
+
+タスク個別メタデータ（`_Requirements:` / `_Leverage:` / `_DependsOn:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`）は従来通り維持する（SD6）。
+
 Task status markers:
 - `- [ ]` = Pending
 - `- [-]` = In progress
@@ -408,6 +427,7 @@ Agent({
         every UT spec must have a corresponding task with matching _TestFocus,
         every IT spec must have an integration test task,
         every E2E spec must have an E2E test task
+    13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

@@ -30,7 +30,7 @@ Call `advisor()` at the following points in your TDD workflow:
 
 ## Diagnostic Reasoning Protocol
 
-Apply `diagnostic-reasoning.md` (DR1-DR5) at every retry point in the TDD cycle.
+Apply `diagnostic-reasoning.md` (DR1-DR6) and `failure-taxonomy.md` (FC1-FC6) at every retry point in the TDD cycle.
 
 ### diagnosis.md Management
 
@@ -42,7 +42,8 @@ Apply `diagnostic-reasoning.md` (DR1-DR5) at every retry point in the TDD cycle.
 Before each fix attempt after a failure:
 
 1. Read `diagnosis.md` to review all prior attempts for this phase
-2. Append a DR2-formatted attempt entry to `diagnosis.md` under the appropriate phase heading (`## GREEN Phase`, `## Quality Checks`, etc.):
+2. **Check DR6 DIVERGENT trigger**: If the most recent 2 `Result: FAIL` attempts under the current phase heading share the same `failure_category` (main category; subcategory is ignored per FC5), you MUST enter DIVERGENT mode. Before the new `### Attempt` heading, insert a `### Divergent Analysis (before Attempt {N}/{max})` block per DR6 that articulates the common implicit assumption and how this attempt will invalidate it. The new `Approach` must fundamentally differ, not be a parameter tweak
+3. Append a DR2-formatted attempt entry to `diagnosis.md` under the appropriate phase heading (`## GREEN Phase`, `## Quality Checks`, etc.):
 
    ```markdown
    ## GREEN Phase
@@ -51,26 +52,28 @@ Before each fix attempt after a failure:
    - **Root cause**: {specific analysis — not just the error message}
    - **Responsible**: {file:line}
    - **Expected behavior**: {per design docs / test spec}
-   - **Approach**: {what you will do — must differ from prior attempts per DR4}
+   - **Approach**: {what you will do — must differ from prior attempts per DR4; must invalidate the common assumption if DIVERGENT per DR6}
+   - **Failure category**: `{FC1 main category}` / `{FC1 subcategory}`
    ```
 
    Use `## GREEN Phase`, `## Quality Checks`, or `## Rework Cycle` as the heading depending on which phase you are in.
 
-3. Implement the fix
-4. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line to the current attempt entry
+4. Implement the fix
+5. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line to the current attempt entry
 
 ### Rework Cycles (inter-agent)
 
 When the orchestrator passes `diagnostic_history` (a markdown text block) in the rework prompt:
 
 1. Read `diagnosis.md` (it contains your earlier TDD-phase diagnostics)
-2. Read the `diagnostic_history` text block from the prompt (it contains prior rework attempts from earlier cycles)
-3. Append a DR2-formatted attempt entry under the `## Rework Cycle` heading in `diagnosis.md` (use `### Attempt {N}/3` — do NOT create a separate `## Diagnosis` section), referencing both sources
-4. Your diagnosis MUST explain why your approach differs from all prior attempts (DR3, DR4)
+2. Read the `diagnostic_history` text block from the prompt (it contains prior rework attempts from earlier cycles, each carrying `Failure category`)
+3. **Check DR6 DIVERGENT trigger across the combined history**: if the last 2 entries (from `diagnostic_history` + `diagnosis.md` `## Rework Cycle` combined) share the same main `failure_category`, enter DIVERGENT mode as described above
+4. Append a DR2-formatted attempt entry under the `## Rework Cycle` heading in `diagnosis.md` (use `### Attempt {N}/3` — do NOT create a separate `## Diagnosis` section), referencing both sources and including the `Failure category` line
+5. Your diagnosis MUST explain why your approach differs from all prior attempts (DR3, DR4) and, if DIVERGENT is triggered, why the new premise is different (DR6)
 
 ### Integration with Advisor
 
-When retry limits approach (per advisor-usage.md), include your diagnosis AND the content of `diagnosis.md` in the advisor call context. The advisor can validate diagnosis quality (DR5) before you spend the final attempt.
+When retry limits approach (per advisor-usage.md), include your diagnosis AND the content of `diagnosis.md` in the advisor call context. The advisor can validate diagnosis quality (DR5) before you spend the final attempt. If DR6 DIVERGENT was triggered, also include the Divergent Analysis block in the advisor prompt.
 
 > **Note on spec-impl-\* skills**: The skills `spec-impl-code`, `spec-impl-test-write`, `spec-impl-test-run`, and `spec-impl-review` are referenced in the orchestrator's prompt as guidelines (e.g., "see /spec-impl-test-write skill"). Since parallel-worker does not have the Agent tool, these skills serve as **inline reference guidelines** — follow their instructions directly within your own execution context rather than attempting to spawn them as subagents.
 
@@ -292,6 +295,12 @@ Apply a uniform limit to all phases. If the limit is exceeded, stop the fix and 
 | dotnet build -warnaserror | 3 | Read analyzer warnings and fix. If not resolved in 3 attempts → stop and report |
 | dotnet test | 2 | Analyze test failures and fix. If not resolved in 2 attempts → stop and report |
 
+### DIVERGENT Trigger (DR6)
+
+Independent of the per-phase retry budget above, `diagnostic-reasoning.md` DR6 requires switching to DIVERGENT mode when the most recent 2 `Result: FAIL` entries in the current phase share the same main `failure_category` (per `failure-taxonomy.md` FC5). This does not change the max retry count — it only changes *how* the next attempt is planned and documented. See the **Intra-Agent Retries** and **Rework Cycles** procedures above for the Divergent Analysis block format.
+
+If DIVERGENT was applied at any point, set `divergent_applied: true` in the stop / completion report (see below).
+
 ### Report Format on Stop
 
 When the retry limit is reached, return the following instead of a normal completion report:
@@ -302,7 +311,10 @@ When the retry limit is reached, return the following instead of a normal comple
 - check: rustfmt|clippy|cargo_test|dotnet_format|dotnet_build|dotnet_test (for quality_check phase)
 - attempts: <number of attempts>
 - last_error: <content of the last error>
-- diagnosis: <summary of the last attempt's diagnosis — root_cause, responsible_files (list), approach. Per DR2>
+- failure_category: <FC1 main category of the last attempt>
+- failure_subcategory: <FC1 subcategory, optional>
+- divergent_applied: true|false (true if DR6 DIVERGENT was entered at any attempt in this phase)
+- diagnosis: <summary of the last attempt's diagnosis — root_cause, responsible_files (list), approach, failure_category. Per DR2 + FC4>
 - changed_files: <files created/modified up to that point. Must NOT include `diagnosis.md` or `state.md`>
 ```
 
@@ -318,7 +330,8 @@ When the retry limit is reached, return the following instead of a normal comple
 - rustfmt: pass|fail
 - clippy: pass|fail
 - mutation_testing: pass|warn|skip <details>
-- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible_files (list), approach>
+- divergent_applied: true|false (optional — include only when any retry occurred; true if DR6 DIVERGENT was entered)
+- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2 + FC4: root_cause, responsible_files (list), approach, failure_category, failure_subcategory (optional)>
 - changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
 ```
 
@@ -333,7 +346,8 @@ When the retry limit is reached, return the following instead of a normal comple
 - dotnet_build: pass|fail
 - dotnet_test: pass|fail
 - stryker: pass|warn|skip <details>
-- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2: root_cause, responsible_files (list), approach>
+- divergent_applied: true|false (optional — include only when any retry occurred; true if DR6 DIVERGENT was entered)
+- diagnosis: <optional — include when any retry occurred during the task. Summary per DR2 + FC4: root_cause, responsible_files (list), approach, failure_category, failure_subcategory (optional)>
 - changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
 ```
 

@@ -16,6 +16,7 @@ The diagnosis entry must contain:
 2. **Responsible**: Which file(s) and line(s) are responsible?
 3. **Expected behavior**: What should the correct behavior be, per design docs / test expectations?
 4. **Approach**: What fix strategy will you use?
+5. **Failure category**: The FC1 main category (and optional subcategory) per `failure-taxonomy.md` FC2. Required — used by DR6 to detect recurring categorical failures.
 
 This applies to: GREEN phase retries, quality check retries (clippy, cargo test, dotnet build, dotnet test), rework cycles, and wave-harness retries.
 
@@ -42,8 +43,11 @@ Persist every fix attempt as a structured entry in `diagnosis.md` (located in th
 - **Responsible**: {file:line}
 - **Expected behavior**: {per design docs / test spec}
 - **Approach**: {what you will do}
+- **Failure category**: `{FC1 main category}` / `{FC1 subcategory}`
 - **Result**: {PASS or FAIL — error summary}
 ```
+
+The `Failure category` line is required per `failure-taxonomy.md` FC2 + FC4. It is written at the same time as the rest of the entry (before the fix, per the two-step write order below) — not added after the `Result` is known. It enables DR6 to detect same-category recurrence across attempts.
 
 Group entries under phase headings: `## GREEN Phase`, `## Quality Checks`, `## Rework Cycle`.
 
@@ -83,3 +87,53 @@ A diagnosis is **insufficient** if it:
 - Proposes the same approach that already failed
 
 Before the final allowed attempt — when you have one attempt remaining — call `advisor()` with your diagnosis for validation before implementing the fix. Include the `diagnosis.md` content in your advisor context so the reviewer can assess diagnosis quality.
+
+## DR6: DIVERGENT Strategy on Recurring Categorical Failures
+
+When the most recent **2 attempts in the current phase** share the same `failure_category` (per `failure-taxonomy.md` FC5), the next attempt MUST enter **DIVERGENT mode**. This is an extension of DR4 (non-repetition) — DR4 forbids repeating a failed *approach*, DR6 forbids continuing to fix within the same *premise* when two attempts under that premise have already failed.
+
+### Trigger Condition (cross-references FC5)
+
+- Same phase heading in `diagnosis.md` (`## GREEN Phase`, `## Quality Checks`, or `## Rework Cycle`)
+- The most recent 2 `Result: FAIL` attempt entries both carry the same **main** `failure_category` (subcategory is ignored per FC5)
+- When the main category changes or an attempt succeeds, the counter resets
+- When the phase heading changes, the counter resets (GREEN and Quality Checks are counted separately)
+
+### Required Procedure
+
+Before writing the next DR2 attempt entry, insert a **Divergent Analysis block** under the current phase heading. Place this block **above** the `### Attempt {N}/{max}` heading (not inside it):
+
+```markdown
+## GREEN Phase
+
+### Divergent Analysis (before Attempt {N}/{max})
+- **Common implicit assumption**: {what assumption was shared across attempts {N-2} and {N-1}, not explicitly stated in either diagnosis?}
+- **Why prior attempts kept failing under this assumption**: {one-sentence explanation of how the assumption forced both fixes to miss the real cause}
+- **Challenge**: {what different premise this attempt will operate under}
+
+### Attempt {N}/{max}
+- **Root cause**: ...
+- **Responsible**: ...
+- **Expected behavior**: ...
+- **Approach**: {must invalidate the implicit assumption — not a parameter tweak, reordering, or variant of prior approaches}
+- **Failure category**: `{category}` / `{subcategory}`
+```
+
+The `Approach` in the DIVERGENT attempt must **fundamentally differ** from both prior attempts. Mechanical variants (swap two arguments, try a different constant, reorder the same operations) do NOT count as divergent and must be rejected by the worker itself before proceeding.
+
+### Interaction with DR4 and DR5
+
+- **DR4**: DIVERGENT is a stricter form of DR4 — DR4 requires a different approach, DR6 requires a different *premise*. If the DIVERGENT attempt shows the same premise as the prior two, it is not actually divergent and violates DR6
+- **DR5**: If DIVERGENT triggers on the final attempt (the one that would normally require `advisor()`), the Divergent Analysis block becomes part of the advisor context. Include the entire `diagnosis.md` content AND the Divergent Analysis in the advisor prompt
+
+### Failure of DIVERGENT
+
+If the DIVERGENT attempt itself fails:
+
+- Do NOT attempt another DIVERGENT variation within the same phase retry budget (retry_exhausted applies normally)
+- Invoke DR4(c): escalate via `advisor()` or orchestrator report
+- The completion / `retry_exhausted` report must record `divergent_applied: true` so that the orchestrator can include this signal in `diagnostic_history`
+
+### Rationale
+
+Repeated failure under the same `failure_category` indicates that the approach is operating on a wrong premise, not that the fix is incomplete. Mechanically trying "one more variant" of the same idea wastes retry budget. DR6 forces the worker to articulate and invalidate the premise before spending another attempt. This is the `failure-taxonomy`-driven version of "challenge the common implicit assumption" — the pattern that consistently produced improved success rates in multi-attempt agent workflows.
