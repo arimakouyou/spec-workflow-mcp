@@ -19,7 +19,7 @@
 | # | カテゴリ | 件数 | 割合 |
 |---|---------|-----|------|
 | 1 | 整合性 / 重複 | **約 158** | **35%** |
-| 2 | エラーハンドリング（shell/CI） | 約 60 | 13% |
+| 2 | シェル堅牢性（hook/CI） | 約 60 | 13% |
 | 3 | ドキュメント乖離 | 約 45 | 10% |
 | 4 | プロセス / CI | 約 30 | 7% |
 | 5 | 設計適合 / スキーマ | 約 28 | 6% |
@@ -38,7 +38,7 @@
 
 - [ ] 新規 ID 規約（QC/DR/FC/SD 等）を追加・変更したら、**リポジトリ全体を grep** して全参照箇所の用語・キー名・コマンドを揃える
 - [ ] `.claude-plugin/rules/` を変更したら、`.claude-plugin/skills/` / `.claude-plugin/agents/` / `src/markdown/templates/` を全 grep で参照箇所洗い出し
-- [ ] `INDEX.md` の件数（「合計 N ルール」）を実件数と照合
+- [ ] `.claude-plugin/rules/INDEX.md` の件数（「合計 N ルール」）を実件数と照合
 - [ ] placeholder 命名が統一されている（`{N}` vs `{phase-number}`、`{skill-name}` vs `{skill name}`、snake vs kebab vs camel）
 - [ ] 同一 prompt 内で矛盾指示がない（例: 「Review and fix」と「Mode: check — DO NOT modify」の共存）
 - [ ] フィールド名 / キー名が統一されている（`responsible_files` vs `responsible`、`reviewOutcome` vs `outcome`）
@@ -55,7 +55,7 @@
 - **PR #50**: `diagnostic_history` が array / string で期待が不一致、`## Diagnosis` と DR2 フォーマットが齟齬
 - **PR #49**: `/spec-implementation`（誤記）vs `/spec-implement`、`next:` プレースホルダの混乱
 - **PR #12**: `integration-verification`（kebab）vs `integration_verification`（snake）vs `autoFixed`（camel）混在
-- **PR #50**: INDEX.md 総計 110 が実件数と齟齬
+- **PR #50**: `.claude-plugin/rules/INDEX.md` 総計 110 が実件数と齟齬
 
 ---
 

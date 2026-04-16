@@ -154,7 +154,7 @@ gh api --paginate "repos/${OWNER}/${REPO_NAME}/issues/{N}/comments"
 - 新規カテゴリが承認されている場合、H の後に追加（ID は新たに振る、例: I, J...）
 - 「生成方法」セクションの実行例も更新
 
-### 7. INDEX.md の更新（必要時）
+### 7. `.claude/_docs/know-how/INDEX.md` の更新（必要時）
 
 カテゴリが増えた場合は `.claude/_docs/know-how/INDEX.md` の要約も更新する。
 
@@ -207,5 +207,5 @@ pr-review-patterns.md が存在しない場合、本スキルで初回生成も�
 - **承認必須**: `--dry-run` 以外の場合、書き出し前に必ずユーザー承認を取る
 - **既存の Structure 尊重**: 追記で pr-review-patterns.md の章構造を壊さない（メタ情報 / A-H / 単発指摘 / 歴史的指摘 / 生成方法）
 - **重複排除**: 同一の指摘を複数回記録しない（PR 番号 + 該当ファイル:行で同一性判定）
-- **Scope 限定**: 本スキルは **pr-review-patterns.md と INDEX.md のみ** を更新する。他ファイルは一切触らない
-- **PR 単独コミット推奨**: 更新後は pr-review-patterns.md のみを含む独立コミットにする（機能変更とミックスしない）
+- **Scope 限定**: 本スキルは **`.claude/_docs/know-how/pr-review-patterns.md` と `.claude/_docs/know-how/INDEX.md` のみ** を更新する。他ファイルは一切触らない
+- **PR 単独コミット推奨**: 更新後は `.claude/_docs/know-how/pr-review-patterns.md` と `.claude/_docs/know-how/INDEX.md` のみを含む独立コミットにする（機能変更とミックスしない）

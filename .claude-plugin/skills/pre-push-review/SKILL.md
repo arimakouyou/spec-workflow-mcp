@@ -95,7 +95,7 @@ git diff --stat "{base}..{target}"
 
 | カテゴリ | レビュー手法 |
 |---------|-------------|
-| **A. 整合性 / 重複** | 新規 ID 規約（FC/DR/SD 等）を grep で全参照洗い出し、キー名・用語・コマンド揺れを検出。INDEX.md の件数計算検算 |
+| **A. 整合性 / 重複** | 新規 ID 規約（FC/DR/SD 等）を grep で全参照洗い出し、キー名・用語・コマンド揺れを検出。`.claude-plugin/rules/INDEX.md` の件数計算検算 |
 | **B. シェル堅牢性** | `.sh` / `.yml` / hook 系の `pipefail` / `command -v` / `|| true` / `$1`-`$9` 未検証 / BSD 移植性 |
 | **C. ドキュメント乖離** | README / TOOLS-REFERENCE / guides 内の旧名・旧パス・存在しないツール、ネストフェンス |
 | **D. プロセス / CI** | `.github/workflows/` の `permissions` / fork PR / listComments pagination / `{{TOOLCHAIN}}` プレースホルダ |
@@ -127,7 +127,7 @@ codex と本スキルの findings が競合した場合:
 
 ```markdown
 ## 観察ログ
-- **A（整合性）**: checked-ok — XxxPlan の FC ID は INDEX.md 合計 N ルールと一致、grep で key 名 unified 確認
+- **A（整合性）**: checked-ok — XxxPlan の FC ID は `.claude-plugin/rules/INDEX.md` 合計 N ルールと一致、grep で key 名 unified 確認
 - **B（shell）**: checked-ok: 該当なし — shell 変更なし
 - **C（ドキュメント）**: finding — `XXX.md:L` で旧名 `old_skill` が残存
 - ...
