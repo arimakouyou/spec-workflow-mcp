@@ -130,7 +130,7 @@ Every `DES-N` in `design.md` should be reachable:
 
   | Value form | Validation rule | Dangling handling |
   |------------|-----------------|-------------------|
-  | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion line in requirements.md (matched via `### REQ-N:` heading + Acceptance Criterion index, or `<!-- REQ-N.M -->` comment) | If not found → **error** (`task_requirement_dangling`) |
+  | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion in requirements.md. Match is satisfied if **either** of the following is present (OR, not AND): (a) a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or (b) the N-th Acceptance Criterion (numbered list item) under a `### REQ-N:` heading. Both (a) and (b) are valid match sources — legacy specs without comments pass via (b), new specs with comments pass via (a) | If neither (a) nor (b) is found → **error** (`task_requirement_dangling`) |
   | `N` / `REQ-N` | Must reference an existing `### REQ-N:` heading in requirements.md | If not found → **error** (`task_requirement_dangling`) |
   | `All` | Blanket marker — always valid | Emit **info** (`requirements_all`) noting the task covers every requirement |
   | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`) — always valid | Emit **info** (`requirements_nfr`) |

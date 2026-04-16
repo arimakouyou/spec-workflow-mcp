@@ -66,6 +66,18 @@ Severity と action の対応（`review-worker.md` 既存ルールの再掲）:
 - **Moderate** → send back to parallel-worker（最大 3 rework）
 - **Critical** → escalate to user
 
+### 外部 severity スケールとの対応（正本）
+
+`review-worker.md` findings / log-implementation 等の各所で使われる Minor / Moderate / Critical を、外部の一般的 severity 語彙と対応付ける。**本表が正本（SSoT）**で、他のドキュメント（例: `review-worker.md` の severity 対応表）は本表の再掲として扱う。
+
+| FC3（本書） | 一般的な外部スケール | CVSS 相当 |
+|-------------|---------------------|----------|
+| Minor | low | informational / low |
+| Moderate | medium | medium |
+| Critical | high / critical | high / critical |
+
+findings を emit する際は Minor / Moderate / Critical のラベルを使い、Severity Classification 表 / FC3 表 / findings 出力のすべてで語彙を揃える。外部ツール（`cargo audit` / `npm audit` / GitHub Advisory 等）の出力を取り込む場合は、本表を使って FC3 語彙に正規化する。
+
 ## FC4: Integration with DR2 (diagnostic-reasoning.md)
 
 `diagnostic-reasoning.md` DR2 の attempt エントリに `Failure category` 行を追加する。**書き込みタイミングは DR1 の "write before fix"** と同じ（Attempt エントリ本体と同時に、`Result` 行より前に書き切る）。

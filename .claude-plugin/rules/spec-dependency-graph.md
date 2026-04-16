@@ -77,7 +77,11 @@ frontmatter は**新規 spec では必須**、**既存 spec ではオプトイ�
 
 - `/spec-verify` はこれを検証する
 - 実在しない ID への参照は **`fail` で報告**（警告ではなく blocking）
-- 参照先ファイルが frontmatter を持たない legacy の場合は、本文中の ID 明記で検出する（requirements.md なら `### REQ-N:` 見出し + `<!-- REQ-N.M -->` コメント、design.md なら `### DES-N:` / `### MOD-N:` / `### API-N:` 見出し、test-design.md なら `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` 見出し）
+- 参照先ファイルが frontmatter を持たない legacy の場合、本文中の **ID マーカー**で検出する。ID の種類ごとに有効な検出源（いずれか一方でも valid、OR 判定）:
+  - **REQ-N**（requirements.md）: `### REQ-N:` 見出しが存在すること
+  - **REQ-N.M**（requirements.md）: (a) `<!-- REQ-N.M -->` コメント付きの Acceptance Criterion 行、または (b) `### REQ-N:` 見出し配下の N 番目の Acceptance Criterion 番号付きリスト項目 — (a)(b) のいずれか一方でも存在すれば valid
+  - **DES-N / MOD-N / API-N**（design.md）: 対応する `### DES-N:` / `### MOD-N:` / `### API-N:` 見出しが存在すること
+  - **UT-N.M / IT-N / E2E-N**（test-design.md）: 対応する `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` 見出しが存在すること
 
 ## SD5: No Cycles
 

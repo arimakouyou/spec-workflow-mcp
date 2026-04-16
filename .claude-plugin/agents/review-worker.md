@@ -262,7 +262,7 @@ findings:
 
 `failure_category` / `failure_subcategory` are **required** per `failure-taxonomy.md` FC2. The `severity` must be consistent with `failure_category` per FC3 — e.g., do not set `failure_category: quality_check_failure/format_violation` with `severity: Critical`.
 
-> **Severity vocabulary note**: this document uses **Minor / Moderate / Critical** throughout. Equivalent external scales (for cross-reference only):
+> **Severity vocabulary note**: this document uses **Minor / Moderate / Critical** throughout. The **authoritative mapping** between this vocabulary and external severity scales lives in `failure-taxonomy.md` FC3 (section "外部 severity スケールとの対応"). The table below is a local restatement for convenience — if the two diverge, FC3 wins.
 >
 > | This doc | Common external scale | CVSS-like |
 > |----------|----------------------|-----------|
@@ -270,7 +270,7 @@ findings:
 > | Moderate | medium | medium |
 > | Critical | high / critical | high / critical |
 >
-> Emit findings using the Minor / Moderate / Critical labels so the Severity Classification table, findings output, and `failure-taxonomy.md` FC3 stay aligned.
+> Emit findings using the Minor / Moderate / Critical labels so the Severity Classification table, findings output, and FC3 stay aligned. When ingesting external tool output (`cargo audit` / `npm audit` / GitHub Advisory), normalize to Minor / Moderate / Critical per FC3.
 
 ### Report Format for User Escalation
 
