@@ -30,7 +30,7 @@ import {
 import '@mdxeditor/editor/style.css';
 import { useTranslation } from 'react-i18next';
 import { useMDXEditorTheme } from './hooks/useMDXEditorTheme';
-import { MermaidRenderer, isMermaidCode, mermaidCodeBlockDescriptor } from './plugins';
+import { MermaidRenderer, isMermaidCode, mermaidCodeBlockDescriptor, renderMermaidSvg } from './plugins';
 import type { MDXEditorWrapperProps, EditorMode } from './types';
 import './MDXEditorWrapper.css';
 
@@ -179,8 +179,9 @@ export function MDXEditorWrapper({
   height = 'full',
 }: MDXEditorWrapperProps) {
   const { t } = useTranslation();
-  const { isDarkMode } = useMDXEditorTheme();
+  const { isDarkMode, mermaidTheme, mermaidThemeVariables } = useMDXEditorTheme();
   const editorRef = useRef<MDXEditorMethods>(null);
+  const viewContainerRef = useRef<HTMLDivElement>(null);
   const [localContent, setLocalContent] = useState(content);
   const [lastSavedContent, setLastSavedContent] = useState(content);
   const isInternalChangeRef = useRef(false);
@@ -229,8 +230,93 @@ export function MDXEditorWrapper({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mode, onSave]);
 
+  useEffect(() => {
+    if (mode !== 'view' || !enableMermaid || !viewContainerRef.current) {
+      return;
+    }
+
+    const root = viewContainerRef.current;
+    let cancelled = false;
+
+    const restoreBlocks = () => {
+      root.querySelectorAll<HTMLElement>('[data-mermaid-rendered="true"]').forEach((element) => {
+        element.remove();
+      });
+
+      root.querySelectorAll<HTMLPreElement>('pre[data-mermaid-source-hidden="true"]').forEach((pre) => {
+        pre.style.display = '';
+        delete pre.dataset.mermaidSourceHidden;
+      });
+    };
+
+    const showFallback = (pre: HTMLPreElement, renderedBlock: HTMLDivElement) => {
+      renderedBlock.remove();
+      pre.style.display = '';
+      delete pre.dataset.mermaidSourceHidden;
+    };
+
+    const renderBlocks = async () => {
+      restoreBlocks();
+
+      const codeBlocks = Array.from(
+        root.querySelectorAll<HTMLElement>('pre code.language-mermaid, pre code[data-language="mermaid"]')
+      );
+
+      await Promise.all(codeBlocks.map(async (codeBlock, index) => {
+        const pre = codeBlock.closest('pre');
+        const source = codeBlock.textContent?.trim();
+
+        if (!(pre instanceof HTMLPreElement) || !source) {
+          return;
+        }
+
+        const renderedBlock = document.createElement('div');
+        renderedBlock.dataset.mermaidRendered = 'true';
+        renderedBlock.className = 'mermaid-container my-4 overflow-auto bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700';
+        renderedBlock.innerHTML = '<div class="h-32 rounded bg-gray-100 dark:bg-gray-700 animate-pulse"></div>';
+
+        pre.style.display = 'none';
+        pre.dataset.mermaidSourceHidden = 'true';
+        pre.insertAdjacentElement('afterend', renderedBlock);
+
+        try {
+          const svg = await renderMermaidSvg(source, {
+            mermaidTheme,
+            mermaidThemeVariables,
+          });
+
+          if (cancelled) {
+            return;
+          }
+
+          renderedBlock.innerHTML = svg;
+          renderedBlock.dataset.mermaidSource = `block-${index}`;
+        } catch (error) {
+          console.debug('Mermaid preview enhancement error:', error);
+          if (!cancelled) {
+            showFallback(pre, renderedBlock);
+          }
+        }
+      }));
+    };
+
+    void renderBlocks();
+
+    return () => {
+      cancelled = true;
+      restoreBlocks();
+    };
+  }, [content, enableMermaid, mermaidTheme, mermaidThemeVariables, mode]);
+
   // Editor plugins configuration
   const plugins = useMemo(() => {
+    const codeBlockEditorDescriptors = enableMermaid
+      ? [
+          mermaidCodeBlockDescriptor,
+          plainTextCodeBlockDescriptor,
+        ]
+      : [plainTextCodeBlockDescriptor];
+
     const basePlugins = [
       headingsPlugin(),
       listsPlugin(),
@@ -239,10 +325,7 @@ export function MDXEditorWrapper({
       tablePlugin(),
       thematicBreakPlugin(),
       codeBlockPlugin({
-        codeBlockEditorDescriptors: [
-          mermaidCodeBlockDescriptor,      // Mermaid diagrams (priority 1)
-          plainTextCodeBlockDescriptor,    // Fallback for all other languages (priority -10)
-        ],
+        codeBlockEditorDescriptors,
         defaultCodeBlockLanguage: 'text',
       }),
       codeMirrorPlugin({
@@ -298,7 +381,7 @@ export function MDXEditorWrapper({
     }
 
     return basePlugins;
-  }, [mode]);
+  }, [enableMermaid, mode]);
 
   // Height style
   const heightStyle = useMemo(() => {
@@ -323,7 +406,11 @@ export function MDXEditorWrapper({
   // Render view mode (read-only)
   if (mode === 'view') {
     return (
-      <div className={`mdx-editor-wrapper view-mode ${isDarkMode ? 'dark-theme' : ''} ${className}`} style={heightStyle}>
+      <div
+        ref={viewContainerRef}
+        className={`mdx-editor-wrapper view-mode ${isDarkMode ? 'dark-theme' : ''} ${className}`}
+        style={heightStyle}
+      >
         <MDXEditor
           ref={editorRef}
           markdown={content}

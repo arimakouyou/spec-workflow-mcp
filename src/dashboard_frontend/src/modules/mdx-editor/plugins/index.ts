@@ -1,1 +1,1 @@
-export { MermaidRenderer, isMermaidCode, mermaidCodeBlockDescriptor } from './mermaidPlugin';
+export { MermaidRenderer, isMermaidCode, mermaidCodeBlockDescriptor, renderMermaidSvg } from './mermaidPlugin';

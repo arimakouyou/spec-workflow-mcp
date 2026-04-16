@@ -7,6 +7,91 @@ interface MermaidRendererProps {
   code: string;
 }
 
+interface MermaidRenderOptions {
+  mermaidTheme: 'dark' | 'default';
+  mermaidThemeVariables: Record<string, string>;
+}
+
+let mermaidRenderCounter = 0;
+let lastMermaidConfigKey: string | null = null;
+
+function initializeMermaidOnce({ mermaidTheme, mermaidThemeVariables }: MermaidRenderOptions): void {
+  const configKey = JSON.stringify({
+    mermaidTheme,
+    mermaidThemeVariables,
+  });
+
+  if (lastMermaidConfigKey === configKey) {
+    return;
+  }
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: mermaidTheme,
+    themeVariables: mermaidThemeVariables,
+    securityLevel: 'strict',
+  });
+
+  lastMermaidConfigKey = configKey;
+}
+
+function createMermaidRenderId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `mermaid-${crypto.randomUUID()}`;
+  }
+
+  mermaidRenderCounter += 1;
+  return `mermaid-${mermaidRenderCounter}`;
+}
+
+function sanitizeMermaidSvg(svg: string): string {
+  if (typeof DOMParser === 'undefined' || typeof XMLSerializer === 'undefined') {
+    return svg;
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svg, 'image/svg+xml');
+  const root = doc.documentElement;
+
+  if (!root || root.nodeName.toLowerCase() === 'parsererror') {
+    throw new Error('Failed to parse Mermaid SVG');
+  }
+
+  root.querySelectorAll('script, foreignObject, iframe, object, embed').forEach((node) => {
+    node.remove();
+  });
+
+  root.querySelectorAll('*').forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+
+      if (name.startsWith('on')) {
+        element.removeAttribute(attribute.name);
+        return;
+      }
+
+      if ((name === 'href' || name === 'xlink:href') &&
+          (value.startsWith('javascript:') || value.startsWith('data:'))) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  return new XMLSerializer().serializeToString(root);
+}
+
+export async function renderMermaidSvg(
+  code: string,
+  { mermaidTheme, mermaidThemeVariables }: MermaidRenderOptions
+): Promise<string> {
+  initializeMermaidOnce({ mermaidTheme, mermaidThemeVariables });
+
+  const uniqueId = createMermaidRenderId();
+  const { svg } = await mermaid.render(uniqueId, code);
+  return sanitizeMermaidSvg(svg);
+}
+
 export function MermaidRenderer({ code }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
@@ -18,15 +103,10 @@ export function MermaidRenderer({ code }: MermaidRendererProps) {
 
     const renderDiagram = async () => {
       try {
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: mermaidTheme,
-          themeVariables: mermaidThemeVariables,
-          securityLevel: 'loose',
+        const renderedSvg = await renderMermaidSvg(code, {
+          mermaidTheme,
+          mermaidThemeVariables,
         });
-
-        const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg: renderedSvg } = await mermaid.render(uniqueId, code);
         setSvg(renderedSvg);
         setError('');
       } catch (err) {
