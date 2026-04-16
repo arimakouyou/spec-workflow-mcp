@@ -33,7 +33,7 @@ always_apply: true
 
 | 記述場所 | 記述形式 |
 |---------|---------|
-| `diagnosis.md` の DR2 attempt エントリ | `- **Failure category**: ` `` `{category}` `` / `` `{subcategory}` `` の 1 行を追加（FC4 参照） |
+| `diagnosis.md` の DR2 attempt エントリ | 次の 1 行を追加（FC4 参照）: `- **Failure category**: {category} / {subcategory}` |
 | `parallel-worker` の `retry_exhausted` レポート | `- failure_category: {category}` / `- failure_subcategory: {subcategory}`（optional） |
 | `parallel-worker` / `wave-harness-worker` の completion report の `diagnosis` オブジェクト | `failure_category: {category}`（`root_cause` / `responsible_files` / `approach` と並置） |
 | `review-worker` の `findings` エントリ | `failure_category: {category}` / `failure_subcategory: {subcategory}`（既存の `category: A|B|C|D|E|E2|F|G` とは別。両方記載する） |

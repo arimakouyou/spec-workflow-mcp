@@ -54,7 +54,7 @@ Call `advisor()` at the following points:
 
 - **Before implementing a complex work item**: After reading the whiteboard, before starting file edits — getting the approach right on the first attempt is critical (no git, file editing only)
 - **When the implementation might affect other work items**: If the whiteboard reveals cross-cutting impacts
-- **On retry attempts**: If `retry_mode` is true, read `diagnosis.md` and write a DR1 diagnosis referencing `diagnostic_history`, then call advisor to validate the diagnosis before implementing. DO NOT repeat approaches from prior attempts (DR4). If the most recent 2 `Result: FAIL` entries (across `diagnosis.md` + `diagnostic_history`) share the same main `failure_category` per FC5, apply DR6 DIVERGENT — write a Divergent Analysis block before the DR2 attempt entry
+- **On retry attempts**: If `retry_mode` is true, read `diagnosis.md` and write a DR1 diagnosis referencing `diagnostic_history`, then call advisor to validate the diagnosis before implementing. DO NOT repeat approaches from prior attempts (DR4). For DR6 DIVERGENT, **scope the 2-consecutive-FAIL comparison to the same phase heading** (wave-harness always writes under `## Rework Cycle` in `diagnosis.md` — see Procedure 3.5, so combine only entries under that heading and the `diagnostic_history` prompt field, which by convention represents the same rework phase). If the most recent 2 `Result: FAIL` entries **within that single phase** share the same main `failure_category` per FC5, apply DR6 DIVERGENT — write a Divergent Analysis block before the DR2 attempt entry. Do not trigger DIVERGENT based on FAILs from different phases.
 
 ## Deterministic checks
 
@@ -92,11 +92,11 @@ rustfmt --check ${affected_files}
 2. When running verification commands, enable the build cache if sccache is available by using a per-command prefix or folding detection into the same Bash block (see `.claude-plugin/rules/rust-build-cache.md`).
 3. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
 3.5. **Diagnostic Reasoning (retry only)**: If `retry_mode` is true, apply DR1-DR6:
-   - Read `{worktree_path}/diagnosis.md` to review all prior attempts
-   - If `diagnostic_history` is provided in the prompt, cross-reference it
+   - Read `{worktree_path}/diagnosis.md` to review all prior attempts under the `## Rework Cycle` phase heading (wave-harness always writes under this heading)
+   - If `diagnostic_history` is provided in the prompt, cross-reference it — by convention it represents the same `## Rework Cycle` phase carried across attempts by the orchestrator
    - Verify your planned approach differs from all prior attempts (DR3, DR4)
-   - **DR6 DIVERGENT check**: If the most recent 2 `Result: FAIL` entries across `diagnosis.md` + `diagnostic_history` share the same main `failure_category` (per `failure-taxonomy.md` FC5), insert a `### Divergent Analysis (before Attempt {N}/{max})` block before the attempt entry and pick a fundamentally different premise
-   - Append a DR2 + FC4 formatted attempt entry to `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, approach, **failure_category**) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
+   - **DR6 DIVERGENT check (scoped to the `## Rework Cycle` phase only)**: Consider only the FAIL entries under the `## Rework Cycle` heading in `diagnosis.md` combined with `diagnostic_history`. If the most recent 2 `Result: FAIL` entries **within this single phase** share the same main `failure_category` (per `failure-taxonomy.md` FC5), insert a `### Divergent Analysis (before Attempt {N}/{max})` block before the attempt entry and pick a fundamentally different premise. Do not count FAILs from other phase headings toward the DIVERGENT trigger
+   - Append a DR2 + FC4 formatted attempt entry under the `## Rework Cycle` heading in `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, approach, **failure_category**) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
    - If on the final attempt, call `advisor()` with that diagnosis (DR5). If DIVERGENT was applied, include the Divergent Analysis block in the advisor context
 4. Implement (file editing only).
 5. Verify (run clippy/rustfmt scoped to `affected_files`; run cargo test per the Deterministic checks section above — use `test_targets` when provided, otherwise infer tests from `affected_files` or fall back to `cargo test --lib --quiet`).

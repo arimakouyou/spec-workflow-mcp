@@ -72,9 +72,16 @@ For each that exists:
   - `### DES-N:` / `### MOD-N:` / `### API-N:` → DES/MOD/API nodes
   - `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` → UT/IT/E2E nodes
   - `- [ ] N.M ...` list items → task-id nodes (leverage the task-parser.ts convention)
-- Edges from `depends_on[].refs`: for each ref, draw edge **from the upstream ID to the downstream ID** that references it (same upstream → downstream direction as file level)
-  - For id-level granularity, also use tasks.md `_Requirements:` to connect REQ IDs → individual tasks
-  - And use test-design.md's Requirements-Test Traceability Matrix to connect REQ → UT/IT/E2E
+- **Edges at id level cannot be derived from `depends_on[].refs` alone** — `depends_on[].refs` lives at the **file level** (it says "this whole file depends on upstream IDs X, Y, Z") and does not identify **which specific downstream ID** is referencing each upstream ID. To draw deterministic id-level edges, use the following **per-ID linkage sources** (same upstream → downstream direction as file level):
+
+  | Downstream file | Linkage source that identifies the specific downstream ID | Edge |
+  |-----------------|----------------------------------------------------------|------|
+  | `design.md` | Each `### DES-N:` / `### MOD-N:` / `### API-N:` section's `**Satisfies:**` field listing REQ IDs (see `design-template.md`) | `REQ-X` → `DES-N` / `MOD-N` / `API-N` per entry |
+  | `test-design.md` | The `## Requirements-Test Traceability Matrix` rows mapping `REQ-X` → UT / IT / E2E IDs | `REQ-X` → `UT-N.M` / `IT-N` / `E2E-N` per matrix cell |
+  | `tasks.md` | Each task's `_Requirements:` metadata (bare `N.M` / `REQ-N.M` / `N` / `REQ-N`, normalized per SD1) | `REQ-X` → `{task-id}` per entry. Skip `All` / `NFR` / `REQ-0` for id-level edges (they are file-wide markers, not individual REQ references) |
+  | `tasks.md` (secondary) | Each task's `_DependsOn:` metadata (task → task) | `{task-id-upstream}` → `{task-id-downstream}` within the same tasks.md |
+
+  If a downstream file has no per-ID linkage source (e.g., legacy design.md without `Satisfies:` fields), fall back to a **file-level synthetic node** for that file and connect the upstream IDs from `depends_on[].refs` to that synthetic node instead of guessing individual downstream IDs. Label the synthetic node as `{file-name} (no per-ID linkage)` so the user knows to add `Satisfies:` / Traceability Matrix entries.
 
 ### 3. Render Mermaid
 

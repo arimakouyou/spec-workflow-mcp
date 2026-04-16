@@ -79,7 +79,7 @@ For each downstream file's `depends_on[].refs`:
 
 - Each ref ID (REQ-N / REQ-N.M / DES-N / MOD-N / API-N / UT-N.M / IT-N / E2E-N) must exist in the referenced upstream file:
   - **REQ-N (bare, no `.M`)**: matches the `### REQ-N:` heading in requirements.md
-  - **REQ-N.M**: matches either a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or the N-th Acceptance Criterion (numbered list) under `### REQ-N:`
+  - **REQ-N.M**: matches either a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or the **M-th** Acceptance Criterion (numbered list) under `### REQ-N:` — the `.M` suffix maps to the Acceptance Criteria index, not to `N`
   - **DES-N / MOD-N / API-N**: matches a `### DES-N:` / `### MOD-N:` / `### API-N:` heading in design.md
   - **UT-N.M / IT-N / E2E-N**: matches a `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` heading in test-design.md
 - Missing upstream ID → **error** (`dangling_reference`)
@@ -130,7 +130,7 @@ Every `DES-N` in `design.md` should be reachable:
 
   | Value form | Validation rule | Dangling handling |
   |------------|-----------------|-------------------|
-  | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion in requirements.md. Match is satisfied if **either** of the following is present (OR, not AND): (a) a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or (b) the N-th Acceptance Criterion (numbered list item) under a `### REQ-N:` heading. Both (a) and (b) are valid match sources — legacy specs without comments pass via (b), new specs with comments pass via (a) | If neither (a) nor (b) is found → **error** (`task_requirement_dangling`) |
+  | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion in requirements.md. Match is satisfied if **either** of the following is present (OR, not AND): (a) a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or (b) the **M-th** Acceptance Criterion (numbered list item) under a `### REQ-N:` heading — the `.M` suffix maps to the Acceptance Criteria index, not to `N`. Both (a) and (b) are valid match sources — legacy specs without comments pass via (b), new specs with comments pass via (a) | If neither (a) nor (b) is found → **error** (`task_requirement_dangling`) |
   | `N` / `REQ-N` | Must reference an existing `### REQ-N:` heading in requirements.md | If not found → **error** (`task_requirement_dangling`) |
   | `All` | Blanket marker — always valid | Emit **info** (`requirements_all`) noting the task covers every requirement |
   | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`) — always valid | Emit **info** (`requirements_nfr`) |
