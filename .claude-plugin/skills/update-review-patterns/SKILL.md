@@ -44,11 +44,16 @@ argument-hint: "[--pr <pr-number>] [--since <date>] [--auto] [--dry-run]"
    ```bash
    gh auth status
    ```
-2. **pr-review-patterns.md の存在**
+2. **pr-review-patterns.md の有無を確認し、処理モードを分岐**
    ```bash
-   test -f .claude/_docs/know-how/pr-review-patterns.md
+   if [ -f .claude/_docs/know-how/pr-review-patterns.md ]; then
+     MODE=update
+   else
+     MODE=initial
+   fi
    ```
-   存在しない場合: 新規作成するかユーザーに確認（テンプレートは本スキル末尾の「新規生成」節を参照）
+   - `MODE=update`: 既存ファイルを追記・更新する通常フロー（以降の手順 1〜8）
+   - `MODE=initial`: ユーザーに初回生成の可否を確認し、承認された場合のみ「pr-review-patterns.md 新規生成モード」節の手順に入る。拒否された場合は **STOP**
 3. **リポジトリ情報**
    ```bash
    gh repo view --json owner,name
@@ -72,9 +77,9 @@ gh pr list --state merged --search "merged:>={date}" --limit 100 --json number,m
 
 各 PR について:
 ```bash
-gh api repos/{owner}/{repo}/pulls/{N}/comments
-gh api repos/{owner}/{repo}/pulls/{N}/reviews
-gh api repos/{owner}/{repo}/issues/{N}/comments
+gh api --paginate repos/{owner}/{repo}/pulls/{N}/comments
+gh api --paginate repos/{owner}/{repo}/pulls/{N}/reviews
+gh api --paginate repos/{owner}/{repo}/issues/{N}/comments
 ```
 
 除外:

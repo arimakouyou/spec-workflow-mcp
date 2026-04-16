@@ -13,7 +13,7 @@ argument-hint: "[--base <ref>] [--target <ref>] [--focus <category>] [--save] [-
 
 ## 呼び出し形式
 
-`/pre-push-review [--base <ref>] [--target <ref>] [--focus <category>]`
+`/pre-push-review [--base <ref>] [--target <ref>] [--focus <category>] [--save] [--auto-fix]`
 
 ## 入力
 
@@ -48,7 +48,7 @@ argument-hint: "[--base <ref>] [--target <ref>] [--focus <category>] [--save] [-
    command -v git >/dev/null 2>&1 || { echo "git が見つかりません"; exit 127; }
    # gh は codex プラグイン検出や `/codex:review` 連携時にのみ必要。未導入でも本スキルは動く
    ```
-1. **現在位置が git リポジトリのルート**
+1. **現在位置が git リポジトリ内**
    ```bash
    git rev-parse --show-toplevel >/dev/null 2>&1 || { echo "git リポジトリ内で実行してください"; exit 1; }
    ```
