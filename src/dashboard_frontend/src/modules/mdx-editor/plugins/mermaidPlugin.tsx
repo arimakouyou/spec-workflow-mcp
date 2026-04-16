@@ -7,6 +7,27 @@ interface MermaidRendererProps {
   code: string;
 }
 
+interface MermaidRenderOptions {
+  mermaidTheme: 'dark' | 'default';
+  mermaidThemeVariables: Record<string, string>;
+}
+
+export async function renderMermaidSvg(
+  code: string,
+  { mermaidTheme, mermaidThemeVariables }: MermaidRenderOptions
+): Promise<string> {
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: mermaidTheme,
+    themeVariables: mermaidThemeVariables,
+    securityLevel: 'loose',
+  });
+
+  const uniqueId = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
+  const { svg } = await mermaid.render(uniqueId, code);
+  return svg;
+}
+
 export function MermaidRenderer({ code }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
@@ -18,15 +39,10 @@ export function MermaidRenderer({ code }: MermaidRendererProps) {
 
     const renderDiagram = async () => {
       try {
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: mermaidTheme,
-          themeVariables: mermaidThemeVariables,
-          securityLevel: 'loose',
+        const renderedSvg = await renderMermaidSvg(code, {
+          mermaidTheme,
+          mermaidThemeVariables,
         });
-
-        const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg: renderedSvg } = await mermaid.render(uniqueId, code);
         setSvg(renderedSvg);
         setError('');
       } catch (err) {

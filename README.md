@@ -29,6 +29,7 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 
 - **Structured Development Workflow** - Sequential spec creation (Request Spec → Requirements → Design → Test Design → Tasks)
 - **Real-Time Web Dashboard** - Monitor specs, tasks, and progress with live updates
+- **Rich Markdown Preview** - Render Mermaid diagrams as SVG in dashboard document and review previews
 - **VSCode Extension** - Integrated sidebar dashboard for VSCode users
 - **Approval Workflow** - Complete approval process with revisions
 - **Task Progress Tracking** - Visual progress bars and detailed status
