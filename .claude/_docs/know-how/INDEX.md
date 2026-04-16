@@ -12,6 +12,7 @@
 
 | ファイル | 要約 |
 |----------|------|
+| [pr-review-patterns.md](pr-review-patterns.md) | 過去 43 PR・約 450 件のレビュー指摘を分析した PUSH 前チェックリスト。頻出カテゴリ（整合性 35% / shell 堅牢性 13% / docs 乖離 10% 等）と代表例、高影響の単発指摘を集約 |
 
 ## conventions
 
