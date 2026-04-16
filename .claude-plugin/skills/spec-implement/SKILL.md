@@ -493,7 +493,7 @@ Agent({
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
     Test design doc path: {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
 
-    **Important**: Always start by running `cd {WORKTREE_PATH}` before beginning implementation. Changes directly in the main repository are prohibited.
+    **Important**: Always start by running \`cd {WORKTREE_PATH}\` before beginning implementation. Changes directly in the main repository are prohibited.
 
     Base branch: {BASE_BRANCH}
 
@@ -509,6 +509,8 @@ Agent({
        - .NET: dotnet format, dotnet build -warnaserror, dotnet test, dotnet list package --vulnerable
     8. Run mutation testing on the diff (Rust: cargo-mutants, .NET: Stryker.NET — if installed)
 
+    Apply diagnostic-reasoning.md DR1-DR5 throughout retries. Create and maintain \`{WORKTREE_PATH}/diagnosis.md\` per DR2.
+
     Include the following in the completion report:
     For Rust projects:
     - tests: pass|fail
@@ -523,12 +525,16 @@ Agent({
     - stryker: pass|warn|skip
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
-    - changed_files: list of all changed files
+    - changed_files: list of all changed files (MUST NOT include diagnosis.md or state.md)
+    - diagnosis: include when any retry occurred — summary of the final successful approach per DR2 with fields:
+      - root_cause: string
+      - responsible_files: list of file paths or code locations (e.g., ["src/foo.rs:42"]) — unified across workers
+      - approach: string
 `
 })
 ```
 
-Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**.
+Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**, **stryker** (.NET mutation testing result), and **diagnosis** (if present — retain for diagnostic_history accumulation in rework cycles).
 
 Branch based on parallel-worker's `status`:
 
@@ -666,7 +672,7 @@ Agent({
     Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5 + changed_files from step 5.5}
     Task prompt: {paste the full _Prompt content here}
 
-    **Important**: Always run `cd {WORKTREE_PATH}` before reviewing and committing.
+    **Important**: Always run \`cd {WORKTREE_PATH}\` before reviewing and committing.
 
     Previous step results (reference only — do not let these bias your review):
     UT quality verification results (step 5):
@@ -697,7 +703,7 @@ Agent({
     **D: Spec** — _Prompt の Success 基準を1つずつ確認し、各基準の充足/不足を明示すること
     **E: Tests** — テストは実装と同期しているか? 値の検証（is_ok() だけでなく具体値の確認）があるか?
     **F: Design Conformance** — design.md に未定義のフィールド/エンドポイントが追加されていないか?
-    **G: API Documentation** — API変更（エンドポイント追加・変更・型変更）がある場合、`docs/openapi.yaml` の更新を確認。openapi.yaml が存在しない場合はスキップ
+    **G: API Documentation** — API変更（エンドポイント追加・変更・型変更）がある場合、\`docs/openapi.yaml\` の更新を確認。openapi.yaml が存在しない場合はスキップ
 
     ⚠️ 各カテゴリの observations を完了レポートに必ず含めること。
     「問題なし」の場合でも、何を確認して問題なしと判断したかを記載する。
@@ -729,19 +735,63 @@ Agent({
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
 
-    **Important**: Always run `cd {WORKTREE_PATH}` before making fixes.
+    **Important**: Always run \`cd {WORKTREE_PATH}\` before making fixes.
 
     rework_attempt: {N} / 3 (maximum 3 times)
 
-    Findings:
+    Current findings:
     {findings from review-worker}
 
+    Diagnostic history (prior rework attempts — DO NOT repeat failed approaches):
+    {diagnostic_history — use "(First rework — no prior attempts)" on first rework, accumulated on subsequent reworks}
+
+    Apply diagnostic-reasoning.md DR1-DR5:
+    - Before writing any fix, read diagnosis.md and append a DR2-formatted attempt entry (\`### Attempt {N}/3\`) under the \`## Rework Cycle\` heading — do not create a separate \`## Diagnosis\` section
+    - Your diagnosis MUST identify a different root cause or approach from the diagnostic history above
+    - On the final attempt (3/3), call advisor() with your diagnosis before implementing
+
     Note: This is rework attempt {N}. The maximum is 3; if unresolved after 3 attempts, the issue will be escalated to the user.
-    Fix all findings at once. On the final attempt (3/3), avoid large-scale changes and choose the minimum fix that will pass review.
+    Fix all findings at once. On the final attempt (3/3), choose the minimum fix that will pass review.
 
     After fixing, run quality checks (rustfmt + clippy + cargo test) to confirm all pass.
-    Include changed_files in the completion report.`
+    Include changed_files and your diagnosis summary in the completion report.`
 })
+```
+
+**Diagnostic history accumulation (orchestrator responsibility)**:
+
+The orchestrator maintains a text block called `diagnostic_history` for each task's rework cycle. Follow these steps:
+
+1. **Before the first rework**: Initialize `diagnostic_history` with the marker string `"(First rework — no prior attempts)"` (this marker makes the prompt clearer than an empty field, which an LLM may misread as "forgot to fill in")
+2. **After each rework attempt**: Extract from parallel-worker's completion report:
+   - The diagnosis summary fields: `root_cause`, `responsible_files` (list), `approach` — these names are unified across parallel-worker and wave-harness-worker outputs
+   - The quality check results (pass/fail)
+3. **Append to diagnostic_history in DR2 format** (fields come from the worker's completion report; if a field is absent, note it as `(not reported)`):
+   ```
+   ### Attempt {N}
+   - **Root cause**: {diagnosis.root_cause from worker's report}
+   - **Responsible**: {diagnosis.responsible_files joined, or "(not reported)"}
+   - **Expected behavior**: {if available in the diagnosis or review findings, otherwise "(not reported)"}
+   - **Approach**: {diagnosis.approach — what the worker changed}
+   - **Result**: {review-worker's verdict — commit/rework/escalate + specific findings}
+   ```
+4. **Pass the accumulated diagnostic_history** in the next rework prompt (see template above)
+
+Example after 2 failed rework attempts:
+```
+### Attempt 1
+- **Root cause**: UserRepo.create() returns raw diesel::Error, not AppError
+- **Responsible**: src/repos/user.rs:42
+- **Expected behavior**: All repository methods return Result<T, AppError> per design.md §3.2
+- **Approach**: Added From<diesel::Error> impl for AppError
+- **Result**: rework — B:design: return type still uses String not AppError in update() and delete()
+
+### Attempt 2
+- **Root cause**: 3 repository methods (create, update, delete) all return String errors; attempt 1 only fixed create
+- **Responsible**: src/repos/user.rs:42, src/repos/user.rs:58, src/repos/user.rs:73
+- **Expected behavior**: All 3 methods return Result<T, AppError> consistently
+- **Approach**: Converted all 3 methods to return AppError, added error mapping in handler layer
+- **Result**: {pending — will be filled after review}
 ```
 
 The orchestrator manages the rework_attempt counter. After the fix, re-run step 5 (UT quality verification) → step 6 (review). **The rework → re-review cycle has a maximum of 3 times**. If unresolved after 3 times, report to the user with the remaining findings.

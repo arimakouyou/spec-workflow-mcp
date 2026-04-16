@@ -28,7 +28,17 @@ permissionMode: bypassPermissions
 - `title`, `description`, `plan`
 - `affected_files`
 - `test_targets` (optional)
-- `previous_error` (optional)
+- `previous_error` (optional — legacy; prefer `diagnostic_history`)
+- `diagnostic_history` (optional) — a single markdown text block (string, NOT a JSON array) containing accumulated prior attempt entries in DR2 format, produced by the orchestrator by concatenating previous attempts' diagnoses. Example value:
+
+  ```markdown
+  ### Attempt 1
+  - **Root cause**: missing null check in parse_input()
+  - **Responsible**: src/parser.rs:42
+  - **Expected behavior**: parse_input() should handle missing values without panicking and allow tests to complete normally
+  - **Approach**: Added Option<T> wrapper with `.unwrap_or_default()`
+  - **Result**: FAIL — `cargo test`: thread panicked at 'index out of bounds'
+  ```
 
 ## Rules
 
@@ -43,7 +53,7 @@ Call `advisor()` at the following points:
 
 - **Before implementing a complex work item**: After reading the whiteboard, before starting file edits — getting the approach right on the first attempt is critical (no git, file editing only)
 - **When the implementation might affect other work items**: If the whiteboard reveals cross-cutting impacts
-- **On retry attempts**: If `retry_mode` is true, call advisor to analyze `previous_error` before repeating the same pattern
+- **On retry attempts**: If `retry_mode` is true, read `diagnosis.md` and write a DR1 diagnosis referencing `diagnostic_history`, then call advisor to validate the diagnosis before implementing. DO NOT repeat approaches from prior attempts (DR4)
 
 ## Deterministic checks
 
@@ -77,12 +87,19 @@ rustfmt --check ${affected_files}
 ## Procedure
 
 1. `cd {worktree_path}` (do not create the worktree).
+   - If `attempt == 1`: Create `{worktree_path}/diagnosis.md` with the header `# Diagnostic Session: {work_item_id}`.
 2. When running verification commands, enable the build cache if sccache is available by using a per-command prefix or folding detection into the same Bash block (see `.claude-plugin/rules/rust-build-cache.md`).
 3. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
+3.5. **Diagnostic Reasoning (retry only)**: If `retry_mode` is true, apply DR1-DR5:
+   - Read `{worktree_path}/diagnosis.md` to review all prior attempts
+   - If `diagnostic_history` is provided in the prompt, cross-reference it
+   - Verify your planned approach differs from all prior attempts (DR3, DR4)
+   - Append a DR2-formatted attempt entry to `{worktree_path}/diagnosis.md` capturing the DR1 diagnosis details (root cause, responsible location, expected behavior, and approach) — this single entry IS the DR1 diagnosis; do not additionally write a separate `## Diagnosis` section
+   - If on the final attempt, call `advisor()` with that diagnosis (DR5)
 4. Implement (file editing only).
-5. Verify (run clippy/rustfmt scoped to affected_files; run cargo test only if test_targets is provided).
+5. Verify (run clippy/rustfmt scoped to `affected_files`; run cargo test per the Deterministic checks section above — use `test_targets` when provided, otherwise infer tests from `affected_files` or fall back to `cargo test --lib --quiet`).
 6. Edit the `### {work_item_id}: ...` section of the whiteboard with implementation insights, decisions, and impacts. Edit only your own section.
-7. Return the `changed_files` list (do not commit). Do not include `whiteboard_path` in `changed_files`.
+7. Return the `changed_files` list (do not commit). Do not include `whiteboard_path`, `diagnosis.md`, or `state.md` in `changed_files` — those are local working files, not implementation artifacts.
 8. If there are no changes, return `no_op`.
 9. Return JSON.
 
@@ -93,7 +110,7 @@ rustfmt --check ${affected_files}
   "schema_version": "taskflow-worker.v3",
   "worker": "wave-harness-worker",
   "session_id": "wh-20260226T190000",
-  "attempt": 1,
+  "attempt": 2,
   "work_item_id": "issue-123",
   "status": "completed",
   "changed_files": ["src/handlers/users.rs"],
@@ -102,12 +119,19 @@ rustfmt --check ${affected_files}
     "rustfmt": "pass",
     "cargo_test": "pass"
   },
+  "diagnosis": {
+    "root_cause": "handler returns raw String error instead of AppError",
+    "responsible_files": ["src/handlers/users.rs:42"],
+    "approach": "Implement From<String> for AppError and use ? operator"
+  },
   "no_op_reason": null,
   "started_at": "2026-02-26T19:00:00Z",
   "ended_at": "2026-02-26T19:10:00Z",
   "error": null
 }
 ```
+
+`diagnosis` is optional — include it when `retry_mode` was true (i.e., `attempt >= 2`, matching the schema examples above for `completed` and `failed`). Omit on the initial attempt (`attempt == 1`) unless explicitly useful for the orchestrator's next attempt. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
 
 ## no_op schema
 
@@ -139,7 +163,7 @@ rustfmt --check ${affected_files}
   "schema_version": "taskflow-worker.v3",
   "worker": "wave-harness-worker",
   "session_id": "wh-20260226T190000",
-  "attempt": 1,
+  "attempt": 2,
   "work_item_id": "issue-123",
   "status": "failed",
   "changed_files": [],
@@ -147,6 +171,11 @@ rustfmt --check ${affected_files}
     "clippy": "not_run",
     "rustfmt": "not_run",
     "cargo_test": "not_run"
+  },
+  "diagnosis": {
+    "root_cause": "missing null check in parse_input()",
+    "responsible_files": ["src/parser.rs:42"],
+    "approach": "Added Option<T> wrapper with .unwrap_or_default()"
   },
   "no_op_reason": null,
   "started_at": "2026-02-26T19:00:00Z",
