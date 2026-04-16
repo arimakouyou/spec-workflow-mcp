@@ -58,10 +58,12 @@ For each that exists:
 
 ### 2. Build Graph Data
 
+**Edge direction (applies to both levels)**: **upstream → downstream** — the arrow points in the direction that changes propagate. For example, `requirements.md --> design.md` means "a change in requirements.md may require updating design.md". This matches the visual rendering in Step 3; do not invert edges at graph-building time.
+
 #### file level
 
 - Nodes: one per existing file (`requirements`, `design`, `test-design`, `tasks`)
-- Edges: for each entry in `depends_on`, draw edge from **downstream file** to **upstream file** (or upstream → downstream — see step 3 for direction)
+- Edges: for each entry in downstream's `depends_on[].file`, draw edge **from the upstream file to the downstream file** (arrow points upstream → downstream)
 
 #### id level
 
@@ -70,13 +72,13 @@ For each that exists:
   - `### DES-N:` / `### MOD-N:` / `### API-N:` → DES/MOD/API nodes
   - `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` → UT/IT/E2E nodes
   - `- [ ] N.M ...` list items → task-id nodes (leverage the task-parser.ts convention)
-- Edges from `depends_on[].refs`: for each ref, draw edge from the downstream file's IDs that reference it → upstream ID
-  - For id-level granularity, also use tasks.md `_Requirements:` to connect individual tasks to REQ IDs
+- Edges from `depends_on[].refs`: for each ref, draw edge **from the upstream ID to the downstream ID** that references it (same upstream → downstream direction as file level)
+  - For id-level granularity, also use tasks.md `_Requirements:` to connect REQ IDs → individual tasks
   - And use test-design.md's Requirements-Test Traceability Matrix to connect REQ → UT/IT/E2E
 
 ### 3. Render Mermaid
 
-Use **top-down (`graph TD`)** layout with upstream → downstream direction. Edge direction: **upstream → downstream** (arrow points in the direction changes propagate).
+Use **top-down (`graph TD`)** layout with upstream → downstream direction. Edge direction in the mermaid source is `upstream --> downstream` (arrow points in the direction changes propagate, consistent with Step 2).
 
 #### file level example
 

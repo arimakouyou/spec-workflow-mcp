@@ -126,9 +126,9 @@ rustfmt --check ${affected_files}
     "responsible_files": ["src/handlers/users.rs:42"],
     "approach": "Implement From<String> for AppError and use ? operator",
     "failure_category": "spec_mismatch",
-    "failure_subcategory": "design_conformance_violation",
-    "divergent_applied": false
+    "failure_subcategory": "design_conformance_violation"
   },
+  "divergent_applied": false,
   "no_op_reason": null,
   "started_at": "2026-02-26T19:00:00Z",
   "ended_at": "2026-02-26T19:10:00Z",
@@ -138,7 +138,7 @@ rustfmt --check ${affected_files}
 
 `diagnosis` is optional — include it when `retry_mode` was true (i.e., `attempt >= 2`, matching the schema examples above for `completed` and `failed`). Omit on the initial attempt (`attempt == 1`) unless explicitly useful for the orchestrator's next attempt. The orchestrator uses this field to build `diagnostic_history` for subsequent attempts.
 
-The `failure_category` / `failure_subcategory` fields follow `failure-taxonomy.md` FC1-FC2. `divergent_applied` is `true` if DR6 DIVERGENT was entered at any attempt for this work item. These three fields are **optional within the `diagnosis` object** — a v3-compatible consumer ignores unknown fields, so no schema version bump is needed.
+The `failure_category` / `failure_subcategory` fields live **inside `diagnosis`** and follow `failure-taxonomy.md` FC1-FC2. `divergent_applied` lives at the **top level** of the response (same location as `parallel-worker`'s retry_exhausted / completion report), so the orchestrator can pick it up uniformly across workers. These fields are optional extensions to the v3 schema — a v3-compatible consumer ignores unknown fields, so no schema version bump is needed.
 
 ## no_op schema
 
@@ -184,9 +184,9 @@ The `failure_category` / `failure_subcategory` fields follow `failure-taxonomy.m
     "responsible_files": ["src/parser.rs:42"],
     "approach": "Added Option<T> wrapper with .unwrap_or_default()",
     "failure_category": "test_failure",
-    "failure_subcategory": "panic",
-    "divergent_applied": false
+    "failure_subcategory": "panic"
   },
+  "divergent_applied": false,
   "no_op_reason": null,
   "started_at": "2026-02-26T19:00:00Z",
   "ended_at": "2026-02-26T19:01:00Z",

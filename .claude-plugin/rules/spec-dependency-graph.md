@@ -23,7 +23,12 @@ always_apply: true
 | `test-design.md`（E2E Test） | `E2E-N` | `E2E-1` | 既存規則のまま |
 | `tasks.md`（Task） | `N.M` | `1.1`, `2.3` | 既存規則のまま（task-parser.ts がパース） |
 
-- `REQ-` / `DES-` / `MOD-` / `API-` のプレフィックスは `requirements.md` / `design.md` 内で ID を見出しに付与することで明示する（例: `### REQ-1.1: User Login Validation`）
+- ID の明示方法は **phase ごとに異なる**:
+  - **requirements.md**: Requirement 見出しは `### REQ-N: タイトル` 形式（例: `### REQ-1: User Login`）。Acceptance Criteria は番号付きリストで列挙し、各行末に `<!-- REQ-N.M -->` コメントを付与して REQ-N.M 識別子を明示する（`requirements-template.md` 参照）
+  - **design.md**: コンポーネント見出しは `### DES-N: ComponentName`、Data Model は `### MOD-N: Name`、API は `### API-N: Name`（例: `### DES-1: UserRepository`）
+  - **test-design.md**: `#### UT-N.M: Name` / `### IT-N: Name` / `### E2E-N: Name`（従来規則のまま）
+  - **tasks.md**: `- [ ] N.M タイトル` のリスト項目（従来規則のまま、`task-parser.ts` がパース）
+- 下流仕様書の `depends_on.refs` は、**REQ-N（bare、Requirement 全体を指す）** と **REQ-N.M（個別 Acceptance Criterion を指す）** のどちらも参照できる。`refs: [REQ-1]` なら REQ-1 配下の全 AC、`refs: [REQ-1.1, REQ-1.2]` なら個別 AC のみ
 - 既存 spec に ID を後付けする場合は Minor 変更扱いとし、参照する下流がなければ付与しなくてもよい（SD3 参照）
 - UT-N.M の M は N の下位番号（Component N のテストケース M）であり、REQ-N.M の M（Acceptance Criteria M）とは**独立**
 
@@ -72,7 +77,7 @@ frontmatter は**新規 spec では必須**、**既存 spec ではオプトイ�
 
 - `/spec-verify` はこれを検証する
 - 実在しない ID への参照は **`fail` で報告**（警告ではなく blocking）
-- 参照先ファイルが frontmatter を持たない legacy の場合は、本文中の ID 明記（例: `### REQ-1.1:`）で検出する
+- 参照先ファイルが frontmatter を持たない legacy の場合は、本文中の ID 明記で検出する（requirements.md なら `### REQ-N:` 見出し + `<!-- REQ-N.M -->` コメント、design.md なら `### DES-N:` / `### MOD-N:` / `### API-N:` 見出し、test-design.md なら `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` 見出し）
 
 ## SD5: No Cycles
 

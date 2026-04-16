@@ -244,13 +244,13 @@ observations:
 
 ### Report Format for Sending Back
 
-When sending back to parallel-worker, return a findings report containing the following:
+When sending back to parallel-worker, return a findings report containing the following. The `severity` value uses the **Minor / Moderate / Critical** vocabulary defined in the Severity Classification table above (not the low / medium / high / critical scale used elsewhere — see the note below):
 
 ```
 review_action: rework
 findings:
   - category: B|C|E|E2
-    severity: medium
+    severity: Moderate
     failure_category: <FC1 main category — e.g., test_failure, quality_check_failure, spec_mismatch>
     failure_subcategory: <FC1 subcategory — e.g., assertion_failure, lint_violation, test_design_missing>
     file: <target file>
@@ -260,7 +260,17 @@ findings:
     rule_ref: <relevant rule file (e.g., security.md#A3, failure-taxonomy.md#FC3)>
 ```
 
-`failure_category` / `failure_subcategory` are **required** per `failure-taxonomy.md` FC2. They must be consistent with `severity` per FC3 — do not set, e.g., `failure_category: quality_check_failure/format_violation` with `severity: critical`.
+`failure_category` / `failure_subcategory` are **required** per `failure-taxonomy.md` FC2. The `severity` must be consistent with `failure_category` per FC3 — e.g., do not set `failure_category: quality_check_failure/format_violation` with `severity: Critical`.
+
+> **Severity vocabulary note**: this document uses **Minor / Moderate / Critical** throughout. Equivalent external scales (for cross-reference only):
+>
+> | This doc | Common external scale | CVSS-like |
+> |----------|----------------------|-----------|
+> | Minor | low | informational / low |
+> | Moderate | medium | medium |
+> | Critical | high / critical | high / critical |
+>
+> Emit findings using the Minor / Moderate / Critical labels so the Severity Classification table, findings output, and `failure-taxonomy.md` FC3 stay aligned.
 
 ### Report Format for User Escalation
 
@@ -268,7 +278,7 @@ findings:
 review_action: escalate
 findings:
   - category: D|F|C
-    severity: high
+    severity: Critical
     failure_category: <FC1 main category — typically spec_mismatch or quality_check_failure>
     failure_subcategory: <FC1 subcategory — e.g., design_conformance_violation, requirement_missing, dependency_vulnerability>
     issue: <description of the spec non-conformance>

@@ -94,12 +94,23 @@ Build a graph: each file is a node, each `depends_on[].file` is a directed edge.
 
 #### Check 4: Requirements Coverage (I's core guarantee)
 
-Every `REQ-N.M` in `requirements.md` must be covered:
+Every `REQ-N.M` in `requirements.md` must be covered by at least one task in `tasks.md` and at least one test spec in `test-design.md`.
 
-- At least one task in `tasks.md` has `_Requirements:` that includes `N.M` (or `N` covering all its Acceptance Criteria) → otherwise **error** (`requirement_not_implemented`)
-- At least one UT-N.M / IT-N / E2E-N in `test-design.md` covers `REQ-N.M` via the Requirements-Test Traceability Matrix → otherwise **error** (`requirement_not_tested`)
+**Task coverage rule**: A task covers `REQ-N.M` if its `_Requirements:` field includes ANY of the following values (per SD6 and the identifier equivalence below):
 
-> **Identifier equivalence note** (per `spec-dependency-graph.md` SD1): the bare numeric values in tasks.md `_Requirements:` (e.g., `1.1`, `2.1`) are equivalent to the prefixed form (`REQ-1.1`, `REQ-2.1`). When matching `_Requirements: 1.1` against requirements.md, treat it as `REQ-1.1`.
+| `_Requirements:` value | Coverage interpretation |
+|------------------------|-------------------------|
+| `N.M` / `REQ-N.M` | Covers exactly `REQ-N.M` (specific Acceptance Criterion) |
+| `N` / `REQ-N` | **Bare Requirement form** — covers every `REQ-N.*` under requirement N |
+| `All` | Blanket coverage — matches every `REQ-N.M` in requirements.md. Typically used by final integration / PhaseReview tasks (see `tasks-template.md:107`) |
+| `REQ-0` | Setup pseudo-requirement (Phase 0 Git init / container / CI / ADR). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
+| `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
+
+If no task covers a given `REQ-N.M` after applying the rules above → **error** (`requirement_not_implemented`).
+
+**Test coverage rule**: At least one UT-N.M / IT-N / E2E-N in `test-design.md` covers `REQ-N.M` via the Requirements-Test Traceability Matrix → otherwise **error** (`requirement_not_tested`)
+
+> **Identifier equivalence note** (per `spec-dependency-graph.md` SD1): the bare numeric values in tasks.md `_Requirements:` (e.g., `1.1`, `2.1`, `1`) are equivalent to the prefixed form (`REQ-1.1`, `REQ-2.1`, `REQ-1`). Normalize both sides to the `REQ-N` / `REQ-N.M` form before matching.
 
 #### Check 5: Component Coverage
 
@@ -115,9 +126,19 @@ Every `DES-N` in `design.md` should be reachable:
 
 #### Check 7: Task-level Metadata Sanity (SD6)
 
-- `_Requirements:` values in tasks.md must reference existing REQ-N.M → otherwise **error** (`task_requirement_dangling`)
-- `_DependsOn:` values must reference existing task IDs within the same tasks.md → otherwise **error** (`task_dependency_dangling`)
-- `_Leverage:` file paths should exist (best-effort filesystem check) → otherwise **info** (`leverage_file_missing`; may be intentional for future files)
+- **`_Requirements:` values** must be one of the accepted forms (per SD6 + existing templates / skills):
+
+  | Value form | Validation rule | Dangling handling |
+  |------------|-----------------|-------------------|
+  | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion line in requirements.md (matched via `### REQ-N:` heading + Acceptance Criterion index, or `<!-- REQ-N.M -->` comment) | If not found → **error** (`task_requirement_dangling`) |
+  | `N` / `REQ-N` | Must reference an existing `### REQ-N:` heading in requirements.md | If not found → **error** (`task_requirement_dangling`) |
+  | `All` | Blanket marker — always valid | Emit **info** (`requirements_all`) noting the task covers every requirement |
+  | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`) — always valid | Emit **info** (`requirements_nfr`) |
+  | `REQ-0` | Reserved setup pseudo-requirement for Phase 0 scaffolding (Git init / containers / CI / ADR — see `spec-tasks/SKILL.md` Phase 0 examples) — always valid even if `REQ-0` is not declared in requirements.md | Emit **info** (`requirements_setup`) |
+  | other | Unknown form | **error** (`task_requirement_unknown_form`) with the specific value |
+
+- **`_DependsOn:` values** must reference existing task IDs within the same tasks.md → otherwise **error** (`task_dependency_dangling`)
+- **`_Leverage:` file paths** should exist (best-effort filesystem check) → otherwise **info** (`leverage_file_missing`; may be intentional for future files)
 
 ### 4. Generate Report
 
