@@ -54,12 +54,12 @@ argument-hint: "[--base <ref>] [--target <ref>] [--focus <category>] [--save] [-
    ```
 2. **`--base` ref の存在確認**
    ```bash
-   git rev-parse --verify "<base>" >/dev/null 2>&1 || { echo "'<base>' ref が存在しません"; exit 1; }
+   git rev-parse --verify "{base}" >/dev/null 2>&1 || { echo "'{base}' ref が存在しません"; exit 1; }
    ```
 3. **`--target` ref の存在確認**（同上）
 4. **base..target の差分が空でない**
    ```bash
-   count=$(git rev-list --count "<base>..<target>")
+   count=$(git rev-list --count "{base}..{target}")
    [ "$count" -eq 0 ] && { echo "レビュー対象の差分がありません"; exit 0; }
    ```
 5. **チェックリストファイル存在確認**
@@ -75,13 +75,13 @@ argument-hint: "[--base <ref>] [--target <ref>] [--focus <category>] [--save] [-
 ### 1. 対象コミット・ファイル把握
 
 ```bash
-git log --oneline "<base>..<target>"
-git diff --stat "<base>..<target>"
+git log --oneline "{base}..{target}"
+git diff --stat "{base}..{target}"
 ```
 
 ログ出力:
 ```
-[pre-push-review] Base: <base>, Target: <target>
+[pre-push-review] Base: {base}, Target: {target}
 [pre-push-review] Commits: N, Files: M, +A -D lines
 ```
 

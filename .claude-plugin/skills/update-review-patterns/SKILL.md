@@ -2,7 +2,7 @@
 name: update-review-patterns
 description: "マージ済 PR のレビューコメントを分析し、`.claude/_docs/know-how/pr-review-patterns.md` のチェックリストを追記・更新する。新規カテゴリの検出、既存カテゴリへの代表例追加、カテゴリ別件数の再集計を行う。通常は PR マージ直後に手動起動。Triggers on: 'update review patterns', 'update checklist', 'pr-review-patterns を更新', 'refresh review patterns', '/update-review-patterns'."
 user-invokable: true
-argument-hint: "[--pr <pr-number>] [--since <date>] [--auto] [--dry-run]"
+argument-hint: "[--pr <N>[,<N>...]] [--since <YYYY-MM-DD>] [--auto] [--dry-run]"
 ---
 
 # PR レビューパターン更新 — チェックリスト保守
@@ -54,10 +54,13 @@ argument-hint: "[--pr <pr-number>] [--since <date>] [--auto] [--dry-run]"
    ```
    - `MODE=update`: 既存ファイルを追記・更新する通常フロー（以降の手順 1〜8）
    - `MODE=initial`: ユーザーに初回生成の可否を確認し、承認された場合のみ「pr-review-patterns.md 新規生成モード」節の手順に入る。拒否された場合は **STOP**
-3. **リポジトリ情報**
+3. **リポジトリ情報の取得と変数定義**
    ```bash
-   gh repo view --json owner,name
+   REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+   OWNER="${REPO%%/*}"
+   REPO_NAME="${REPO##*/}"
    ```
+   以降の API コール（`gh api repos/${OWNER}/${REPO_NAME}/...`）では `${OWNER}/${REPO_NAME}` を使用する。
 4. **対象 PR リストの確定** — 引数から解決できない場合はユーザー確認
 
 ## 処理フロー
@@ -77,9 +80,9 @@ gh pr list --state merged --search "merged:>={date}" --limit 100 --json number,m
 
 各 PR について:
 ```bash
-gh api --paginate repos/{owner}/{repo}/pulls/{N}/comments
-gh api --paginate repos/{owner}/{repo}/pulls/{N}/reviews
-gh api --paginate repos/{owner}/{repo}/issues/{N}/comments
+gh api --paginate "repos/${OWNER}/${REPO_NAME}/pulls/{N}/comments"
+gh api --paginate "repos/${OWNER}/${REPO_NAME}/pulls/{N}/reviews"
+gh api --paginate "repos/${OWNER}/${REPO_NAME}/issues/{N}/comments"
 ```
 
 除外:
