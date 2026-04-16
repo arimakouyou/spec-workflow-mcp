@@ -124,6 +124,35 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
 - `APPROVED` レビューに付随するコメントは優先度を下げる
 - 1つのコメントが複数カテゴリに該当する場合は、より高い対応レベルのカテゴリを採用
 
+### 2.5 指摘の妥当性検証（MANDATORY — Copilot 提案の鵜呑み禁止）
+
+カテゴリ分類後、**対応計画を作る前**に各コメントの妥当性を検証する。Copilot bot のような機械レビュアーは誤検出・過剰指摘を含むことがあり、memory 由来のフィードバック「レビュー指摘対応で品質保証レベルを下げない（Copilot 提案の鵜呑み禁止）」に従って、ソースを読んで裏取りする。
+
+各コメントについて以下を実施:
+
+1. **指摘対象の実在確認**: コメントが指す `path:line` を Read で開き、指摘された事象が本当にそこに存在するか確認
+2. **仕様・文脈との整合**: プロジェクトの `rules/` / `design.md` / 既存実装の意図と指摘が矛盾していないかチェック
+3. **過去 PR での対応状況**: 類似指摘が既にマージ済み PR で対応されていないか（PR description / `git log` / `CHANGELOG.md` を確認）
+4. **妥当性の 3 段階判定**:
+   - `valid` — 指摘が正しく、対応すべき
+   - `partial` — 指摘の方向性は正しいが、具体的修正案には問題あり（別案で対応）
+   - `invalid` — 指摘が誤り（ソースの誤読、既解決、仕様適合範囲内）。対応せず、コメント返信で説明する
+
+**判定例**:
+
+| 判定 | 例 |
+|-----|-----|
+| valid | 「`### REQ-1.1:` 見出しは `### REQ-1:` + AC コメントの規則と矛盾」 → テンプレ実態と照合して確認 |
+| partial | 「`unwrap()` を削除すべき」→ 削除方針は正しいが具体案の `?` より `map_err` が設計規約に沿う |
+| invalid | 「`### REQ-N.M:` 見出しを使え」→ 規則は逆（`REQ-N:` + AC コメント）、指摘が誤り |
+
+**品質低下リスクのある指摘の扱い**:
+
+- 機械的な指摘に従うと既存の品質ゲート・整合性を**下げる**恐れがある場合は、対応前にユーザーに確認する
+- 判断に迷う場合は `advisor()` を呼んで second opinion を得る
+
+検証結果を次の Step 3 の対応計画にマージし、各コメントに `validity: valid | partial | invalid` を付記する。
+
 ### 3. 対応計画の提示
 
 分類結果をユーザーに提示し、**実行前に必ず確認を取る**。
@@ -160,6 +189,27 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
 
 ユーザー承認後、以下の順序で対応する。
 
+#### 4.0 同種問題の網羅調査（MANDATORY）
+
+対応を始める前に、各 `valid` / `partial` 指摘について **同種問題がリポジトリ内に他にも存在しないか** を機械的に探索する。PR レビューで挙がった指摘 1 件の背後に、同じパターンの問題が複数箇所で眠っていることが多い（pr-review-patterns.md の全体所見: 指摘の 35% は「同じ情報の多重管理」由来）。
+
+**探索手法**:
+
+| 指摘タイプ | 探索クエリ例 |
+|-----------|-------------|
+| ID / キー名の誤り（例: `N-th` → `M-th`） | `grep -rn "N-th\|N 番目" .claude-plugin/` で残存検出 |
+| 用語・コマンドの不統一（例: `-warnaserror` vs `--warnaserror`） | 指摘の両形式で全域 grep |
+| 配置位置の揺れ（例: `divergent_applied` top-level vs nested） | `grep -rn "divergent_applied" .claude-plugin/` で全箇所確認 |
+| ネストフェンス / placeholder | コードブロックと placeholder パターンを全域 grep |
+| shell 堅牢性（例: `jq` 前提） | `grep -rn "jq " .claude-plugin/hooks/` |
+
+発見した同種問題は **同じ PR / 同じコミット** で一緒に修正する（「別機会に」と分散させるとテストしにくい）。発見件数を Step 3 の対応計画に追記してユーザーに見える化する:
+
+```
+### 対応計画（同種問題の網羅含む）
+- 指摘 #N-th → M-th 修正: 1 件（元指摘） + 2 件（grep で発見、同ファイル内）
+```
+
 #### 4.1 矛盾するフィードバックの検出
 
 対応開始前に、矛盾するフィードバックがないかチェックする:
@@ -195,6 +245,24 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/comments/{comment_id}/replies \
 gh api repos/${OWNER}/${REPO_NAME}/issues/{number}/comments \
   -f body="{回答内容}"
 ```
+
+#### 4.5 セルフレビュー（MANDATORY）
+
+品質チェック（Step 5）と push（Step 6）の前に、**修正後の diff 全体を `/pre-push-review` でセルフレビュー** する。pr-review-patterns.md のチェックリストで A-H 全カテゴリを再点検し、修正によって新たな不整合（例: 一部ファイルだけ更新して他が取り残された）が生まれていないかを検出する。
+
+```
+/pre-push-review --base origin/{base-branch}
+```
+
+判定に従って分岐:
+
+| 判定 | アクション |
+|------|----------|
+| `push_ok`（Critical 0 / Moderate 0） | Step 5 品質チェックへ進む |
+| `push_after_fix`（Minor のみ） | Minor を追加修正するか、ユーザーに提示して判断を仰ぐ |
+| `fix_required`（Critical or Moderate あり） | Step 4.2 に戻って追加修正。このまま push してはいけない |
+
+**セルフレビューをスキップする条件**: 修正量が極めて軽微（1 行の typo 等）かつ `--focus C` などで部分的に確認済みの場合のみ、ユーザーの明示同意でスキップ可。
 
 ### 5. 品質チェック
 
