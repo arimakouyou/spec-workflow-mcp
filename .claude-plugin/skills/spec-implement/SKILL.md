@@ -534,7 +534,7 @@ Agent({
 })
 ```
 
-Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**, and **diagnosis** (if present — retain for diagnostic_history accumulation in rework cycles).
+Capture from the result: **status**, **test_file_paths**, **implementation_file_paths**, **changed_files**, **mutation_testing**, **stryker** (.NET mutation testing result), and **diagnosis** (if present — retain for diagnostic_history accumulation in rework cycles).
 
 Branch based on parallel-worker's `status`:
 
