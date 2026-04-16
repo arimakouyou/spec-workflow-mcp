@@ -77,7 +77,11 @@ For each of `requirements.md` / `design.md` / `test-design.md` / `tasks.md` that
 
 For each downstream file's `depends_on[].refs`:
 
-- Each ref ID (REQ-N.M, DES-N, etc.) must exist in the referenced upstream file (by heading or `<!-- REQ-N.M -->` comment)
+- Each ref ID (REQ-N / REQ-N.M / DES-N / MOD-N / API-N / UT-N.M / IT-N / E2E-N) must exist in the referenced upstream file:
+  - **REQ-N (bare, no `.M`)**: matches the `### REQ-N:` heading in requirements.md
+  - **REQ-N.M**: matches either a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or the N-th Acceptance Criterion (numbered list) under `### REQ-N:`
+  - **DES-N / MOD-N / API-N**: matches a `### DES-N:` / `### MOD-N:` / `### API-N:` heading in design.md
+  - **UT-N.M / IT-N / E2E-N**: matches a `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` heading in test-design.md
 - Missing upstream ID → **error** (`dangling_reference`)
 - Extra/orphan ID in upstream that no downstream references → **warn** (`orphan_upstream_id`; informational)
 

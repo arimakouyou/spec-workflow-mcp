@@ -156,9 +156,9 @@ Based on the `output` parameter:
 - `file:<path>`: write the same content to `<path>` (create parent directories if needed). Do not overwrite existing files without the user's explicit confirmation
 - `inline`: return only the fenced mermaid code block, no prose
 
-Output template (for `stdout`):
+Output template (for `stdout`). The embedded mermaid block uses 3 backticks; the outer template is shown here with 4 backticks so the nested fence does not prematurely close:
 
-```markdown
+````markdown
 # Spec Graph: {spec-name} ({level} level)
 
 **Generated**: {YYYY-MM-DD HH:MM}
@@ -180,7 +180,7 @@ graph TD
 - For interactive navigation, paste this block into a mermaid-aware viewer (GitHub preview, mermaid.live, VSCode mermaid extension).
 - To drill into ID-level relations, re-run with `level=id`.
 - If a file appears isolated, either the upstream reference is missing or frontmatter has not been added yet — run /spec-verify to confirm.
-```
+````
 
 ### 5. (Optional) Suggest Next Actions
 
