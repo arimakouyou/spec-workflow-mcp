@@ -1,4 +1,17 @@
+---
+spec_id: {spec-name}
+phase: tasks
+version: 1
+depends_on:
+  - file: design.md
+    refs: [DES-1, DES-2]  # 実装対象のコンポーネント
+  - file: test-design.md
+    refs: [UT-1.1, IT-1]  # 満たすべきテスト仕様
+---
+
 # Tasks Document
+
+> **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1, SD6）: タスク層のメタデータ（`_Requirements:` / `_DependsOn:` / `_Leverage:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`）は従来通り。frontmatter の `depends_on` は tasks.md **全体**が依存する上流仕様書 ID を宣言し、タスク個別の REQ 紐付けは `_Requirements:` で行う（粒度の異なる直交情報）。
 
 ## Phase 1: Core Domain Layer
 

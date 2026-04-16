@@ -298,6 +298,25 @@ Agent({
 .spec-workflow/specs/{spec-name}/test-design.md
 ```
 
+**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
+
+以下の YAML frontmatter をファイル冒頭に追加する。`depends_on` は requirements.md の REQ-N と design.md の DES-N のうち、このテスト設計が対象とするものを列挙する:
+
+```yaml
+---
+spec_id: {spec-name}
+phase: test-design
+version: 1
+depends_on:
+  - file: requirements.md
+    refs: [REQ-1, REQ-2]
+  - file: design.md
+    refs: [DES-1, DES-2]
+---
+```
+
+UT-N.M / IT-N / E2E-N の識別子は従来通り `####` 見出しで明示する（SD1）。
+
 **品質基準（統合時チェック）:**
 - 全 Requirement ID に最低1つの UT と、関連する IT または E2E が紐づいていること
 - design.md の全コンポーネントに対して UT 仕様が存在すること
@@ -367,6 +386,7 @@ Agent({
     11. E2E INFRASTRUCTURE: E2E Test Infrastructure section must define project type, container test setup, and test runner
     12. CONTAINER CONSISTENCY: IT/E2E specs Technology fields must be consistent with design.md Container Architecture and E2E Test Infrastructure section
     13. REQUIRED TEST TOOLS: Required Test Tools section must exist within Test Environment Requirements, with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns). All E2E test tools must be Required=Yes.
+    14. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: test-design, version, depends_on (file entries pointing to requirements.md and design.md with refs) must exist at the top of the file. Every REQ-/DES- ID in depends_on.refs must exist in the referenced upstream file (SD4)
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

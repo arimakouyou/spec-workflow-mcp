@@ -1,4 +1,17 @@
+---
+spec_id: {spec-name}
+phase: test-design
+version: 1
+depends_on:
+  - file: requirements.md
+    refs: [REQ-1, REQ-2]  # 検証対象の Requirement
+  - file: design.md
+    refs: [DES-1, DES-2]  # テスト対象のコンポーネント
+---
+
 # Test Design Document
+
+> **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1）: UT-N.M / IT-N / E2E-N は従来通り `####` 見出しで明示。VRT-N / DOM-N も同形式。末尾の Requirements-Test Traceability Matrix で REQ → テスト ID の対応を記録する。
 
 ## Test Strategy Overview
 

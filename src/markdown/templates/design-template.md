@@ -1,4 +1,15 @@
+---
+spec_id: {spec-name}
+phase: design
+version: 1
+depends_on:
+  - file: requirements.md
+    refs: [REQ-1, REQ-2]  # このデザインが実装対象とする Requirement。REQ-N（Acceptance Criteria 全体）または REQ-N.M（個別 AC）
+---
+
 # Design Document
+
+> **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1）: Components and Interfaces の各コンポーネント見出しを `### DES-N: ComponentName` 形式で書く（例: `### DES-1: UserRepository`）。Data Models は `### MOD-N:`、API は `### API-N:` を任意で付与。下流仕様書（test-design.md / tasks.md）はこの ID で参照する。
 
 ## Overview
 
@@ -41,21 +52,23 @@ graph TD
 
 ## Components and Interfaces
 
-### Component 1
+### DES-1: [Component Name]
 - **Purpose:** [What this component does]
 - **Interfaces:** [Public methods/APIs]
 - **Dependencies:** [What it depends on]
 - **Reuses:** [Existing components/utilities it builds upon]
+- **Satisfies:** [REQ-N.M を列挙。対応する Acceptance Criteria]
 
-### Component 2
+### DES-2: [Component Name]
 - **Purpose:** [What this component does]
 - **Interfaces:** [Public methods/APIs]
 - **Dependencies:** [What it depends on]
 - **Reuses:** [Existing components/utilities it builds upon]
+- **Satisfies:** [REQ-N.M を列挙]
 
 ## Data Models
 
-### Model 1
+### MOD-1: [Model Name]
 ```
 [Define the structure of Model1 in your language]
 - id: [unique identifier type]
@@ -63,7 +76,7 @@ graph TD
 - [Additional properties as needed]
 ```
 
-### Model 2
+### MOD-2: [Model Name]
 ```
 [Define the structure of Model2 in your language]
 - id: [unique identifier type]

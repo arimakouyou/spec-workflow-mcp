@@ -20,8 +20,9 @@
 | `csharp-style.md` | CS1〜CS16 | 16 | C# コードスタイル・フォーマット規約（.NET 10） |
 | `diagnostic-reasoning.md` | DR1〜DR6 | 6 | 診断推論プロトコル（リトライ前の構造化診断・セッション状態永続化・繰り返し防止・DIVERGENT 仮説転換） |
 | `failure-taxonomy.md` | FC1〜FC6 | 6 | 横断的な失敗分類語彙（parallel-worker / review-worker / wave-harness 間の共通キー。DR6 DIVERGENT トリガー判定の入力） |
+| `spec-dependency-graph.md` | SD1〜SD7 | 7 | 仕様書間の依存グラフ（ID 体系 + frontmatter スキーマ + refs 整合性 + DAG 制約 + 変更伝搬意味論）。`/spec-impact-analyze` と `/spec-verify` の入力 |
 
-**合計: 117 ルール（ID 付き）**
+**合計: 124 ルール（ID 付き）**
 
 ## リファレンスガイド（ID なし・パターン集）
 
@@ -67,6 +68,7 @@
 | `advisor-usage.md` | advisor ツール利用ガイドライン（全エージェント共通） |
 | `diagnostic-reasoning.md` | 診断推論プロトコル（DR1-DR6: リトライ前診断・セッション状態永続化・非繰り返し制約・DIVERGENT 仮説転換） |
 | `failure-taxonomy.md` | 横断的な失敗分類語彙（FC1-FC6: 4 主要カテゴリ + Severity マップ + DR6 連携） |
+| `spec-dependency-graph.md` | 仕様書間の依存グラフ（SD1-SD7: ID 体系 + frontmatter + refs 整合性 + DAG + 変更伝搬）。`/spec-impact-analyze` と `/spec-verify` が参照 |
 
 ## ルール参照の早見表
 

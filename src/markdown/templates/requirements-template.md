@@ -1,4 +1,13 @@
+---
+spec_id: {spec-name}
+phase: requirements
+version: 1
+depends_on: []
+---
+
 # Requirements Document
+
+> **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1）: 各 Requirement の見出しは `### REQ-N: タイトル` 形式で書く（N は Requirement 番号）。Acceptance Criteria はフラットに 1, 2, 3 と列挙し、各行末に `<!-- REQ-N.M -->` コメントを付与して機械可読な `REQ-N.M` 識別子を明示する。下流仕様書（design.md / test-design.md / tasks.md）は `REQ-N`（全体）または `REQ-N.M`（個別 AC）で参照する。
 
 ## Introduction
 
@@ -10,24 +19,24 @@
 
 ## Requirements
 
-### Requirement 1
+### REQ-1: [Requirement Name]
 
 **User Story:** As a [role], I want [feature], so that [benefit]
 
 #### Acceptance Criteria
 
-1. WHEN [event] THEN [system] SHALL [response]
-2. IF [precondition] THEN [system] SHALL [response]
-3. WHEN [event] AND [condition] THEN [system] SHALL [response]
+1. WHEN [event] THEN [system] SHALL [response]  <!-- REQ-1.1 -->
+2. IF [precondition] THEN [system] SHALL [response]  <!-- REQ-1.2 -->
+3. WHEN [event] AND [condition] THEN [system] SHALL [response]  <!-- REQ-1.3 -->
 
-### Requirement 2
+### REQ-2: [Requirement Name]
 
 **User Story:** As a [role], I want [feature], so that [benefit]
 
 #### Acceptance Criteria
 
-1. WHEN [event] THEN [system] SHALL [response]
-2. IF [precondition] THEN [system] SHALL [response]
+1. WHEN [event] THEN [system] SHALL [response]  <!-- REQ-2.1 -->
+2. IF [precondition] THEN [system] SHALL [response]  <!-- REQ-2.2 -->
 
 ## Non-Functional Requirements
 

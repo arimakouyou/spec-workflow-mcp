@@ -64,6 +64,25 @@ Write the file to:
 .spec-workflow/specs/{spec-name}/requirements.md
 ```
 
+**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
+
+Include the following YAML frontmatter at the top of the file:
+
+```yaml
+---
+spec_id: {spec-name}
+phase: requirements
+version: 1
+depends_on: []
+---
+```
+
+`requirements.md` is the upstream root, so `depends_on` is always an empty array.
+
+**Requirement IDs (per SD1):**
+
+Use `### REQ-N: [Requirement Name]` for each requirement heading. Acceptance Criteria are numbered `1.`, `2.`, `3.` within the requirement — they form the implicit `REQ-N.M` identifiers that downstream specs reference. Add `<!-- REQ-N.M -->` comments after each Acceptance Criterion line so that downstream agents can locate them precisely.
+
 ### 5. Self-Review via Subagent (before approval)
 
 Validate the document in **2 stages** before requesting approval.
@@ -114,7 +133,8 @@ Agent({
     1. TEMPLATE: Every section from the template must exist with real content (no [describe...] or TODO)
     2. Every requirement needs User Story ('As a [role]...') and EARS Acceptance Criteria (WHEN/IF...THEN...SHALL)
     3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability
-    4. Requirements should be uniquely identified (REQ-1, REQ-2, etc.)
+    4. Requirements must be uniquely identified as '### REQ-N:' headings (per spec-dependency-graph.md SD1)
+    5. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: requirements, version, depends_on: [] must exist at the top of the file
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
