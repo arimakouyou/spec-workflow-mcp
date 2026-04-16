@@ -109,3 +109,15 @@ frontmatter は**新規 spec では必須**、**既存 spec ではオプトイ�
 | 上流 ID に**参照していない変更** | 下流は無関係 | `gray`（参考） |
 
 「実質変更」と「表現揺れ」の判別は現時点では LLM 判定に委ねる（`/spec-impact-analyze` が判定）。将来的に機械的な差分検出（キーワード抽出など）に寄せる可能性があるが、現段階ではヒューリスティックを固定しない。
+
+## Related Skills
+
+この依存グラフ定義を入力とする独立スキル群（いずれも read-only、ワークフローを gate しない）:
+
+| Skill | 役割 |
+|-------|------|
+| `/spec-impact-analyze` | 上流（requirements.md 等）の変更差分を入力に、下流ファイルへの波及を SD7 の green/amber/gray で分類して報告 |
+| `/spec-verify` | SD1-SD7 を使い、frontmatter 存在・refs 整合性（SD4）・DAG 性（SD5）・REQ→テスト→タスクのカバレッジを検証 |
+| `/spec-graph` | frontmatter から mermaid 依存グラフを生成（file level / id level）。視覚的な俯瞰に使う |
+
+これらは Harness-as-Code アプローチの 3 側面（変更伝搬 / 整合性検証 / 可視化）に相当し、ルールを直接触らずに価値を引き出す補助スキルとして追加された。
