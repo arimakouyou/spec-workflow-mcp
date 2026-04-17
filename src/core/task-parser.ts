@@ -303,14 +303,14 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
           dependsOn.push(...depMatch[1].split(',').map(d => d.trim()).filter(d => d));
         }
       } else if (contentLine.includes('_Evidence:') && !contentLine.includes('_Prompt:')) {
-        const evMatch = contentLine.match(/_Evidence:\s*([^_]+?)_/);
+        const evMatch = contentLine.match(/_Evidence:\s*(.+?)\s*(?:_\s*$|$)/);
         if (evMatch) {
           const parsed = Array.from(
             new Set(
               evMatch[1]
                 .split(/[,\s]+/)
                 .map(e => e.trim())
-                .filter(e => /^EV-[a-z0-9-]+-\d{3}$/.test(e))
+                .filter(e => /^EV-[a-z0-9_-]+-\d{3}$/.test(e))
             )
           );
           evidence.push(...parsed);

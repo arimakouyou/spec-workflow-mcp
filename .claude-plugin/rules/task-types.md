@@ -85,6 +85,7 @@ Rules:
 - A type defined in the YAML overrides the built-in definition with the same key (full replacement of `required_categories`).
 - New types may be added; they must ship `required_categories`.
 - Any category referenced by a type must either be a built-in (TT3) or appear in the `categories:` map with a `description`.
+- Category キー名は `[a-z0-9_-]+` の範囲（小文字 ASCII、数字、ハイフン、アンダースコアのみ）に限定する。これは EV-ID 構文 `EV-{category}-{NNN}` が 3 桁連番と category を区切るために必要な制約で、パーサ側もこの範囲のみを EV-ID として受理する。
 - Unknown types cause `spec-request-spec` Step B to FAIL with a message listing valid values.
 
 ## TT5: Legacy and Unclassified Specs

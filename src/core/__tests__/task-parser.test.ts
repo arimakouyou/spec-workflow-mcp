@@ -180,6 +180,30 @@ describe('task-parser', () => {
       const task = result.tasks.find(t => t.id === '1.1');
       expect(task?.evidence).toBeUndefined();
     });
+
+    it('trailing underscore がない _Evidence 行もパースする (italic なしの EC2 例)', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-001 EV-branches-002
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
+    });
+
+    it('snake_case を含む category (TT4 拡張想定) もパースする', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-security_posture-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-security_posture-001']);
+    });
   });
 
   describe('computeExecutionWaves', () => {

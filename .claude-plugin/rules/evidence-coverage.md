@@ -119,5 +119,5 @@ Step B sub-agents must evaluate evidence coverage for legacy / unclassified spec
 
 When a previously-created non-legacy spec adds EV citations for the first time:
 
-- The skill run that introduces citations must also add/update the frontmatter `depends_on.refs` to include any EV referenced at the document level.
+- The skill run that introduces citations should add them using supported body citation forms from `EC1`（HTML コメントアンカー `<!-- EV-{category}-{NNN} -->`、括弧内引用 `(EV-{category}-{NNN})`、または tasks.md の `_Evidence:` メタデータ）。新規の citation は frontmatter `depends_on.refs` には **追加しない**（EC1 precedence note の通り、現時点で `EV-*` は `/spec-verify` が refs として未サポートのため、`/spec-verify` から unknown ref として reject される可能性がある）。
 - `EC3` line-count violations uncovered by retrofitting are reported but do not block approval on the first retrofit pass; they become blocking after the second run. This avoids a wall of errors on legacy documents while still encouraging cleanup.
