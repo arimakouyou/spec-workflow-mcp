@@ -54,7 +54,7 @@ Each agent prompt MUST include:
 - The `evidence-template.md` format to follow (frontmatter + sections)
 - Instructions to produce **one file per topic**, not per source file, named `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` with a zero-padded 3-digit sequence (001, 002, ...)
 - A size guide: aim for 50–150 lines per evidence file; split larger topics
-- A requirement that `sources:` in the frontmatter contain real `path:Lstart-Lend` ranges, not fabricated citations
+- A requirement that `sources:` in the frontmatter is a YAML list whose entries have both `path:` (real file path) and `lines:` (e.g. `L10-L45`) keys, not fabricated citations (format defined in `evidence-template.md`)
 - The `Explore` thoroughness level: `medium` by default, `very thorough` for `deep` rows
 
 Example prompt skeleton (fill in before each call):
@@ -74,7 +74,7 @@ Write one or more evidence files under:
 Each file:
 - Uses the evidence template at .spec-workflow/templates/evidence-template.md
 - Is 50–150 lines, scoped to a single topic
-- Cites real file paths and line ranges in sources:
+- Fills `sources:` as a YAML list of entries, each with `path:` (real file path) and `lines:` (e.g. `L10-L45`); see evidence-template.md
 - Names: EV-{category}-001.md, EV-{category}-002.md, ...
 - **The file name stem and the frontmatter `ev_id:` MUST match exactly** — both carry the same `EV-{category}-{NNN}` string (per `.claude-plugin/rules/spec-dependency-graph.md` SD1). A mismatch will FAIL the EC1 integrity check.
 - Quotes only what is needed to establish the fact (avoid full-file dumps)

@@ -129,4 +129,9 @@ Return to the calling agent:
 
 ### Green Strategy Used
 {Obvious Implementation / Fake It / Triangulation} — {reason}
+
+### Output Notes
+- {Steering state, e.g. `steering: absent — pre-approval dependency check and file placement rule check skipped`, or `steering: present — all checks applied`}
+- {File placement deviations from P4-01, if any, with rationale}
+- {Other assumptions or caller-relevant notes; omit the bullets that don't apply and leave `- none` if all N/A}
 ```

@@ -39,11 +39,11 @@ If ANY file is missing — **STOP immediately.** Inform the user which file is m
 
 Before reading test-design.md, load project-level instance information from steering documents **if they exist**:
 
-- `{project-path}/.spec-workflow/steering/tech.md` — approved E2E/IT dependencies (Playwright, testcontainers, reqwest 等) と performance/availability targets。新規 dev-dependency は Approved リストへの追加が必須。
-- `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)** の「Integration Test」「E2E Test」行を E2E/IT テストファイルの配置先と命名規則の決定根拠として使用する。
-- `{project-path}/.spec-workflow/steering/product.md` — 主要ユーザーフローの確認（scope 外のシナリオを誤って実装しないため）。
+- `{project-path}/.spec-workflow/steering/tech.md` — approved E2E/IT dependencies (Playwright, testcontainers, reqwest, etc.) and performance/availability targets. Any new dev-dependency MUST be listed in the "External Dependencies (Approved)" table; if it is not, STOP and flag it rather than introducing it silently.
+- `{project-path}/.spec-workflow/steering/structure.md` — use the **File Placement Rules (P4-01)** "Integration Test" and "E2E Test" rows to decide where E2E/IT test files live and how they are named. Do not invent a placement if the rule exists.
+- `{project-path}/.spec-workflow/steering/product.md` — reference the main user flows so you do not accidentally implement a scenario that is out of scope.
 
-存在しないファイルはスキップ。steering docs はオプショナル。
+Skip any file that does not exist; steering docs are optional.
 
 ### 1. Read Test Design
 
