@@ -31,7 +31,7 @@ PR レビューコメントへの対応を **Command + 3 種のローカル work
 | `pr-fix-worker`（sonnet）| 1 ファイル分の修正を適用 | N 影響ファイル数 | Edit あり、commit なし |
 | `pr-pattern-scanner`（haiku）| 1 パターンを repo 全域 grep | N 妥当指摘ユニーク数 | なし（read-only）|
 
-並列度はすべて `.claude-plugin/rules/resource-aware-parallelism.md` の `MAX_HEAVY_AGENTS`（デフォルト 4）で上限制御する。
+並列度は `.claude-plugin/rules/resource-aware-parallelism.md` に従いエージェント種別で分ける。`pr-triage-worker` と `pr-pattern-scanner` は read-only / 軽量なので `MAX_LIGHT_AGENTS`（デフォルト 5）、`pr-fix-worker` は Edit 実行の重量エージェントなので `MAX_HEAVY_AGENTS`（デフォルト 4）で上限制御する。
 
 ## 全体ワークフロー
 
@@ -96,7 +96,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments --paginate
 gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/reviews --paginate
 
 # resolved 状態（GraphQL 経由、REST では取れない）
-gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[] | {id: .id, databaseId: .databaseId, path: .path, line: .line}]}'
+gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[] | {id: .id, databaseId: .databaseId, createdAt: .createdAt, path: .path, line: .line}]}'
 ```
 
 resolved 済みコメントは Phase 2 の triage 対象から除外（`reply_only` に分類して完了レポートに記録）。
@@ -126,7 +126,7 @@ Agent({
 
 - 矛盾検出は **Command 側で一本化** する（Phase 2.5 で triage 結果を集約してから突合）。triager には他コメント情報を渡さない — haiku のコンテキストを無駄遣いしないため
 - プロンプト雛形は `.claude/agents/pr-triage-worker.md` の「入力形式」セクションを参照
-- 同時実行数が `MAX_HEAVY_AGENTS` を超える場合はバッチ分割する（最初のバッチが完了してから次を起動）
+- 同時実行数が `MAX_LIGHT_AGENTS` を超える場合はバッチ分割する（最初のバッチが完了してから次を起動）
 
 ### Triage 結果の集約
 
@@ -275,7 +275,7 @@ git add {全 fix-worker の file 一覧} {pattern-scanner 経由の追加修正�
 if [ -f Cargo.toml ]; then
   cargo fmt --all -- --check && cargo clippy --quiet --all-targets -- -D warnings
 elif find . -maxdepth 3 \( -name "*.csproj" -o -name "*.sln" \) -print -quit 2>/dev/null | grep -q .; then
-  dotnet format --verify-no-changes && dotnet build -warnaserror
+  dotnet restore && dotnet format --verify-no-changes --no-restore && dotnet build --no-restore -warnaserror
 elif [ -f package.json ]; then
   npm run lint --if-present && npm run typecheck --if-present
 fi
@@ -420,6 +420,6 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 | `.claude-plugin/skills/handle-pr-comments/SKILL.md:127-166` | 妥当性検証原則 |
 | `.claude-plugin/skills/handle-pr-comments/SKILL.md:204-223` | 同種問題 grep パターン例 |
 | `.claude-plugin/skills/pre-push-review/SKILL.md` | `/pre-push-review` 仕様 |
-| `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_HEAVY_AGENTS` |
+| `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_LIGHT_AGENTS` (triage / scanner), `MAX_HEAVY_AGENTS` (fix-worker) |
 | `.claude-plugin/rules/quality-checks.md` QC1-QC3 | 最終確認コマンド |
 | MEMORY `feedback_copilot_review_request.md` | Copilot 依頼 REST 仕様 |

@@ -16,7 +16,7 @@ PR レビューコメント 1 件を独立評価し、以下を返す read-only 
 
 1. **カテゴリ分類**（5 分類）: `code_fix` / `question` / `style` / `approval` / `suggestion`
 2. **妥当性判定**（3 段階）: `valid` / `partial` / `invalid`
-3. **他コメントとの矛盾検出**（同一 path:line に相反指摘があるか、入力で他コメント一覧が与えられた場合）
+3. **他コメントとの矛盾検出は通常責務に含めない** — Phase 2.5 で Command 側が triage 結果を集約して一本化する設計。将来的に `sibling_comments` 入力が明示的に渡された場合のみ補助情報として扱いうるが、本スキルでは未使用
 
 ## 入力形式
 

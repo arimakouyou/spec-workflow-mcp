@@ -34,7 +34,7 @@ PR レビューコメントへの対応は現状 `handle-pr-comments`（プラ�
 | tools | Read, Grep, Glob, advisor |
 | memory | なし（エフェメラル） |
 | 役割 | PR コメント 1 件を受け取り、対象 `path:line` を読み、steering/rules と照合、5 分類 + validity 判定を返す |
-| 並列度 | N = コメント件数（上限は `resource-aware-parallelism.md` の MAX_HEAVY_AGENTS で制限、デフォルト 4） |
+| 並列度 | N = コメント件数（triage は read-only / 軽量なので `resource-aware-parallelism.md` の MAX_LIGHT_AGENTS で制限、デフォルト 5） |
 | 返答形式 | 最終メッセージで YAML を返す（fire-and-forget、SendMessage 不使用） |
 | 副作用 | なし（Edit/Write なし、commit なし）|
 
@@ -159,7 +159,7 @@ resolved コメントは triage から除外。
 
 ### Phase 2: 並列トリアージ
 
-`pr-triage-worker` を件数ぶん同時起動。`resource-aware-parallelism.md` の `MAX_HEAVY_AGENTS` で上限制御。
+`pr-triage-worker` を件数ぶん同時起動。triage は read-only / 軽量なので `resource-aware-parallelism.md` の `MAX_LIGHT_AGENTS` で上限制御。
 
 ```
 Agent(subagent_type: "pr-triage-worker", prompt: <comment #1 context>)
@@ -213,7 +213,7 @@ Agent(subagent_type: "pr-pattern-scanner", prompt: "pattern: <regex>\nexclude: {
 
 検出された追加箇所は Command が受け取り、以下で分岐:
 
-- 0 件 → Phase 6 へ
+- 0 件 → Phase 5.5 へ
 - 1 件以上 → ユーザーに提示し「同パターンの残存箇所を追加修正するか」を確認、承認時は Phase 4 に戻って `pr-fix-worker` を追加起動（ループ上限 3 回、それ以降は `Escalated` として最終レポートに含めユーザー判断）
 
 ### Phase 5.5: 初回コミット（pre-push-review のための履歴作成）
@@ -319,7 +319,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 | `同:127-166` | 妥当性検証原則（steering/rules prior、品質下げ禁止、3 段階判定） |
 | `同:204-223` | 同種問題の grep パターン例 |
 | `.claude-plugin/skills/pre-push-review/SKILL.md` | `/pre-push-review` 呼び出し・結果解釈 |
-| `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_HEAVY_AGENTS` 参照 |
+| `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_LIGHT_AGENTS` (triage / scanner) / `MAX_HEAVY_AGENTS` (fix-worker) 参照 |
 | `.claude-plugin/rules/quality-checks.md` QC1-QC3 | 最終確認コマンド |
 
 SKILL.md 本文でもこれらへの行番号リンクを明示し、挙動がズレた際の突合箇所をはっきりさせる。
