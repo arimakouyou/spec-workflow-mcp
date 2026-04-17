@@ -137,7 +137,13 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
 各コメントについて以下を実施:
 
 1. **指摘対象の実在確認**: コメントが指す `path:line` を Read で開き、指摘された事象が本当にそこに存在するか確認
-2. **仕様・文脈との整合**: プロジェクトの `rules/` / `design.md` / 既存実装の意図と指摘が矛盾していないかチェック
+2. **仕様・文脈との整合**: プロジェクトの `.claude-plugin/rules/` / `.spec-workflow/steering/*.md` (product / tech / structure) / `design.md` / 既存実装の意図と指摘が矛盾していないかチェック。特に以下は指摘より steering / rules が **prior**:
+   - ファイル配置の指摘 ↔ `steering/structure.md` の File Placement Rules (P4-01)
+   - 依存追加の指摘 ↔ `steering/tech.md` の "External Dependencies (Approved)"
+   - アーキテクチャ方針の指摘 ↔ `steering/tech.md` の Accepted ADR
+   - スコープ拡大の指摘 ↔ `steering/product.md` の Non-Goals
+   - 命名・スタイル・エラーハンドリングの指摘 ↔ `.claude-plugin/rules/*-style.md` / `rules/design-principles.md`
+   steering / rules と矛盾する指摘は `invalid` と判定し、コメント返信で該当ドキュメントへのリンクとともに説明する。
 3. **過去 PR での対応状況**: 類似指摘が既にマージ済み PR で対応されていないか（PR description / `git log` / `CHANGELOG.md` を確認）
 4. **妥当性の 3 段階判定**:
    - `valid` — 指摘が正しく、対応すべき

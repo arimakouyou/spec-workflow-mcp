@@ -39,6 +39,16 @@ Agent({
 
 ## Execution Steps
 
+### 0. Load Project-Level Context (Steering)
+
+Before reviewing, load project-level instance information from steering documents **if they exist**:
+
+- `{project-path}/.spec-workflow/steering/tech.md` — approved external dependencies, technical constraints, ADR summary. Use this as the source of truth when checking whether the implementation introduced any unapproved dependency or diverged from recorded architectural decisions.
+- `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)** and any Project-Specific Conventions. Use this to verify that new files were placed and named according to project rules.
+- `{project-path}/.spec-workflow/steering/product.md` — product principles / non-goals (used to flag scope creep).
+
+Skip any file that does not exist.
+
 ### 1. Read All Code
 
 Read both the test files and implementation files to understand:
@@ -86,6 +96,11 @@ Evaluate the final code on:
 - **Maintainability**: Is it easy to modify in the future?
 - **Test coverage**: Do tests adequately cover the behavior?
 - **Consistency**: Does it follow existing codebase patterns?
+- **Steering Alignment** (only if steering docs exist):
+  - **File placement**: Are new source and test files placed per `structure.md` File Placement Rules (P4-01)? Flag any file placed outside the rule-mandated directory.
+  - **Approved dependencies**: Does every newly imported third-party dependency appear in `tech.md` "External Dependencies (Approved)"? Flag additions that do not.
+  - **ADR conformance**: Does the implementation contradict any Accepted ADR summarized in `tech.md`? Flag any such divergence.
+  - **Product scope**: Does the change stay within product scope (not quietly implementing a Non-Goal from `product.md`)?
 
 ## Output Format
 
@@ -104,6 +119,7 @@ Return to the calling agent:
 - Maintainability: {GOOD/FAIR/POOR} — {details}
 - Test coverage: {GOOD/FAIR/POOR} — {details}
 - Consistency: {GOOD/FAIR/POOR} — {details}
+- Steering alignment: {PASS/CONCERN/N/A} — {details; N/A if no steering docs exist}
 
 ### Success Criteria Check
 - [ ] {criterion 1}: {met/unmet}

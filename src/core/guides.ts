@@ -48,6 +48,11 @@ Follow this workflow exactly to avoid errors.
 - After cleanup: "Spec complete. Ready to implement?"
 
 ### Phase 5: Implementation — Execute tasks
+- Read steering docs at \`.spec-workflow/steering/*.md\` at the start of each task if they exist:
+  - \`tech.md\` for approved dependencies, technical constraints, and ADR conformance
+  - \`structure.md\` for File Placement Rules (P4-01) that decide where new files MUST live
+  - \`product.md\` to avoid implementing Non-Goals
+  Do not add a third-party dependency unless it is listed in tech.md's "External Dependencies (Approved)" table — if missing, STOP and ask the user to approve (adds an entry there) before proceeding.
 - For each task: mark [-] -> implement -> log-implementation (MANDATORY) -> mark [x]
 - Search implementation logs BEFORE coding to discover existing work
 - Task status: \`[ ]\` pending, \`[-]\` in-progress, \`[x]\` completed

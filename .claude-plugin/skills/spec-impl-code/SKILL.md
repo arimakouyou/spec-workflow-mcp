@@ -40,6 +40,16 @@ Agent({
 
 ## Execution Steps
 
+### 0. Load Project-Level Context (Steering)
+
+Before reading the tests, load project-level instance information from steering documents **if they exist**:
+
+- `{project-path}/.spec-workflow/steering/tech.md` — project-specific technology constraints (approved dependencies, required versions, external integrations, performance targets). Any new dependency introduced during GREEN must already be listed in the "External Dependencies (Approved)" table; if it is not, STOP and flag it to the caller rather than introducing it silently.
+- `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)**. Use this table to decide where new source files MUST be placed and how they MUST be named. Do not invent a placement if the rule exists.
+- `{project-path}/.spec-workflow/steering/product.md` — product principles and non-goals (skip if absent; used only to resolve ambiguity).
+
+Skip any file that does not exist; steering docs are optional. General engineering policies (design principles, style, security) live in `.claude-plugin/rules/` and are already applied project-wide — do not re-read them here.
+
 ### 1. Read and Understand the Tests
 
 - Read each test file to understand:
@@ -78,7 +88,8 @@ Follow `/tdd-skills` Green Strategies:
 
 - Read `_Leverage` files to understand existing patterns and utilities
 - Follow the codebase's existing conventions (naming, structure, error handling)
-- Create the modules that tests import
+- Create new source files **at the target directory dictated by `structure.md` File Placement Rules (P4-01)**. If the rule table has no matching row for the file type, use the closest analog and note the assumption in Output Notes.
+- Do not introduce any third-party dependency that is not listed in `tech.md` "External Dependencies (Approved)". If the test requires one that is missing, STOP and report it to the caller.
 - Implement functions/classes with the expected signatures
 - Handle all test cases including error scenarios
 

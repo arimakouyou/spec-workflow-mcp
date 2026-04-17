@@ -109,6 +109,19 @@ git diff --stat "{base}..{target}"
 2. Grep で同種問題の網羅調査
 3. `--focus` で絞られていない限り全カテゴリを順次実施
 
+### 3.5 steering 整合性チェック
+
+`.spec-workflow/steering/*.md` が存在する場合、A-H のカテゴリとは別に以下を検証する（pr-review-patterns.md には含まれないプロジェクト固有の追加観点）。`--focus` でカテゴリを絞った場合でも、このステップは既定で実行する（スキップする場合は `--focus` に `no-steering` を明示）。
+
+| チェック項目 | 手法 |
+|------------|------|
+| **配置規則準拠** | diff に新規ソース/テストファイルがある場合、`.spec-workflow/steering/structure.md` の File Placement Rules (P4-01) と照合。規則にある File Type と一致しない配置は finding |
+| **承認済み依存のみ使用** | `package.json` / `Cargo.toml` / `*.csproj` 等の依存追加が diff にある場合、`.spec-workflow/steering/tech.md` の "External Dependencies (Approved)" に列挙されているか確認。未承認の新規依存は finding |
+| **ADR 整合** | アーキテクチャに影響する変更（新規ハンドラ階層、DB スキーマ、外部 API 連携等）が `.spec-workflow/steering/tech.md` の Architecture Decision Records にある Accepted ADR と矛盾していないか確認。矛盾する場合は新規 ADR 起票 (`/adr`) を提案 |
+| **Non-Goals への抵触** | `.spec-workflow/steering/product.md` の Non-Goals / Out of Scope に該当する機能を誤って実装していないか確認 |
+
+steering 不在時は「観察ログ」に `checked-ok: steering docs absent — skipped steering consistency check` と明記してスキップ。
+
 ### 4. codex プラグインの併用検出
 
 `/codex:review` が使える環境かを検出:
@@ -131,6 +144,7 @@ codex と本スキルの findings が競合した場合:
 - **B（shell）**: checked-ok: 該当なし — shell 変更なし
 - **C（ドキュメント）**: finding — `XXX.md:L` で旧名 `old_skill` が残存
 - ...
+- **steering 整合**: checked-ok — 新規 `src/services/foo.rs` は P4-01 "Service" 配置規則と一致、新規依存なし、Accepted ADR と矛盾なし / もしくは `checked-ok: steering docs absent`
 ```
 
 ### 6. Findings 出力
