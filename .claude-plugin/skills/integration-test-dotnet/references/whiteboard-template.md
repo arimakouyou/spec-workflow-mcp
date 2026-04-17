@@ -65,6 +65,12 @@ Location: `.claude/_docs/plans/integ-test-dotnet-wb-{timestamp}.md`
 ## Quality Gate Results
 | File | Status | Reviewer |
 |------|:------:|----------|
+
+## Escalated Items
+(Items Pentagon could not resolve after exhausting 3 review cycles. User intervention required. Never downgrade to PASS.)
+
+| File | Unresolved findings | Last cycle | Root cause hypothesis |
+|------|---------------------|:----------:|-----------------------|
 ```
 
 ---

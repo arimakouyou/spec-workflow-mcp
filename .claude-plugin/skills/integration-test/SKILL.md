@@ -184,7 +184,7 @@ Main loop: monitor until all tasks are complete.
 **When Pentagon returns FAIL**:
 1. Count the number of reviews (per test file)
 2. Under 3 times: re-run the Worker with a prompt including the review comments
-3. 3rd time: mark as complete with remaining issues noted on the whiteboard
+3. 3rd time: Pentagon reports `FAIL (escalated)`. **Do NOT mark the file as complete or PASS.** Record the unresolved findings on the whiteboard under `Escalated Items`, keep the test file out of the final PASS count, and escalate to the user in the P5 final report (see below).
 
 ### P4: Final Verification
 
@@ -201,11 +201,11 @@ If verification fails, Command fixes it directly.
 
 ### P5: Cleanup & Report
 
-1. Move the whiteboard to `.claude/_docs/deleted/`
-2. Output the final report:
+1. Move the whiteboard to `.claude/_docs/deleted/` **only if there are no escalated items**. If any test file ended with `FAIL (escalated)`, keep the whiteboard in place so the user can act on it.
+2. Output the final report. If there is at least one escalated item, prepend a prominent escalation block and do **not** declare the overall run as complete:
 
 ```
-integration-test parallel implementation complete
+integration-test parallel implementation complete (or ESCALATED)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Targets: {targets}
@@ -218,6 +218,10 @@ Test results:
 
 Quality gate:
   {quality_gate_results}
+
+Escalated items: {count}            # omit when zero
+  - {test_file}: {short_reason}     # one line per escalated file
+  Remaining findings are on the whiteboard. User decision required before merge.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

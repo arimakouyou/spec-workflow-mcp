@@ -64,6 +64,12 @@ Command が P1 で作成するホワイトボード。
 ## Quality Gate Results
 | File | Status | Reviewer |
 |------|:------:|----------|
+
+## Escalated Items
+(Pentagon が 3 サイクル消化しても FAIL のまま解消できなかった項目。ユーザー介入が必要。PASS 扱いへは絶対に格下げしない)
+
+| File | Unresolved findings | Last cycle | Root cause hypothesis |
+|------|---------------------|:----------:|-----------------------|
 ```
 
 ---

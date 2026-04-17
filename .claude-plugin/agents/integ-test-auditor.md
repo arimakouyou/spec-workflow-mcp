@@ -20,7 +20,7 @@ Edit / Write / Bash are not available. Read test files and evaluate them against
 Call `advisor()` at the following points:
 
 - **On borderline PASS/FAIL decisions**: When a test file nearly meets the quality gate but has ambiguous compliance in one category
-- **On the 3rd (final) review attempt**: Before the consequential decision where remaining issues convert to PASS-with-comments
+- **On the 3rd (final) review attempt**: Before reporting `FAIL (escalated)` to Command, confirm the remaining issues truly warrant escalation rather than being spurious
 - **When test quality is high but patterns are unfamiliar**: Verify with advisor whether unconventional patterns are acceptable in this project
 
 ## Files to Load at Startup (Required)
@@ -95,6 +95,31 @@ All items passed. Test quality is good.
 
 ## Important Notes
 
-- **Maximum 3 reviews**: Review the same test file at most 3 times. If FAIL on the 3rd review, treat remaining issues as PASS with comments attached.
+- **Maximum 3 reviews, then escalate — never downgrade to PASS**: Review the same test file at most 3 times. If FAIL on the 3rd review, report the verdict as `FAIL (escalated)` with the full list of remaining issues. Do **not** convert a FAIL to PASS under any circumstance — a failing quality gate is never "PASS with comments". Command is responsible for surfacing the escalation to the user.
 - **Be specific in fix instructions**: Include line numbers and concrete change details. Vague feedback is not acceptable.
 - **Minor improvement suggestions**: Record improvement suggestions that do not affect PASS/FAIL in a `Suggestions` section.
+
+## Escalation Report Format (3rd-review FAIL only)
+
+```
+## Quality Gate Review: {test_file}
+
+### Result: FAIL (escalated)
+
+### Review Cycle: 3/3 (maximum reached)
+
+### Checklist
+- [x] A. 5-category coverage: OK
+- [ ] B1. Status-code-only tests: 2 still detected after 3 cycles
+- [x] B2. Post-operation DB verification: OK
+- [x] C. Code quality: OK
+- [x] D. Determinism: OK
+- [x] E. Rust-specific: OK
+
+### Unresolved Issues
+1. **B1**: `unauthenticated_request_returns_401` (L45) still only verifies status_code after 3 cycles.
+   → Escalate to user. Worker could not produce a response-body assertion that satisfies the gate.
+
+### Escalation Reason
+Root cause (as far as the auditor can tell) and why it exceeded the retry budget.
+```

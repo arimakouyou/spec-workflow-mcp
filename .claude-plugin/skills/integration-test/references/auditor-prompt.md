@@ -73,6 +73,6 @@ E. Rust 固有: PASS / FAIL
 
 ## レビューサイクル
 - 最大 3 回のレビューサイクル
-- 3 回目で FAIL の場合は残存指摘付きで完了扱いとし、Command に報告する
+- 3 回目で FAIL の場合は verdict を `FAIL (escalated)` として残存指摘を全て列挙し Command にエスカレーションする。**FAIL を PASS に格下げしてはならない** — Command がユーザーへのエスカレーションを担う
 - PASS の場合はホワイトボードの Quality Gate Results 更新を Command に依頼する
 ```
