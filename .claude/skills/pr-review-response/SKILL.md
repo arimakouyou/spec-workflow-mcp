@@ -99,7 +99,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/reviews --paginate
 gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[] | {id: .id, databaseId: .databaseId, createdAt: .createdAt, path: .path, line: .line}]}'
 ```
 
-resolved 済みコメントは Phase 2 の triage 対象から除外（`reply_only` に分類して完了レポートに記録）。
+resolved 済みコメントは Phase 2 の triage 対象から除外し、下記集約表の **`skipped` バケット** に入れて完了レポートに記録する（`reply_only`（質問回答用）とは別枠）。
 
 REST コメントと GraphQL の resolved 状態は `databaseId` を最優先で突合。なければ `createdAt + path + line` の複合キーでマッピング（body だけの突合は禁止 — 同文面で誤マッピングが起きる）。
 
@@ -130,7 +130,7 @@ Agent({
 
 ### Triage 結果の集約
 
-各 worker が返す YAML ブロックをパースし、以下の 4 バケットに分類する:
+各 worker が返す YAML ブロックをパースし、以下の 5 バケットに分類する:
 
 | バケット | 条件 |
 |---------|------|
@@ -138,6 +138,7 @@ Agent({
 | `reply_only` | `category: question` |
 | `user_decision` | `validity: partial` or `category: suggestion` |
 | `invalid_reject` | `validity: invalid`（対応せず理由付き返信） |
+| `skipped` | triage 前から resolved 済み、または `category: approval`（対応不要、完了レポートに記録のみ） |
 
 ---
 
@@ -370,7 +371,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 ## PR #{number} レビューコメント対応完了（並列版）
 
 ### Triage 結果
-- auto_fix: {N}件 / reply_only: {M}件 / user_decision: {K}件 / invalid_reject: {L}件
+- auto_fix: {N}件 / reply_only: {M}件 / user_decision: {K}件 / invalid_reject: {L}件 / skipped: {X}件（resolved / approval）
 - 矛盾ペア: {P}件（ユーザー解消済み）
 
 ### 修正サマリ

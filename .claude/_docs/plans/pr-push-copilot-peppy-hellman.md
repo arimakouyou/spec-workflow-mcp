@@ -167,7 +167,7 @@ Agent(subagent_type: "pr-triage-worker", prompt: <comment #2 context>)
 ...
 ```
 
-単一メッセージ内で複数 Agent tool use を並べて同時発火させる。各 worker の戻り値を集約し、以下 4 バケットに分配:
+単一メッセージ内で複数 Agent tool use を並べて同時発火させる。各 worker の戻り値を集約し、以下 5 バケットに分配:
 
 | バケット | 条件 |
 |---------|------|
@@ -175,6 +175,7 @@ Agent(subagent_type: "pr-triage-worker", prompt: <comment #2 context>)
 | `reply_only` | category `question` |
 | `user_decision` | validity `partial` or category `suggestion` |
 | `invalid_reject` | validity `invalid`（対応せず理由付きで返信） |
+| `skipped` | triage 前から resolved 済み、または category `approval`（対応不要、完了レポートに記録のみ） |
 
 ### Phase 2.5: 矛盾フィードバック検出（ユーザー承認の前段）
 
@@ -278,7 +279,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 ## PR #{number} レビューコメント対応完了
 
 ### Triage 結果
-- auto_fix: {N} / reply_only: {M} / user_decision: {K} / invalid_reject: {L}
+- auto_fix: {N} / reply_only: {M} / user_decision: {K} / invalid_reject: {L} / skipped: {X}（resolved / approval）
 
 ### 修正サマリ
 - 修正ファイル: {N} ({parallel workers})
