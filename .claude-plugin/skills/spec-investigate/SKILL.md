@@ -76,6 +76,7 @@ Each file:
 - Is 50–150 lines, scoped to a single topic
 - Cites real file paths and line ranges in sources:
 - Names: EV-{category}-001.md, EV-{category}-002.md, ...
+- **The file name stem and the frontmatter `ev_id:` MUST match exactly** — both carry the same `EV-{category}-{NNN}` string (per `.claude-plugin/rules/spec-dependency-graph.md` SD1). A mismatch will FAIL the EC1 integrity check.
 - Quotes only what is needed to establish the fact (avoid full-file dumps)
 
 Return a short summary listing each file created with its topic and the list of sources (path:Lstart-Lend).

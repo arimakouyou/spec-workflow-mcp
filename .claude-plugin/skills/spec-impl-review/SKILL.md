@@ -39,7 +39,9 @@ Agent({
 
 ## Execution Steps
 
-### 0. Load Project-Level Context (Steering)
+### 0. Load Project-Level Context (Steering) — **Authoritative Validator**
+
+> **Responsibility split**: `spec-impl-code` and `spec-impl-test-write` read steering as *guidance* while writing code — they consult File Placement Rules (P4-01) and the approved dependency list, but they are **not** expected to perform a full steering audit. **This REFACTOR phase is the authoritative steering validator** for the implementation: impl-code / impl-test-write catch violations opportunistically, but impl-review is the last line of defense and must flag anything they missed.
 
 Before reviewing, load project-level instance information from steering documents **if they exist**:
 
@@ -47,7 +49,7 @@ Before reviewing, load project-level instance information from steering document
 - `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)** and any Project-Specific Conventions. Use this to verify that new files were placed and named according to project rules.
 - `{project-path}/.spec-workflow/steering/product.md` — product principles / non-goals (used to flag scope creep).
 
-Skip any file that does not exist.
+Skip any file that does not exist. If steering is absent, record `steering: absent — full consistency check skipped` in the quality assessment output and rely on `.claude-plugin/rules/` project-wide policies alone.
 
 ### 1. Read All Code
 

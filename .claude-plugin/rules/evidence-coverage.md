@@ -29,9 +29,12 @@ Evidence files created by `/spec-investigate` are named `EV-{category}-{NNN}` wh
 Rules:
 
 - The canonical form of an EV-ID in any of these contexts is the exact string `EV-{category}-{NNN}`. Matching is case-sensitive.
+- The evidence file's frontmatter `ev_id:` and its filename stem **must match exactly** (per `spec-dependency-graph.md` SD1). A mismatch is a FAIL under EC1.
 - A citation that points to a file that does not exist under `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` is a FAIL.
 - A citation that names a `{category}` that is neither listed in `task-types.md` TT3 nor in the project's `user-config/task-types.yml` (TT4) is a FAIL.
 - A citation that points to an EV whose `spec_name:` frontmatter disagrees with the current spec is a FAIL. Cross-spec citations are not supported in Step 2; they may be introduced in a later step.
+
+> **Precedence note (EC1 ↔ SD3/SD5)**: EV-* IDs are allowed inside the same `depends_on.refs` array as REQ-*/DES-*/etc., but per `spec-dependency-graph.md` SD1 (last bullet) and SD5, EV entries are **supporting evidence** and do **not** participate in the DAG phase-order constraint. `/spec-verify` SD5 / SD4 DAG checks enumerate REQ/DES/MOD/API/UT/IT/E2E IDs only; EV entries in the same array are skipped for cycle / phase-order detection (they are still validated for existence and spec_name by EC1). If future tooling changes this behavior, update SD3 first — EC1 defers to SD3 for phase-order semantics.
 
 ## EC2: Required Citation Sites (blocking for classified task types)
 

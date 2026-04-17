@@ -48,7 +48,7 @@ Before reading the tests, load project-level instance information from steering 
 - `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)**. Use this table to decide where new source files MUST be placed and how they MUST be named. Do not invent a placement if the rule exists.
 - `{project-path}/.spec-workflow/steering/product.md` — product principles and non-goals (skip if absent; used only to resolve ambiguity).
 
-Skip any file that does not exist; steering docs are optional. General engineering policies (design principles, style, security) live in `.claude-plugin/rules/` and are already applied project-wide — do not re-read them here.
+**When steering docs are absent**: Skip the load step entirely. In Output Notes, record `steering: absent — pre-approval dependency check and file placement rule check skipped`. The caller (spec-implement orchestrator) will see this note and treat it as an expected legacy condition rather than a missed check. Do not block implementation on missing steering docs — steering docs are optional (see `steering-doc/SKILL.md`). General engineering policies (design principles, style, security) live in `.claude-plugin/rules/` and are already applied project-wide — do not re-read them here.
 
 ### 1. Read and Understand the Tests
 

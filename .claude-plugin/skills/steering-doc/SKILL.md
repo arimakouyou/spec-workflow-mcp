@@ -136,11 +136,21 @@ Agent({
     2. SPECIFICITY: Content must be specific to this project, not generic boilerplate
     3. COMPLETENESS: All tables must have concrete entries, not placeholder rows. Sections that do not apply must read \`Status: N/A — {{reason}}\` rather than being blank
     4. ACTIONABILITY: Guidance must be clear enough to inform future spec development
-    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`.claude-plugin/rules/\`. Flag any of the following as issues:
-       - For structure.md: sections titled \`Naming Conventions\`, \`Import Patterns\`, \`Code Structure Patterns\`, \`Code Organization Principles\`, \`Module Boundaries\`, \`Documentation Standards\`, or their contents (duplicates design-principles.md / *-style.md / doc-* rules)
-       - For tech.md: sections named \`Prohibited Patterns\` containing general language-level prohibitions (belongs in rules/), or general security/testing/documentation policies (belongs in rules/)
-       - Generic restatements of design principles D1–D6 from \`rules/design-principles.md\`
-       In each case, the fix is to remove the duplicated content and link to the authoritative rules/ file instead.
+    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`.claude-plugin/rules/\`. Flag any of the following as issues (each section name maps to the rules/ file that already owns it):
+       - For structure.md:
+         * \`Naming Conventions\` → owned by \`rules/*-style.md\` (rust-style.md / csharp-style.md / axum.md / etc.)
+         * \`Import Patterns\` → owned by \`rules/*-style.md\`
+         * \`Code Structure Patterns\` → owned by \`rules/design-principles.md\` / \`rules/*-style.md\`
+         * \`Code Organization Principles\` → owned by \`rules/design-principles.md\`
+         * \`Module Boundaries\` → owned by \`rules/design-principles.md\` / \`rules/project-architecture.md\`
+         * \`Documentation Standards\` → owned by \`rules/doc-crossref.md\` / \`rules/doc-freshness.md\`
+       - For tech.md:
+         * \`Prohibited Patterns\` containing general language-level prohibitions → owned by \`rules/*-style.md\` / \`rules/security.md\`
+         * Generic security policies → owned by \`rules/security.md\`
+         * Generic testing policies → owned by \`rules/flaky-test-management.md\` / \`rules/regression-test-policy.md\`
+         * Generic documentation policies → owned by \`rules/doc-crossref.md\` / \`rules/doc-freshness.md\`
+       - Generic restatements of design principles D1–D6 → owned by \`rules/design-principles.md\`
+       In each case, the fix is to remove the duplicated content and link to the authoritative rules/ file named above.
     6. ADR LINKAGE (tech.md only): The Architecture Decision Records section should either contain a populated summary table matching \`.claude/_docs/adr/INDEX.md\`, or show \`Status: N/A — no ADRs yet\` if none exist.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
