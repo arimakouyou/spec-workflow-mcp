@@ -18,10 +18,10 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
     'Please start the dashboard with: spec-workflow-mcp --dashboard';
 
   const nextSteps = [
-    'Follow sequence: /spec-request-spec → /spec-requirements → /spec-design → /spec-test-design → /spec-tasks → /spec-implement',
+    'Follow sequence: spec-request-spec → spec-requirements → spec-design → spec-test-design → spec-tasks → spec-implement',
     'Read templates from .spec-workflow/templates/ (or user-templates/ for overrides)',
     'Request approval after each document using the approvals MCP tool',
-    'Use plugin skills (slash commands) for workflow phases, approvals MCP tool for approval management',
+    'Use your client adapter (skills, saved prompts, command aliases, or workspace instructions) for workflow phases, and the approvals MCP tool for approval management',
     dashboardMessage
   ];
 
@@ -44,7 +44,7 @@ ${nextSteps.map(step => `- ${step}`).join('\n')}
 **Important Instructions:**
 1. This guide has been injected into your context for immediate reference
 2. Follow the workflow sequence exactly: Request Spec → Requirements → Design → Test Design → Tasks → Implementation
-3. Use plugin skills (slash commands like /spec-request-spec, /spec-requirements, etc.) to execute each phase
+3. Use the phase capability names (spec-request-spec, spec-requirements, etc.) through your client's adapter to execute each phase
 4. Always request approval between phases using the approvals MCP tool
 5. Never proceed to the next phase without successful approval cleanup
 

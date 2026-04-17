@@ -58,7 +58,22 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > - ルール：プロジェクトアーキテクチャ、品質チェック、セキュリティ、設計原則など
 > - フック：タスク読み取りガードの自動化
 
-### 方法2: 手動 MCP 設定
+### 方法2: マルチツール用アダプタ（Codex / 汎用AIクライアント）
+
+Claude Code 以外のクライアント向けに、ツール中立の共有ワークフロー定義とアダプタを同梱しています。
+
+- `assistant-adapters/shared/spec-workflow-core.md` - 共有ワークフロー定義
+- `assistant-adapters/codex/AGENTS.md` - Codex向けアダプタ
+- `assistant-adapters/generic/SYSTEM.md` - 汎用システムプロンプト/ルールファイル向け
+
+ベストプラクティス:
+
+- MCPサーバーとワークフロー定義を分離する
+- フェーズ名は `spec-request-spec` などの共通 capability 名で統一する
+- クライアントごとの差分はアダプタ層だけに閉じ込める
+- 承認は引き続き `approvals` MCPツールとダッシュボードで一元管理する
+
+### 方法3: 手動 MCP 設定
 
 MCP設定に追加します（以下のクライアント固有のセットアップを参照）：
 
@@ -98,6 +113,8 @@ VSCodeマーケットプレイスから[Spec Workflow MCP Extension](https://mar
 - **「user-auth仕様のタスク1.2を実行して」** - 特定のタスクを実行
 
 [その他の例を見る →](docs/PROMPTING-GUIDE.ja.md)
+
+Claude Code以外では、クライアントの永続指示・ワークスペースルール・保存済みプロンプトに `assistant-adapters/` 配下のアダプタを読み込ませてください。
 
 ## 🔧 MCPクライアントセットアップ
 
@@ -303,7 +320,7 @@ your-project/
     config.example.toml
 ```
 
-### プラグイン構造（`.claude-plugin/` で配布）
+### 配布構造（Claude プラグイン + マルチツールアダプタ）
 
 ```
 .claude-plugin/
@@ -337,6 +354,14 @@ your-project/
     security.md            # セキュリティガイドライン
     design-principles.md   # 設計原則
     ...
+
+assistant-adapters/
+  shared/
+    spec-workflow-core.md  # 共有ワークフロー定義
+  codex/
+    AGENTS.md              # Codex 向けアダプタ
+  generic/
+    SYSTEM.md              # 汎用クライアント向けアダプタ
 ```
 
 ## 🛠️ 開発

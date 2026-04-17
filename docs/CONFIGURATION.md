@@ -88,6 +88,25 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 
 > **Note**: When using the plugin, you do not need to manually configure MCP in your client settings. The plugin handles everything.
 
+## Multi-Tool Adapters
+
+For non-Claude clients, combine MCP configuration with the instruction files shipped under `assistant-adapters/`.
+
+### Available adapters
+
+| File | Purpose |
+|------|---------|
+| `assistant-adapters/shared/spec-workflow-core.md` | Shared workflow definition |
+| `assistant-adapters/codex/AGENTS.md` | Workspace instructions for Codex |
+| `assistant-adapters/generic/SYSTEM.md` | Generic rules/system-prompt adapter |
+
+### Recommended setup
+
+1. Register the MCP server in your client
+2. Start the dashboard with `spec-workflow-mcp --dashboard`
+3. Load the matching adapter into the client's persistent instructions or workspace rules
+4. Standardize on shared phase capability names such as `spec-request-spec`
+
 ## Environment Variables
 
 ### SPEC_WORKFLOW_HOME

@@ -105,6 +105,10 @@ spec-workflow-mcp/
 │   ├── skills/            # Workflow skills (spec-requirements, spec-design, etc.)
 │   ├── agents/            # Specialized sub-agents
 │   └── rules/             # Project rules and conventions
+├── assistant-adapters/    # Non-Claude adapter distribution
+│   ├── shared/            # Tool-neutral workflow definition
+│   ├── codex/             # Codex adapter
+│   └── generic/           # Generic client adapter
 ├── dashboard/             # Web dashboard files
 │   ├── index.html         # Dashboard UI
 │   ├── styles.css         # Dashboard styles

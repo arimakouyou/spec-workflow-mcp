@@ -105,6 +105,10 @@ spec-workflow-mcp/
 │   ├── skills/            # ワークフロースキル（spec-requirements、spec-design など）
 │   ├── agents/            # 専門サブエージェント
 │   └── rules/             # プロジェクトルールと規約
+├── assistant-adapters/    # Claude以外向けのアダプタ配布
+│   ├── shared/            # ツール中立の共有ワークフロー定義
+│   ├── codex/             # Codex向けアダプタ
+│   └── generic/           # 汎用クライアント向けアダプタ
 ├── dashboard/             # Webダッシュボードファイル
 │   ├── index.html         # ダッシュボードUI
 │   ├── styles.css         # ダッシュボードスタイル

@@ -10,6 +10,9 @@
   "files": [
     "dist/**/*",
     ".claude-plugin/**/*",
+    "assistant-adapters/**/*",
+    "AGENTS.md",
+    "CLAUDE.md",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -41,6 +44,7 @@
     "spec-workflow",
     "ai-development",
     "claude",
+    "codex",
     "cursor",
     "development-workflow",
     "project-management"

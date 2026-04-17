@@ -62,7 +62,22 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > - Rules: project architecture, quality checks, security, design principles, etc.
 > - Hooks: automated task read guards
 
-### Option 2: Manual MCP Configuration
+### Option 2: Multi-Tool Adapters (Codex / generic AI clients)
+
+The package also ships a tool-neutral workflow core plus thin adapters for non-Claude clients:
+
+- `assistant-adapters/shared/spec-workflow-core.md` - shared workflow definition
+- `assistant-adapters/codex/AGENTS.md` - Codex adapter
+- `assistant-adapters/generic/SYSTEM.md` - generic rules/system-prompt adapter
+
+Best practice:
+
+- keep the MCP server and workflow instructions separate
+- standardize on shared phase capability names such as `spec-request-spec`
+- isolate client-specific behavior in adapter files only
+- keep approvals centralized in the `approvals` MCP tool and dashboard
+
+### Option 3: Manual MCP Configuration
 
 Add to your MCP configuration (see client-specific setup below):
 
@@ -102,6 +117,8 @@ Simply mention spec-workflow in your conversation:
 - **"Execute task 1.2 in spec user-auth"** - Runs a specific task
 
 [See more examples →](docs/PROMPTING-GUIDE.md)
+
+For non-Claude clients, load the matching file from `assistant-adapters/` into the client's persistent instructions, workspace rules, or saved prompt system.
 
 ## 🔧 MCP Client Setup
 
@@ -362,7 +379,7 @@ your-project/
     config.example.toml
 ```
 
-### Plugin Structure (distributed via `.claude-plugin/`)
+### Distribution Structure (Claude plugin + multi-tool adapters)
 
 ```
 .claude-plugin/
@@ -396,6 +413,14 @@ your-project/
     security.md            # Security guidelines
     design-principles.md   # Design principles
     ...
+
+assistant-adapters/
+  shared/
+    spec-workflow-core.md  # Shared workflow definition
+  codex/
+    AGENTS.md              # Codex adapter
+  generic/
+    SYSTEM.md              # Generic client adapter
 ```
 
 ## 🛠️ Development

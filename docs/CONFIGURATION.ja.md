@@ -86,6 +86,25 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 
 > **注意**: プラグインを使用する場合、クライアント設定で手動で MCP を設定する必要はありません。プラグインがすべてを処理します。
 
+## マルチツールアダプタ
+
+Claude Code 以外のクライアントでは、MCP設定に加えて `assistant-adapters/` 配下の指示ファイルを使います。
+
+### 利用可能なアダプタ
+
+| ファイル | 用途 |
+|------|---------|
+| `assistant-adapters/shared/spec-workflow-core.md` | 共有ワークフロー定義 |
+| `assistant-adapters/codex/AGENTS.md` | Codex向けワークスペース指示 |
+| `assistant-adapters/generic/SYSTEM.md` | 汎用システムプロンプト/ルールファイル |
+
+### 推奨構成
+
+1. MCPサーバーをクライアントに登録する
+2. ダッシュボードを `spec-workflow-mcp --dashboard` で起動する
+3. クライアントの永続指示機能に対応アダプタを読み込ませる
+4. フェーズ名は `spec-request-spec` などの共通 capability 名で統一する
+
 ## 環境変数
 
 ### SPEC_WORKFLOW_HOME
