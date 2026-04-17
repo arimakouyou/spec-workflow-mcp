@@ -284,9 +284,37 @@ elif find . -maxdepth 3 \( -name "*.csproj" -o -name "*.sln" \) -print -quit 2>/
     && dotnet build --no-restore -warnaserror \
     && dotnet test --no-build --verbosity quiet
 elif [ -f package.json ]; then
-  npm run lint --if-present \
-    && npm run typecheck --if-present \
-    && npm test --if-present
+  # QC6（.claude-plugin/rules/quality-checks.md 準拠）:
+  # eslint (→ tsc fallback) → prettier → test → tsc → build → audit
+  # 各ステップは QC6 仕様どおり「未設定なら skip」で、lint/format 違反は FAIL させる。
+  # いずれかが exit != 0 なら以降を止めて pipeline 全体を FAIL とする。
+  set -e
+  has_eslint=0
+  if npx --no-install eslint --version >/dev/null 2>&1; then
+    has_eslint=1
+  fi
+  # Step 1: lint — eslint 優先、未設定時は tsc --noEmit を fallback
+  if [ "$has_eslint" = 1 ]; then
+    npx --no-install eslint . --max-warnings=0
+  else
+    npx --no-install tsc --noEmit
+  fi
+  # Step 2: format — prettier が未設定なら skip
+  if npx --no-install prettier --version >/dev/null 2>&1; then
+    npx --no-install prettier --check .
+  fi
+  # Step 3: test
+  npm test --if-present
+  # Step 4: tsc --noEmit — TypeScript configured かつ Step 1 で lint fallback として tsc を実行済みでない場合のみ
+  if [ "$has_eslint" = 1 ] && grep -q '"typescript"' package.json; then
+    npx --no-install tsc --noEmit
+  fi
+  # Step 5: build — build script がある時のみ
+  npm run build --if-present
+  # Step 6: audit — lockfile がある時のみ
+  if [ -f package-lock.json ]; then
+    npm audit --audit-level=high
+  fi
 fi
 
 git commit -m "$(cat <<'EOF'

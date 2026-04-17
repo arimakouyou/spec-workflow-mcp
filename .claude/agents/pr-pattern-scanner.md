@@ -54,6 +54,8 @@ Grep の機械的ヒットの中には、文字列は一致するが **意味的
 
 最終メッセージ本文に YAML ブロックを 1 つだけ返す。
 
+複数行を含みうるフィールド（`context`、`filtered_out[].reason`、`notes`）は YAML のブロックスカラー `|` で返す。ダブルクォート 1 行文字列で返すと改行/引用符で機械パースが壊れるため。
+
 ```yaml
 pattern: "{検索パターン（入力のエコー）}"
 total_hits: {N}
@@ -61,15 +63,18 @@ truncated: false   # max_hits を超えた場合 true
 additional_occurrences:
   - path: {path}
     line: {line}
-    context: "{該当行±1行}"
+    context: |
+      {該当行±1行 — 複数行可}
 filtered_out:
   - path: {path}
     line: {line}
-    reason: "{なぜ別文脈と判断したか}"
+    reason: |
+      {なぜ別文脈と判断したか — 複数行可}
 missing_from_fix_queue:
   - {path}:{line}
   - ...
-notes: "{特記事項があれば 1-2 行、なければ空文字}"
+notes: |
+  {特記事項があれば 1-2 行、なければ空}
 ```
 
 ## ルール

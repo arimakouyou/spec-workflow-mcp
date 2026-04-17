@@ -70,7 +70,7 @@ format 結果の diff は最終報告に含める。
 
 ### Step 4: 軽量な確認（可能な範囲）
 
-修正量が大きい or 既存テストに波及しそうなときは、該当ファイルだけの test を走らせる（フルテストスイートは走らせない — オーケストレーターが Phase 6 で `pre-push-review` を呼ぶ）。
+修正量が大きい or 既存テストに波及しそうなときは、該当ファイルだけの test を走らせる。ここでは軽量確認のみを行い、フル QC（テスト含む）は `/pr-review-response` の Phase 5.5 で Command が `quality-checks.md` 準拠（QC3/QC6/QC12）で実行する。`pre-push-review` は静的チェックリストレビューであり、テスト実行の代替ではない。
 
 | 言語 | 軽量チェックコマンド |
 |------|---------------------|
@@ -84,18 +84,23 @@ format 結果の diff は最終報告に含める。
 
 最終メッセージ本文に YAML ブロックを 1 つだけ返す。
 
+複数行を含みうるフィールド（`skipped_comments[].reason`、`lightweight_check_output`、`summary`）は YAML のブロックスカラー `|` で返す。ダブルクォート 1 行文字列で返すと改行/引用符で機械パースが壊れるため。
+
 ```yaml
 file: {path}
 changed_lines: [{start-end}, ...]   # 修正行範囲
 applied_comments: [{id1}, {id2}, ...]   # 修正を反映したコメント ID
 skipped_comments:
   - id: {id}
-    reason: "{なぜ skip したか}"
+    reason: |
+      {なぜ skip したか — 複数行可}
 format_applied: true | false
 format_changes: {N}   # format による変更行数
 lightweight_check: pass | fail | skip
-lightweight_check_output: "{fail 時のエラー、skip 時は空文字}"
-summary: "{1-2 行}"
+lightweight_check_output: |
+  {fail 時のエラー出力 — 複数行可、skip 時は空}
+summary: |
+  {1-2 行のまとめ}
 ```
 
 ## ルール

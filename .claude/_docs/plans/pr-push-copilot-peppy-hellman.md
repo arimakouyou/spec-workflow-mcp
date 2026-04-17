@@ -287,7 +287,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 
 ### 品質チェック
 - pre-push-review: {verdict}
-- quality gate (QC1-QC3): PASS
+- quality gate: PASS（Rust: QC1-QC3 / Node.js: QC6 / .NET: QC12 — プロジェクトに応じて）
 
 ### Push
 - commit: {hash}

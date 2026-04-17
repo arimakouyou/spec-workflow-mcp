@@ -85,12 +85,16 @@ steering/rules が存在しないプロジェクトでは、そのチェック�
 
 最終メッセージ本文に YAML ブロックを 1 つだけ返す（fire-and-forget）。追加のテキストは不要。
 
+複数行を含みうるフィールド（`reason`、`proposed_action`）は YAML のブロックスカラー `|` で返す。ダブルクォート 1 行文字列で返すと改行/引用符で機械パースが壊れるため。
+
 ```yaml
 comment_id: {id}
 category: code_fix | question | style | approval | suggestion
 validity: valid | partial | invalid
-reason: "{判定根拠 — どの rule/steering と整合/矛盾したか、または指摘が誤りと判断した具体的理由}"
-proposed_action: "{妥当時の修正方針 1-2 行、invalid/question 時は空文字}"
+reason: |
+  {判定根拠 — どの rule/steering と整合/矛盾したか、指摘が誤りと判断した具体的理由。複数行可}
+proposed_action: |
+  {妥当時の修正方針 1-2 行、invalid/question 時は空}
 ```
 
 ## ルール
