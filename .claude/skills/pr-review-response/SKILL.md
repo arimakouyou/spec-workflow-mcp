@@ -76,7 +76,7 @@ Phase 9  完了レポート
    OWNER="${REPO%%/*}"
    REPO_NAME="${REPO##*/}"
    ```
-3. **PR 状態確認**: `gh pr view {number} --json state` — `MERGED`/`CLOSED` の場合は続行確認
+3. **PR 状態確認**: `gh pr view {number} --json state,headRefName,baseRefName` — `MERGED`/`CLOSED` の場合は続行確認。`baseRefName` は Phase 6 の `--base origin/{baseRefName}` で参照、`headRefName` は完了レポートで使用するため同時に取得
 4. **ワーキングツリー**: `git status --porcelain` — 未コミット変更があれば STOP
 5. **PR ブランチへの切り替え**: `gh pr checkout {number}`
 
@@ -114,12 +114,12 @@ resolved 除外後の全コメントについて `pr-triage-worker` を **単一
 Agent({
   subagent_type: "pr-triage-worker",
   description: "Triage: {path}:{line}",
-  prompt: buildTriagePrompt(comment_1, sibling_comments)
+  prompt: buildTriagePrompt(comment_1)
 })
 Agent({
   subagent_type: "pr-triage-worker",
   description: "Triage: {path}:{line}",
-  prompt: buildTriagePrompt(comment_2, sibling_comments)
+  prompt: buildTriagePrompt(comment_2)
 })
 // ...
 ```
@@ -271,14 +271,22 @@ Phase 4 + Phase 5 追加修正がすべて working tree にある状態。Comman
 # 修正されたファイルのみ add（git add -A は使わない — 意図しないファイルを含めないため）
 git add {全 fix-worker の file 一覧} {pattern-scanner 経由の追加修正ファイル}
 
-# 軽量最終チェック（pre-push-review 前の念のための確認）
+# フル QC（commit 前必須 — quality-checks.md の QC3/QC6/QC12 準拠）
+# pre-push-review は静的レビューでテスト代替にならないため、ここでフル実行する
 # プロジェクトタイプは存在するファイルで判定
 if [ -f Cargo.toml ]; then
-  cargo fmt --all -- --check && cargo clippy --quiet --all-targets -- -D warnings
+  cargo fmt --all -- --check \
+    && cargo clippy --quiet --all-targets -- -D warnings \
+    && cargo test --quiet
 elif find . -maxdepth 3 \( -name "*.csproj" -o -name "*.sln" \) -print -quit 2>/dev/null | grep -q .; then
-  dotnet restore && dotnet format --verify-no-changes --no-restore && dotnet build --no-restore -warnaserror
+  dotnet restore \
+    && dotnet format --verify-no-changes --no-restore \
+    && dotnet build --no-restore -warnaserror \
+    && dotnet test --no-build --verbosity quiet
 elif [ -f package.json ]; then
-  npm run lint --if-present && npm run typecheck --if-present
+  npm run lint --if-present \
+    && npm run typecheck --if-present \
+    && npm test --if-present
 fi
 
 git commit -m "$(cat <<'EOF'
@@ -291,14 +299,12 @@ fix: PR #{number} レビューコメント対応（並列対応）
 
 同種問題の追加修正:
 - {scanner 検出箇所のサマリ}
-
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
 
 - **reset / amend 禁止**: Phase 6 で `fix_required` になっても、この commit は書き換えず追加 commit を積む
-- 品質チェックは `pr-fix-worker` 内で完了している前提だが、Command 側でも最終確認を軽量に走らせる
+- 品質チェック（QC3/QC6/QC12 のフル実行）は Command が commit 前にここで責任を持って走らせる（`pr-fix-worker` 側は軽量 check のみ）
 
 ---
 

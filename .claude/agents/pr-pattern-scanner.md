@@ -32,11 +32,7 @@ max_hits: 50   # 上限、超えた場合は truncate して notice を付ける
 
 ### Step 1: パターン走査
 
-Grep ツールで `pattern` を `include_globs` の範囲で検索し、出現箇所を集める。`exclude_paths` に含まれるファイルは結果から除外する。
-
-```
-Grep(pattern: "{pattern}", glob: "{include_globs}", output_mode: "content", -n: true, head_limit: {max_hits})
-```
+Grep ツールで `pattern` を検索し、対象範囲は `include_globs` で絞り込む。結果は行番号付きで最大 `max_hits` 件まで取得し、`exclude_paths` に含まれるファイルは結果から除外する。
 
 ### Step 2: ヒット箇所の簡易文脈取得
 

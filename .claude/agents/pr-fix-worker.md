@@ -61,7 +61,7 @@ related_rules: [{path_to_rule1}, {path_to_rule2}, ...]   # 任意、triage-worke
 
 | 拡張子 | コマンド |
 |-------|---------|
-| `.rs` | `cargo fmt -- {path}`（ファイル単位） or `cargo fmt --all` |
+| `.rs` | `cargo fmt --all`（repo 既定）。ファイル単位で必要な場合のみ `rustfmt {path}` |
 | `.cs` | `dotnet format {project} --include {path}` |
 | `.ts` / `.tsx` / `.js` / `.jsx` | `npx prettier --write {path}` |
 | `.md` | `npx markdownlint-cli2 --fix {path}` が使えれば実行（repo 既定は `.claude-plugin/hooks/post-edit-markdownlint.sh` で自動起動するので手動実行は fallback 想定） |
