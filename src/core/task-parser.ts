@@ -305,12 +305,15 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
       } else if (contentLine.includes('_Evidence:') && !contentLine.includes('_Prompt:')) {
         const evMatch = contentLine.match(/_Evidence:\s*([^_]+?)_/);
         if (evMatch) {
-          evidence.push(
-            ...evMatch[1]
-              .split(/[,\s]+/)
-              .map(e => e.trim())
-              .filter(e => /^EV-[a-z0-9-]+-\d+$/i.test(e))
+          const parsed = Array.from(
+            new Set(
+              evMatch[1]
+                .split(/[,\s]+/)
+                .map(e => e.trim())
+                .filter(e => /^EV-[a-z0-9-]+-\d{3}$/.test(e))
+            )
           );
+          evidence.push(...parsed);
         }
       } else if (contentLine.match(/Files?:/)) {
         const fileMatch = contentLine.match(/Files?:\s*(.+)$/);
@@ -339,6 +342,7 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
                       files.length > 0 ||
                       purposes.length > 0 ||
                       implementationDetails.length > 0 ||
+                      evidence.length > 0 ||
                       !!prompt ||
                       isPhaseReview;
 

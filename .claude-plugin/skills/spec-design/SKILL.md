@@ -457,20 +457,25 @@ Agent({
     7. Excluded Test Environments section must exist (table may be empty if no exclusions, but section must be present)
     8. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: design, version, depends_on (file: requirements.md, refs: [REQ-...]) must exist at the top of the file
     9. IDENTIFIERS (spec-dependency-graph.md SD1): Components and Interfaces use '### DES-N: Name' headings, Data Models use '### MOD-N: Name', API sections use '### API-N: Name'. depends_on.refs must point to REQ-N (or REQ-N.M) that exist in requirements.md
-    10. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter.
-        - If task_type is absent, 'legacy', or request-spec.md does not exist → SKIP checks 10-11 (EC5) and note 'evidence checks skipped (legacy)' in the report.
-        - Otherwise, for every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs):
+    10. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
+        - If request-spec.md does not exist, or task_type is absent → SKIP checks 10-13 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 10-13 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+        - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
+            Run check 10 (EC1 integrity) on every citation as described below.
+            SKIP checks 11-13 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+        - If task_type is any other declared value, run checks 10-13 normally.
+        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 10 applies:
             a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
             b. The referenced file's frontmatter spec_name: must equal this spec-name.
             c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
           Any failure = FAIL with rule_id EC1.
-    11. INLINE CODE BUDGET (evidence-coverage.md EC3): Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+    11. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 10 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
             - A single fenced block exceeds 20 lines.
             - Cumulative fenced-block lines within a single H2 or H3 section exceed 40 lines.
             - Total fenced-block lines in the document exceed 200 lines.
           For each violation FAIL with rule_id EC3; fix_hint: 'Move the long excerpt to a new EV-{category}-{NNN}.md (pick the best-matching category from task-types.md TT3) and leave a brief summary + citation'. Markdown tables, block-quoted prose, ASCII architecture diagrams, and Mermaid diagrams are NOT counted.
-    12. PER-COMPONENT EVIDENCE (evidence-coverage.md EC2, per DES/MOD): Each '### DES-N:' and '### MOD-N:' section must either (a) cite at least one EV-... inside that section, or (b) carry an HTML comment '<!-- no-evidence: {reason} -->' inside the section that explains why no existing-code anchor applies (reason must be non-empty). Missing both = FAIL rule_id EC2_perDES.
-    13. CODE REUSE ANALYSIS EVIDENCE (evidence-coverage.md EC2): The 'Code Reuse Analysis' section must be driven by EV citations. Every concrete reused path, module, or utility mentioned in this section must be backed by an EV-... citation on the same line or in the adjacent bullet. Missing any = FAIL rule_id EC2_codeReuse; fix_hint: 'Back each reused path with an EV citation (typically EV-entry-points-* or EV-domain-models-*). If you still need to list the path without an existing EV, create one via targeted re-investigation.'
+    12. PER-COMPONENT EVIDENCE (evidence-coverage.md EC2, per DES/MOD): Apply this check only when check 10 routed to full enforcement (non-legacy classified task_type). Each '### DES-N:' and '### MOD-N:' section must either (a) cite at least one EV-... inside that section, or (b) carry an HTML comment '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) inside the section that explains why no existing-code anchor applies (reason must be non-empty). Missing both = FAIL rule_id EC2_perDES.
+    13. CODE REUSE ANALYSIS EVIDENCE (evidence-coverage.md EC2): Apply this check only when check 10 routed to full enforcement (non-legacy classified task_type). The 'Code Reuse Analysis' section must be driven by EV citations. Every concrete reused path, module, or utility mentioned in this section must be backed by an EV-... citation on the same line or in the adjacent bullet. Missing any = FAIL rule_id EC2_codeReuse; fix_hint: 'Back each reused path with an EV citation (typically EV-entry-points-* or EV-domain-models-*). If you still need to list the path without an existing EV, create one via targeted re-investigation.'
 
     Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.

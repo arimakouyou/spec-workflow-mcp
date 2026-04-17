@@ -30,7 +30,7 @@ always_apply: true
   - **test-design.md**: `#### UT-N.M: Name` / `### IT-N: Name` / `### E2E-N: Name`（従来規則のまま）
   - **tasks.md**: `- [ ] N.M タイトル` のリスト項目（従来規則のまま、`task-parser.ts` がパース）
   - **evidence/{category}/EV-*.md**: ファイル名と frontmatter `ev_id:` の両方に `EV-{category}-{NNN}` を記載（`evidence-template.md` 参照）。仕様書本体からは HTML コメント、括弧内引用、もしくは frontmatter `depends_on.refs` の 3 形式で参照する（`evidence-coverage.md` EC1）
-- 下流仕様書の `depends_on.refs` は、**REQ-N（bare、Requirement 全体を指す）** と **REQ-N.M（個別 Acceptance Criterion を指す）** のどちらも参照できる。`refs: [REQ-1]` なら REQ-1 配下の全 AC、`refs: [REQ-1.1, REQ-1.2]` なら個別 AC のみ。`EV-*` も同じ `refs` 配列に含められるが、EV は **supporting evidence** であり SD5 の DAG 制約（phase 上流→下流）には参加しない — 任意の phase から EV を参照してよい
+- 下流仕様書の `depends_on.refs` は、**REQ-N（bare、Requirement 全体を指す）** と **REQ-N.M（個別 Acceptance Criterion を指す）** のどちらも参照できる。`refs: [REQ-1]` なら REQ-1 配下の全 AC、`refs: [REQ-1.1, REQ-1.2]` なら個別 AC のみ。なお、`/spec-verify` が `depends_on.refs` の要素として認識するのは `REQ-N` / `REQ-N.M` / `DES-N` / `MOD-N` / `API-N` / `UT-N.M` / `IT-N` / `E2E-N` のみであり、`EV-*` を `depends_on.refs` に含める運用は現時点では未サポート。EV への参照は HTML コメント（`<!-- EV-{category}-{NNN} -->`）または括弧内引用（`(EV-{category}-{NNN})`）で行うこと（詳細は `evidence-coverage.md` EC1）
 - 既存 spec に ID を後付けする場合は Minor 変更扱いとし、参照する下流がなければ付与しなくてもよい（SD3 参照）
 - UT-N.M の M は N の下位番号（Component N のテストケース M）であり、REQ-N.M の M（Acceptance Criteria M）とは**独立**
 

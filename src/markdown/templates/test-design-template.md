@@ -13,7 +13,7 @@ depends_on:
 
 > **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1）: UT-N.M / IT-N / E2E-N は従来通り `####` 見出しで明示。VRT-N / DOM-N も同形式。末尾の Requirements-Test Traceability Matrix で REQ → テスト ID の対応を記録する。
 
-> **Evidence 引用**（`.claude-plugin/rules/evidence-coverage.md` EC2, 非 legacy 類型のみ）: 各テストケース（UT/IT/E2E）は、検証対象の挙動を現行コードで裏付ける EV を最低 1 件引用すること。`Evidence:` 欄もしくはインライン `(EV-{category}-{NNN})` を利用。典型的には `EV-contract-current-*` / `EV-branches-*` / `EV-regressions-*` / `EV-test-harness-*`。真に新規の挙動でアンカーが存在しない場合のみ `<!-- no-evidence: {理由} -->` を記載可（理由必須、WARN のみ）。
+> **Evidence 引用**（`.claude-plugin/rules/evidence-coverage.md` EC2, 非 legacy 類型のみ）: 各テストケース（UT/IT/E2E）は、検証対象の挙動を現行コードで裏付ける EV を最低 1 件引用すること。`Evidence:` 欄もしくはインライン `(EV-{category}-{NNN})` を利用。典型的には `EV-contract-current-*` / `EV-branches-*` / `EV-regressions-*` / `EV-test-harness-*`。真に新規の挙動でアンカーが存在しない場合のみ per-artifact waiver `<!-- no-evidence: {reason} -->` を記載可（reason 必須、WARN のみ）。
 
 ## Test Strategy Overview
 

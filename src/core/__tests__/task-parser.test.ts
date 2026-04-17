@@ -121,6 +121,54 @@ describe('task-parser', () => {
       expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
     });
 
+    it('桁数不足 (EV-callers-1) は reject する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-1, EV-callers-01, EV-callers-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001']);
+    });
+
+    it('小文字の ev-prefix (case 違反) は reject する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: ev-callers-001, Ev-callers-002, EV-callers-003_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-003']);
+    });
+
+    it('重複する EV-ID は 1 回だけ残す', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-001, EV-branches-002 EV-callers-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
+    });
+
+    it('_Evidence のみのタスクは header 扱いにしない (isHeader: false)', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - _Evidence: EV-domain-models-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-domain-models-001']);
+      expect(task?.isHeader).toBe(false);
+    });
+
     it('_Prompt: 内の Evidence は無視する', () => {
       const content = `## Phase 1: Core
 

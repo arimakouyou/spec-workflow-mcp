@@ -20,21 +20,22 @@ Evidence files created by `/spec-investigate` are named `EV-{category}-{NNN}` wh
    ```markdown
    Existing handler enforces a 30-second timeout. (EV-contract-current-001)
    ```
-3. **Frontmatter `depends_on.refs`** (per `spec-dependency-graph.md` SD2) for document-level dependencies:
+3. **Frontmatter `depends_on.refs`** (per `spec-dependency-graph.md` SD2) for document-level dependencies — ただし後述の precedence note の通り、現時点では `/spec-verify` が `EV-*` を refs として認識しない。後方互換のため Step B の EC1 整合性チェックは `refs` 内の `EV-*` を citation として拾うが、**新規の citation は HTML コメントまたは括弧内引用を使うこと** を推奨する:
    ```yaml
+   # 非推奨（未サポート運用）
    depends_on:
-     refs: [REQ-1.1, EV-callers-003]
+     refs: [REQ-1.1]  # EV-* は refs に入れず、本文で <!-- EV-callers-003 --> の形で引用する
    ```
 
 Rules:
 
-- The canonical form of an EV-ID in any of these contexts is the exact string `EV-{category}-{NNN}`. Matching is case-sensitive.
+- The canonical form of an EV-ID in any of these contexts is the exact string `EV-{category}-{NNN}`. Matching is case-sensitive; `{NNN}` is exactly 3 digits with zero-padding.
 - The evidence file's frontmatter `ev_id:` and its filename stem **must match exactly** (per `spec-dependency-graph.md` SD1). A mismatch is a FAIL under EC1.
 - A citation that points to a file that does not exist under `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` is a FAIL.
 - A citation that names a `{category}` that is neither listed in `task-types.md` TT3 nor in the project's `user-config/task-types.yml` (TT4) is a FAIL.
 - A citation that points to an EV whose `spec_name:` frontmatter disagrees with the current spec is a FAIL. Cross-spec citations are not supported in Step 2; they may be introduced in a later step.
 
-> **Precedence note (EC1 ↔ SD3/SD5)**: EV-* IDs are allowed inside the same `depends_on.refs` array as REQ-*/DES-*/etc., but per `spec-dependency-graph.md` SD1 (last bullet) and SD5, EV entries are **supporting evidence** and do **not** participate in the DAG phase-order constraint. `/spec-verify` SD5 / SD4 DAG checks enumerate REQ/DES/MOD/API/UT/IT/E2E IDs only; EV entries in the same array are skipped for cycle / phase-order detection (they are still validated for existence and spec_name by EC1). If future tooling changes this behavior, update SD3 first — EC1 defers to SD3 for phase-order semantics.
+> **Precedence note (EC1 ↔ SD3/SD5)**: `/spec-verify` は現時点では `depends_on.refs` の要素として `REQ-N` / `REQ-N.M` / `DES-N` / `MOD-N` / `API-N` / `UT-N.M` / `IT-N` / `E2E-N` のみを認識し、`EV-*` エントリは未サポート（未知の ref として扱われる可能性がある）。したがって本 PR の時点では、EV の引用は HTML コメント（`<!-- EV-{category}-{NNN} -->`）または括弧内引用（`(EV-{category}-{NNN})`）を正式な方法とし、`depends_on.refs` への EV-ID 直接記載は未サポート運用とする。将来 `/spec-verify` に EV-* 対応が入る際は、SD3 と EC1 を同時に更新する。
 
 ## EC2: Required Citation Sites (blocking for classified task types)
 
@@ -53,7 +54,8 @@ Enforcement matrix (FAIL on violation unless noted):
 
 Escape hatches:
 
-- `<!-- no-evidence: {reason} -->` comment adjacent to an item documents why no EV applies. The Step B check accepts this as non-blocking only when `{reason}` is non-empty.
+- **Per-artifact waiver**: `<!-- no-evidence: {reason} -->` comment adjacent to a specific item (per `### REQ-N:` AC, per `### DES-N:` / `### MOD-N:` section, per `#### UT-N.M:` / `### IT-N:` / `### E2E-N:` section) documents why no EV applies to that item. The Step B check accepts this as non-blocking only when `{reason}` is non-empty.
+- **Doc-level category waiver** (requirements.md only): `<!-- no-evidence: {category} — {reason} -->` comment placed at the top of `requirements.md` waives the doc-level EC2 category coverage requirement for that single `{category}`. Both `{category}` (must match one of the categories listed in `task-types.md` TT3 / TT4) and `{reason}` must be non-empty; the Step B check records it as WARN rather than FAIL. One comment per waived category.
 - `task_type: legacy` specs skip EC2 entirely (see EC5).
 - Retrofit allowance: EC6 still applies — a first-pass retrofit run converts EC2 FAILs into WARNs; they become blocking from the second run onward.
 
@@ -102,8 +104,16 @@ FAILs from `EC1` / `EC3` are blocking per `enforcement-levels.md` L4. `EC2` WARN
 
 ## EC5: Interaction with Legacy Specs
 
-- If `request-spec.md` is missing, or its `task_type` is absent, or `task_type: legacy`, the Step B sub-agent must SKIP all EC checks and return PASS for the evidence portion. This preserves the legacy workflow exception documented in `spec-workflow-enforcement.md`.
-- A `task_type: legacy` spec that nonetheless contains EV-* citations is treated as opt-in: EC1 still applies (citations must resolve), but EC3 remains advisory.
+Step B sub-agents must evaluate evidence coverage for legacy / unclassified specs in this exact order:
+
+1. If `request-spec.md` is missing → SKIP all EC checks and return PASS for the evidence portion.
+2. If `request-spec.md` exists but `task_type` is absent → SKIP all EC checks and return PASS for the evidence portion.
+3. If `task_type: legacy` **and** the spec contains no `EV-{category}-{NNN}` citations (HTML comment, inline paren form, `_Evidence` task metadata, or `depends_on.refs` EV entry) → SKIP all EC checks and return PASS for the evidence portion. This preserves the legacy workflow exception documented in `spec-workflow-enforcement.md`.
+4. If `task_type: legacy` **and** the spec contains one or more `EV-*` citations → treat the spec as **opt-in for citation integrity only**:
+   - Run EC1 and require every cited EV identifier to resolve correctly (file existence, `spec_name:` match, category validity).
+   - Do **not** enforce EC2 (neither doc-level category coverage nor per-artifact requirements). Missing evidence on REQ/DES/MOD/testcase/task in a legacy spec is never a FAIL.
+   - Treat EC3 as **advisory only**: report oversized inline code excerpts as informational notes, but do not FAIL Step B on that basis.
+5. Only specs whose `request-spec.md` declares a non-legacy `task_type` are fully subject to EC1 / EC2 / EC3.
 
 ## EC6: Retrofitting Existing Specs
 
