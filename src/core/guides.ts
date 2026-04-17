@@ -1,5 +1,5 @@
-// ガイド関数の共有モジュール
-// spec-workflow-guide と steering-guide からガイドテキスト生成ロジックを抽出
+// Shared module for guide generation functions.
+// Extracted from spec-workflow-guide and steering-guide prompts.
 
 export function getSpecWorkflowGuide(): string {
   return `# Spec Development Workflow
@@ -181,7 +181,7 @@ flowchart TD
 10. If delete fails: STOP — report error and ask user to retry
 
 ### Phase 2: Tech Document
-**Purpose**: Document project-level technology stack and architecture. Technology selection rationale and decision history should be recorded in \`.spec-workflow/steering/logs/tech-decisions.md\`, not in the tech.md document itself.
+**Purpose**: Record the project-specific technology stack, approved external dependencies, technical constraints, and an Architecture Decision Records (ADR) summary. Formal decisions live in \`.claude/_docs/adr/\` (managed by the \`/adr\` skill); lightweight chronological notes go to \`.spec-workflow/steering/logs/tech-decisions.md\`. General engineering policies (security, type safety, error handling, testing, documentation) are authoritative in \`.claude-plugin/rules/\` — do NOT duplicate them in tech.md.
 
 **File Operations**:
 - Check for custom template: \`.spec-workflow/user-templates/tech-template.md\`
@@ -194,17 +194,18 @@ flowchart TD
 **Process**:
 1. Check for custom template at \`.spec-workflow/user-templates/tech-template.md\`
 2. If no custom template, read from \`.spec-workflow/templates/tech-template.md\`
-3. Analyze existing technology stack
-4. Document architectural decisions and patterns
-5. Create \`tech.md\` at \`.spec-workflow/steering/tech.md\`
-6. Request approval using approvals tool with action:'request'
-7. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
-8. If needs-revision: update document using comments, create NEW approval, do NOT proceed
-9. Once approved: use approvals with action:'delete' (must succeed) before proceeding
-10. If delete fails: STOP — report error and ask user to retry
+3. Analyze the existing technology stack and detect deviations from \`.claude-plugin/rules/project-architecture.md\`
+4. Populate project-specific instance data only (languages, dependencies, storage, integrations, external deps, requirements). Skip any section already enforced by rules/.
+5. Populate the ADR summary table from \`.claude/_docs/adr/INDEX.md\` if ADRs exist; otherwise leave with a placeholder row noting N/A.
+6. Create \`tech.md\` at \`.spec-workflow/steering/tech.md\`
+7. Request approval using approvals tool with action:'request'
+8. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
+9. If needs-revision: update document using comments, create NEW approval, do NOT proceed
+10. Once approved: use approvals with action:'delete' (must succeed) before proceeding
+11. If delete fails: STOP — report error and ask user to retry
 
 ### Phase 3: Structure Document
-**Purpose**: Map codebase organization and patterns.
+**Purpose**: Map the project-specific directory layout, File Placement Rules (P4-01), and any project-specific conventions that extend rules/. Coding policies (separation of concerns, dependency direction, naming, import order, code organization, module boundaries, documentation standards) are authoritative in \`.claude-plugin/rules/\` — do NOT duplicate them in structure.md.
 
 **File Operations**:
 - Check for custom template: \`.spec-workflow/user-templates/structure-template.md\`
@@ -217,15 +218,16 @@ flowchart TD
 **Process**:
 1. Check for custom template at \`.spec-workflow/user-templates/structure-template.md\`
 2. If no custom template, read from \`.spec-workflow/templates/structure-template.md\`
-3. Analyze directory structure and file organization
-4. Document coding patterns and conventions
-5. Create \`structure.md\` at \`.spec-workflow/steering/structure.md\`
-6. Request approval using approvals tool with action:'request'
-7. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
-8. If needs-revision: update document using comments, create NEW approval, do NOT proceed
-9. Once approved: use approvals with action:'delete' (must succeed) before proceeding
-10. If delete fails: STOP — report error and ask user to retry
-11. After successful cleanup: "Steering docs complete. Ready for spec creation?"
+3. Capture the actual directory layout; record only deviations from \`.claude-plugin/rules/project-architecture.md\`
+4. Fill in File Placement Rules (P4-01) so that any new file's target directory is uniquely determined
+5. Populate Project-Specific Conventions only with rules that are NOT already enforced by \`.claude-plugin/rules/*-style.md\`; otherwise leave \`Status: N/A — follows .claude-plugin/rules/*-style.md\`
+6. Create \`structure.md\` at \`.spec-workflow/steering/structure.md\`
+7. Request approval using approvals tool with action:'request'
+8. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
+9. If needs-revision: update document using comments, create NEW approval, do NOT proceed
+10. Once approved: use approvals with action:'delete' (must succeed) before proceeding
+11. If delete fails: STOP — report error and ask user to retry
+12. After successful cleanup: "Steering docs complete. Ready for spec creation?"
 
 ## Workflow Rules
 
@@ -241,6 +243,17 @@ flowchart TD
 - CRITICAL: Verbal approval is NEVER accepted - dashboard or VS Code extension only
 - NEVER proceed on user saying "approved" - check system status only
 
+## Related Authoritative Sources
+
+Steering documents record **project-specific instance information**. General policies are authoritative elsewhere:
+
+- \`.claude-plugin/rules/\` — enforced engineering policies (design principles, project architecture, style, security, testing, documentation)
+- \`.claude/_docs/adr/\` — Architecture Decision Records (canonical, managed by the \`/adr\` skill)
+- \`.claude/_docs/tech-debt/INDEX.md\` — detailed technical debt entries (P5-02)
+- \`.spec-workflow/steering/logs/tech-decisions.md\` — lightweight chronological changelog, one line per change linking to ADR-NNNN when formalized
+
+When drafting steering documents, do not duplicate content that already lives in these authoritative sources; link to them instead.
+
 ## File Structure
 \`\`\`
 .spec-workflow/
@@ -253,6 +266,17 @@ flowchart TD
     ├── tech.md
     ├── structure.md
     └── logs/
-        └── tech-decisions.md  # 技術選定の経緯・根拠（実装時参照不要）
+        └── tech-decisions.md  # Lightweight changelog of tech decisions (links to ADR-NNNN)
+
+.claude/
+├── _docs/
+│   ├── adr/             # Canonical ADR records (managed by the /adr skill)
+│   │   └── INDEX.md
+│   └── tech-debt/
+│       └── INDEX.md     # Canonical technical debt register (P5-02)
+└── ...
+
+.claude-plugin/
+└── rules/               # Authoritative engineering policies (always_apply)
 \`\`\``;
 }

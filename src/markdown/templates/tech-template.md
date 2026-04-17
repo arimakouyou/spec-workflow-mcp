@@ -1,100 +1,175 @@
 # Technology Stack
 
+> This document captures **technology-level instance information** for this project.
+> General engineering policies (error handling, type safety, security, API validation, testing, build caches) are
+> authoritative in `.claude-plugin/rules/`. Do not duplicate them here. Record only what **this** project chose.
+> Placeholder format: `{{FIELD_NAME}}` marks required values; `[example: ...]` shows illustrative samples only.
+
 ## Project Type
-[Describe what kind of project this is: web application, CLI tool, desktop application, mobile app, library, API service, embedded system, game, etc.]
+
+{{PROJECT_TYPE}} — e.g., web application, CLI tool, desktop app, mobile app, library, API service, embedded system.
 
 ## Core Technologies
 
 ### Primary Language(s)
-- **Language**: [e.g., Python 3.11, Go 1.21, TypeScript, Rust, C++]
-- **Runtime/Compiler**: [if applicable]
-- **Language-specific tools**: [package managers, build tools, etc.]
 
-### Key Dependencies/Libraries
-[List the main libraries and frameworks your project depends on]
-- **[Library/Framework name]**: [Purpose and version]
-- **[Library/Framework name]**: [Purpose and version]
+| Language | Runtime / Compiler | Language Toolchain |
+|----------|--------------------|--------------------|
+| {{language_version}} | {{runtime_or_compiler}} | {{package_manager_build_tool}} |
+
+### Key Dependencies / Libraries
+
+| Library / Framework | Version | Purpose |
+|---------------------|---------|---------|
+| {{name}} | {{semver_or_tag}} | {{why_used}} |
+| {{name}} | {{semver_or_tag}} | {{why_used}} |
 
 ### Application Architecture
-[Describe how your application is structured - this could be MVC, event-driven, plugin-based, client-server, standalone, microservices, monolithic, etc.]
 
-### Data Storage (if applicable)
-- **Primary storage**: [e.g., PostgreSQL, files, in-memory, cloud storage]
-- **Caching**: [e.g., Redis, in-memory, disk cache]
-- **Data formats**: [e.g., JSON, Protocol Buffers, XML, binary]
+{{ARCHITECTURE_SUMMARY}} — one paragraph. If the project follows
+`.claude-plugin/rules/project-architecture.md` verbatim, state `Follows project-architecture.md ({{rust|dotnet}} profile)`
+and describe only deviations below.
 
-### External Integrations (if applicable)
-- **APIs**: [External services you integrate with]
-- **Protocols**: [e.g., HTTP/REST, gRPC, WebSocket, TCP/IP]
-- **Authentication**: [e.g., OAuth, API keys, certificates]
+| Deviation | Reason |
+|-----------|--------|
+| {{deviation}} | {{why}} |
 
-### Monitoring & Dashboard Technologies (if applicable)
-- **Dashboard Framework**: [e.g., React, Vue, vanilla JS, terminal UI]
-- **Real-time Communication**: [e.g., WebSocket, Server-Sent Events, polling]
-- **Visualization Libraries**: [e.g., Chart.js, D3, terminal graphs]
-- **State Management**: [e.g., Redux, Vuex, file system as source of truth]
+Status: {{Follows project-architecture.md | deviations listed above}}
+
+### Data Storage
+
+| Concern | Technology |
+|---------|------------|
+| Primary Storage | {{e.g., PostgreSQL 15, SQLite, S3}} |
+| Caching | {{e.g., Redis, Valkey, in-memory}} |
+| Data Formats | {{e.g., JSON, Protocol Buffers, XML}} |
+
+### External Integrations
+
+| System | Protocol | Authentication |
+|--------|----------|----------------|
+| {{system_name}} | {{e.g., HTTP/REST, gRPC, WebSocket}} | {{e.g., OAuth2, API key, mTLS}} |
+
+## External Dependencies (Approved)
+
+Third-party dependencies that have been reviewed and approved for use in this project. New dependencies must be added
+here **before** being introduced into the codebase.
+
+| Name | Version | Purpose | License | Approved On | Approved By |
+|------|---------|---------|---------|-------------|-------------|
+| {{name}} | {{semver}} | {{why_used}} | {{spdx_id}} | {{YYYY-MM-DD}} | {{approver}} |
 
 ## Development Environment
 
 ### Build & Development Tools
-- **Build System**: [e.g., Make, CMake, Gradle, npm scripts, cargo]
-- **Package Management**: [e.g., pip, npm, cargo, go mod, apt, brew]
-- **Development workflow**: [e.g., hot reload, watch mode, REPL]
+
+| Concern | Tool |
+|---------|------|
+| Build System | {{e.g., cargo, dotnet, npm scripts}} |
+| Package Management | {{e.g., cargo, NuGet, npm, pnpm}} |
+| Development Workflow | {{e.g., hot reload, watch mode, REPL}} |
 
 ### Code Quality Tools
-- **Static Analysis**: [Tools for code quality and correctness]
-- **Formatting**: [Code style enforcement tools]
-- **Testing Framework**: [Unit, integration, and/or end-to-end testing tools]
-- **Documentation**: [Documentation generation tools]
+
+| Concern | Tool |
+|---------|------|
+| Static Analysis | {{e.g., clippy, Roslyn analyzers, ESLint}} |
+| Formatting | {{e.g., rustfmt, dotnet format, Prettier}} |
+| Testing Framework | {{e.g., cargo test, xUnit, Jest}} |
+| Documentation Generation | {{e.g., rustdoc, DocFX, TypeDoc}} |
 
 ### Version Control & Collaboration
-- **VCS**: [e.g., Git, Mercurial, SVN]
-- **Branching Strategy**: [e.g., Git Flow, GitHub Flow, trunk-based]
-- **Code Review Process**: [How code reviews are conducted]
 
-### Dashboard Development (if applicable)
-- **Live Reload**: [e.g., Hot module replacement, file watchers]
-- **Port Management**: [e.g., Dynamic allocation, configurable ports]
-- **Multi-Instance Support**: [e.g., Running multiple dashboards simultaneously]
+| Concern | Value |
+|---------|-------|
+| VCS | {{e.g., Git}} |
+| Branching Strategy | {{e.g., GitHub Flow, Git Flow, trunk-based}} |
+| Code Review | {{e.g., required approvals, CODEOWNERS scope}} |
 
-## Deployment & Distribution (if applicable)
-- **Target Platform(s)**: [Where/how the project runs: cloud, on-premise, desktop, mobile, embedded]
-- **Distribution Method**: [How users get your software: download, package manager, app store, SaaS]
-- **Installation Requirements**: [Prerequisites, system requirements]
-- **Update Mechanism**: [How updates are delivered]
+## Deployment & Distribution
+
+| Concern | Value |
+|---------|-------|
+| Target Platform(s) | {{e.g., Linux x86_64, Windows, Kubernetes}} |
+| Distribution Method | {{e.g., container image, npm package, installer}} |
+| Installation Requirements | {{e.g., .NET 8 runtime, glibc 2.28+}} |
+| Update Mechanism | {{e.g., package manager pull, auto-update service}} |
 
 ## Technical Requirements & Constraints
 
-### Performance Requirements
-- [e.g., response time, throughput, memory usage, startup time]
-- [Specific benchmarks or targets]
+### Performance
 
-### Compatibility Requirements  
-- **Platform Support**: [Operating systems, architectures, versions]
-- **Dependency Versions**: [Minimum/maximum versions of dependencies]
-- **Standards Compliance**: [Industry standards, protocols, specifications]
+| Metric | Target |
+|--------|--------|
+| {{e.g., p95 request latency}} | {{e.g., < 200 ms}} |
+| {{e.g., startup time}} | {{e.g., < 2 s}} |
 
-### Security & Compliance
-- **Security Requirements**: [Authentication, encryption, data protection]
-- **Compliance Standards**: [GDPR, HIPAA, SOC2, etc. if applicable]
-- **Threat Model**: [Key security considerations]
+### Compatibility
+
+| Concern | Constraint |
+|---------|------------|
+| Platform Support | {{e.g., Linux, macOS, Windows; x86_64 + arm64}} |
+| Dependency Versions | {{e.g., PostgreSQL >= 14, Node.js >= 20}} |
+| Standards Compliance | {{e.g., OpenAPI 3.1, OAuth 2.1}} |
+
+### Security
+
+| Concern | Value |
+|---------|-------|
+| Authentication | {{e.g., OIDC, API key}} |
+| Encryption | {{e.g., TLS 1.3, AES-256 at rest}} |
+| Compliance Standards | {{e.g., GDPR, SOC 2, N/A}} |
+
+Detailed security policies live in `.claude-plugin/rules/security.md`. Record only project-specific additions above.
 
 ### Scalability & Reliability
-- **Expected Load**: [Users, requests, data volume]
-- **Availability Requirements**: [Uptime targets, disaster recovery]
-- **Growth Projections**: [How the system needs to scale]
+
+| Concern | Value |
+|---------|-------|
+| Expected Load | {{e.g., 1k req/s peak, 50 GB/day}} |
+| Availability Target | {{e.g., 99.9% monthly}} |
+| Growth Projection | {{e.g., 2x traffic in 12 months}} |
+
+## Architecture Decision Records
+
+Summary of significant architectural decisions. Full records live in `.claude/_docs/adr/` (managed by the `/adr` skill).
+Add a new ADR with `/adr <title>`.
+
+If this project has no ADRs yet, record `Status: N/A — no ADRs yet`. Once ADRs exist, replace the status line with
+the summary table below and keep it in sync with `.claude/_docs/adr/INDEX.md`.
+
+Status: {{N/A — no ADRs yet | see summary table below}}
+
+| ADR | Title | Status | Date | Supersedes |
+|-----|-------|--------|------|------------|
+| [ADR-NNNN](.claude/_docs/adr/NNNN-{{slug}}.md) | {{title}} | {{Proposed\|Accepted\|Deprecated\|Superseded}} | {{YYYY-MM-DD}} | {{—\|ADR-NNNN}} |
+
+> Status values: Proposed, Accepted, Deprecated, Superseded.
 
 ## Technical Decisions
 
-[現在採用中の技術的判断を簡潔に記述する。
- 選定の経緯・根拠・却下した代替案は .spec-workflow/steering/logs/tech-decisions.md に記録する]
+Entry point into decision records for this project.
+
+- **Formal decisions** → Architecture Decision Records above (canonical source: `.claude/_docs/adr/INDEX.md`).
+- **Lightweight chronological changelog** → `.spec-workflow/steering/logs/tech-decisions.md` (one-line "what changed on
+  YYYY-MM-DD, link to ADR-NNNN if formalized").
 
 ## Known Limitations
 
-[技術的負債、制限事項、改善の余地がある領域を記述する]
+High-level summary of current technical debt and limitations. Detailed entries are managed under
+`.claude/_docs/tech-debt/INDEX.md` (P5-02). Create individual debt entries with `/tech-debt add`.
 
-- [Limitation 1]: [Impact and potential future solutions]
-- [Limitation 2]: [Why it exists and when it might be addressed]
+| Area | Impact | Tech-Debt Entry |
+|------|--------|-----------------|
+| {{area}} | {{user_or_dev_impact}} | {{TD-NNNN or link}} |
 
-> **P5-02 対応**: 詳細な技術的負債の追跡は `.claude/_docs/tech-debt/INDEX.md` で管理する。
-> このセクションは概要のみ記載し、個別の負債エントリは `/tech-debt add` で作成すること。
+## See Also
+
+General engineering policies enforced project-wide (authoritative location: `.claude-plugin/rules/`):
+
+- `rules/design-principles.md` — architectural taste invariants (D1–D6)
+- `rules/project-architecture.md` — baseline architecture per language profile
+- `rules/security.md` / `rules/type-safety.md` / `rules/api-validation.md` — horizontal policies
+- `rules/error-message-guidelines.md` — error formatting
+- `rules/regression-test-policy.md` / `rules/flaky-test-management.md` — testing discipline
+- `rules/doc-freshness.md` / `rules/doc-crossref.md` — documentation discipline

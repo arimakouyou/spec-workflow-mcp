@@ -28,7 +28,7 @@ async function handler(args: Record<string, any>, context: ToolContext): Promise
   }
 
   const validDocTypes = ['product', 'tech', 'structure'];
-  // ダッシュボードのプレビュー用サンプルコンテキストではバリデーションをスキップ
+  // Skip validation for the dashboard preview sample context.
   const isPreviewContext = context.projectPath === '{{projectPath}}';
   if (!isPreviewContext && !validDocTypes.includes(docType)) {
     throw new Error(`docType must be one of: ${validDocTypes.join(', ')}`);
@@ -50,25 +50,25 @@ ${context.dashboardUrl ? `- Dashboard: ${context.dashboardUrl}` : ''}
 **Instructions:**
 1. First, read the template at: .spec-workflow/templates/${docType}-template.md
 2. Check if steering docs exist at: .spec-workflow/steering/
-3. Create comprehensive content following the template structure
-4. Create the document at: .spec-workflow/steering/${docType}.md
-5. After creating, use approvals tool with action:'request' to get user approval
+3. Before writing, review \`.claude-plugin/rules/\` (authoritative engineering policies). DO NOT duplicate any policy already enforced there — link to the relevant rule file instead.
+4. Fill the template with project-specific instance information only (what this project chose, where files live, which ADRs exist, which external dependencies are approved).
+5. Create the document at: .spec-workflow/steering/${docType}.md
+6. After creating, use approvals tool with action:'request' to get user approval
 
 **File Paths:**
 - Template location: .spec-workflow/templates/${docType}-template.md
 - Document destination: .spec-workflow/steering/${docType}.md
 
 **Steering Document Types:**
-- **product**: Defines project vision, goals, and user outcomes
-- **tech**: Documents project-level technology stack and architecture. Selection rationale and decision history go to .spec-workflow/steering/logs/tech-decisions.md
-- **structure**: Maps codebase organization and conventions
+- **product**: Defines project purpose, target users, non-goals, product principles, and success metrics.
+- **tech**: Records the technology stack, approved external dependencies, technical constraints, and an ADR summary. Formal decisions live in .claude/_docs/adr/ (managed by the /adr skill); lightweight changelog entries go to .spec-workflow/steering/logs/tech-decisions.md.
+- **structure**: Maps the project-specific directory layout, File Placement Rules (P4-01), and any Project-Specific Conventions that extend .claude-plugin/rules/*-style.md.
 
 **Key Principles:**
-- Be specific and actionable
-- Include examples where helpful
-- Consider both technical and business requirements
-- Provide clear guidance for future development
-- Templates are automatically updated on server start
+- Keep content project-specific and instance-level. Defer general policies to .claude-plugin/rules/.
+- Prefer tables with one fact per row. Reserve prose for Purpose / Principles / Vision only.
+- Use \`Status: N/A — {{reason}}\` instead of leaving sections blank.
+- Templates are automatically updated on server start.
 
 Please read the ${docType} template and create a comprehensive steering document at the specified path.`
       }

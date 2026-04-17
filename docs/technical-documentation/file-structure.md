@@ -98,9 +98,9 @@ src/
 │       ├── requirements-template.md  # Requirements document template
 │       ├── design-template.md       # Design document template
 │       ├── tasks-template.md        # Tasks document template
-│       ├── product-template.md      # Product vision template
-│       ├── tech-template.md         # Technical standards template
-│       └── structure-template.md    # Code structure template
+│       ├── product-template.md      # Product: purpose, users, non-goals, principles, success metrics
+│       ├── tech-template.md         # Tech: stack, approved external deps, constraints, ADR summary
+│       └── structure-template.md    # Structure: directory layout, File Placement Rules (P4-01), project-specific conventions
 ├── server.ts                       # Main MCP server class
 ├── index.ts                        # CLI entry point & argument parsing
 └── types.ts                        # TypeScript type definitions
