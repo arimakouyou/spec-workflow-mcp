@@ -388,7 +388,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 ### 品質チェック
 - pre-push-review: {verdict}
   - Critical: {N} / Moderate: {M} / Minor: {K}
-- Phase 5.5 軽量チェック: PASS
+- Phase 5.5 QC（フル / QC3/QC6/QC12 準拠）: PASS
 
 ### Commit & Push
 - commit 数: {N} 件（初回 + 再修正 {M} 回）
@@ -428,5 +428,5 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 | `.claude-plugin/skills/handle-pr-comments/SKILL.md:204-223` | 同種問題 grep パターン例 |
 | `.claude-plugin/skills/pre-push-review/SKILL.md` | `/pre-push-review` 仕様 |
 | `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_LIGHT_AGENTS` (triage / scanner), `MAX_HEAVY_AGENTS` (fix-worker) |
-| `.claude-plugin/rules/quality-checks.md` QC1-QC3 | 最終確認コマンド |
+| `.claude-plugin/rules/quality-checks.md` QC3/QC6/QC12 | Phase 5.5 のフル QC コマンド（cargo/dotnet/npm test 含む） |
 | MEMORY `feedback_copilot_review_request.md` | Copilot 依頼 REST 仕様 |

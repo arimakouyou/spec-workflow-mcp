@@ -231,7 +231,7 @@ git commit -m "fix: PR #{number} レビューコメント対応
 "
 ```
 
-品質チェック（`.claude-plugin/rules/quality-checks.md` QC1-QC3）は `pr-fix-worker` 内で完了している前提。commit 直前に Command が最終確認として rustfmt/clippy を軽く走らせる。
+品質チェック（`.claude-plugin/rules/quality-checks.md` QC3/QC6/QC12 — cargo/dotnet/npm test を含むフル実行）は commit 前に Command 側で責任を持って走らせる。`pr-fix-worker` 内での軽量 check（`cargo check` 等）はあくまで事前確認で、QC フルの代替にはならない（pre-push-review は静的レビューでテスト代替にもならないため）。
 
 > **reset/amend 禁止**: Phase 6 で `fix_required` になっても、この commit は書き換えず追加コミットを積む。
 
@@ -321,7 +321,7 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 | `同:204-223` | 同種問題の grep パターン例 |
 | `.claude-plugin/skills/pre-push-review/SKILL.md` | `/pre-push-review` 呼び出し・結果解釈 |
 | `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_LIGHT_AGENTS` (triage / scanner) / `MAX_HEAVY_AGENTS` (fix-worker) 参照 |
-| `.claude-plugin/rules/quality-checks.md` QC1-QC3 | 最終確認コマンド |
+| `.claude-plugin/rules/quality-checks.md` QC3/QC6/QC12 | Phase 5.5 のフル QC コマンド（cargo/dotnet/npm test 含む） |
 
 SKILL.md 本文でもこれらへの行番号リンクを明示し、挙動がズレた際の突合箇所をはっきりさせる。
 
