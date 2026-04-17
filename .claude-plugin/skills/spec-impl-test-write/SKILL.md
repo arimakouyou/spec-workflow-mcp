@@ -22,8 +22,10 @@ Agent({
     Task prompt: {task _Prompt content}
     Test focus areas: {_TestFocus content from task, if available}
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
+    Evidence files: {_Evidence EV IDs, resolved to full paths by the orchestrator}
 
     Follow the /spec-impl-test-write skill instructions.
+    Read ONLY the listed evidence files — do not load other EV-*.md files.
 
     Return the list of test files created and test names.`
 })
@@ -44,6 +46,15 @@ Agent({
 - If a `_TestFocus` field is provided (via the "Test focus areas" parameter), it is structured in 4 categories: **Happy Path / Boundary Values / Error Handling / Edge Cases**. Write tests covering **all 4 categories** as specified — these categories are aligned with the unit-test-engineer's quality verification criteria to minimize rework
 - Read the design document to understand interfaces, data models, and expected behavior
 - Identify the public API surface: functions, methods, endpoints, components
+
+### 1.5 Load Evidence (Selective)
+
+If the task carries an `_Evidence:` line (`.claude-plugin/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to full `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files**.
+
+- Evidence files typically cite the current contract (`EV-contract-current-*`), branches (`EV-branches-*`), regressions (`EV-regressions-*`), or harness (`EV-test-harness-*`) that the tests must guard. Use the `sources:` frontmatter entries to locate the exact code ranges the tests should lock in.
+- Do **not** read other EV files from the spec's `evidence/` directory — they belong to other tasks.
+- Do **not** re-derive the current behavior from scratch. If an evidence file cites `path:Lx-Ly` showing the existing contract, your tests should assert compatibility with that contract, not guess at it.
+- If the task has no `_Evidence:` line, skip this step. Legacy specs (no `task_type`) will also have no evidence.
 
 ### 2. Discover Existing Test Patterns
 

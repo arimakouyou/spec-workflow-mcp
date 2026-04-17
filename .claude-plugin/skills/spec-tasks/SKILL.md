@@ -428,7 +428,22 @@ Agent({
         every IT spec must have an integration test task,
         every E2E spec must have an E2E test task
     13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
+    14. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter.
+        - If task_type is absent, 'legacy', or request-spec.md does not exist → SKIP checks 14-15 (EC5) and note 'evidence checks skipped (legacy)' in the report.
+        - Otherwise, for every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, frontmatter depends_on.refs, or _Evidence: task-level metadata):
+            a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
+            b. The referenced file's frontmatter spec_name: must equal this spec-name.
+            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+          Any failure = FAIL with rule_id EC1.
+    15. INLINE CODE BUDGET (evidence-coverage.md EC3): Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+            - A single fenced block exceeds 10 lines.
+            - Cumulative fenced-block lines within a single H2 or H3 section exceed 20 lines.
+            - Total fenced-block lines in the document exceed 60 lines.
+          For each violation FAIL with rule_id EC3; fix_hint: 'tasks.md should carry task descriptions and metadata, not code. Move any illustrative code to an evidence file and cite it via _Evidence'. Markdown tables are NOT counted.
+    16. _Evidence METADATA (evidence-coverage.md EC2, per task): Every implementation task MUST have an _Evidence line listing at least one EV-{category}-{NNN}. Exempt from this requirement: Phase 0 setup tasks (Git init, container setup, CI bootstrap) and tasks whose title starts with 'PhaseReview'. IT and E2E test tasks MUST carry _Evidence (typically EV-test-harness-* or EV-contract-current-*). Missing _Evidence on a non-exempt task = FAIL rule_id EC2_taskEvidence with fix_hint 'Add: _Evidence: EV-{category}-{NNN} on the line under the task header, parallel to _Leverage. Pick the EV(s) the implementer will need to open while coding this task.'
+    17. _Evidence FORMAT: The _Evidence line format is `_Evidence: EV-{category}-{NNN}[ EV-{category}-{NNN}[, ...]]` — space or comma separated EV IDs. Each listed EV must exist on disk (covered by EC1 check 14). A single task should cite no more than 4 EVs; more than 4 signals the task is not atomic and should be split. = WARN rule_id EC2_taskEvidenceSplit (not blocking).
 
+    Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
 })

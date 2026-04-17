@@ -68,6 +68,72 @@ describe('task-parser', () => {
     });
   });
 
+  describe('_Evidence: パース', () => {
+    it('単一の EV-ID を正しくパースする', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-domain-models-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-domain-models-001']);
+    });
+
+    it('複数 EV をカンマ/スペース区切りでパースする', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create service
+  - File: src/service.ts
+  - _Evidence: EV-callers-001, EV-branches-002 EV-regressions-003_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual([
+        'EV-callers-001',
+        'EV-branches-002',
+        'EV-regressions-003'
+      ]);
+    });
+
+    it('_Evidence: がないタスクは evidence が undefined', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Requirements: REQ-1_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toBeUndefined();
+    });
+
+    it('EV-ID 形式に合わない値は除外する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-001, invalid-id, EV-branches-002_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
+    });
+
+    it('_Prompt: 内の Evidence は無視する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Prompt: Role: Dev | Task: Create model _Evidence: EV-ignore-001_ | Restrictions: None | Success: Done_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toBeUndefined();
+    });
+  });
+
   describe('computeExecutionWaves', () => {
     function makeTasks(defs: Array<{
       id: string;

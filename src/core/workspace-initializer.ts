@@ -55,6 +55,8 @@ export class WorkspaceInitializer {
     
     const templates = [
       'request-spec-template',
+      'investigation-manifest-template',
+      'evidence-template',
       'requirements-template',
       'design-template',
       'test-design-template',
@@ -98,6 +100,8 @@ This directory allows you to create custom templates that override the default S
 
 1. **Create your custom template file** in this directory with the exact same name as the default template you want to override:
    - \`request-spec-template.md\` - Override request specification document template
+   - \`investigation-manifest-template.md\` - Override Phase 0.5 investigation manifest template (used by /spec-investigate)
+   - \`evidence-template.md\` - Override Phase 0.5 evidence file template (EV-*.md)
    - \`requirements-template.md\` - Override requirements document template
    - \`design-template.md\` - Override design document template
    - \`test-design-template.md\` - Override test design document template

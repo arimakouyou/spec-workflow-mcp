@@ -387,7 +387,21 @@ Agent({
     12. CONTAINER CONSISTENCY: IT/E2E specs Technology fields must be consistent with design.md Container Architecture and E2E Test Infrastructure section
     13. REQUIRED TEST TOOLS: Required Test Tools section must exist within Test Environment Requirements, with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns). All E2E test tools must be Required=Yes.
     14. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: test-design, version, depends_on (file entries pointing to requirements.md and design.md with refs) must exist at the top of the file. Every REQ-/DES- ID in depends_on.refs must exist in the referenced upstream file (SD4)
+    15. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter.
+        - If task_type is absent, 'legacy', or request-spec.md does not exist → SKIP checks 15-16 (EC5) and note 'evidence checks skipped (legacy)' in the report.
+        - Otherwise, for every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs):
+            a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
+            b. The referenced file's frontmatter spec_name: must equal this spec-name.
+            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+          Any failure = FAIL with rule_id EC1.
+    16. INLINE CODE BUDGET (evidence-coverage.md EC3): Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+            - A single fenced block exceeds 15 lines.
+            - Cumulative fenced-block lines within a single H2 or H3 section exceed 30 lines.
+            - Total fenced-block lines in the document exceed 120 lines.
+          For each violation FAIL with rule_id EC3; fix_hint: 'Move fixture-like or harness-like excerpts to an evidence file under evidence/test-harness/ (or a more specific category) and leave a brief summary + citation'. Markdown tables and ASCII diagrams are NOT counted.
+    17. PER-TESTCASE EVIDENCE (evidence-coverage.md EC2, per UT/IT/E2E): Every '#### UT-N.M:', '### IT-N:', and '### E2E-N:' section must cite at least one EV-... that anchors the behavior under test. If a case exercises a truly new behavior with no existing-code anchor, use '<!-- no-evidence: {reason} -->' with a non-empty reason inside the section. Missing both = FAIL rule_id EC2_perTestCase with fix_hint 'Cite the EV that captures the current or expected behavior the test guards (typically EV-contract-current-*, EV-branches-*, or EV-regressions-*).'
 
+    Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
 })

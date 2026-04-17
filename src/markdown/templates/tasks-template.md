@@ -11,7 +11,9 @@ depends_on:
 
 # Tasks Document
 
-> **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1, SD6）: タスク層のメタデータ（`_Requirements:` / `_DependsOn:` / `_Leverage:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`）は従来通り。frontmatter の `depends_on` は tasks.md **全体**が依存する上流仕様書 ID を宣言し、タスク個別の REQ 紐付けは `_Requirements:` で行う（粒度の異なる直交情報）。
+> **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1, SD6）: タスク層のメタデータ（`_Requirements:` / `_DependsOn:` / `_Leverage:` / `_Evidence:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`）は従来通り。frontmatter の `depends_on` は tasks.md **全体**が依存する上流仕様書 ID を宣言し、タスク個別の REQ 紐付けは `_Requirements:` で行う（粒度の異なる直交情報）。
+
+> **`_Evidence` メタ**（`.claude-plugin/rules/evidence-coverage.md` EC2, 非 legacy 類型のみ）: 実装タスク（Phase 0 setup と `PhaseReview` タスクを除く、IT / E2E テストタスクを含む）には `_Evidence: EV-{category}-{NNN}` を必須。スペース/カンマ区切りで複数引用可（最大 4 件）。`/spec-impl-code` と `/spec-impl-test-write` はこの行から EV ファイルを選択読込する。
 
 ## Phase 1: Core Domain Layer
 
@@ -20,6 +22,7 @@ depends_on:
   - Define TypeScript interfaces and implement model with validation/CRUD
   - Purpose: Establish type-safe data layer
   - _Leverage: src/types/base.ts, src/models/BaseModel.ts, src/utils/validation.ts_
+  - _Evidence: EV-domain-models-001, EV-cross-cutting-001_
   - _Requirements: 1.1, 2.1, 2.2_
   - _TestFocus: Interface contract validation, CRUD success/failure, validation boundaries, relationship integrity_
   - _Prompt: Role: TypeScript Developer specializing in type systems and data modeling | Task: Create comprehensive TypeScript interfaces and implement model with validation and CRUD operations following requirements 1.1, 2.1, 2.2, extending existing base interfaces and model from src/types/base.ts and src/models/BaseModel.ts | Restrictions: Do not modify existing base interfaces, maintain backward compatibility, follow project naming conventions | Success: All interfaces compile without errors, model extends BaseModel correctly, validation methods implemented, full type coverage for feature requirements_
@@ -104,6 +107,7 @@ depends_on:
   - Write E2E tests covering critical user journeys across all layers
   - Purpose: Verify full-stack integration works correctly
   - _Leverage: tests/helpers/testUtils.ts, tests/fixtures/data.ts_
+  - _Evidence: EV-test-harness-001, EV-entry-points-001_
   - _Requirements: All_
   - _TestFocus: User journey flows, cross-layer data integrity, error recovery paths_
   - _Prompt: Role: QA Engineer with expertise in E2E testing | Task: Implement end-to-end tests covering all critical user journeys across all layers | Restrictions: Must test real user workflows, ensure tests are maintainable | Success: E2E tests cover critical journeys, tests run reliably_

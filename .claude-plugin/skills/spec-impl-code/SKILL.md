@@ -22,8 +22,10 @@ Agent({
     Task prompt: {task _Prompt content}
     Test files: {test-file-paths}
     Leverage files: {_Leverage file paths}
+    Evidence files: {_Evidence EV IDs, resolved to full paths by the orchestrator}
 
     Follow the /spec-impl-code skill instructions.
+    Read ONLY the listed evidence files — do not load other EV-*.md files.
 
     Return the list of files created/modified and implementation approach.`
 })
@@ -45,6 +47,16 @@ Agent({
   - What interfaces are expected (parameters, return types)
   - What behavior is verified (assertions define the contract)
   - What error conditions are tested
+
+### 1.5 Load Evidence (Selective)
+
+If the task carries an `_Evidence:` line (`.claude-plugin/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files** before implementing.
+
+- Evidence files capture the relevant existing-code context (current contracts, callers, branches) that informed this task's design. Loading them up-front avoids re-reading the codebase for behavior the spec already anchored.
+- Do **not** read other EV files from the spec's `evidence/` directory — they are for other tasks. Loading them is wasteful and can introduce unrelated constraints.
+- Do **not** fall back to crawling the codebase to rediscover behavior that evidence files already cite. If an evidence file cites `path:Lx-Ly`, open that exact range rather than scanning the whole file.
+- If the task has no `_Evidence:` line (e.g. a Phase 0 setup task), skip this step.
+- Legacy specs (no `task_type` in `request-spec.md`) will also have no `_Evidence:` lines. This is normal — skip.
 
 ### 2. Plan the Implementation
 
