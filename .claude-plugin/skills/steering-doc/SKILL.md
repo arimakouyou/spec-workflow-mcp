@@ -136,21 +136,21 @@ Agent({
     2. SPECIFICITY: Content must be specific to this project, not generic boilerplate
     3. COMPLETENESS: All tables must have concrete entries, not placeholder rows. Sections that do not apply must read \`Status: N/A — {{reason}}\` rather than being blank
     4. ACTIONABILITY: Guidance must be clear enough to inform future spec development
-    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`.claude-plugin/rules/\`. Flag any of the following as issues (each section name maps to the rules/ file that already owns it):
+    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`.claude-plugin/rules/\`. Flag any of the following as issues (each section name maps to the \`.claude-plugin/rules/\` file that already owns it):
        - For structure.md:
-         * \`Naming Conventions\` → owned by \`rules/*-style.md\` (rust-style.md / csharp-style.md / axum.md / etc.)
-         * \`Import Patterns\` → owned by \`rules/*-style.md\`
-         * \`Code Structure Patterns\` → owned by \`rules/design-principles.md\` / \`rules/*-style.md\`
-         * \`Code Organization Principles\` → owned by \`rules/design-principles.md\`
-         * \`Module Boundaries\` → owned by \`rules/design-principles.md\` / \`rules/project-architecture.md\`
-         * \`Documentation Standards\` → owned by \`rules/doc-crossref.md\` / \`rules/doc-freshness.md\`
+         * \`Naming Conventions\` → owned by \`.claude-plugin/rules/*-style.md\` (rust-style.md / csharp-style.md / axum.md / etc.)
+         * \`Import Patterns\` → owned by \`.claude-plugin/rules/*-style.md\`
+         * \`Code Structure Patterns\` → owned by \`.claude-plugin/rules/design-principles.md\` / \`.claude-plugin/rules/*-style.md\`
+         * \`Code Organization Principles\` → owned by \`.claude-plugin/rules/design-principles.md\`
+         * \`Module Boundaries\` → owned by \`.claude-plugin/rules/design-principles.md\` / \`.claude-plugin/rules/project-architecture.md\`
+         * \`Documentation Standards\` → owned by \`.claude-plugin/rules/doc-crossref.md\` / \`.claude-plugin/rules/doc-freshness.md\`
        - For tech.md:
-         * \`Prohibited Patterns\` containing general language-level prohibitions → owned by \`rules/*-style.md\` / \`rules/security.md\`
-         * Generic security policies → owned by \`rules/security.md\`
-         * Generic testing policies → owned by \`rules/flaky-test-management.md\` / \`rules/regression-test-policy.md\`
-         * Generic documentation policies → owned by \`rules/doc-crossref.md\` / \`rules/doc-freshness.md\`
-       - Generic restatements of design principles D1–D6 → owned by \`rules/design-principles.md\`
-       In each case, the fix is to remove the duplicated content and link to the authoritative rules/ file named above.
+         * \`Prohibited Patterns\` containing general language-level prohibitions → owned by \`.claude-plugin/rules/*-style.md\` / \`.claude-plugin/rules/security.md\`
+         * Generic security policies → owned by \`.claude-plugin/rules/security.md\`
+         * Generic testing policies → owned by \`.claude-plugin/rules/flaky-test-management.md\` / \`.claude-plugin/rules/regression-test-policy.md\`
+         * Generic documentation policies → owned by \`.claude-plugin/rules/doc-crossref.md\` / \`.claude-plugin/rules/doc-freshness.md\`
+       - Generic restatements of design principles D1–D6 → owned by \`.claude-plugin/rules/design-principles.md\`
+       In each case, the fix is to remove the duplicated content and link to the authoritative \`.claude-plugin/rules/\` file named above.
     6. ADR LINKAGE (tech.md only): The Architecture Decision Records section should either contain a populated summary table matching \`.claude/_docs/adr/INDEX.md\`, or show \`Status: N/A — no ADRs yet\` if none exist.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.

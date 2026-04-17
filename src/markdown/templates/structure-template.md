@@ -62,7 +62,7 @@ Status: {{N/A — follows .claude-plugin/rules/*-style.md | custom conventions l
 
 General policies enforced project-wide (authoritative location: `.claude-plugin/rules/`):
 
-- `rules/design-principles.md` — separation of concerns, dependency direction, public API minimization, DRY, naming appropriateness
-- `rules/project-architecture.md` — baseline directory structure for Rust / .NET backends
-- `rules/rust-style.md` / `rules/csharp-style.md` — language-specific naming, formatting, import order
-- `rules/doc-crossref.md` / `rules/doc-freshness.md` — documentation standards
+- `.claude-plugin/rules/design-principles.md` — separation of concerns, dependency direction, public API minimization, DRY, naming appropriateness
+- `.claude-plugin/rules/project-architecture.md` — baseline directory structure for Rust / .NET backends
+- `.claude-plugin/rules/rust-style.md` / `.claude-plugin/rules/csharp-style.md` — language-specific naming, formatting, import order
+- `.claude-plugin/rules/doc-crossref.md` / `.claude-plugin/rules/doc-freshness.md` — documentation standards

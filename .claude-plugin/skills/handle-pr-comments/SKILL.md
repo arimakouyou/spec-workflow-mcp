@@ -142,7 +142,7 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
    - 依存追加の指摘 ↔ `steering/tech.md` の "External Dependencies (Approved)"
    - アーキテクチャ方針の指摘 ↔ `steering/tech.md` の Accepted ADR
    - スコープ拡大の指摘 ↔ `steering/product.md` の Non-Goals
-   - 命名・スタイル・エラーハンドリングの指摘 ↔ `.claude-plugin/rules/*-style.md` / `rules/design-principles.md`
+   - 命名・スタイル・エラーハンドリングの指摘 ↔ `.claude-plugin/rules/*-style.md` / `.claude-plugin/rules/design-principles.md`
    steering / rules と矛盾する指摘は `invalid` と判定し、コメント返信で該当ドキュメントへのリンクとともに説明する。
 3. **過去 PR での対応状況**: 類似指摘が既にマージ済み PR で対応されていないか（PR description / `git log` / `CHANGELOG.md` を確認）
 4. **妥当性の 3 段階判定**:

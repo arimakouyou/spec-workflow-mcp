@@ -167,9 +167,9 @@ High-level summary of current technical debt and limitations. Detailed entries a
 
 General engineering policies enforced project-wide (authoritative location: `.claude-plugin/rules/`):
 
-- `rules/design-principles.md` — architectural taste invariants (D1–D6)
-- `rules/project-architecture.md` — baseline architecture per language profile
-- `rules/security.md` / `rules/type-safety.md` / `rules/api-validation.md` — horizontal policies
-- `rules/error-message-guidelines.md` — error formatting
-- `rules/regression-test-policy.md` / `rules/flaky-test-management.md` — testing discipline
-- `rules/doc-freshness.md` / `rules/doc-crossref.md` — documentation discipline
+- `.claude-plugin/rules/design-principles.md` — architectural taste invariants (D1–D6)
+- `.claude-plugin/rules/project-architecture.md` — baseline architecture per language profile
+- `.claude-plugin/rules/security.md` / `.claude-plugin/rules/type-safety.md` / `.claude-plugin/rules/api-validation.md` — horizontal policies
+- `.claude-plugin/rules/error-message-guidelines.md` — error formatting
+- `.claude-plugin/rules/regression-test-policy.md` / `.claude-plugin/rules/flaky-test-management.md` — testing discipline
+- `.claude-plugin/rules/doc-freshness.md` / `.claude-plugin/rules/doc-crossref.md` — documentation discipline
