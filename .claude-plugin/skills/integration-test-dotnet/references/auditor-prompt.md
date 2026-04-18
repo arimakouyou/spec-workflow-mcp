@@ -73,6 +73,6 @@ Fix instructions: (FAIL only)
 
 ## Review Cycle
 - Maximum 3 review cycles
-- If FAIL on the 3rd cycle, mark as complete with remaining issues and report to Command
+- If FAIL on the 3rd cycle, report verdict as `FAIL (escalated)` with the full unresolved finding list and escalate to Command. **Never downgrade a FAIL to PASS** — Command must surface the escalation to the user.
 - If PASS, request Command to update Quality Gate Results on the whiteboard
 ````

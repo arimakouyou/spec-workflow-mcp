@@ -39,6 +39,18 @@ Agent({
 
 ## Execution Steps
 
+### 0. Load Project-Level Context (Steering) — **Authoritative Validator**
+
+> **Responsibility split**: `spec-impl-code` and `spec-impl-test-write` read steering as *guidance* while writing code — they consult File Placement Rules (P4-01) and the approved dependency list, but they are **not** expected to perform a full steering audit. **This REFACTOR phase is the authoritative steering validator** for the implementation: impl-code / impl-test-write catch violations opportunistically, but impl-review is the last line of defense and must flag anything they missed.
+
+Before reviewing, load project-level instance information from steering documents **if they exist**:
+
+- `{project-path}/.spec-workflow/steering/tech.md` — approved external dependencies, technical constraints, ADR summary. Use this as the source of truth when checking whether the implementation introduced any unapproved dependency or diverged from recorded architectural decisions.
+- `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)** and any Project-Specific Conventions. Use this to verify that new files were placed and named according to project rules.
+- `{project-path}/.spec-workflow/steering/product.md` — product principles / non-goals (used to flag scope creep).
+
+Skip any file that does not exist. If steering is absent, record `steering: absent — full consistency check skipped` in the quality assessment output and rely on `.claude-plugin/rules/` project-wide policies alone.
+
 ### 1. Read All Code
 
 Read both the test files and implementation files to understand:
@@ -86,6 +98,11 @@ Evaluate the final code on:
 - **Maintainability**: Is it easy to modify in the future?
 - **Test coverage**: Do tests adequately cover the behavior?
 - **Consistency**: Does it follow existing codebase patterns?
+- **Steering Alignment** (only if steering docs exist):
+  - **File placement**: Are new source and test files placed per `structure.md` File Placement Rules (P4-01)? Flag any file placed outside the rule-mandated directory.
+  - **Approved dependencies**: Does every newly imported third-party dependency appear in `tech.md` "External Dependencies (Approved)"? Flag additions that do not.
+  - **ADR conformance**: Does the implementation contradict any Accepted ADR summarized in `tech.md`? Flag any such divergence.
+  - **Product scope**: Does the change stay within product scope (not quietly implementing a Non-Goal from `product.md`)?
 
 ## Output Format
 
@@ -104,6 +121,7 @@ Return to the calling agent:
 - Maintainability: {GOOD/FAIR/POOR} — {details}
 - Test coverage: {GOOD/FAIR/POOR} — {details}
 - Consistency: {GOOD/FAIR/POOR} — {details}
+- Steering alignment: {PASS/CONCERN/N/A} — {details; N/A if no steering docs exist}
 
 ### Success Criteria Check
 - [ ] {criterion 1}: {met/unmet}

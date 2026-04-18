@@ -1,3 +1,15 @@
+---
+task_type: feature-add
+# task_type は .claude-plugin/rules/task-types.md TT2 の値から選択:
+#   feature-add       新規 API / 画面 / コマンド追加
+#   feature-modify    既存機能の挙動・契約変更
+#   bugfix            既存の不具合修正
+#   refactor          振る舞いを変えないリファクタ
+#   legacy-migration  レガシーコードからの移植
+# 省略または `legacy` を指定した場合は Phase 0.5 調査フェーズがスキップされます。
+# `legacy` を指定する場合は legacy_reason: を併記してください。
+---
+
 # 要求仕様 (Request Specification)
 
 ## フィーチャー概要

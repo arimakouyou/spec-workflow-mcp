@@ -9,6 +9,8 @@ depends_on: []
 
 > **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1）: 各 Requirement の見出しは `### REQ-N: タイトル` 形式で書く（N は Requirement 番号）。Acceptance Criteria はフラットに 1, 2, 3 と列挙し、各行末に `<!-- REQ-N.M -->` コメントを付与して機械可読な `REQ-N.M` 識別子を明示する。下流仕様書（design.md / test-design.md / tasks.md）は `REQ-N`（全体）または `REQ-N.M`（個別 AC）で参照する。
 
+> **Evidence 引用**（`.claude-plugin/rules/evidence-coverage.md` EC1/EC2, 非 legacy 類型のみ）: `request-spec.md` で宣言された `task_type` の必須 evidence category は、本ドキュメント全体で各 1 件以上引用すること。Acceptance Criteria 行に `<!-- EV-{category}-{NNN} -->` を追記するか、該当 REQ の直下で括弧内引用 `(EV-{category}-{NNN})` を使う。該当 category が本当にこの spec に適用されない場合は、ドキュメント冒頭に `<!-- no-evidence: {category} — {理由} -->` を置けば Step B チェックは WARN で済む。
+
 ## Introduction
 
 [Provide a brief overview of the feature, its purpose, and its value to users]
@@ -25,7 +27,7 @@ depends_on: []
 
 #### Acceptance Criteria
 
-1. WHEN [event] THEN [system] SHALL [response]  <!-- REQ-1.1 -->
+1. WHEN [event] THEN [system] SHALL [response]  <!-- REQ-1.1 --> <!-- EV-{category}-{NNN} -->
 2. IF [precondition] THEN [system] SHALL [response]  <!-- REQ-1.2 -->
 3. WHEN [event] AND [condition] THEN [system] SHALL [response]  <!-- REQ-1.3 -->
 

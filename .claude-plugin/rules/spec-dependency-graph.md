@@ -22,13 +22,15 @@ always_apply: true
 | `test-design.md`（Integration Test） | `IT-N` | `IT-1` | 既存規則のまま |
 | `test-design.md`（E2E Test） | `E2E-N` | `E2E-1` | 既存規則のまま |
 | `tasks.md`（Task） | `N.M` | `1.1`, `2.3` | 既存規則のまま（task-parser.ts がパース） |
+| `evidence/{category}/EV-*.md`（Evidence） | `EV-{category}-{NNN}` | `EV-callers-001`, `EV-branches-012` | Phase 0.5 で `/spec-investigate` が生成する証跡ファイル。`task-types.md` TT3 の category 名 + 3 桁ゼロ埋め連番。詳細は `evidence-coverage.md` EC1 |
 
 - ID の明示方法は **phase ごとに異なる**:
   - **requirements.md**: Requirement 見出しは `### REQ-N: タイトル` 形式（例: `### REQ-1: User Login`）。Acceptance Criteria は番号付きリストで列挙し、各行末に `<!-- REQ-N.M -->` コメントを付与して REQ-N.M 識別子を明示する（`requirements-template.md` 参照）
   - **design.md**: コンポーネント見出しは `### DES-N: ComponentName`、Data Model は `### MOD-N: Name`、API は `### API-N: Name`（例: `### DES-1: UserRepository`）
   - **test-design.md**: `#### UT-N.M: Name` / `### IT-N: Name` / `### E2E-N: Name`（従来規則のまま）
   - **tasks.md**: `- [ ] N.M タイトル` のリスト項目（従来規則のまま、`task-parser.ts` がパース）
-- 下流仕様書の `depends_on.refs` は、**REQ-N（bare、Requirement 全体を指す）** と **REQ-N.M（個別 Acceptance Criterion を指す）** のどちらも参照できる。`refs: [REQ-1]` なら REQ-1 配下の全 AC、`refs: [REQ-1.1, REQ-1.2]` なら個別 AC のみ
+  - **evidence/{category}/EV-*.md**: ファイル名と frontmatter `ev_id:` の両方に `EV-{category}-{NNN}` を記載（`evidence-template.md` 参照）。仕様書本体からは HTML コメント、括弧内引用、もしくは frontmatter `depends_on.refs` の 3 形式で参照する（`evidence-coverage.md` EC1）
+- 下流仕様書の `depends_on.refs` は、**REQ-N（bare、Requirement 全体を指す）** と **REQ-N.M（個別 Acceptance Criterion を指す）** のどちらも参照できる。`refs: [REQ-1]` なら REQ-1 配下の全 AC、`refs: [REQ-1.1, REQ-1.2]` なら個別 AC のみ。なお、`/spec-verify` が `depends_on.refs` の要素として認識するのは `REQ-N` / `REQ-N.M` / `DES-N` / `MOD-N` / `API-N` / `UT-N.M` / `IT-N` / `E2E-N` のみであり、`EV-*` を `depends_on.refs` に含める運用は現時点では未サポート。EV への参照は HTML コメント（`<!-- EV-{category}-{NNN} -->`）または括弧内引用（`(EV-{category}-{NNN})`）で行うこと（詳細は `evidence-coverage.md` EC1）
 - 既存 spec に ID を後付けする場合は Minor 変更扱いとし、参照する下流がなければ付与しなくてもよい（SD3 参照）
 - UT-N.M の M は N の下位番号（Component N のテストケース M）であり、REQ-N.M の M（Acceptance Criteria M）とは**独立**
 

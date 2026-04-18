@@ -11,6 +11,8 @@ depends_on:
 
 > **ID 規則**（`.claude-plugin/rules/spec-dependency-graph.md` SD1）: Components and Interfaces の各コンポーネント見出しを `### DES-N: ComponentName` 形式で書く（例: `### DES-1: UserRepository`）。Data Models は `### MOD-N:`、API は `### API-N:` を任意で付与。下流仕様書（test-design.md / tasks.md）はこの ID で参照する。
 
+> **Evidence 引用**（`.claude-plugin/rules/evidence-coverage.md` EC2, 非 legacy 類型のみ）: 各 `### DES-N:` / `### MOD-N:` セクションと Code Reuse Analysis は EV 引用で裏付けること。形式は `(EV-{category}-{NNN})` または `<!-- EV-{category}-{NNN} -->`。既存コード近傍のない完全新規コンポーネントは per-artifact waiver `<!-- no-evidence: {reason} -->` を記載してよい（reason 必須、WARN のみ）。
+
 ## Overview
 
 [High-level description of the feature and its place in the overall system]
@@ -24,15 +26,18 @@ depends_on:
 [How the implementation will follow project organization conventions]
 
 ## Code Reuse Analysis
-[What existing code will be leveraged, extended, or integrated with this feature]
+[What existing code will be leveraged, extended, or integrated with this feature.
+ 各項目は EV-{category}-{NNN} 引用で裏付けること（evidence-coverage.md EC2）]
 
 ### Existing Components to Leverage
-- **[Component/Utility Name]**: [How it will be used]
-- **[Service/Helper Name]**: [How it will be extended]
+- **[Component/Utility Name]** (EV-{category}-{NNN}): [How it will be used]
+- **[Service/Helper Name]** (EV-{category}-{NNN}): [How it will be extended]
 
 ### Integration Points
-- **[Existing System/API]**: [How the new feature will integrate]
-- **[Database/Storage]**: [How data will connect to existing schemas]
+- **[Existing System/API]** (EV-{category}-{NNN}): [How the new feature will integrate]
+- **[Database/Storage]** (EV-{category}-{NNN}): [How data will connect to existing schemas]
+
+<!-- {category} は task-types.md TT3 の値から選択（entry-points / domain-models / callers / branches / contract-current / regressions / test-harness / cross-cutting など）。spec の task_type が要求する category のうち、実際に投入された EV の ID で置き換える。{NNN} は 3 桁ゼロ埋め。 -->
 
 ## Architecture
 
@@ -58,6 +63,7 @@ graph TD
 - **Dependencies:** [What it depends on]
 - **Reuses:** [Existing components/utilities it builds upon]
 - **Satisfies:** [REQ-N.M を列挙。対応する Acceptance Criteria]
+- **Evidence:** [EV-{category}-{NNN} を列挙。このコンポーネントの設計判断の根拠となる EV]
 
 ### DES-2: [Component Name]
 - **Purpose:** [What this component does]

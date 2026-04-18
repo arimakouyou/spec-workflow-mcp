@@ -95,12 +95,16 @@ src/
 │   └── tailwind.config.js           # Tailwind CSS config
 ├── markdown/                        # Document templates
 │   └── templates/
-│       ├── requirements-template.md  # Requirements document template
-│       ├── design-template.md       # Design document template
-│       ├── tasks-template.md        # Tasks document template
-│       ├── product-template.md      # Product vision template
-│       ├── tech-template.md         # Technical standards template
-│       └── structure-template.md    # Code structure template
+│       ├── request-spec-template.md         # Request spec (Phase 0): task_type 宣言と基本ユースケース
+│       ├── investigation-manifest-template.md  # Phase 0.5 investigation manifest: 生成した EV の索引
+│       ├── evidence-template.md             # Phase 0.5 EV ファイル: ev_id, spec_name, sources, related_refs
+│       ├── requirements-template.md         # Requirements document template
+│       ├── design-template.md               # Design document template
+│       ├── test-design-template.md          # Test design document template (UT/IT/E2E specs)
+│       ├── tasks-template.md                # Tasks document template
+│       ├── product-template.md              # Product: purpose, users, non-goals, principles, success metrics
+│       ├── tech-template.md                 # Tech: stack, approved external deps, constraints, ADR summary
+│       └── structure-template.md            # Structure: directory layout, File Placement Rules (P4-01), project-specific conventions
 ├── server.ts                       # Main MCP server class
 ├── index.ts                        # CLI entry point & argument parsing
 └── types.ts                        # TypeScript type definitions

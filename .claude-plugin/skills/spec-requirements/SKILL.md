@@ -135,7 +135,31 @@ Agent({
     3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability
     4. Requirements must be uniquely identified as '### REQ-N:' headings (per spec-dependency-graph.md SD1)
     5. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: requirements, version, depends_on: [] must exist at the top of the file
+    6. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
+       - If request-spec.md does not exist, or task_type is absent → SKIP checks 6-9 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+       - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 6-9 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+       - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
+           Run check 6 (EC1 integrity) on every citation as described below.
+           SKIP checks 7-9 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+       - If task_type is any other declared value, run checks 6-9 normally.
+       - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 6 applies:
+           a. The file .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist (use Read to probe).
+           b. The referenced file's frontmatter spec_name: must equal this spec-name.
+           c. The {category} must be one of the categories listed in .claude-plugin/rules/task-types.md TT3 (and .spec-workflow/user-config/task-types.yml TT4 if present).
+         Any failure = FAIL with rule_id EC1.
+    7. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 6 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, excluding the fence lines themselves; any language or no language counts). Fail if any of:
+           - A single fenced block exceeds 10 lines.
+           - Cumulative fenced-block lines within a single H2 or H3 section exceed 20 lines.
+           - Total fenced-block lines in the document exceed 80 lines.
+         For each violation, produce a FAIL with rule_id EC3, location, and a fix_hint like 'Move the N-line excerpt to a new EV-{category}-{NNN}.md under evidence/{category}/ and leave a 1-2 sentence summary with the EV citation'. Markdown tables, block-quoted prose, and ASCII diagrams are NOT counted.
+    8. CATEGORY COVERAGE (evidence-coverage.md EC2, doc-level): Apply this check only when check 6 routed to full enforcement (non-legacy classified task_type). For the declared task_type, read the required categories from .claude-plugin/rules/task-types.md TT2 (merged with .spec-workflow/user-config/task-types.yml TT4 if present). Every required category must appear at least once across either:
+           - EV-{category}-... citations in the body (HTML comment, inline paren, or anywhere in fenced prose), OR
+           - frontmatter depends_on.refs entries that start with EV-{category}-.
+         Missing category = FAIL rule_id EC2 with fix_hint 'Add at least one EV-{category}-... citation somewhere in requirements.md (any REQ or the Non-Functional Requirements section) and ensure a matching evidence file exists under evidence/{category}/. If the category legitimately does not apply to this spec, add <!-- no-evidence: {category} — {reason} --> at the top of the document (doc-level category waiver format defined in evidence-coverage.md EC2).'
+         A <!-- no-evidence: {category} — {reason} --> comment at the top of the document waives coverage for the named {category} when both {category} and {reason} are non-empty and {category} matches a task-types.md TT3 / TT4 entry; record it as WARN rather than FAIL. One comment per waived category.
+    9. PER-REQ EVIDENCE (evidence-coverage.md EC2, per-REQ): Apply this check only when check 6 routed to full enforcement (non-legacy classified task_type). Each '### REQ-N:' heading SHOULD have at least one EV-... citation on one of its Acceptance Criteria. Missing = WARN with rule_id EC2_perREQ (not blocking).
 
+    Reporting: for issues triggered by rules EC1/EC2/EC3, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
 })

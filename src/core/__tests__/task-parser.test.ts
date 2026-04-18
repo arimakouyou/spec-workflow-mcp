@@ -68,6 +68,144 @@ describe('task-parser', () => {
     });
   });
 
+  describe('_Evidence: パース', () => {
+    it('単一の EV-ID を正しくパースする', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-domain-models-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-domain-models-001']);
+    });
+
+    it('複数 EV をカンマ/スペース区切りでパースする', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create service
+  - File: src/service.ts
+  - _Evidence: EV-callers-001, EV-branches-002 EV-regressions-003_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual([
+        'EV-callers-001',
+        'EV-branches-002',
+        'EV-regressions-003'
+      ]);
+    });
+
+    it('_Evidence: がないタスクは evidence が undefined', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Requirements: REQ-1_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toBeUndefined();
+    });
+
+    it('EV-ID 形式に合わない値は除外する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-001, invalid-id, EV-branches-002_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
+    });
+
+    it('桁数不足 (EV-callers-1) は reject する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-1, EV-callers-01, EV-callers-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001']);
+    });
+
+    it('小文字の ev-prefix (case 違反) は reject する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: ev-callers-001, Ev-callers-002, EV-callers-003_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-003']);
+    });
+
+    it('重複する EV-ID は 1 回だけ残す', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-001, EV-branches-002 EV-callers-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
+    });
+
+    it('_Evidence のみのタスクは header 扱いにしない (isHeader: false)', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - _Evidence: EV-domain-models-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-domain-models-001']);
+      expect(task?.isHeader).toBe(false);
+    });
+
+    it('_Prompt: 内の Evidence は無視する', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Prompt: Role: Dev | Task: Create model _Evidence: EV-ignore-001_ | Restrictions: None | Success: Done_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toBeUndefined();
+    });
+
+    it('trailing underscore がない _Evidence 行もパースする (italic なしの EC2 例)', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-callers-001 EV-branches-002
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-callers-001', 'EV-branches-002']);
+    });
+
+    it('snake_case を含む category (TT4 拡張想定) もパースする', () => {
+      const content = `## Phase 1: Core
+
+- [ ] 1.1 Create model
+  - File: src/model.ts
+  - _Evidence: EV-security_posture-001_
+`;
+      const result = parseTasksFromMarkdown(content);
+      const task = result.tasks.find(t => t.id === '1.1');
+      expect(task?.evidence).toEqual(['EV-security_posture-001']);
+    });
+  });
+
   describe('computeExecutionWaves', () => {
     function makeTasks(defs: Array<{
       id: string;

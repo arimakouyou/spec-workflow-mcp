@@ -35,6 +35,16 @@ If ANY file is missing — **STOP immediately.** Inform the user which file is m
 
 ## Process
 
+### 0. Load Project-Level Context (Steering)
+
+Before reading test-design.md, load project-level instance information from steering documents **if they exist**:
+
+- `{project-path}/.spec-workflow/steering/tech.md` — approved E2E/IT dependencies (Playwright, testcontainers, reqwest, etc.) and performance/availability targets. Any new dev-dependency MUST be listed in the "External Dependencies (Approved)" table; if it is not, STOP and flag it rather than introducing it silently.
+- `{project-path}/.spec-workflow/steering/structure.md` — use the **File Placement Rules (P4-01)** "Integration Test" and "E2E Test" rows to decide where E2E/IT test files live and how they are named. Do not invent a placement if the rule exists.
+- `{project-path}/.spec-workflow/steering/product.md` — reference the main user flows so you do not accidentally implement a scenario that is out of scope.
+
+Skip any file that does not exist; steering docs are optional.
+
 ### 1. Read Test Design
 
 1. Read `.spec-workflow/specs/{spec-name}/test-design.md`
