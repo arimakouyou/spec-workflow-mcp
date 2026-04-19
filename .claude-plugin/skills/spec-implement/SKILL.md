@@ -25,7 +25,150 @@ The orchestrator's sole responsibilities:
 2. Call agents with the correct prompts
 3. Receive agent completion reports and hand off to the next agent
 4. Call `/log-implementation` skill
-5. Update task status in tasks.md
+5. ~~Update task status in tasks.md~~ → **tasks.md チェックボックスは `progress-write-sync` hook が progress.md のイベント (BEGIN/END/VERIFIED/COMPLETE) から自動同期するため、orchestrator は tasks.md を直接編集しない**
+
+## 🔁 Session Tracking & Resume Protocol (MUST READ FIRST)
+
+このセクションは **下の Prerequisites Check より先に読む**。再開可能性と step 粒度の記録が全フローの前提。
+
+### Session lockfile の作成・削除 (MANDATORY)
+
+- **Wave 開始前 (Prerequisites Check の直後)**: 必ず `.spec-workflow/.implement-session.json` を Write tool で作成する:
+
+  ```json
+  {
+    "specName": "{spec-name}",
+    "sessionId": "{YYYY-MM-DDTHH:MM:SS.sssZ}-{任意suffix}",
+    "startedAt": "{YYYY-MM-DDTHH:MM:SS.sssZ}",
+    "pid": 0
+  }
+  ```
+
+  (pid は 0 固定で可。ISO8601 UTC。)
+
+- **全 wave 完了 or 異常終了 (Step 9 Final E2E Gate PASS / escalate)**: 同ファイルを Delete (Bash `rm`) する。
+- lockfile が存在する間、PreToolUse(Task) hook は全 Task 呼び出しに `<spec-step>` タグを要求する。lockfile が無い場合 hook は素通し。
+- **lockfile が既に存在している状態で spec-implement を再起動**した場合 → これは中断後の再開セッションである。下の「再開判定プロトコル」に従う。
+
+### 📛 `<spec-step>` メタタグ必須化 (ALL Task calls)
+
+本 skill 内の **すべての** Task tool (subagent 起動) 呼び出しは、prompt 先頭行に以下タグを必須で含めること:
+
+```
+<spec-step spec="{specName}" task="{taskId}" step="{stepId}" attempt="{N}">
+```
+
+- 有効 step ID: `discover`, `red-write`, `red-verify`, `green-code`, `green-verify`, `refactor`, `refactor-verify`, `ut-quality`, `simplify`, `review-commit`, `log`, `phase-integration`, `phase-cve`, `phase-experts`, `phase-commit`
+- `attempt` は同 step の試行回数 (初回 1、redo 2、…)
+- 欠落時は PreToolUse(Task) hook が exit 2 で block する。回避禁止
+
+タグは hook によって抽出され、progress.md に `BEGIN` イベントとして durable 記録される。この記録が無いと再開位置を特定できない。
+
+本 skill 内の parallel-worker / review-worker / frontend-test-engineer / unit-test-engineer / code-simplifier 等、すべての subagent_type に対して適用される。
+
+### Call site ↔ step ID 対応表
+
+各 Agent tool 呼び出し箇所で指定する `step` 属性:
+
+| SKILL.md section | subagent_type | `step` 属性値 |
+|-----------------|---------------|---------|
+| 2. Discover Existing Work (文書読取の subagent 起動時) | general-purpose | `discover` |
+| 3.5.3 Phase Review Code Review + Commit | `spec-workflow-mcp:review-worker` | `review-commit` |
+| 3.5.1.5 Integration Verification | (任意) | `phase-integration` |
+| 3.5.1.6 CVE Audit | (任意) | `phase-cve` |
+| 3.5.2 Expert Team Review | (任意) | `phase-experts` |
+| 4. TDD Implementation | `spec-workflow-mcp:parallel-worker` | 初回 `red-write`、GREEN 段階で `green-code` (1 呼び出しで 2 step をまたぐ設計の場合、少なくとも `green-code` タグを付与) |
+| 5. UT Quality Verification | `spec-workflow-mcp:frontend-test-engineer` / `unit-test-engineer` | `ut-quality` |
+| 5.5 Code Simplification | `spec-workflow-mcp:code-simplifier` | `simplify` |
+| 6. Code Review + Commit | `spec-workflow-mcp:review-worker` | `review-commit` |
+| 6.x Rework attempts | `spec-workflow-mcp:parallel-worker` | 原因 step を再指定 (e.g. `green-code` / `refactor`)。attempt は +1 |
+| 7. Log Implementation (/log-implementation) | general-purpose (delegation wrap) | `log` |
+
+各呼び出しは `prompt` 先頭行に `<spec-step spec="..." task="..." step="..." attempt="...">` を必須で含める。attempt は初回 1、同 step 再実行ごとに +1。
+
+### 🔍 再開判定プロトコル (セッション再起動時)
+
+spec-implement 起動時、lockfile が既にある or 対象 task の progress.md が既にある場合、以下を先に判定せよ:
+
+対象ファイル: `.spec-workflow/specs/{spec-name}/Implementation Logs/task-{sanitizedTaskId}_progress.md`
+(sanitizedTaskId: `.` と `/` を `-` に置換。例: task 2.1 → task-2-1)
+
+**判定ルール** (末尾行の EVENT を見る):
+
+| 末尾 EVENT | 意味 | 取るアクション |
+|-----------|------|-------------|
+| `COMPLETE` | task 完了済 | スキップ、次 task へ |
+| `VERIFIED <step>` | step 検証済 | 次 step から再開 (step 順序: discover → red-write → red-verify → green-code → green-verify → refactor → refactor-verify → log) |
+| `FAILED <step>` | 回復不能失敗 | ユーザにエスカレート、meta.reason を提示 |
+| `END <step>` で `VERIFIED` 無し | subagent は戻ったが検証前に中断 | **その step を redo** (attempt 番号を +1) |
+| `BEGIN <step>` で `END` 無し | subagent 自体が中断 (レートリミット等) | **その step を redo** (attempt 番号を +1) |
+| 同 step の `BEGIN` が 3 回以上 | 試行上限到達 | task 先頭に戻すか検討、ユーザに確認 |
+| ファイル無し or 空 | 未開始 | step 1 (discover) から開始 |
+
+**redo 前の必須チェック**:
+
+1. git working tree が clean か確認 (`git status --porcelain`)。汚染されていれば、ユーザに以下を提示して承認を得てから進める:
+   - 破棄: `git reset --hard spec-impl/{spec}/task-{sanitizedTaskId}/step-{step}/attempt-{前回N}`
+   - 退避: `git stash`
+   - 手動解決
+2. `_DependsOn` を持つ task の場合、依存先 task の状態を確認。依存先が再開中 / 失敗中なら、それを先に解決するようユーザに提示。
+
+### ✍️ VERIFIED / FAILED / COMPLETE の書き込み (orchestrator 責務)
+
+orchestrator は subagent 復帰後、progress.md に以下を append する責務がある (hook ではなく orchestrator 側が書く)。**Edit / Write tool で直接書いてはいけない** — race や末尾重複の原因になる。**必ず下の `append-progress-event` CLI 経由で書く**。
+
+- 各 step の subagent 完了・成果検証後 → `VERIFIED <step>`
+- 回復不能エラー時 → `FAILED <step>` (meta に `{"reason": "..."}`)
+- task 全 step 完了 (= `log` step の VERIFIED 直後) → `COMPLETE` (meta に `{"log_id": "..."}`)
+
+**書き込みコマンド** (Bash tool から実行):
+
+```bash
+npx tsx "${CLAUDE_PLUGIN_ROOT:-.}/scripts/append-progress-event.ts" \
+  <specName> <taskId> <EVENT> <stepId> '<meta_json>'
+```
+
+例:
+
+```bash
+# VERIFIED を書く
+npx tsx scripts/append-progress-event.ts my-spec 2.1 VERIFIED green-code '{}'
+
+# FAILED (理由付き)
+npx tsx scripts/append-progress-event.ts my-spec 2.1 FAILED green-code '{"reason":"型エラー解消不能"}'
+
+# COMPLETE (log_id 付き)
+npx tsx scripts/append-progress-event.ts my-spec 2.1 COMPLETE log '{"log_id":"abc-123"}'
+```
+
+この CLI は:
+
+1. progress.md (task 単位) に append-only で 1 行追記
+2. 同 spec の tasks.md を `syncTasksMarkdown` で自動同期 (COMPLETE 時 `[-]` → `[x]`)
+
+orchestrator は tasks.md を**一切手動 Edit してはいけない**。チェックボックス遷移は全て CLI 経由の自動同期に委ねる。
+
+### 🧾 Review Logs (レビュー指摘の永続化)
+
+各種 review skill (pre-push-review / handle-pr-comments / codex:review / phase-review-team) が実行されたら、指摘を **review log** に永続化する。これはレビュー → 修正 → 再レビューの履歴を task 単位で残すため。
+
+パス: `.spec-workflow/specs/<spec>/Review Logs/task-<sanitizedTaskId>_reviews.md`
+
+書き込みは CLI 経由:
+
+```bash
+npx tsx scripts/append-review-log.ts <spec> <task> <source> <attempt> <action> <categories_json> "<summary>"
+```
+
+`action` ∈ `{commit, rework, escalate}`。task 完了時 `/log-implementation` に渡す `reviewProcess` フィールドは:
+
+```bash
+npx tsx scripts/aggregate-review-logs.ts <spec> <task>
+```
+
+で集計 JSON を取得し、そのまま流し込む (手動入力不要)。詳細は `/log-implementation` skill の「reviewProcess 構造」節を参照。
+
+---
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -158,7 +301,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 **Single-task wave**: If the wave contains only one task, process it as before (sequential flow).
 
 **Multi-task wave**: If the wave contains multiple tasks, process them in parallel:
-- Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
+- ~~Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md~~ → **tasks.md は編集しない**。各 task の最初の subagent 起動時 (step 4 parallel-worker) に PreToolUse hook が BEGIN を progress.md に書き込み、progress-write-sync hook が tasks.md を `[ ]` → `[-]` へ自動同期する。
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers in resource-aware batches (step 4)
 
@@ -173,7 +316,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 
 **Wave 計算時の PhaseReview 除外**: `_PhaseReview: true` のタスクは wave 計算から常に除外する。PhaseReview はフェーズ内の全通常タスク完了後に単独で処理する。
 
-**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed as a single multi-task wave in **parallel**. Mark them from `[ ]` to `[-]` together, following the same multi-task wave rules described above.
+**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed as a single multi-task wave in **parallel**. **tasks.md は編集しない** — 各 task の最初の subagent 起動時に BEGIN hook + sync hook が `[-]` を自動設定する。
 
 **Multi-task wave の per-task 処理**: wave 内の各タスクは、steps 3-8（worktree 作成 → parallel-worker → UT検証 → review-worker → log → merge/cleanup → mark `[x]`）を**タスクごとに独立して**実行する。各タスクは専用の worktree/branch で作業し、完了時に個別にマージする。wave 内の全タスクが完了（または失敗）した後に次の wave に進む。
 
@@ -916,7 +1059,12 @@ Required fields:
 
 Only after `/log-implementation` returns success:
 - Verify all success criteria from the `_Prompt` are met
-- Edit tasks.md: Change `[-]` to `[x]`
+- **tasks.md を手動 Edit しない**。代わりに以下を実行して COMPLETE イベントを progress.md に記録する (sync hook が自動で `[-]` → `[x]` に反映する):
+
+  ```bash
+  npx tsx scripts/append-progress-event.ts {spec-name} {task-id} VERIFIED log '{}'
+  npx tsx scripts/append-progress-event.ts {spec-name} {task-id} COMPLETE log '{"log_id":"<id-from-log-implementation>"}'
+  ```
 
 #### Worktree Merge and Cleanup
 

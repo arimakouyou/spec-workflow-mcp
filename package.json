@@ -10,6 +10,10 @@
   "files": [
     "dist/**/*",
     ".claude-plugin/**/*",
+    "scripts/**/*",
+    "src/core/progress-log-parser.ts",
+    "src/core/tasks-auto-update.ts",
+    "src/core/task-parser.ts",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

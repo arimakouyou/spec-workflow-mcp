@@ -318,7 +318,8 @@ your-project/
     spec-design/           # 設計ドキュメント作成
     spec-test-design/      # テスト設計作成
     spec-tasks/            # タスク分割
-    spec-implement/        # 実装ワークフロー
+    spec-implement/        # 実装ワークフロー (step 粒度の中断再開対応, 詳細は docs/RESUME-PROTOCOL.ja.md)
+    spec-resume/           # 中断セッション再開プロトコル
     spec-review/           # コードレビュー
     integration-test/      # 統合テスト
     tdd-skills/            # TDD ワークフロー

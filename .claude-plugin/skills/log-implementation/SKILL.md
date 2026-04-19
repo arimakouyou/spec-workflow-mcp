@@ -66,12 +66,49 @@ integrations:     # フロントエンド-バックエンド連携パターン
 
 ```yaml
 reworkCount: 0      # 差し戻し回数（0 = 初回レビュー通過）
-reviewOutcome: commit  # commit | escalated
+reviewOutcome: commit  # commit | escalated | approved | rejected
 findings:           # reworkCount > 0 の場合のみ
   - attempt: 1
+    source: pre-push-review | handle-pr-comments | codex-review | phase-review-team
     categories: [...]
     summary: ...
     action: rework | commit | escalate
+    timestamp: <ISO8601>
+```
+
+**推奨: Review Logs CLI で自動集計**
+
+spec-implement セッション中に各種 review skill (pre-push-review / handle-pr-comments / codex:review / phase-review-team) が指摘を残した場合、以下 CLI で自動集計された JSON をそのまま reviewProcess に載せることができる:
+
+```bash
+npx tsx scripts/aggregate-review-logs.ts {specName} {taskId}
+```
+
+出力例:
+
+```json
+{
+  "reworkCount": 1,
+  "reviewOutcome": "approved",
+  "findings": [ { "source": "pre-push-review", "attempt": 1, "action": "rework", "categories": ["tests"], "summary": "...", "timestamp": "..." } ]
+}
+```
+
+Review Logs 元ファイル (`.spec-workflow/specs/{specName}/Review Logs/task-{sanitizedTaskId}_reviews.md`) は append-only で保持される (完成後集計後も削除しない)。
+
+### Review Logs の書き込み
+
+各 review skill 自身、または orchestrator がレビュー 1 件ごとに以下を呼ぶ:
+
+```bash
+npx tsx scripts/append-review-log.ts {specName} {taskId} <source> <attempt> <action> <categories_json> "<summary>"
+```
+
+例:
+
+```bash
+npx tsx scripts/append-review-log.ts my-spec 2.1 pre-push-review 1 rework '["tests","security"]' "CVE found in dependency A"
+npx tsx scripts/append-review-log.ts my-spec 2.1 pre-push-review 2 commit '[]' "dependency A upgraded, all checks pass"
 ```
 
 ## 手順
