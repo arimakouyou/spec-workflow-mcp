@@ -56,7 +56,13 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > - スキル：spec-request-spec、spec-requirements、spec-design、spec-test-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
 > - エージェント：code-simplifier、review-worker、unit-test-engineer、frontend-test-engineer、parallel-worker など
 > - ルール：プロジェクトアーキテクチャ、品質チェック、セキュリティ、設計原則など
-> - フック：タスク読み取りガードの自動化
+> - フック：タスク読み取りガード、lockfile 整合性、フォーマットチェック、編集後自動整形、差分検出式セキュリティ監査
+
+> **プラグインフック利用時の前提：**
+> - `jq` — すべてのフックで JSON 解析に使用（必須）
+> - GNU coreutils (`timeout`) — `security-audit-guard.sh` の fail-close タイムアウト処理で使用（Linux は標準搭載、macOS は `brew install coreutils` で導入が必要）
+>
+> これらは本プラグインのフックを使用するときのみ必要です。MCP サーバーと Web ダッシュボード自体はこれらに依存しません。
 
 ### 方法2: 手動 MCP 設定
 

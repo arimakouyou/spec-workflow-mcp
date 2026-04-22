@@ -60,7 +60,13 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > - Skills: spec-request-spec, spec-requirements, spec-design, spec-test-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
 > - Agents: code-simplifier, review-worker, unit-test-engineer, frontend-test-engineer, parallel-worker, etc.
 > - Rules: project architecture, quality checks, security, design principles, etc.
-> - Hooks: automated task read guards
+> - Hooks: automated task read guards, lockfile integrity, format check, post-edit formatter, and diff-aware security audit
+
+> **Prerequisites for the plugin hooks:**
+> - `jq` — required by every hook for JSON parsing
+> - GNU coreutils (`timeout`) — required by `security-audit-guard.sh` for fail-close audit timeouts (preinstalled on Linux; install via `brew install coreutils` on macOS)
+>
+> These utilities are only required when the plugin hooks run; the MCP server and web dashboard do not depend on them.
 
 ### Option 2: Manual MCP Configuration
 

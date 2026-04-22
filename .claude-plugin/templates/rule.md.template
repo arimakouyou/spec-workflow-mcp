@@ -1,0 +1,76 @@
+# {Rule タイトル}
+
+**ID Prefix**: `XX` (2-3 文字の識別子)
+**適用範囲**: 全タスク / 特定言語のみ / 特定フェーズのみ
+**強制レベル**: L1 (docs) / L2 (AI review) / L3 (CI) / L4 (arch test) / L5 (compiler)
+**関連**: `other-rule.md`, `some-skill`
+
+---
+
+## 目的
+
+なぜこの Rule が必要かを 1-3 文で記述。どういう失敗経験から生まれたかを書くと維持判断に役立つ。
+
+---
+
+## 規則
+
+### XX-1: {規則のタイトル}
+
+**規則**: (具体的で、違反/遵守が判定可能な形で記述)
+
+**理由**: (なぜこの規則が必要か)
+
+**違反例**:
+```rust
+// やってはいけない例
+fn process(data: Vec<u8>) -> Vec<u8> {
+    serde_json::from_slice(&data).unwrap()  // L5 で clippy が deny する
+}
+```
+
+**遵守例**:
+```rust
+fn process(data: Vec<u8>) -> Result<Value, AppError> {
+    serde_json::from_slice(&data).map_err(AppError::Parse)
+}
+```
+
+**検出方法** (どの層で強制するか):
+- L5: `clippy.toml` で `unwrap_used = "deny"`
+- L4: `tests/architecture.rs` で unwrap 出現回数 assert
+
+---
+
+### XX-2: {次の規則}
+
+...
+
+---
+
+## 昇格・降格の目安
+
+このルールが効かないと感じたら、以下を検討:
+
+- **より低い層で強制できないか?** (L1 → L3-L5 へ昇格)
+- **特定タスクでのみ必要になっていないか?** (Rule → Skill 降格)
+- **もう必要ないのではないか?** (四半期レビューで降格判断)
+
+---
+
+## 変更履歴
+
+| 日付 | 版 | 変更内容 |
+|---|---|---|
+| 2026-01-15 | 1 | 初版作成(`feature-X` 実装中の失敗から) |
+| 2026-03-20 | 2 | XX-3 を追加 |
+
+---
+
+## Rule 作成時のチェックリスト
+
+- [ ] 全タスクで必要か? → No なら Skill に降ろす
+- [ ] L5 (compiler/lint) で強制できないか? → できるなら rule 記述を最小にして L5 に寄せる
+- [ ] 違反/遵守が判定可能な形で書いてあるか?(曖昧な規則は L2 で false negative になる)
+- [ ] 関連する既存 Rule と責務が重複していないか?
+- [ ] ID Prefix は INDEX.md と重複していないか?

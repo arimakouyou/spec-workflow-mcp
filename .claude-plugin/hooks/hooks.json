@@ -12,12 +12,12 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/format-check-guard.sh\"",
-            "timeout": 120
+            "timeout": 30
           },
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/security-audit-guard.sh\"",
-            "timeout": 180
+            "timeout": 400
           }
         ]
       }
@@ -38,13 +38,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-check.sh\"",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-markdownlint.sh\"",
-            "timeout": 10
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit.sh\"",
+            "timeout": 20
           }
         ]
       }
