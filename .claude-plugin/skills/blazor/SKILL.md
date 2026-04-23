@@ -1,14 +1,31 @@
 ---
-paths:
-  - "**/*.razor"
-  - "**/*.razor.cs"
-globs:
-  - "**/*.csproj"
+name: blazor
+description: |
+  Blazor Web App / Blazor WebAssembly (.NET 10) のベストプラクティス。`InteractiveServer` / `InteractiveWebAssembly` / `InteractiveAuto` の render mode 選択、コードビハインド (`.razor.cs` + partial class) + `[Parameter]` / `[CascadingParameter]` / `EventCallback<T>` によるデータフロー、`@bind` 双方向バインディング、`<EditForm>` + `DataAnnotationsValidator` / `FluentValidation`、`@page` ディレクティブと `NavigationManager`、`dotnet publish -c Release -p:PublishTrimmed=true` による Trim/AOT 検証、bUnit コンポーネントテスト + ロジック抽出 xUnit テスト、`<Virtualize>` と `@key` でのリスト最適化をカバー。Blazor コンポーネント実装、状態管理、EditForm バリデーション、AOT 公開設定、bUnit テスト記述時に参照。`aspnet-core` Skill を補完する。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Blazor Best Practices
 
-Blazor Web App または Blazor WebAssembly を使用する場合、このルールは `aspnet-core.md` を補完する。
+Blazor Web App または Blazor WebAssembly を使用する場合、この Skill は `aspnet-core` Skill を補完する。
+
+## 対象
+
+- Blazor コンポーネント (`.razor` + `.razor.cs`) の新規作成と修正
+- Render mode の選択（`InteractiveServer` / `InteractiveWebAssembly` / `InteractiveAuto`）
+- `[Parameter]` / `[CascadingParameter]` / `EventCallback<T>` によるデータフロー設計
+- `<EditForm>` + バリデーション（`DataAnnotationsValidator` / `FluentValidation`）
+- `<Virtualize>` / `@key` によるリスト描画最適化
+- Trim/AOT ビルド検証 (`dotnet publish -c Release -p:PublishTrimmed=true`)
+- bUnit でのコンポーネントテスト、ロジック抽出による xUnit テスト
+- ルーティング設計 (`@page` + `NavigationManager`)
+
+## 対象外
+
+- ASP.NET Core Minimal APIs 自体 → `aspnet-core` Skill
+- Entity Framework Core → `entity-framework-core` Skill
+- プロジェクト構成 (.csproj) → `csproj` Skill
+- C# コードスタイル → `csharp-style` Rule
 
 ## プロジェクト構成 (Blazor Web App)
 
@@ -169,3 +186,8 @@ public void Counter_IncrementButton_UpdatesCount()
     <ItemRow Item="@item" />
 </Virtualize>
 ```
+
+## 関連 Rule / Skill
+
+- 普遍制約: `csharp-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-C1-C5)
+- 関連 Skill: `aspnet-core` (Blazor Server 側 DI / middleware), `csproj` (PublishTrimmed 設定), `entity-framework-core` (サーバーサイドの DB アクセス), `dotnet-build-cache`, `setup-ci`, `tdd-skills-dotnet`

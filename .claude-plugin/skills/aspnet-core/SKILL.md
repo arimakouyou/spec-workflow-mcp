@@ -1,11 +1,30 @@
 ---
-paths:
-  - "**/*.cs"
-globs:
-  - "**/*.csproj"
+name: aspnet-core
+description: |
+  ASP.NET Core (.NET 10) のベストプラクティス。Minimal APIs (`app.MapGet` / `MapGroup` / `RouteGroupBuilder`) によるエンドポイント定義、DI (Scoped / Singleton / Transient + `IOptions<T>` / `IOptionsMonitor<T>`)、ミドルウェアパイプライン順序 (Exception Handler → HSTS → HTTPS Redirection → CORS → Authn → Authz → Routing → Endpoints)、`IMiddleware` / 規約ベースのカスタムミドルウェア、`TypedResults` と `Results<T1,T2>` による型安全レスポンス、ProblemDetails (RFC 9457)、`IExceptionHandler` による集中エラーハンドリング、JwtBearer 認証 + `AuthorizationBuilder` policy、`WebApplicationFactory<Program>` 統合テスト、graceful shutdown (`IHostApplicationLifetime` / `BackgroundService`) をカバー。ASP.NET Core エンドポイント追加、DI 設定、middleware 実装、認証・認可実装、統合テスト記述時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # ASP.NET Core Best Practices (.NET 10)
+
+## 対象
+
+- Minimal API のエンドポイント追加、`MapGroup` によるグループ化
+- DI 設定（Scoped / Singleton / Transient）と `IOptions<T>` / `IOptionsMonitor<T>` 利用
+- Middleware パイプラインの構築（`UseExceptionHandler`, `UseAuthentication` / `UseAuthorization` など）
+- カスタム middleware 実装（`IMiddleware` / 規約ベース）
+- `TypedResults` と `ProblemDetails` による型安全レスポンス
+- `IExceptionHandler` による集中エラーハンドリング
+- JwtBearer 認証 + `AuthorizationBuilder` policy
+- `WebApplicationFactory<Program>` を使った統合テスト
+- `IHostApplicationLifetime` / `BackgroundService` による graceful shutdown
+
+## 対象外
+
+- EF Core クエリ・DbContext → `entity-framework-core` Skill
+- Blazor コンポーネント → `blazor` Skill
+- プロジェクト構成 → `csproj` Skill
+- C# コードスタイル → `csharp-style` Rule
 
 ## Endpoint Configuration
 
@@ -559,3 +578,8 @@ builder.Services.Configure<HostOptions>(options =>
     options.ShutdownTimeout = TimeSpan.FromSeconds(60);
 });
 ```
+
+## 関連 Rule / Skill
+
+- 普遍制約: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-C1-C5), `api-validation` Skill (AV-C1-C5)
+- 関連 Skill: `csproj`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet`

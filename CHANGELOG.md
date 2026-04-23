@@ -43,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `resource-aware-parallelism.md` → `resource-aware-parallelism` skill
   - Updated all `resource-aware-parallelism.md` references in `integration-test`, `integration-test-dotnet`, `spec-implement`, and `phase-review-team` skills to the new skill-name form
   - Updated `.claude-plugin/rules/INDEX.md` total rule count (124 → 121) and added a dedicated "Skill に降格されたルール" section documenting the migration
+- **Plugin Rule → Skill demotion (Phase B-2)** - Demoted 12 additional rules (9 technology-specific + 3 task-specific) from `.claude-plugin/rules/` to Skills under `.claude-plugin/skills/{name}/SKILL.md`. Each entry retains its existing body content while gaining `SKILL.md.template` 準拠 frontmatter (name / description with specific nouns and use-case triggers / allowed-tools) and 対象 / 対象外 / 関連 Rule・Skill sections:
+  - Rust 技術別 4: `axum`, `diesel`, `leptos`, `rust-build-cache`
+  - .NET 技術別 5: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `dotnet-build-cache`
+  - 特定タスク 3: `api-validation` (AV-R1-5 / AV-C1-5 を Skill 本文内で保持), `flaky-test-management` (FT1-6), `doc-freshness`
+  - `feedback-loop.md` は `always_apply: true` を持つため降格せず Rule として維持
+  - Rewrote all `.claude-plugin/rules/{rule}.md` references in `skills/` and `agents/` to the `{rule}` Skill form using sed bulk substitution, with manual fixes for bare-path references in `agents/code-simplifier.md` and `skills/tech-debt/SKILL.md`
+  - Updated `.claude-plugin/rules/INDEX.md` total rule count (121 → 105; AV-R1-5/AV-C1-5 = 10 + FT1-6 = 6 = 16 IDs removed) and consolidated the "Skill に降格されたルール" section with Phase B-1 and B-2 subsections
 
 ### Removed
 

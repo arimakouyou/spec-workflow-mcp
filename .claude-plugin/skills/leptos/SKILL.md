@@ -1,14 +1,31 @@
 ---
-paths:
-  - "**/*.rs"
-globs:
-  - "**/Cargo.toml"
+name: leptos
+description: |
+  Leptos フルスタック WASM フレームワーク (Rust) のベストプラクティス。`ssr` / `hydrate` / `csr` feature flag による target 分離、`#[cfg(feature = "ssr")]` による server-only コードの分離、`leptos_axum` での Axum 統合、`#[component]` マクロ、`signal()` と派生計算 (closure/Memo)、`provide_context` での状態共有、`#[server]` 関数、`Resource` + `Suspense`、`ActionForm` 進化的フォーム、`leptos_router` routing、コンポーネントロジックを純粋関数に抽出する TDD 戦略、`cargo leptos build` による WASM 検証をカバー。Leptos フロントエンド/フルスタック開発時に参照。`project-architecture.md` よりも優先される。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Leptos Best Practices
 
-When using a Leptos full-stack configuration, this rule takes precedence over `project-architecture.md`.
+When using a Leptos full-stack configuration, this skill takes precedence over the `project-architecture` Rule.
 All Diesel, Valkey, and Axum code must be wrapped in `#[cfg(feature = "ssr")]`.
+
+## 対象
+
+- Leptos コンポーネント (`#[component]`) の新規作成と修正
+- Signal / Memo を使ったリアクティブ state の設計
+- `#[server]` 関数の追加・修正（DB 接続、外部 API 呼び出し）
+- `Resource` + `Suspense` / `Transition` による非同期データ取得
+- `ActionForm` / `ServerAction` を使ったフォーム
+- `leptos_router` によるルーティング設定
+- Leptos フルスタックプロジェクトの feature flag 構成
+
+## 対象外
+
+- 純粋な Axum API サーバー（Leptos を使わない） → `axum` Skill
+- Diesel モデル定義 → `diesel` Skill
+- Valkey 接続管理 → `valkv-cache` Skill
+- WASM 非対応の API 利用（`std::fs`, `std::net` など）は `#[cfg(feature = "ssr")]` でガードする
 
 ## Project Structure
 
@@ -300,6 +317,7 @@ cargo leptos build
 ```
 
 This command builds both SSR and WASM targets. Common WASM-only compilation errors include:
+
 - Using `std::fs`, `std::net`, or other APIs unavailable in `wasm32-unknown-unknown`
 - Calling `tokio::spawn` or other runtime-specific code outside `#[cfg(feature = "ssr")]`
 - Missing `#[cfg(feature = "ssr")]` guards on server-only dependencies
@@ -375,7 +393,7 @@ mod tests {
 
 GREEN phase でテストが通過した後、必ず `cargo leptos build` を実行して WASM コンパイルを検証する。WASM コンパイル失敗は `#[cfg(feature = "ssr")]` ガードの不足を示す。
 
-詳細なテストパターンは TDD Skills (Rust) リファレンス: [leptos-frontend-testing.md](../skills/tdd-skills-rust/references/leptos-frontend-testing.md) を参照。
+詳細なテストパターンは TDD Skills (Rust) リファレンス: [leptos-frontend-testing.md](../tdd-skills-rust/references/leptos-frontend-testing.md) を参照。
 
 ## Performance
 
@@ -383,3 +401,8 @@ GREEN phase でテストが通過した後、必ず `cargo leptos build` を実�
 - Use `Memo` to prevent unnecessary recomputation
 - Set keys correctly on the `For` component to minimize list re-rendering
 - Use `Suspense` to isolate async data loading and reduce rendering blocks
+
+## 関連 Rule / Skill
+
+- 普遍制約: `rust-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-R1-R5)
+- 関連 Skill: `axum` (SSR 時の Router 構成), `diesel` (SSR 時の DB アクセス), `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-code`, `spec-impl-test-write`

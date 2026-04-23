@@ -1,11 +1,25 @@
 ---
-paths:
-  - "**/*.rs"
-globs:
-  - "**/Cargo.toml"
+name: axum
+description: |
+  Axum Web フレームワーク (Rust) のベストプラクティス。Router の分割と合成 (merge/nest)、`#[derive(Clone)]` な AppState の設計と `State` extractor、Extractor の引数順序 (body 消費系は最後)、`AppError` + `IntoResponse` の実装、tower `ServiceBuilder` によるミドルウェア構成、graceful shutdown、handler テスト (`tower::ServiceExt`) をカバー。Axum ハンドラ新規追加、API エンドポイント追加、ミドルウェア追加、認証・認可レイヤ挿入、Rust バックエンド実装時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Axum Best Practices
+
+## 対象
+
+- Axum ハンドラの新規追加と既存エンドポイントの修正
+- Router 構成の変更（分割、合成、ネスト）
+- `AppState` の設計および DI
+- middleware の追加（認証、トレース、CORS、timeout）
+- Axum handler のユニット/統合テスト記述
+
+## 対象外
+
+- Diesel クエリの書き方 → `diesel` Skill
+- Valkey/Redis キャッシュ → `valkv-cache` Skill
+- Leptos との統合（`leptos_axum`） → `leptos` Skill
 
 ## Router Configuration
 
@@ -152,3 +166,8 @@ async fn shutdown_signal() {
 - Test handlers directly using `axum::body::Body` and `tower::ServiceExt`
 - Construct a test `AppState` to inject test DBs or mocks
 - Send actual HTTP requests in integration tests
+
+## 関連 Rule / Skill
+
+- 普遍制約: `rust-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-R1-R5), `api-validation` Skill (AV-R1-R5)
+- 関連 Skill: `diesel`, `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test`

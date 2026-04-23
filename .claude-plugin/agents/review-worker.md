@@ -40,7 +40,7 @@ Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`. De
 
 ### Rust
 
-> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `.claude-plugin/rules/rust-build-cache.md`.
+> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `rust-build-cache` Skill.
 
 ```bash
 cargo fmt --all -- --check
@@ -121,8 +121,8 @@ dotnet publish -c Release -p:PublishTrimmed=true
 ### A. Style and Conventions
 
 Refer to the language-specific style rules and relevant framework rules:
-- **Rust**: `.claude-plugin/rules/rust-style.md`, `axum.md`, `diesel.md`, `leptos.md`
-- **C#/.NET**: `.claude-plugin/rules/csharp-style.md`, `aspnet-core.md`, `entity-framework-core.md`, `blazor.md`
+- **Rust**: `.claude-plugin/rules/rust-style.md`, `axum` Skill, `diesel` Skill, `leptos` Skill
+- **C#/.NET**: `.claude-plugin/rules/csharp-style.md`, `aspnet-core` Skill, `entity-framework-core` Skill, `blazor` Skill
 
 - Compliance with project rules
 - Validity of naming (whether types, functions, and variables accurately express their intent)

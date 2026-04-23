@@ -168,7 +168,7 @@ PR コメントフィードバックステップを削除する:
 flaky test 対策設定を有効化する（P6-08/P6-09）:
 - `ci.yml` のテストリトライセクション（`nick-fields/retry@v3`）をアンコメント
 - リトライ回数: 3（2回目以降の成功は flaky 候補として警告）
-- flaky test 管理ポリシーは `.claude-plugin/rules/flaky-test-management.md` を参照
+- flaky test 管理ポリシーは `flaky-test-management` Skill を参照
 
 #### `--with-auto-merge`
 

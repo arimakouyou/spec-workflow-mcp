@@ -89,7 +89,7 @@ rustfmt --check ${affected_files}
 
 1. `cd {worktree_path}` (do not create the worktree).
    - If `attempt == 1`: Create `{worktree_path}/diagnosis.md` with the header `# Diagnostic Session: {work_item_id}`.
-2. When running verification commands, enable the build cache if sccache is available by using a per-command prefix or folding detection into the same Bash block (see `.claude-plugin/rules/rust-build-cache.md`).
+2. When running verification commands, enable the build cache if sccache is available by using a per-command prefix or folding detection into the same Bash block (see `rust-build-cache` Skill).
 3. Read `whiteboard_path` and obtain shared context from Goal, How Our Work Connects, and Key Questions.
 3.5. **Diagnostic Reasoning (retry only)**: If `retry_mode` is true, apply DR1-DR6:
    - Read `{worktree_path}/diagnosis.md` to review all prior attempts under the `## Rework Cycle` phase heading (wave-harness always writes under this heading)

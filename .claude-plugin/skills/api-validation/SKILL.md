@@ -1,6 +1,28 @@
+---
+name: api-validation
+description: |
+  API リクエストバリデーションの規約 (Rust + C#)。Rust (serde) の AV-R1 `deny_unknown_fields`、AV-R2 型レベルバリデーション (Axum Extractor)、AV-R3 ビジネスバリデーション (サービス層)、AV-R4 Enum バリデーション (`rename_all`)、AV-R5 Optional 明示。C# (ASP.NET Core) の AV-C1 `[ApiController]` + Model Validation、AV-C2 Data Annotations + FluentValidation、AV-C3 `UnmappedMemberHandling.Disallow`、AV-C4 `JsonStringEnumConverter`、AV-C5 `required` + nullability。API エンドポイント実装時、DTO 設計時、バリデーション層の責務分担判断時、review-worker Security カテゴリの実施時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
+---
+
 # API バリデーションスキーマ
 
 API リクエストのバリデーションを厳格に定義し、未知フィールドの拒否とスキーマの一貫性を確保する。
+
+## 対象
+
+- API エンドポイント（Axum / ASP.NET Core）の実装
+- リクエスト DTO の設計
+- 型バリデーションとビジネスバリデーションの責務分担
+- Enum フィールドの許容値設計
+- 必須/任意フィールドの型レベル表現
+- review-worker の Security カテゴリ適用
+
+## 対象外
+
+- HTTP レスポンスの設計 → `axum` / `aspnet-core` Skill
+- DB レイヤのバリデーション → `diesel` / `entity-framework-core` Skill
+- フロントエンドバリデーション → `leptos` / `blazor` Skill
 
 ## 基本原則
 
@@ -253,11 +275,13 @@ design.md の Data Models セクションで DTO を定義する際に、以下�
 review-worker のカテゴリ C（Security）で以下を確認:
 
 ### Rust
+
 - AV-R1: リクエスト DTO に `deny_unknown_fields` が付与されているか
 - AV-R3: ビジネスバリデーションがサービス層で実行されているか
 - AV-R5: 必須/任意フィールドが型で明示されているか
 
 ### C#
+
 - AV-C1: `[ApiController]` またはバリデータが適用されているか
 - AV-C2: 型制約と業務ルールが分離されているか（Data Annotations + FluentValidation）
 - AV-C3: リクエスト DTO で未知フィールドが拒否されているか
@@ -277,3 +301,8 @@ review-worker のカテゴリ C（Security）で以下を確認:
 | AV-C3 (未知フィールド拒否) | L1 ドキュメント | L4 構造テスト |
 | AV-C4 (Enum バリデーション) | L5 型システム（JsonStringEnumConverter） | L5 維持 |
 | AV-C5 (Required/Optional 明示) | L5 型システム（required + NRT） | L5 維持 |
+
+## 関連 Rule / Skill
+
+- 普遍制約: `security` (A1-A10), `type-safety` (TS-R1-R5, TS-C1-C5), `design-principles`, `enforcement-levels` (L1-L5)
+- 関連 Skill: `axum` (Rust Extractor), `aspnet-core` (`[ApiController]` / Minimal API), `spec-design` (DTO スキーマ定義)

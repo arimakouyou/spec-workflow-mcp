@@ -168,7 +168,7 @@ global using Xunit;
 ## NuGet Package References
 
 Required packages for the integration test project (`*.IntegrationTests.csproj`).
-バージョンは `*` 表記（ショートハンド）。実プロジェクトでは `csproj.md` に従い具体バージョンを指定するか、Central Package Management (`Directory.Packages.props`) を使用すること:
+バージョンは `*` 表記（ショートハンド）。実プロジェクトでは `csproj` Skill に従い具体バージョンを指定するか、Central Package Management (`Directory.Packages.props`) を使用すること:
 
 ```xml
 <ItemGroup>

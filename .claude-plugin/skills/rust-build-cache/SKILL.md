@@ -1,13 +1,26 @@
 ---
-paths:
-  - "**/*.rs"
-  - "**/Cargo.toml"
+name: rust-build-cache
+description: |
+  Rust プロジェクトで cargo コマンドを実行する全エージェント向けのビルドキャッシュ設定。sccache を `RUSTC_WRAPPER` として前置する方式で worktree 間のコンパイル結果を共有し、ビルド・テスト・lint を高速化する。`CARGO_TARGET_DIR` 共有は禁止（ファイルロック競合）、Cargo レジストリキャッシュとインクリメンタルコンパイルは対応不要。cargo-nextest 利用時の扱い、sccache キャッシュ破損時のリカバリ、未インストール環境でのフォールバックをカバー。cargo fmt/clippy/test/build を実行する直前、parallel-worker や integ-test-worker などコンパイル重量エージェントの起動前に参照。
+allowed-tools: [Read, Bash, Grep]
 ---
 
 # Rust ビルドキャッシュ
 
-Rust プロジェクトで cargo コマンドを実行する全エージェント向けのビルドキャッシュ設定ルール。
+Rust プロジェクトで cargo コマンドを実行する全エージェント向けのビルドキャッシュ設定ガイド。
 worktree 間でのコンパイル結果共有により、ビルド・テスト・lint の大幅な高速化を実現する。
+
+## 対象
+
+- cargo fmt / clippy / test / build を走らせる直前
+- `parallel-worker` / `integ-test-worker` / `wave-harness-worker` / `review-worker` 起動前の前処理
+- CI 環境での Rust ジョブ高速化
+- worktree を活用した並列実装時のコンパイル結果共有
+
+## 対象外
+
+- .NET / dotnet のビルドキャッシュ → `dotnet-build-cache` Skill
+- CI ワークフローの actions/cache セットアップ → `setup-ci` Skill
 
 ## sccache の検出と利用
 
@@ -61,7 +74,7 @@ cargo fmt --all -- --check && cargo clippy --quiet --all-targets -- -D warnings 
 
 ## cargo-nextest（オプション）
 
-cargo-nextest はテストバイナリの並列実行が高速。利用可能な場合はオプションとして活用できる。ただし `quality-checks.md` の `cargo test` コマンドが正式仕様であり、nextest への切替はそちらで一括管理する。
+cargo-nextest はテストバイナリの並列実行が高速。利用可能な場合はオプションとして活用できる。ただし `quality-checks` Rule の `cargo test` コマンドが正式仕様であり、nextest への切替はそちらで一括管理する。
 
 ```bash
 # nextest が利用可能か確認（利用は任意）
@@ -94,3 +107,9 @@ sccache --start-server
 ### sccache が未インストールの場合
 
 sccache がインストールされていない環境では、フォールバックとして通常の cargo コマンドがそのまま動作し、ビルドは問題なく実行できる想定である（`RUSTC_WRAPPER` も設定されない）。一方で、sccache がインストールされているが設定ミスや破損などで動作しない場合は、`RUSTC_WRAPPER` を一時的に解除して `cargo` を直接実行することで切り分けを行うこと。
+
+## 関連 Rule / Skill
+
+- 普遍制約: `quality-checks` (QC1-QC3: cargo fmt/clippy/test の正式コマンド)
+- 関連 Skill: `cargo-toml`, `axum`, `diesel`, `leptos`, `resource-aware-parallelism` (並列起動時の台数制御)
+- 関連 Agent: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`

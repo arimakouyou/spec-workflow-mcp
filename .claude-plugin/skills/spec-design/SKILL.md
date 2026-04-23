@@ -258,7 +258,7 @@ Data Models should use `### MOD-N: ModelName` and API sections (if present) shou
 
 Describe all entities in type definition or schema format.
 
-> **バリデーションガイダンス**: リクエスト DTO は `#[serde(deny_unknown_fields)]` を付与し、未知フィールドを拒否すること（`api-validation.md` AV-R1 参照）。各フィールドの必須/任意（`Option<T>`）、文字列長制限、Enum 許容値を設計段階で定義しておくこと。
+> **バリデーションガイダンス**: リクエスト DTO は `#[serde(deny_unknown_fields)]` を付与し、未知フィールドを拒否すること（`api-validation` Skill AV-R1 参照）。各フィールドの必須/任意（`Option<T>`）、文字列長制限、Enum 許容値を設計段階で定義しておくこと。
 
 #### API Design (if applicable)
 

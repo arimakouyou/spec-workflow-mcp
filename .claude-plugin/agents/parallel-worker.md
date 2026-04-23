@@ -93,7 +93,7 @@ When retry limits approach (per advisor-usage.md), include your diagnosis AND th
   git worktree add .worktrees/{spec-name}/{task-id} -b impl/{spec-name}/{task-id}
   ```
 - After moving to the worktree, verify you are on the correct path and branch with `pwd` and `git branch --show-current`.
-- After verifying the worktree, apply the build cache when running cargo commands (see `.claude-plugin/rules/rust-build-cache.md`). Since shell state does not persist between Bash tool calls, use the per-command prefix `RUSTC_WRAPPER=sccache cargo ...` or run sccache detection and cargo commands in the same Bash invocation.
+- After verifying the worktree, apply the build cache when running cargo commands (see `rust-build-cache` Skill). Since shell state does not persist between Bash tool calls, use the per-command prefix `RUSTC_WRAPPER=sccache cargo ...` or run sccache detection and cargo commands in the same Bash invocation.
 - Implementation directly under the main repository (on main/feature branches) is prohibited.
 
 ## Whiteboard
@@ -111,7 +111,7 @@ Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`. De
 
 ### Rust Projects
 
-> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `.claude-plugin/rules/rust-build-cache.md`.
+> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `rust-build-cache` Skill.
 
 ```bash
 cargo fmt --all -- --check
@@ -121,7 +121,7 @@ cargo test --quiet
 
 ### .NET Projects (.csproj / .sln detected, no Cargo.toml)
 
-> **Note**: .NET uses MSBuild incremental builds and NuGet cache automatically. See `.claude-plugin/rules/dotnet-build-cache.md`. Use `--no-restore` / `--no-build` flags to chain commands efficiently.
+> **Note**: .NET uses MSBuild incremental builds and NuGet cache automatically. See `dotnet-build-cache` Skill. Use `--no-restore` / `--no-build` flags to chain commands efficiently.
 
 ```bash
 dotnet restore

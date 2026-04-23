@@ -1,13 +1,27 @@
 ---
-paths:
-  - "**/*.cs"
-  - "**/*.csproj"
+name: dotnet-build-cache
+description: |
+  .NET プロジェクトで dotnet コマンドを実行する全エージェント向けのビルドキャッシュ設定。MSBuild インクリメンタルビルド (デフォルト有効・設定不要)、NuGet パッケージキャッシュ (`~/.nuget/packages` で自動共有・並行アクセス安全)、`bin/` / `obj/` 共有禁止 (worktree 間で絶対パス差分)、`dotnet restore → build --no-restore → test --no-build` 最適化チェーン、`dotnet watch` によるホットリロード、CI での `actions/cache` 対象、`dotnet clean` / `dotnet nuget locals all --clear` でのトラブルシュートをカバー。dotnet build / test / publish を走らせる直前、.NET 系 parallel-worker / integ-test-worker 起動前に参照。
+allowed-tools: [Read, Bash, Grep]
 ---
 
 # .NET ビルドキャッシュ
 
-.NET プロジェクトで `dotnet` コマンドを実行する全エージェント向けのビルドキャッシュ設定ルール。
+.NET プロジェクトで `dotnet` コマンドを実行する全エージェント向けのビルドキャッシュ設定ガイド。
 Rust の sccache とは異なり、.NET はビルトインのキャッシュメカニズムに依存する。
+
+## 対象
+
+- dotnet build / test / publish を走らせる直前
+- CI 環境での NuGet キャッシュ設定 (`actions/cache` の対象決定)
+- worktree 内での並列 dotnet コマンド実行前の前処理
+- .NET 系 `parallel-worker` / `integ-test-worker` / `wave-harness-worker` 起動前
+
+## 対象外
+
+- Rust のビルドキャッシュ → `rust-build-cache` Skill
+- CI workflow の `actions/cache` セットアップ詳細 → `setup-ci` Skill
+- エージェント並列数制御 → `resource-aware-parallelism` Skill
 
 ## MSBuild インクリメンタルビルド
 
@@ -70,3 +84,9 @@ dotnet build
 dotnet nuget locals all --clear
 dotnet restore
 ```
+
+## 関連 Rule / Skill
+
+- 普遍制約: `quality-checks` (QC12)
+- 関連 Skill: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`, `resource-aware-parallelism`
+- 関連 Agent: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`

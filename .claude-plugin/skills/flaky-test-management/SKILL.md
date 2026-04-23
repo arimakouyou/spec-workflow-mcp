@@ -1,7 +1,28 @@
+---
+name: flaky-test-management
+description: |
+  Flaky Test (不安定テスト) 管理ポリシー。FT1 分類 (Timing / Order / Environment / Data-dependent)、FT2 CI ベースおよび手動検出 (`cargo test --test-threads=1` や 10 回リピート、`npx jest --runInBand`)、FT3 GitHub Issues での追跡 (`flaky-test` label + Issue テンプレ)、FT4 リトライ設定 (cargo-nextest / Vitest / Jest / GitHub Actions nick-fields/retry)、FT5 隔離 (`#[ignore]` / `.skip`、最大 30 日、全テストの 5% 以下)、FT6 予防 (sleep 禁止、固定ポート禁止、`DateTime::now()` 禁止、testcontainers / シード付き乱数を推奨) をカバー。flaky テスト発生時、CI で断続的に失敗するテストの対処、テスト環境分離の設計、`regression-test-policy` の健全性指標レビュー時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
+---
+
 # Flaky Test 管理ポリシー
 
 Flaky test（不安定テスト）の定義、検出、追跡、対処方針を定義する。
 P6-07, P6-08, P6-09 に対応する。
+
+## 対象
+
+- CI で断続的に失敗するテストの検出と対処
+- テスト隔離判断（`#[ignore]` / `.skip`）
+- Issue テンプレートに沿った flaky テスト追跡
+- テストランナー設定（cargo-nextest / Vitest / Jest / GitHub Actions）でのリトライ
+- flaky を生みにくいテスト設計（testcontainers、シード付き乱数、トランザクションロールバック）
+
+## 対象外
+
+- テストコード全般の書き方 → `tdd-skills` / `tdd-skills-rust` / `tdd-skills-dotnet`
+- リグレッションテストの定着 → `regression-test-policy` Skill
+- 統合テストのフィクスチャ設計 → `integration-test` / `integration-test-dotnet` Skill
 
 ## FT1: 定義と分類 (P6-07)
 
@@ -75,6 +96,7 @@ Flaky test は GitHub Issues で `flaky-test` ラベルを付けて管理する�
 ### Rust (cargo-nextest)
 
 `.config/nextest.toml`:
+
 ```toml
 [profile.default]
 retries = 2
@@ -83,6 +105,7 @@ retries = 2
 ### Node.js (Vitest)
 
 `vitest.config.ts`:
+
 ```typescript
 export default defineConfig({
   test: {
@@ -94,6 +117,7 @@ export default defineConfig({
 ### Node.js (Jest)
 
 `jest.config.js`:
+
 ```javascript
 module.exports = {
   // グローバルリトライ
@@ -164,3 +188,8 @@ Flaky test の発生を防ぐためのガイドライン。
 - **ファクトリ/フィクスチャ** パターンでテストデータを構造化
 - **トランザクションロールバック** で DB テストの分離を保証
 - 疑わしいテストは `--test-threads=1` で分離実行して原因を特定
+
+## 関連 Rule / Skill
+
+- 普遍制約: `quality-checks` (QC3, QC12), `diagnostic-reasoning` (DR1-DR6), `failure-taxonomy` (FC1-FC6)
+- 関連 Skill: `regression-test-policy`, `tdd-skills`, `tdd-skills-rust`, `tdd-skills-dotnet`, `integration-test`, `integration-test-dotnet`, `setup-ci`

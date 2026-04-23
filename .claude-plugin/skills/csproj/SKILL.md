@@ -1,13 +1,29 @@
 ---
-paths:
-  - "**/*.csproj"
-  - "**/Directory.Build.props"
-  - "**/Directory.Packages.props"
+name: csproj
+description: |
+  `.csproj` / `Directory.Build.props` / `Directory.Packages.props` の規約 (.NET 10 SDK スタイル)。PropertyGroup 順序 (TargetFramework → OutputType → RootNamespace)、`<Nullable>enable</Nullable>` / `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` / `<ImplicitUsings>enable</ImplicitUsings>` の必須化、PackageReference アルファベット順、Central Package Management (`ManagePackageVersionsCentrally` + `Directory.Packages.props`)、Roslyn analyzer の `PrivateAssets="all"`、`dotnet list package --vulnerable` / snitch / `dotnet nuget why` による依存衛生をカバー。.csproj 編集、パッケージ追加・更新、Central Package Management 導入、analyzer 設定、NuGet 脆弱性監査時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # .csproj / Directory.Build.props Style Rules
 
 Follow SDK-style project format conventions for .NET 10 projects.
+
+## 対象
+
+- 新規 .csproj の作成、レガシープロジェクトの SDK-style への移行
+- Directory.Build.props による共通設定の集約（`Nullable`, `TreatWarningsAsErrors`, `EnforceCodeStyleInBuild`）
+- Directory.Packages.props による Central Package Management の導入・運用
+- PackageReference の追加・更新・アルファベット順維持
+- Roslyn analyzer (Meziantou / Roslynator / StyleCop) 導入時の `PrivateAssets="all"`
+- NuGet 脆弱性監査、`snitch` による未使用検出、`dotnet nuget why` による transitive 依存解析
+
+## 対象外
+
+- C# コードのスタイル → `csharp-style` Rule
+- ASP.NET Core の Program.cs 設定 → `aspnet-core` Skill
+- NuGet キャッシュ戦略 → `dotnet-build-cache` Skill
+- CI での NuGet キャッシュ設定 → `setup-ci` Skill
 
 ## Section Order (.csproj)
 
@@ -137,7 +153,7 @@ Follow SDK-style project format conventions for .NET 10 projects.
 
 - An `.editorconfig` file must coexist with csproj settings at the solution root
 - Use `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>` in `Directory.Build.props` to enforce code style rules during build
-- Refer to `csharp-style.md` for detailed C# formatting and naming convention rules
+- Refer to `csharp-style` Rule for detailed C# formatting and naming convention rules
 - Ensure `.editorconfig` severity levels align with `TreatWarningsAsErrors` — any `warning`-level rule will fail the build
 
 ## Dependency Hygiene
@@ -164,3 +180,8 @@ dotnet nuget why <project> <package>
 
 - Audit the full dependency graph after any package change
 - When removing a package, verify no transitive consumers depend on it by running `dotnet build` across the entire solution
+
+## 関連 Rule / Skill
+
+- 普遍制約: `csharp-style`, `quality-checks` (QC12)
+- 関連 Skill: `aspnet-core`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `setup-ci`, `tdd-skills-dotnet`, `integration-test-dotnet`

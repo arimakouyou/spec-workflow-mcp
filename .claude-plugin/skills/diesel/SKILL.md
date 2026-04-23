@@ -1,13 +1,25 @@
 ---
-paths:
-  - "**/*.rs"
-  - "**/migrations/**"
-  - "**/diesel.toml"
-globs:
-  - "**/Cargo.toml"
+name: diesel
+description: |
+  Diesel / diesel-async ORM (Rust) のベストプラクティス。`Queryable`/`Selectable`/`Insertable`/`AsChangeset` による model 定義、`diesel.toml` の schema 自動生成、`.select(Model::as_select())` での type-safe クエリ、deadpool + `AsyncDieselConnectionManager` による connection pool、`.transaction()` と `scope_boxed()` によるトランザクション、up.sql/down.sql ペアでのマイグレーション、N+1 回避と batch insert をカバー。Diesel 利用 Rust コードの新規追加、既存クエリ修正、migration 作成、repository レイヤ実装、PostgreSQL スキーマ設計時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Diesel / diesel-async Best Practices
+
+## 対象
+
+- Diesel model の新規定義・更新（`Queryable`, `Selectable`, `Insertable`, `AsChangeset`）
+- type-safe クエリの記述、repository レイヤの実装
+- migration の作成（up.sql / down.sql）と運用
+- diesel-async の connection pool 設計
+- トランザクション境界の設計
+
+## 対象外
+
+- Axum handler の実装 → `axum` Skill
+- Valkey/Redis キャッシュ連携 → `valkv-cache` Skill
+- PostgreSQL 自体の運用（DB チューニング、バックアップ） → インフラ側
 
 ## Project Structure
 
@@ -174,3 +186,8 @@ DROP TABLE users;
 - Use `.limit()` + `.offset()` when fetching large amounts of data
 - Perform bulk inserts in a single call with `.values(&vec_of_insertables)`
 - Write queries that can make use of indexes
+
+## 関連 Rule / Skill
+
+- 普遍制約: `rust-style`, `design-principles`, `security` (A1-A10: SQL injection 等), `type-safety` (TS-R1-R5)
+- 関連 Skill: `axum` (AppState に DbPool 格納), `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test` (testcontainers での DB テスト), `spec-tasks`, `spec-test-design`

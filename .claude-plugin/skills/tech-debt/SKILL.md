@@ -167,4 +167,4 @@ ADR の結果として生じた tech debt は `related-adr` フィールドで�
 
 - ファイル作成後の staging/commit はユーザーが明示的に要求した場合のみ実行する
 - Accepted ステータスは「修正しない」という意図的な判断。理由を概要セクションに記載すること
-- doc-freshness.md により、90日以上 Open のエントリはレビュー対象となる
+- `doc-freshness` Skill により、90日以上 Open のエントリはレビュー対象となる

@@ -1,12 +1,27 @@
 ---
-paths:
-  - "**/*.cs"
-  - "**/Migrations/**"
-globs:
-  - "**/*.csproj"
+name: entity-framework-core
+description: |
+  Entity Framework Core (.NET 10) のベストプラクティス。`IEntityTypeConfiguration<T>` (Fluent API) によるエンティティ構成、`required` キーワード、`DbContext.OnModelCreating` + `ApplyConfigurationsFromAssembly`、`AddDbContext` / `AddDbContextPool` での登録、`AsNoTracking` / `AsSplitQuery` / `SingleOrDefaultAsync` / projection (`Select`) による読み取りクエリ最適化、`BeginTransactionAsync` と `CreateExecutionStrategy` によるトランザクション、`dotnet ef migrations` + idempotent script、`ExecuteUpdateAsync` / `ExecuteDeleteAsync` による一括操作、Testcontainers (PostgreSql) での統合テスト (InMemory provider は統合テストでは使わない) をカバー。EF Core エンティティ定義、クエリ最適化、マイグレーション作成、DbContext 設計、統合テスト記述時に参照。
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Entity Framework Core Best Practices (.NET 10)
+
+## 対象
+
+- エンティティ定義（Fluent API、`IEntityTypeConfiguration<T>`）
+- DbContext 構築・登録（`AddDbContext` / `AddDbContextPool`）
+- 読み取りクエリ最適化（`AsNoTracking` / `AsSplitQuery` / projection）
+- トランザクション境界設計（implicit / explicit / `CreateExecutionStrategy`）
+- マイグレーション作成・適用（`dotnet ef migrations`）
+- 一括操作（`ExecuteUpdateAsync` / `ExecuteDeleteAsync`）
+- Testcontainers による統合テスト
+
+## 対象外
+
+- ASP.NET Core の DI / middleware → `aspnet-core` Skill
+- プロジェクト構成 → `csproj` Skill
+- C# コードスタイル → `csharp-style` Rule
 
 ## Project Structure
 
@@ -400,3 +415,8 @@ public class TransactionalTestBase : IAsyncLifetime
 ```
 
 > **Warning:** `UseInMemoryDatabase` is acceptable for unit-testing simple business logic that wraps `DbContext`, but never rely on it for integration tests. Constraints (unique indexes, foreign keys, check constraints) and SQL-specific behaviors are not enforced by the InMemory provider.
+
+## 関連 Rule / Skill
+
+- 普遍制約: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10: SQL injection 等), `type-safety` (TS-C1-C5)
+- 関連 Skill: `csproj`, `aspnet-core` (AppState / DI 設定), `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet` (Testcontainers PostgreSql)

@@ -1,6 +1,28 @@
+---
+name: doc-freshness
+description: |
+  リポジトリ内のドキュメント・ルールファイル・ADR の陳腐化検出と定期レビュー促進。監視対象は Rules (90 日) / ADR (180 日) / Steering docs (90 日) / design.md (120 日) / tech-debt (90 日) / know-how (180 日)。`git log -1 --format="%ct"` での最終更新日取得、閾値判定 (Fresh < 61 日 / Warning 61-90 日 / Stale >= 91 日)、週次 CI での GitHub Issue 自動作成、ADR status による追加判定 (Proposed 30 日以内遷移、Deprecated / Superseded は対象外)、Phase Review (Expert Team) での乖離検出、手動チェックコマンドをカバー。週次 CI ドキュメントチェック設定、手動の定期監査、古いドキュメント検出と更新判断、tech-debt との連携時に参照。
+allowed-tools: [Read, Bash, Grep, Glob]
+---
+
 # ドキュメント鮮度管理
 
 リポジトリ内のドキュメント・ルールファイル・ADR の陳腐化を検出し、定期的なレビューを促す。
+
+## 対象
+
+- 週次 CI でのドキュメント鮮度チェック設定
+- 手動での定期監査（90/120/180 日閾値）
+- Stale ドキュメント検出後の更新判断
+- ADR status (`Proposed` / `Accepted` / `Deprecated` / `Superseded`) に応じた追加判定
+- Phase Review（Expert Team Review）での実装とドキュメントの乖離検出
+- `tech-debt` Skill との連携（Open 状態エントリの放置検出）
+
+## 対象外
+
+- ドキュメントの書き方・構成 → 各 Skill / テンプレート
+- spec ドキュメントの整合性検証 → `spec-verify` / `spec-impact-analyze` Skill
+- CI workflow の setup → `setup-ci` Skill
 
 ## 監視対象
 
@@ -73,3 +95,8 @@ for f in .claude-plugin/rules/*.md; do
   [ "$age" -gt 90 ] && echo "STALE ($age days): $f"
 done
 ```
+
+## 関連 Rule / Skill
+
+- 普遍制約: `quality-checks`
+- 関連 Skill: `tech-debt` (Stale 検出を tech-debt エントリとして起票), `adr`, `setup-ci` (週次 CI での自動チェック), `regression-test-policy` (test-design.md の 120 日閾値)

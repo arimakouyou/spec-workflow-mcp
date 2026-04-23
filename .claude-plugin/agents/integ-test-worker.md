@@ -25,7 +25,7 @@ Call `advisor()` at the following points:
 2. **Understand the context**: Read handler → repository → model → dto
 3. **Design test cases**: Cover all 5 categories (happy path / error / boundary / edge / external dependency error)
 4. **Implement tests**: Write code in compliance with test-patterns.md
-5. **Self quality check with build cache**: Run rustfmt + clippy + cargo test in a single Bash block. If sccache is available, set `export RUSTC_WRAPPER=sccache` at the top of the block (see `.claude-plugin/rules/rust-build-cache.md`):
+5. **Self quality check with build cache**: Run rustfmt + clippy + cargo test in a single Bash block. If sccache is available, set `export RUSTC_WRAPPER=sccache` at the top of the block (see `rust-build-cache` Skill):
    ```bash
    if command -v sccache >/dev/null 2>&1; then export RUSTC_WRAPPER=sccache; fi
    cargo fmt --all -- --check && cargo clippy --quiet --all-targets -- -D warnings && cargo test --quiet
