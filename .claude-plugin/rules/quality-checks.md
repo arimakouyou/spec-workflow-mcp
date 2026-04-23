@@ -14,11 +14,10 @@ Unified command specification for quality checks run by parallel-worker, review-
 
 > **CI Parity**: These commands are also used by the `/setup-ci` skill to generate GitHub Actions CI workflow YAML. CI templates may include additional setup steps (tool installation etc.) as prerequisites, but the quality check commands themselves must be identical. Re-run `/setup-ci` after updating this file to keep CI in sync.
 
-> **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `.claude-plugin/rules/rust-build-cache.md` (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
+> **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `rust-build-cache` Skill (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
 
 > **Hook Enforcement**: The following checks are also enforced via plugin hooks (`.claude-plugin/hooks/`):
-> - **Auto-format (PostToolUse)**: `post-edit-check.sh` — QC1 rustfmt, QC6 prettier, QC12 dotnet format (auto-fix on Edit/Write)
-> - **Markdown lint (PostToolUse)**: `post-edit-markdownlint.sh` — QC10 markdownlint (auto-fix on Edit/Write)
+> - **Auto-format (PostToolUse)**: `post-edit.sh` — QC1 rustfmt, QC6 prettier, QC10 markdownlint, QC12 dotnet format (auto-fix on Edit/Write)
 > - **Format guard (PreToolUse)**: `format-check-guard.sh` — QC1/QC6/QC12 format check (blocking on git commit)
 > - **Lockfile guard (PreToolUse)**: `lockfile-guard.sh` — QC9 lockfile verification (blocking on git commit)
 > - **Security audit (PreToolUse)**: `security-audit-guard.sh` — QC4/QC6/QC12 vulnerability audit (blocking on git commit)
@@ -31,7 +30,7 @@ Unified command specification for quality checks run by parallel-worker, review-
 
 ## QC1: rustfmt
 
-> 🔗 **Hook**: `post-edit-check.sh` (PostToolUse — auto-fix), `format-check-guard.sh` (PreToolUse — commit gate)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — auto-fix), `format-check-guard.sh` (PreToolUse — commit gate)
 
 ```bash
 cargo fmt --all -- --check
@@ -177,7 +176,7 @@ The full check order becomes:
 
 ## QC6: Node.js Task-Level Quality Checks
 
-> 🔗 **Hook**: `post-edit-check.sh` (PostToolUse — prettier auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — npm audit commit gate)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — prettier auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — npm audit commit gate)
 
 When the project is Node.js-based (detected by `package.json` existence without Rust indicators), use the following task-level quality checks.
 
@@ -256,13 +255,13 @@ npx knip --no-progress 2>&1 | head -50
 
 ## QC12: .NET Task-Level Quality Checks
 
-> 🔗 **Hook**: `post-edit-check.sh` (PostToolUse — dotnet format auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — dotnet vulnerable commit gate)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — dotnet format auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — dotnet vulnerable commit gate)
 
 When the project is .NET-based (detected by `*.sln` or `*.csproj` existence without Rust indicators), use the following task-level quality checks. Target: **.NET 10**.
 
-> **Build Cache**: .NET uses MSBuild incremental builds and NuGet package cache automatically. See `.claude-plugin/rules/dotnet-build-cache.md` for details. Use `--no-restore` / `--no-build` flags to skip redundant steps in the chain.
+> **Build Cache**: .NET uses MSBuild incremental builds and NuGet package cache automatically. See `dotnet-build-cache` Skill for details. Use `--no-restore` / `--no-build` flags to skip redundant steps in the chain.
 
-> **Analyzers**: Projects should include .NET Analyzers (CAxxxx), Roslynator, and StyleCop.Analyzers via `Directory.Build.props`. Analyzer warnings are caught by `dotnet build -warnaserror`. See `.claude-plugin/rules/csproj.md`.
+> **Analyzers**: Projects should include .NET Analyzers (CAxxxx), Roslynator, and StyleCop.Analyzers via `Directory.Build.props`. Analyzer warnings are caught by `dotnet build -warnaserror`. See `csproj` Skill.
 
 ### format
 
@@ -523,7 +522,7 @@ done
 
 ## QC10: Documentation Lint (P5-03)
 
-> 🔗 **Hook**: `post-edit-markdownlint.sh` (PostToolUse — markdownlint auto-fix)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — markdownlint auto-fix)
 
 Markdown ファイルのフォーマット整合性とリンク健全性を検証する。全プロジェクトタイプ共通。
 

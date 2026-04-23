@@ -123,7 +123,6 @@ dotnet publish -c Release -p:PublishTrimmed=true
 Refer to the language-specific style rules and relevant framework rules:
 - **Rust**: `.claude-plugin/rules/rust-style.md`, `axum` Skill, `diesel` Skill, `leptos` Skill
 - **C#/.NET**: `.claude-plugin/rules/csharp-style.md`, `aspnet-core` Skill, `entity-framework-core` Skill, `blazor` Skill
-
 - Compliance with project rules
 - Validity of naming (whether types, functions, and variables accurately express their intent)
 - Code consistency (whether style and patterns are aligned with existing code)

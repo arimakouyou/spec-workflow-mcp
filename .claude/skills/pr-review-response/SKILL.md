@@ -31,7 +31,7 @@ PR レビューコメントへの対応を **Command + 3 種のローカル work
 | `pr-fix-worker`（sonnet）| 1 ファイル分の修正を適用 | N 影響ファイル数 | Edit あり、commit なし |
 | `pr-pattern-scanner`（haiku）| 1 パターンを repo 全域 grep | N 妥当指摘ユニーク数 | なし（read-only）|
 
-並列度は `.claude-plugin/rules/resource-aware-parallelism.md` に従いエージェント種別で分ける。`pr-triage-worker` と `pr-pattern-scanner` は read-only / 軽量なので `MAX_LIGHT_AGENTS`（デフォルト 5）、`pr-fix-worker` は Edit 実行の重量エージェントなので `MAX_HEAVY_AGENTS`（デフォルト 4）で上限制御する。
+並列度は `resource-aware-parallelism` Skill に従いエージェント種別で分ける。`pr-triage-worker` と `pr-pattern-scanner` は read-only / 軽量なので `MAX_LIGHT_AGENTS`（デフォルト 5）、`pr-fix-worker` は Edit 実行の重量エージェントなので `MAX_HEAVY_AGENTS`（デフォルト 4）で上限制御する。
 
 ## 全体ワークフロー
 
@@ -455,6 +455,6 @@ gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/requested_reviewers \
 | `.claude-plugin/skills/handle-pr-comments/SKILL.md:127-166` | 妥当性検証原則 |
 | `.claude-plugin/skills/handle-pr-comments/SKILL.md:204-223` | 同種問題 grep パターン例 |
 | `.claude-plugin/skills/pre-push-review/SKILL.md` | `/pre-push-review` 仕様 |
-| `.claude-plugin/rules/resource-aware-parallelism.md` | `MAX_LIGHT_AGENTS` (triage / scanner), `MAX_HEAVY_AGENTS` (fix-worker) |
+| `resource-aware-parallelism` Skill | `MAX_LIGHT_AGENTS` (triage / scanner), `MAX_HEAVY_AGENTS` (fix-worker) |
 | `.claude-plugin/rules/quality-checks.md` QC3/QC6/QC12 | Phase 5.5 のフル QC コマンド（cargo/dotnet/npm test 含む） |
 | MEMORY `feedback_copilot_review_request.md` | Copilot 依頼 REST 仕様 |

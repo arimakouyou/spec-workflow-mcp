@@ -233,7 +233,7 @@ dotnet test --no-build --verbosity quiet
 ユニットテスト通過後、Phase の成果物が統合レベルで動作することを検証する。
 コマンド定義は `quality-checks.md` の「Integration Verification」セクションを参照。
 
-**Step A: プロジェクトタイプ検出**
+##### Step A: プロジェクトタイプ検出
 
 | 検出条件 | タイプ |
 |----------|--------|
@@ -244,11 +244,11 @@ dotnet test --no-build --verbosity quiet
 | `package.json` 存在 | Node.js |
 | いずれにも該当しない | Generic（ビルドのみ検証） |
 
-**Step B: ビルド検証（必須）**
+##### Step B: ビルド検証（必須）
 
 成果物のビルドが成功することを確認する。コマンドはプロジェクトタイプに応じて `quality-checks.md` を参照。
 
-**Step C: 統合テスト実行**
+##### Step C: 統合テスト実行
 
 統合テストファイルが存在する場合に実行。存在しない場合の判定（**このルールに厳密に従うこと**）:
 - design.md の Excluded Test Environments で当該環境が明示的に除外 → SKIP (設計時除外)
@@ -256,7 +256,7 @@ dotnet test --no-build --verbosity quiet
   - 「仕様あり」の判定: test-design.md に `## Integration Test Specifications` 見出しが存在し、かつそのセクション内に `### IT-` で始まる見出しが 1 件以上ある場合
 - 上記条件を満たす仕様が存在しない（仕様なし） → SKIP (設計上不要)
 
-**Step D: スモークテスト（API プロジェクトのみ）**
+##### Step D: スモークテスト（API プロジェクトのみ）
 
 サーバを一時起動し、ヘルスチェックエンドポイントへの疎通を確認する。外部依存（DB等）で起動不可の場合は FAIL (環境不備)（SKIP は許可しない）。
 
@@ -283,7 +283,7 @@ dotnet test --no-build --verbosity quiet
 
 Expert Team Review の前に、依存ライブラリの脆弱性を機械的に検査する。
 
-**Step A: 監査ツール実行**
+##### Step A: 監査ツール実行
 
 | プロジェクトタイプ | 検出条件 | 監査コマンド |
 |----------------|----------|------------|
@@ -301,7 +301,7 @@ cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 ```
 未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、Expert Team Review のセキュリティ担当に委ねる。
 
-**Step B: 結果分類**
+##### Step B: 結果分類
 
 | 重大度 | アクション |
 |-------|----------|
@@ -310,7 +310,7 @@ cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 
 ※ `cargo audit` の `medium` および `npm audit` の `moderate` は同一の重大度として扱う。
 
-**Step C: 結果の引き渡し**
+##### Step C: 結果の引き渡し
 
 CVE 監査結果を Expert Team Review の入力に追加する:
 
@@ -944,7 +944,7 @@ tasks.md 内の全タスク（PhaseReview 含む）が `[x]` になった時点�
 
 コマンド定義は `quality-checks.md` の「Integration Verification」セクションを参照。
 
-**Step 1: フルビルド検証**
+##### Step 1: フルビルド検証
 
 プロジェクト全体のクリーンビルドが成功することを確認する。
 
@@ -959,7 +959,7 @@ cargo leptos build
 npm run build
 ```
 
-**Step 2: 全テスト実行**
+##### Step 2: 全テスト実行
 
 ユニットテスト + 統合テストの全件を実行する。
 
@@ -971,7 +971,7 @@ cargo test --quiet
 npm test
 ```
 
-**Step 3: 統合テスト実行**
+##### Step 3: 統合テスト実行
 
 統合テストが存在する場合、明示的に統合テストのみを実行する。
 
@@ -983,7 +983,7 @@ cargo test --tests --quiet
 npm run test:integration
 ```
 
-**Step 4: フルスモークテスト（API プロジェクトのみ）**
+##### Step 4: フルスモークテスト（API プロジェクトのみ）
 
 Phase Review のスモークテスト（Step D）と同様の手順だが、ヘルスチェックに加えて、
 design.md に定義された主要エンドポイントのレスポンス確認も行う。
@@ -993,7 +993,7 @@ design.md に定義された主要エンドポイントのレスポンス確認�
   - 認証が必要なエンドポイントは 401 が返ることを確認（認証なしで 200 が返る場合はセキュリティ問題）
   - 認証不要なエンドポイントは 200 または 404（データなし）が返ることを確認
 
-**Step 5: E2E テスト実行（コンテナベース — test-design.md 仕様準拠）**
+##### Step 5: E2E テスト実行（コンテナベース — test-design.md 仕様準拠）
 
 test-design.md の E2E 仕様に基づくテストが存在する場合に実行する（`/spec-e2e-implement` で作成されたテスト）。
 

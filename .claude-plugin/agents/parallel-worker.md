@@ -57,7 +57,6 @@ Before each fix attempt after a failure:
    ```
 
    Use `## GREEN Phase`, `## Quality Checks`, or `## Rework Cycle` as the heading depending on which phase you are in.
-
 4. Implement the fix
 5. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line to the current attempt entry
 

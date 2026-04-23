@@ -16,14 +16,14 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
   <img src="https://img.youtube.com/vi/C-uEa3mfxd0/maxresdefault.jpg" alt="Approval System Demo" width="600">
 </a>
 
-*See how the approval system works: create documents, request approval through the dashboard, provide feedback, and track revisions.*
+> See how the approval system works: create documents, request approval through the dashboard, provide feedback, and track revisions.
 
 ### 📊 Dashboard & Spec Management
 <a href="https://www.youtube.com/watch?v=g9qfvjLUWf8" target="_blank">
   <img src="https://img.youtube.com/vi/g9qfvjLUWf8/maxresdefault.jpg" alt="Dashboard Demo" width="600">
 </a>
 
-*Explore the real-time dashboard: view specs, track progress, navigate documents, and monitor your development workflow.*
+> Explore the real-time dashboard: view specs, track progress, navigate documents, and monitor your development workflow.
 
 ## ✨ Key Features
 
@@ -35,15 +35,6 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 - **Task Progress Tracking** - Visual progress bars and detailed status
 - **Implementation Logs** - Searchable logs of all task implementations with code statistics
 - **CI/CD Generation** - `/setup-ci` generates 5 GitHub Actions workflow files (ci, e2e, scheduled-quality, dependabot, release)
-- **Multi-Language Support** - Available in 11 languages
-
-## 🌍 Supported Languages
-
-🇺🇸 English • 🇯🇵 日本語 • 🇨🇳 中文 • 🇪🇸 Español • 🇧🇷 Português • 🇩🇪 Deutsch • 🇫🇷 Français • 🇷🇺 Русский • 🇮🇹 Italiano • 🇰🇷 한국어 • 🇸🇦 العربية
-
-**📖 Documentation in your language:**
-
-[English](README.md) | [日本語](README.ja.md) | [中文](README.zh.md) | [Español](README.es.md) | [Português](README.pt.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Русский](README.ru.md) | [Italiano](README.it.md) | [한국어](README.ko.md) | [العربية](README.ar.md)
 
 ## 🚀 Quick Start
 

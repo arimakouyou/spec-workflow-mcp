@@ -19,7 +19,7 @@
 | `failure-taxonomy.md` | FC1〜FC6 | 6 | 横断的な失敗分類語彙（parallel-worker / review-worker / wave-harness 間の共通キー。DR6 DIVERGENT トリガー判定の入力） |
 | `spec-dependency-graph.md` | SD1〜SD7 | 7 | 仕様書間の依存グラフ（ID 体系 + frontmatter スキーマ + refs 整合性 + DAG 制約 + 変更伝搬意味論）。`/spec-impact-analyze` と `/spec-verify` の入力 |
 
-**合計: 105 ルール（ID 付き）**
+> **合計: 105 ルール（ID 付き）**
 
 ## Skill に降格されたルール（Phase B-1 + B-2）
 
