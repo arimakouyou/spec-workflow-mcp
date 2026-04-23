@@ -355,7 +355,7 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
    - Identify entity: check EF Core entity models from `Models/{Domain}.cs` or `Entities/{Domain}.cs`
    - Identify DTOs: check request/response models from `Dtos/{Domain}Dto.cs`
    - Identify external dependencies: find interface-based dependencies (e.g., external API clients via `HttpClient`)
-3. **Worker assignment**: assign to Workers per test class. Before assignment, run the resource detection snippet from `resource-aware-parallelism.md` and obtain `MAX_HEAVY_AGENTS`. Limit Worker count to `min(Workers column below, MAX_HEAVY_AGENTS)`.
+3. **Worker assignment**: assign to Workers per test class. Before assignment, run the resource detection snippet from `resource-aware-parallelism` Skill and obtain `MAX_HEAVY_AGENTS`. Limit Worker count to `min(Workers column below, MAX_HEAVY_AGENTS)`.
 
    | # of Targets | MAX_HEAVY_AGENTS | # of Workers | Assignment Method |
    |:------:|:------:|:---------:|---------|

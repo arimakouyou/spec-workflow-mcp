@@ -162,7 +162,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers in resource-aware batches (step 4)
 
-**リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
+**リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
 
 サブバッチ分割例:
 - wave 6タスク, MAX_HEAVY_AGENTS=3 → サブバッチ [3, 3]
@@ -330,7 +330,7 @@ CVE 監査結果は統合検証結果と共に 3.5.2 の Expert Team Review に�
 
 Phase 完了時は、コミット前に専門家チームによる多角的コードレビューを実施する。詳細は `/phase-review-team` スキルを参照。
 
-**リソース制限**: 並列起動前に `resource-aware-parallelism.md` のリソース検出を実行し、`MAX_LIGHT_AGENTS` に基づいて専門家をバッチ分割起動する。詳細は `/phase-review-team` スキル内の手順を参照。
+**リソース制限**: 並列起動前に `resource-aware-parallelism` Skill のリソース検出を実行し、`MAX_LIGHT_AGENTS` に基づいて専門家をバッチ分割起動する。詳細は `/phase-review-team` スキル内の手順を参照。
 
 **チーム編成（最大5名を並列起動）:**
 
@@ -464,7 +464,7 @@ Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prom
 
 Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
 
-**Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control（`resource-aware-parallelism.md` 参照）。並列起動前にリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合はサブバッチに分割し、各サブバッチ内のエージェントのみ同時起動する。各サブバッチの完了を待ってから次のサブバッチを起動し、全サブバッチ完了後に step 5 へ進む。wave 内タスク数が `MAX_HEAVY_AGENTS` 以下の場合は全エージェントを同時起動する。
+**Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control（`resource-aware-parallelism` Skill 参照）。並列起動前にリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合はサブバッチに分割し、各サブバッチ内のエージェントのみ同時起動する。各サブバッチの完了を待ってから次のサブバッチを起動し、全サブバッチ完了後に step 5 へ進む。wave 内タスク数が `MAX_HEAVY_AGENTS` 以下の場合は全エージェントを同時起動する。
 
 リソース検出結果をログに記録する:
 ```

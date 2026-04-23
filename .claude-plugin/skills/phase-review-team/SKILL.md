@@ -33,7 +33,7 @@ Phase 完了時にコミット前に実施する、専門家チームによる�
 
 ### 1. Assemble and Dispatch (Parallel / Batched)
 
-**リソース適応型並列制御**: 専門家を起動する前に、`resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_LIGHT_AGENTS` を取得する。
+**リソース適応型並列制御**: 専門家を起動する前に、`resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_LIGHT_AGENTS` を取得する。
 
 - `MAX_LIGHT_AGENTS >= 5`: 5 名全員を**同時に並列起動**（デフォルト動作）
 - `MAX_LIGHT_AGENTS = 3〜4`: 2 バッチに分割して起動

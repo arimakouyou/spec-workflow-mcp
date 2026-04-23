@@ -114,7 +114,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
    - Identify repository: analyze query logic from `src/db/repository/{domain}.rs`
    - Identify model: check Diesel models from `src/models/{domain}.rs`
    - Identify external dependencies: find trait-based dependencies (e.g., external API clients)
-3. **Worker assignment**: assign to Workers per test file. 割当前に `resource-aware-parallelism.md` のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。Worker 数は `min(下表の Workers 列, MAX_HEAVY_AGENTS)` に制限する。
+3. **Worker assignment**: assign to Workers per test file. 割当前に `resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。Worker 数は `min(下表の Workers 列, MAX_HEAVY_AGENTS)` に制限する。
 
    | # of Targets | MAX_HEAVY_AGENTS | # of Workers | Assignment Method |
    |:------:|:------:|:---------:|---------|

@@ -16,13 +16,12 @@
 | `enforcement-levels.md` | L1〜L5 | 5 | 段階的執行レベル定義 |
 | `error-message-guidelines.md` | EM1〜EM4 | 4 | エラーメッセージ品質ガイドライン |
 | `flaky-test-management.md` | FT1〜FT6 | 6 | Flaky Test 管理ポリシー |
-| `regression-test-policy.md` | RT1〜RT3 | 3 | リグレッションテストポリシー（バグ→テスト変換・受入基準定着） |
 | `csharp-style.md` | CS1〜CS16 | 16 | C# コードスタイル・フォーマット規約（.NET 10） |
 | `diagnostic-reasoning.md` | DR1〜DR6 | 6 | 診断推論プロトコル（リトライ前の構造化診断・セッション状態永続化・繰り返し防止・DIVERGENT 仮説転換） |
 | `failure-taxonomy.md` | FC1〜FC6 | 6 | 横断的な失敗分類語彙（parallel-worker / review-worker / wave-harness 間の共通キー。DR6 DIVERGENT トリガー判定の入力） |
 | `spec-dependency-graph.md` | SD1〜SD7 | 7 | 仕様書間の依存グラフ（ID 体系 + frontmatter スキーマ + refs 整合性 + DAG 制約 + 変更伝搬意味論）。`/spec-impact-analyze` と `/spec-verify` の入力 |
 
-**合計: 124 ルール（ID 付き）**
+**合計: 121 ルール（ID 付き）**
 
 ## リファレンスガイド（ID なし・パターン集）
 
@@ -31,15 +30,24 @@
 | `axum.md` | Axum Web フレームワークパターン |
 | `diesel.md` | Diesel ORM パターン |
 | `leptos.md` | Leptos フルスタック WASM パターン |
-| `valkey.md` | Valkey キャッシュパターン |
-| `cargo-toml.md` | Cargo.toml フォーマット規約 |
-| `context7.md` | Context7 API ドキュメント検索ガイド |
 | `rust-build-cache.md` | sccache ビルドキャッシュ戦略 |
 | `csproj.md` | .csproj / Directory.Build.props 規約（.NET 10） |
 | `aspnet-core.md` | ASP.NET Core パターン（.NET 10） |
 | `entity-framework-core.md` | Entity Framework Core パターン（.NET 10） |
 | `blazor.md` | Blazor フルスタック WASM パターン（.NET 10） |
 | `dotnet-build-cache.md` | .NET ビルドキャッシュ戦略 |
+
+## Skill に降格されたルール（Phase B-1）
+
+以下は従来 Rule として `.claude-plugin/rules/` に配置していたが、常時ロード不要な状況依存知識として Skill (`.claude-plugin/skills/{name}/SKILL.md`) に降格した:
+
+| 旧ファイル | 新 Skill | 説明 |
+|---------|---------|------|
+| `cargo-toml.md` | `cargo-toml` | Cargo.toml フォーマット規約 |
+| `valkey.md` | `valkv-cache` | Valkey (Redis 互換) キャッシュパターン |
+| `context7.md` | `context7` | Context7 MCP ドキュメント検索ガイド |
+| `regression-test-policy.md` | `regression-test-policy` | リグレッションテストポリシー（RT1-RT3） |
+| `resource-aware-parallelism.md` | `resource-aware-parallelism` | リソース検出・並列実行制御 |
 
 ## 品質維持・ガベージコレクション
 
@@ -54,7 +62,6 @@
 |---------|------|
 | `error-message-guidelines.md` | エラーメッセージ品質ガイドライン（EM1-EM4） |
 | `flaky-test-management.md` | Flaky Test 管理ポリシー（FT1-FT6: 定義・検出・追跡・リトライ・隔離・予防） |
-| `regression-test-policy.md` | リグレッションテストポリシー（RT1-RT3: バグ→テスト変換・受入基準定着・スイート管理） |
 
 ## ワークフロー・プロセスルール
 
@@ -63,7 +70,6 @@
 | `spec-workflow-enforcement.md` | spec-workflow 必須手順（tasks.md 読後の実装禁止等） |
 | `feedback-loop.md` | フィードバックループメカニズム |
 | `project-architecture.md` | プロジェクト構造・レイヤー定義 |
-| `resource-aware-parallelism.md` | リソース検出・並列実行制御 |
 | `hybrid-inspection.md` | ハイブリッド検査モデル（決定論 + LLM） |
 | `advisor-usage.md` | advisor ツール利用ガイドライン（全エージェント共通） |
 | `diagnostic-reasoning.md` | 診断推論プロトコル（DR1-DR6: リトライ前診断・セッション状態永続化・非繰り返し制約・DIVERGENT 仮説転換） |

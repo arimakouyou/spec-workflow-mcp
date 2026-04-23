@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All matching ecosystems are audited in a single commit pass (not early-exited) so that every finding is surfaced together, shortening the fix/re-commit cycle
   - Commits that do not touch dependencies pass through immediately, avoiding the previous 180s Bash blocking
   - **Requires GNU coreutils for the `timeout` command**; macOS users must install via `brew install coreutils` (Linux users: usually preinstalled)
+- **Plugin Rule → Skill demotion (Phase B-1)** - Demoted 5 context-dependent rules from `.claude-plugin/rules/` to Skills under `.claude-plugin/skills/{name}/SKILL.md` to reduce always-loaded attention dilution. Each entry was rewritten to follow the new `SKILL.md.template` structure (frontmatter with specific nouns and use-case triggers in `description`, plus 対象 / 対象外 / 主要観点 / よくある落とし穴 / 関連 Rule・Skill sections):
+  - `cargo-toml.md` → `cargo-toml` skill
+  - `valkey.md` → `valkv-cache` skill (renamed to avoid the `**/*key*` Read deny pattern common in local permission settings)
+  - `context7.md` → `context7` skill
+  - `regression-test-policy.md` → `regression-test-policy` skill
+  - `resource-aware-parallelism.md` → `resource-aware-parallelism` skill
+  - Updated all `resource-aware-parallelism.md` references in `integration-test`, `integration-test-dotnet`, `spec-implement`, and `phase-review-team` skills to the new skill-name form
+  - Updated `.claude-plugin/rules/INDEX.md` total rule count (124 → 121) and added a dedicated "Skill に降格されたルール" section documenting the migration
 
 ### Removed
 
