@@ -203,11 +203,11 @@ gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isReso
 
 | 指摘タイプ | 探索クエリ例 |
 |-----------|-------------|
-| ID / キー名の誤り（例: `N-th` → `M-th`） | `grep -rn "N-th\|N 番目" .claude-plugin/` で残存検出 |
+| ID / キー名の誤り（例: `N-th` → `M-th`） | `grep -rn "N-th\|N 番目" .` でリポジトリ全域から残存検出 |
 | 用語・コマンドの不統一（例: `-warnaserror` vs `--warnaserror`） | 指摘の両形式で全域 grep |
-| 配置位置の揺れ（例: `divergent_applied` top-level vs nested） | `grep -rn "divergent_applied" .claude-plugin/` で全箇所確認 |
+| 配置位置の揺れ（例: key の top-level vs nested） | `grep -rn "<key-name>" .` で全箇所確認 |
 | ネストフェンス / placeholder | コードブロックと placeholder パターンを全域 grep |
-| shell 堅牢性（例: `jq` 前提） | `grep -rn "jq " .claude-plugin/hooks/` |
+| shell 堅牢性（例: `jq` 前提） | `grep -rn "jq " <スクリプト配置先ディレクトリ>` |
 
 発見した同種問題は **同じ PR / 同じコミット** で一緒に修正する（「別機会に」と分散させるとテストしにくい）。発見件数を Step 3 の対応計画に追記してユーザーに見える化する:
 
@@ -254,21 +254,23 @@ gh api repos/${OWNER}/${REPO_NAME}/issues/{number}/comments \
 
 #### 4.4 セルフレビュー（MANDATORY）
 
-品質チェック（Step 5）と push（Step 6）の前に、**修正後の diff 全体を `/pre-push-review` でセルフレビュー** する。pr-review-patterns.md のチェックリストで A-H 全カテゴリを再点検し、修正によって新たな不整合（例: 一部ファイルだけ更新して他が取り残された）が生まれていないかを検出する。
+品質チェック（Step 5）と push（Step 6）の前に、**修正後の diff 全体をセルフレビュー** する。修正によって新たな不整合（例: 一部ファイルだけ更新して他が取り残された、参照先の ID や命名が揃っていない、コメント文と実装が食い違っている等）が生まれていないかを検出する。
 
+```bash
+git diff "origin/{baseRefName}..HEAD"
 ```
-/pre-push-review --base origin/{baseRefName}
-```
 
-判定に従って分岐:
+観点:
 
-| 判定 | アクション |
-|------|----------|
-| `push_ok`（Critical 0 / Moderate 0） | Step 5 品質チェックへ進む |
-| `push_after_fix`（Minor のみ） | Minor を追加修正するか、ユーザーに提示して判断を仰ぐ |
-| `fix_required`（Critical or Moderate あり） | Step 4.2 に戻って追加修正。このまま push してはいけない |
+- 同種パターンの grep 網羅（リネーム・ID 変更など 1 箇所の修正が他箇所にも反映されているか）
+- 既存テスト・既存 API に対する破壊的変更の有無
+- 修正漏れ・一部だけ更新で他ファイルと齟齬になっていないか
+- プロジェクト固有のレビューチェックリストがあれば（例: `.claude/_docs/know-how/pr-review-patterns.md`）、そのカテゴリに沿って再点検
+- codex / 他のレビュー系プラグインが enable されていれば `/codex:review` 等で追加観点を取る
 
-**セルフレビューをスキップする条件**: 修正量が極めて軽微（1 行の typo 等）かつ `--focus C` などで部分的に確認済みの場合のみ、ユーザーの明示同意でスキップ可。
+Critical / Moderate 相当の問題が見つかった場合は Step 4.2 に戻って追加修正。Minor のみならユーザーに提示して判断を仰ぐ。
+
+**セルフレビューをスキップする条件**: 修正量が極めて軽微（1 行の typo 等）の場合のみ、ユーザーの明示同意でスキップ可。
 
 ### 5. 品質チェック
 

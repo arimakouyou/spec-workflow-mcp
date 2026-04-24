@@ -196,7 +196,7 @@ steering doc 作成完了後、プロジェクトルートの `CLAUDE.md`（ま�
 {主要技術の列挙。詳細は .spec-workflow/steering/tech.md を参照}
 
 ## コーディングルール
-- ルール一覧: `.claude-plugin/rules/INDEX.md`
+- ルール一覧: `.claude-plugin/rules/` ディレクトリ直下
 - スタイル: `.claude-plugin/rules/rust-style.md`
 - セキュリティ: `.claude-plugin/rules/security.md`
 

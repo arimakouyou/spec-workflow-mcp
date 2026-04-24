@@ -15,7 +15,7 @@ Provides TDD principles and practices based on the teachings of t-wada (Takuto W
 
 ## Pre-check: Know-how Reference
 
-Read relevant know-how such as testing from the Know-how INDEX under the `feedback-loop` rule.
+Read relevant know-how such as testing from the Know-how INDEX as described in the `feedback-loop` skill (FL2).
 Incorporate checklists and counter-examples into your test design.
 
 ## The Essence of TDD

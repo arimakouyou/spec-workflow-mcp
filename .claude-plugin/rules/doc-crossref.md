@@ -23,14 +23,6 @@ spec-workflow のドキュメント間の参照整合性を検証する。
 | test-design.md | テストファイル | テスト仕様に対応するテストファイルが存在するか |
 | docs/openapi.yaml | ソースコード | OpenAPI 定義がソースと一致しているか |
 
-### ルールファイル間の参照
-
-| 参照元 | 参照先 | 検証内容 |
-|--------|--------|---------|
-| review-worker.md | rules/*.md | 参照先ルールファイルが存在するか |
-| spec-implement.md | agents/*.md | 参照先エージェントが存在するか |
-| INDEX.md | rules/*.md | インデックスのファイルパスが正しいか |
-
 ## 検証コマンド
 
 ### Markdown 内部リンクの検証
@@ -69,15 +61,16 @@ done
 ### Phase Review 時（step 3.5.2 Expert Team Review）
 
 実装担当が以下を確認:
+
 - tasks.md の `_Requirements` が requirements.md に存在するか
 - 実装がすべての Requirement ID をカバーしているか
 
 ### 週次定期チェック（`--with-scheduled`）
 
 定期 CI で以下を実行:
+
 - Markdown 内部リンクの破損チェック
 - Requirements Traceability Matrix の整合性チェック
-- INDEX.md のファイルパス整合性チェック
 
 ### `/generate-api-docs` 実行時
 

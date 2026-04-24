@@ -4,7 +4,7 @@ description: >
   A skill for accumulating user feedback, corrections, and instructions as know-how in `.claude/_docs/know-how/`.
   Provides step-by-step procedures for recording know-how (domain selection, duplicate check, file creation, INDEX update).
   Triggers when the user says "remember this", "do this from now on", "remember", or "add to know-how",
-  or when the feedback-loop rule detects feedback and instructs a recording.
+  or when the `feedback-loop` skill (FL3) detects feedback and instructs a recording.
   Can also be explicitly invoked with /knowhow-capture.
 ---
 

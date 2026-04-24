@@ -38,7 +38,6 @@
 
 - [ ] 新規 ID 規約（QC/DR/FC/SD 等）を追加・変更したら、**リポジトリ全体を grep** して全参照箇所の用語・キー名・コマンドを揃える
 - [ ] `.claude-plugin/rules/` を変更したら、`.claude-plugin/skills/` / `.claude-plugin/agents/` / `src/markdown/templates/` を全 grep で参照箇所洗い出し
-- [ ] `.claude-plugin/rules/INDEX.md` の件数（「合計 N ルール」）を実件数と照合
 - [ ] placeholder 命名が統一されている（`{N}` vs `{phase-number}`、`{skill-name}` vs `{skill name}`、snake vs kebab vs camel）
 - [ ] 同一 prompt 内で矛盾指示がない（例: 「Review and fix」と「Mode: check — DO NOT modify」の共存）
 - [ ] フィールド名 / キー名が統一されている（`responsible_files` vs `responsible`、`reviewOutcome` vs `outcome`）

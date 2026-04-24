@@ -104,7 +104,7 @@ Every `REQ-N.M` in `requirements.md` must be covered by at least one task in `ta
 | `N` / `REQ-N` | **Bare Requirement form** — covers every `REQ-N.*` under requirement N |
 | `All` | Blanket coverage — matches every `REQ-N.M` in requirements.md. Typically used by final integration / PhaseReview tasks (see `tasks-template.md:107`) |
 | `REQ-0` | Setup pseudo-requirement (Phase 0 Git init / container / CI / ADR). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
-| `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
+| `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts`). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
 
 If no task covers a given `REQ-N.M` after applying the rules above → **error** (`requirement_not_implemented`).
 
@@ -133,7 +133,7 @@ Every `DES-N` in `design.md` should be reachable:
   | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion in requirements.md. Match is satisfied if **either** of the following is present (OR, not AND): (a) a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or (b) the **M-th** Acceptance Criterion (numbered list item) under a `### REQ-N:` heading — the `.M` suffix maps to the Acceptance Criteria index, not to `N`. Both (a) and (b) are valid match sources — legacy specs without comments pass via (b), new specs with comments pass via (a) | If neither (a) nor (b) is found → **error** (`task_requirement_dangling`) |
   | `N` / `REQ-N` | Must reference an existing `### REQ-N:` heading in requirements.md | If not found → **error** (`task_requirement_dangling`) |
   | `All` | Blanket marker — always valid | Emit **info** (`requirements_all`) noting the task covers every requirement |
-  | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`) — always valid | Emit **info** (`requirements_nfr`) |
+  | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts`) — always valid | Emit **info** (`requirements_nfr`) |
   | `REQ-0` | Reserved setup pseudo-requirement for Phase 0 scaffolding (Git init / containers / CI / ADR — see `spec-tasks/SKILL.md` Phase 0 examples) — always valid even if `REQ-0` is not declared in requirements.md | Emit **info** (`requirements_setup`) |
   | other | Unknown form | **error** (`task_requirement_unknown_form`) with the specific value |
 

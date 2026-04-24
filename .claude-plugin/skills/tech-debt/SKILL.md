@@ -161,7 +161,7 @@ ADR の結果として生じた tech debt は `related-adr` フィールドで�
 ## Know-how からの昇格
 
 `/knowhow-capture` で記録された know-how のうち、個別の tips ではなく構造的・慢性的な問題であるものは
-`/tech-debt add` に昇格させる。feedback-loop.md FL4 の昇格パスを参照。
+`/tech-debt add` に昇格させる。`feedback-loop` Skill の FL4 の昇格パスを参照。
 
 ## Notes
 
