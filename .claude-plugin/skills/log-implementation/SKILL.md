@@ -1,15 +1,22 @@
 ---
 name: log-implementation
-description: "タスク実装完了後にMarkdown形式の実装ログを記録する。必須: specName, taskId, summary, filesModified, filesCreated, statistics, artifacts。タスクを [x] にする前に必ず呼び出すこと。Triggers on: /log-implementation invocation, or when implementation logging is needed after task completion."
+description: "タスク実装完了後に構造化された Markdown 実装ログを記録する。必須: specName, taskId, summary, filesModified, filesCreated, statistics, artifacts (apiEndpoints / components / functions / classes / integrations)。タスクを [x] にする前に必ず呼び出すこと。Triggers on: /log-implementation invocation, or when implementation logging is needed after task completion."
 ---
 
-# Log Implementation — 実装ログ記録
+# Log Implementation — 構造化実装ログ記録
 
-タスク実装完了後に、実装内容をMarkdownファイルとして構造化記録する。
+タスク実装完了後に、実装内容を Markdown ファイルとして**構造化記録**する。artifact（API エンドポイント / コンポーネント / 関数 / クラス / 連携パターン）などの意味的情報を含めた詳細ログを担う Skill。
+
+## hook との役割分担
+
+このスキルは「主機能」として artifact を含む詳細ログを生成する。`log-implementation.sh` hook は Stop 時に**安全網**としてスケルトンのみ自動生成する（summary=`(auto-logged)`、artifact 空）。本スキルを明示呼出したほうが情報は豊かになる。
+
+- **Skill（本体）**: LLM が意味的情報を判断して artifact を埋める — 詳細な実装ログ
+- **Hook（安全網）**: スケルトン自動生成 — 呼び忘れ時の最低限の記録
 
 ## 重要ルール
 
-**タスクを `[x]` にマークする前に、必ずこのスキルを実行すること。** ログのないタスク完了は許可されない。
+**タスクを `[x]` にマークする前に、必ずこのスキルを実行すること。** 本スキルを明示呼出した場合、hook は既存ログを尊重してスキップする（上書きされない）。
 
 ## 入力
 
