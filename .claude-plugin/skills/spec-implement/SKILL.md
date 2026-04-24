@@ -26,6 +26,7 @@ The orchestrator's sole responsibilities:
 3. Receive agent completion reports and hand off to the next agent
 4. Call `/log-implementation` skill
 5. Update task status in tasks.md
+6. Update session state via `${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh`（init / start-task / complete-task / end。詳細は「Session Initialization」節）
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -50,6 +51,34 @@ Tell the user: "Cannot start implementation because {filename} does not exist. P
 ---
 
 Tasks must be approved and cleaned up (Phases 1-4 complete). If not, use `/spec-tasks` first.
+
+## Session Initialization (MANDATORY — DO NOT SKIP)
+
+Prerequisites Check を通過した直後、Step 0 に入る前に**実装セッションを初期化**する。これにより `.implement-session.json` と `.implement-session.lock` がプロジェクトルートに作成され、以下の Hook 群が活性化する:
+
+| Hook | 役割 |
+|------|------|
+| `inject-spec.sh` (UserPromptSubmit) | spec context を毎ターン注入（仕様読み忘れ防止） |
+| `resume-hint.sh` (SessionStart) | 再開状況と git 実状態を context 先頭に提示 |
+| `verify-tests-run.sh` (Stop) | 完了宣言前にテストランナー実行履歴を検査 |
+| `detect-new-files.sh` (PostToolUse Write) | spec 未言及の新規ファイルを警告 |
+| `log-implementation.sh` (Stop) | ログ呼び忘れの安全網（スケルトン自動生成） |
+
+初期化コマンド:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" init {spec-name}
+```
+
+後続の Task Cycle では:
+
+- 各タスク開始時に `session-manage.sh start-task {task-id}` を呼ぶ
+- 各タスク完了時（`[x]` マーク後）に `session-manage.sh complete-task {task-id} {commit-hash}` を呼ぶ
+- 全 wave 完了 or 中断時に `session-manage.sh end` で lockfile を解放
+
+> **注意**: session ファイルは「真のソース」ではない。レートリミット等で更新前に落ちる可能性があるため、hook 側でも git 実状態を優先する前提で設計されている。best-effort で更新すればよい。
+
+---
 
 ## Step 0: Tool Verification (MANDATORY — DO NOT SKIP)
 
@@ -161,6 +190,12 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 - Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers in resource-aware batches (step 4)
+
+**Session 更新（各タスク開始時）**: `[-]` にマークしたタスクごとに以下を実行してセッションの `current_task` を更新する（multi-task wave では wave 内の最後に start したタスクが current_task になる。best-effort、不正確でも構わない）:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" start-task {task-id}
+```
 
 **リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
 
@@ -929,6 +964,16 @@ git worktree remove "$WORKTREE_PATH"
 git branch -d "$BRANCH"
 ```
 
+#### Session 更新（タスク完了時）
+
+マージ完了後、セッションの `completed_tasks` に記録する。`{commit-hash}` は review-worker が作成したコミット hash（マージ前のタスクコミット）:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" complete-task {task-id} {commit-hash}
+```
+
+これにより `current_task` がクリアされ、次タスク選択時に再び start-task で設定される。
+
 Then move to the next pending wave and repeat.
 
 ### 9. Final E2E Gate (全Phase完了後)
@@ -1100,6 +1145,16 @@ review-worker へ以下の引数・情報を渡す:
 > review-worker は上記の引数で `/create-pr` スキルを実行する。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。必要なコミット/プッシュも review-worker が担当する。
 
 PR 作成完了後、`/spec-status` スキルで最終ステータスを表示する。
+
+### Session 終了
+
+全 wave の完了（または Final E2E Gate FAIL によるユーザーエスカレーション）後、実装セッションを終了する:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" end
+```
+
+lockfile が削除され、session 本体はそのまま `.implement-session.json` として残す（後から参照可能）。`spec-archive` 実施時に `session-manage.sh archive` で `.spec-workflow/archived/sessions/` に退避することもできる。
 
 ## Monitoring Progress
 
