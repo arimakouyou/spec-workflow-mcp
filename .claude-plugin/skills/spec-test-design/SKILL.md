@@ -401,17 +401,17 @@ Same strict process — verbal approval is never accepted.
 
 1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only. Save the returned `approvalId`.
 
-2. **Automatic polling with auto-transition**: Start approval polling (Bash script with 60-minute timeout):
+2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run:
    ```
    /check-approval <approvalId> next:/spec-tasks
    ```
-   The polling script will automatically check approval status and handle the result:
-   - **approved**: Cleanup is performed automatically, and check-approval automatically invokes `/spec-tasks`
+   `check-approval` fetches status once via the `approvals` MCP tool (no polling) and branches:
+   - **pending**: User has not acted yet — instruct the user to approve, then re-run `/check-approval`
+   - **approved**: Cleanup is performed automatically, and `check-approval` automatically invokes `/spec-tasks`
    - **needs-revision**: Reviewer comments are displayed
    - **rejected**: Rejection reason is displayed — revise and create a new approval
-   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if polling ends with needs-revision):
+3. **Handle needs-revision** (if status was needs-revision):
    - Update test-design using reviewer comments, spawn the review subagent again
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-tasks`
 

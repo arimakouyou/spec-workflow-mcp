@@ -145,17 +145,17 @@ This is a strict, automated process. Verbal approval from the user is never acce
 
 1. **Request approval**: Use the `approvals` MCP tool with `action: 'request'`. Pass `filePath` only — never include content in the request. Save the returned `approvalId`.
 
-2. **Automatic polling**: Start approval polling (Bash script with 60-minute timeout):
+2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run:
    ```
    /check-approval <approvalId>
    ```
-   The polling script will automatically check approval status and handle the result:
+   `check-approval` fetches status once via the `approvals` MCP tool (no polling) and branches:
+   - **pending**: User has not acted yet — instruct the user to approve, then re-run `/check-approval`
    - **approved**: Cleanup is performed automatically
    - **needs-revision**: Reviewer comments are displayed
    - **rejected**: Rejection reason is displayed — revise and create a new approval
-   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if polling ends with needs-revision):
+3. **Handle needs-revision** (if status was needs-revision):
    - Read the reviewer's comments, update the document accordingly
    - Re-run the review subagent (fix + check)
    - Submit a NEW approval request and run `/check-approval <newApprovalId>`
