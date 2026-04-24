@@ -106,90 +106,22 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 ## Quality Checks (all must pass)
 
-Use the unified commands defined in `.claude-plugin/rules/quality-checks.md`. Detect the project type first, then run the appropriate commands.
+**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (権威ソース)**。
+プロジェクトタイプを検出し、該当する QC 項目を実行する:
 
-### Rust Projects
+| プロジェクトタイプ | 検出条件 | 適用する QC 項目 |
+|----------------|--------|----------------|
+| Rust | `Cargo.toml` | QC1 (rustfmt) / QC2 (clippy) / QC3 (cargo test) / QC4 (cargo-audit, cargo-udeps) |
+| Leptos フルスタック | `Cargo.toml` に `[package.metadata.leptos]` | 上記 + QC5 (cargo leptos build or WASM-specific clippy) |
+| .NET | `*.csproj` / `*.sln` | QC12 (dotnet format / build -warnaserror / test / dependency analysis) |
+| .NET Blazor | `Microsoft.AspNetCore.Components.WebAssembly` 参照 | 上記 + QC12.6 (dotnet publish -p:PublishTrimmed=true) |
+| Node.js | `package.json` | QC6 (npm test / lint / format / audit) |
 
-> **Note**: If sccache is available, run these commands in a single Bash block with `export RUSTC_WRAPPER=sccache`, or prefix each command with `RUSTC_WRAPPER=sccache`. See `rust-build-cache` Skill.
+具体的なコマンド・タイムアウト・エラー処理は `quality-checks.md` を必ず参照すること。
+本 agent 内にコマンドを再記述しない（Single source of truth）。
 
-```bash
-cargo fmt --all -- --check
-cargo clippy --quiet --all-targets -- -D warnings
-cargo test --quiet
-```
-
-### .NET Projects (.csproj / .sln detected, no Cargo.toml)
-
-> **Note**: .NET uses MSBuild incremental builds and NuGet cache automatically. See `dotnet-build-cache` Skill. Use `--no-restore` / `--no-build` flags to chain commands efficiently.
-
-```bash
-dotnet restore
-dotnet format --verify-no-changes --no-restore
-dotnet build --no-restore -warnaserror
-dotnet test --no-build --verbosity quiet
-```
-
-### Dependency Analysis (after core checks, before mutation testing)
-
-quality-checks.md で定義されたオプショナルツールを利用可能時に実行する。mutation testing より先に実行し、ブロッキング脆弱性がある場合は早期に検出する。
-
-#### Rust
-
-```bash
-# cargo-audit (blocking — 脆弱性検出時は停止)
-if command -v cargo-audit >/dev/null 2>&1; then
-  cargo audit
-fi
-
-# cargo-udeps (advisory — 警告のみ)
-if command -v cargo-udeps >/dev/null 2>&1 && rustup run nightly rustc --version >/dev/null 2>&1; then
-  cargo +nightly udeps --quiet || true
-fi
-```
-
-#### .NET
-
-```bash
-# Security audit (blocking — high/critical 脆弱性検出時は停止)
-OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
-echo "$OUTPUT"
-if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
-  echo "Critical or high severity vulnerabilities found"
-  exit 1
-fi
-
-# Snitch (advisory — 冗長参照の警告のみ)
-if dotnet tool list | grep -q snitch; then
-  dotnet tool run snitch 2>&1 | head -30 || true
-fi
-```
-
-### Leptos Full-Stack Projects
-
-If `Cargo.toml` contains `[package.metadata.leptos]`, WASM frontend build verification is **required**:
-
-```bash
-# Check cargo-leptos availability
-if cargo leptos --version 2>/dev/null; then
-  cargo leptos build
-else
-  # Fallback: WASM-specific clippy
-  cargo clippy --target wasm32-unknown-unknown --no-default-features --features hydrate --quiet -- -D warnings
-fi
-```
-
-Without this step, WASM compilation errors go undetected because `cargo test` only compiles for the host target.
-
-### .NET Blazor Projects
-
-`*.csproj` に `Microsoft.AspNetCore.Components.WebAssembly` パッケージ参照がある場合、WASM ビルド検証が **必須**:
-
-```bash
-# Trim/AOT 有効で publish 検証（Leptos の cargo leptos build 相当）
-dotnet publish -c Release -p:PublishTrimmed=true
-```
-
-このステップなしでは、Trim/AOT 互換性の問題が検出されない（`dotnet build` はトリミングを実行しない）。
+> **Build Cache**: Rust は `rust-build-cache` Skill の sccache 設定、
+> .NET は `dotnet-build-cache` Skill の MSBuild/NuGet キャッシュを適用する。
 
 ### .NET Task Detection
 
