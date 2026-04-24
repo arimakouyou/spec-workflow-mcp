@@ -21,6 +21,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 **For any reason whatsoever (e.g., "it's a simple task", "I can do it myself"), do not skip agent calls.**
 
 The orchestrator's sole responsibilities:
+
 1. Read tasks.md and identify the next task
 2. Call agents with the correct prompts
 3. Receive agent completion reports and hand off to the next agent
@@ -54,7 +55,9 @@ Tasks must be approved and cleaned up (Phases 1-4 complete). If not, use `/spec-
 
 ## Session Initialization (MANDATORY — DO NOT SKIP)
 
-Prerequisites Check を通過した直後、Step 0 に入る前に**実装セッションを初期化**する。これにより `.implement-session.json` と `.implement-session.lock` がプロジェクトルートに作成され、以下の Hook 群が活性化する:
+Prerequisites Check を通過した直後、Step 0 に入る前に**実装セッションを初期化**する。
+これにより `.implement-session.json` と `.implement-session.lock` がプロジェクトルートに
+作成され、以下の Hook 群が活性化する:
 
 | Hook | 役割 |
 |------|------|
@@ -76,7 +79,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" init {spec-name}
 - 各タスク完了時（`[x]` マーク後）に `session-manage.sh complete-task {task-id} {commit-hash}` を呼ぶ
 - 全 wave 完了 or 中断時に `session-manage.sh end` で lockfile を解放
 
-> **注意**: session ファイルは「真のソース」ではない。レートリミット等で更新前に落ちる可能性があるため、hook 側でも git 実状態を優先する前提で設計されている。best-effort で更新すればよい。
+> **注意**: session ファイルは「真のソース」ではない。レートリミット等で更新前に落ちる
+> 可能性があるため、hook 側でも git 実状態を優先する前提で設計されている。
+> best-effort で更新すればよい。
 
 ---
 
@@ -87,6 +92,7 @@ Prerequisites 通過後、実装開始前に全必須ツールの存在を検証
 ### 0.1 ツール要件の読み取り
 
 以下2ファイルからツール要件テーブルを解析:
+
 1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` セクション
 2. `.spec-workflow/specs/{spec-name}/test-design.md` → `#### Required Test Tools` セクション
 
@@ -99,6 +105,7 @@ Prerequisites 通過後、実装開始前に全必須ツールの存在を検証
 各ツールエントリについて Check Command を実行する。**Check Command はセキュリティ上の制約に従うこと:**
 
 **安全性チェック（実行前に必ず検証 — 対象はドキュメントに記載された Check Command 文字列自体）:**
+
 - Check Command は `<tool> --version` や `<tool> -v` 等の読み取り専用バージョン確認パターンのみ許可
 - ドキュメント記載の Check Command 文字列にパイプ (`|`)、リダイレクト (`>`, `<`)、セミコロン (`;`)、`&&`、`$()` 等のシェル演算子が含まれる場合は**自動実行しない** — ユーザーに内容を提示して承認を得てから実行
 - 安全なパターンの場合のみ自動実行（`2>&1` はオーケストレータが付与するラッパーであり、Check Command 自体には含まれない）:
@@ -124,7 +131,8 @@ echo "EXIT_CODE: $?"
 MISSING_REQUIRED リストおよび VERSION_MISMATCH リストが空でない場合、以下の手順を実行:
 
 1. 不足ツール一覧をユーザーに提示:
-   ```
+
+   ```text
    以下のツールが不足／バージョン不足です:
 
    | Tool | Purpose | Install Command | Status |
@@ -142,7 +150,7 @@ MISSING_REQUIRED リストおよび VERSION_MISMATCH リストが空でない場
 
 ### 0.4 ゲート判定
 
-```
+```text
 if MISSING_REQUIRED is not empty OR VERSION_MISMATCH is not empty:
   Report to user:
     "## ⛔ Tool Verification Failed
@@ -187,11 +195,14 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 **Single-task wave**: If the wave contains only one task, process it as before (sequential flow).
 
 **Multi-task wave**: If the wave contains multiple tasks, process them in parallel:
+
 - Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers in resource-aware batches (step 4)
 
-**Session 更新（各タスク開始時）**: `[-]` にマークしたタスクごとに以下を実行してセッションの `current_task` を更新する（multi-task wave では wave 内の最後に start したタスクが current_task になる。best-effort、不正確でも構わない）:
+**Session 更新（各タスク開始時）**: `[-]` にマークしたタスクごとに以下を実行して
+セッションの `current_task` を更新する（multi-task wave では wave 内の最後に start
+したタスクが current_task になる。best-effort、不正確でも構わない）:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" start-task {task-id}
@@ -200,6 +211,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" start-task {task-id}
 **リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
 
 サブバッチ分割例:
+
 - wave 6タスク, MAX_HEAVY_AGENTS=3 → サブバッチ [3, 3]
 - wave 4タスク, MAX_HEAVY_AGENTS=2 → サブバッチ [2, 2]
 - wave 3タスク, MAX_HEAVY_AGENTS=1 → サブバッチ [1, 1, 1]（逐次実行）
@@ -219,6 +231,7 @@ Before writing any code, search implementation logs to understand what's already
 Implementation logs live in: `.spec-workflow/specs/{spec-name}/Implementation Logs/`
 
 **Search with grep** (fast, recommended):
+
 ```bash
 grep -r "GET\|POST\|PUT\|DELETE" ".spec-workflow/specs/{spec-name}/Implementation Logs/"
 grep -r "component\|Component" ".spec-workflow/specs/{spec-name}/Implementation Logs/"
@@ -233,6 +246,7 @@ Search at least 2-3 different terms to discover comprehensively. If you find exi
 ### 3. Read Task Guidance
 
 Look at the task's `_Prompt` field for structured guidance:
+
 - **Role**: The developer persona to adopt
 - **Task**: What to build, with context references
 - **Restrictions**: Constraints and things to avoid
@@ -286,6 +300,7 @@ dotnet test --no-build --verbosity quiet
 ##### Step C: 統合テスト実行
 
 統合テストファイルが存在する場合に実行。存在しない場合の判定（**このルールに厳密に従うこと**）:
+
 - design.md の Excluded Test Environments で当該環境が明示的に除外 → SKIP (設計時除外)
 - test-design.md に統合テスト仕様が存在する（仕様あり） → FAIL (実装漏れ)
   - 「仕様あり」の判定: test-design.md に `## Integration Test Specifications` 見出しが存在し、かつそのセクション内に `### IT-` で始まる見出しが 1 件以上ある場合
@@ -331,9 +346,11 @@ Expert Team Review の前に、依存ライブラリの脆弱性を機械的に�
 ロックファイルが存在しない場合は SKIP（新規プロジェクトで依存未解決）。
 
 `cargo audit` 未インストールの場合:
+
 ```bash
 cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 ```
+
 未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、Expert Team Review のセキュリティ担当に委ねる。
 
 ##### Step B: 結果分類
@@ -349,7 +366,7 @@ cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 
 CVE 監査結果を Expert Team Review の入力に追加する:
 
-```
+```text
 CVE Audit Results:
 - cargo audit: {PASS / N件の脆弱性検出 / SKIP}
 - npm audit: {PASS / N件の脆弱性検出 / SKIP / N/A}
@@ -502,7 +519,8 @@ Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to t
 **Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control（`resource-aware-parallelism` Skill 参照）。並列起動前にリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合はサブバッチに分割し、各サブバッチ内のエージェントのみ同時起動する。各サブバッチの完了を待ってから次のサブバッチを起動し、全サブバッチ完了後に step 5 へ進む。wave 内タスク数が `MAX_HEAVY_AGENTS` 以下の場合は全エージェントを同時起動する。
 
 リソース検出結果をログに記録する:
-```
+
+```text
 [resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
 [wave-split] Wave has {N} tasks, processing in {M} sub-batch(es) of {sizes}
 ```
@@ -597,8 +615,9 @@ Branch based on parallel-worker's `status`:
 ### 5. Unit Test Quality Verification [AGENT CALL REQUIRED]
 
 > ⛔ **Do not add tests yourself. Always call the appropriate test engineer agent.**
-
+>
 > **Agent selection**:
+>
 > - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`src/pages/`、`src/components/`）が対象なら `frontend-test-engineer`
 > - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
 > - C#/.NET プロジェクト（`.cs`、`.csproj` 存在）は `unit-test-engineer`（C#/xUnit セクション対応済み）。Blazor code-behind テストも同エージェントが対応
@@ -609,6 +628,7 @@ Verify the quality of tests written during the TDD cycle and supplement any miss
 Pass the implementation files to the selected test engineer agent and have it confirm coverage of required test perspectives (happy path, boundary values, exception handling, edge cases).
 
 Leptos frontend task detection hints:
+
 - `_Prompt` に `#[component]`、`view!`、signal、memo、`#[server]` が含まれる
 - 対象ファイルが `src/pages/`、`src/components/`、`src/server_fns/` 配下にある
 - `Cargo.toml` に `[package.metadata.leptos]` があり、実装が UI ロジックを含む
@@ -755,6 +775,7 @@ Agent({
 The orchestrator branches based on review-worker's `review_action`:
 
 #### review_action: commit (all aspects pass)
+
 → proceed to step 7
 
 #### review_action: rework (findings in B:design / C:security / E:tests)
@@ -809,7 +830,8 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
    - The `divergent_applied` flag (if present)
    - The quality check results (pass/fail)
 3. **Append to diagnostic_history in DR2 + FC4 format** (fields come from the worker's completion report; if a field is absent, note it as `(not reported)`):
-   ```
+
+   ```text
    ### Attempt {N}
    - **Root cause**: {diagnosis.root_cause from worker's report}
    - **Responsible**: {diagnosis.responsible_files joined, or "(not reported)"}
@@ -818,11 +840,13 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
    - **Failure category**: `{diagnosis.failure_category}` / `{diagnosis.failure_subcategory or ""}`
    - **Result**: {review-worker's verdict — commit/rework/escalate + specific findings}
    ```
+
    If `divergent_applied: true`, add a line `- **Divergent applied**: true` after the `Failure category` line. This lets the next attempt know a DIVERGENT attempt has already been spent.
 4. **Pass the accumulated diagnostic_history** in the next rework prompt (see template above)
 
 Example after 2 failed rework attempts (same `failure_category` twice → DR6 DIVERGENT required on Attempt 3):
-```
+
+```text
 ### Attempt 1
 - **Root cause**: UserRepo.create() returns raw diesel::Error, not AppError
 - **Responsible**: src/repos/user.rs:42
@@ -843,6 +867,7 @@ Example after 2 failed rework attempts (same `failure_category` twice → DR6 DI
 The orchestrator manages the rework_attempt counter. After the fix, re-run step 5 (UT quality verification) → step 6 (review). **The rework → re-review cycle has a maximum of 3 times**. If unresolved after 3 times, report to the user with the remaining findings.
 
 **Counter scope:**
+
 - The counter resets **per task** (per task-id)
 - Tasks with `_PhaseReview: true` also allow up to 3 reworks
 - When a review rework occurs during PhaseReview, identify the root cause task and fix it, but that fix also consumes the rework counter (recorded as the PhaseReview's rework_attempt)
@@ -858,10 +883,12 @@ A mismatch with the approved design.md or a specification interpretation discrep
 
 1. Present findings to the user and confirm **how to adjust within the scope of design.md**
 2. Append the user's response to the `_Prompt`'s Restrictions for the relevant task:
-   ```
+
+   ```text
    Example addition to _Prompt:
    Restrictions: ... | [escalate response] review-worker finding: Use UserDto instead of UserDetailDto. last_login_at is not defined in design.md and must not be included
    ```
+
 3. Send back to parallel-worker as a rework (switch from escalate to rework)
 4. After the fix, re-run step 5 (UT) → step 6 (review)
 
@@ -872,6 +899,7 @@ The same cycle limit as rework (maximum 3 times) applies. If unresolved after 3 
 Call the `/log-implementation` skill BEFORE marking the task complete. A task without a log is not complete — this is the most commonly skipped step.
 
 Required fields:
+
 - `specName`: The spec name
 - `taskId`: The task ID you just completed
 - `summary`: Clear description of what was implemented (1-2 sentences)
@@ -887,6 +915,7 @@ Required fields:
   - `reworkCount`: Number of reworks (use `0` if committed on the first attempt)
   - `reviewOutcome`: Final result — `"commit"` or `"escalated"`
   - `findings`: Only include if reworkCount > 0. Record of each review attempt:
+
     ```json
     "reviewProcess": {
       "reworkCount": 2,
@@ -913,7 +942,9 @@ Required fields:
       ]
     }
     ```
+
   - `observations` (optional — review-worker のレビュー観察ログ。tool schema には未定義の拡張フィールド。review-worker の完了レポートの `observations` キーに対応):
+
     ```json
     "observations": {
       "style": "checked-ok: 命名規則準拠、create_user/UserDto 等",
@@ -924,13 +955,17 @@ Required fields:
       "design_conformance": "checked-ok: design.md 定義外の追加なし"
     }
     ```
+
   - `auto_fixed` (optional — tool schema には未定義の拡張フィールド。review-worker の完了レポートの `auto_fixed` キーをそのまま記録する): 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
+
     ```json
     "auto_fixed": [
       { "category": "A:style", "file": "src/handler.rs:45", "description": "unwrap() を map_err() に修正" }
     ]
     ```
+
   - If reworkCount is 0 (passed on first attempt), `findings` may be omitted. `observations` and `auto_fixed` are optional extension fields (not in tool schema) but recommended for traceability. オーケストレーターは review-worker から受け取った完了レポートの `auto_fixed` 配列をそのまま記録すること:
+
     ```json
     "reviewProcess": {
       "reworkCount": 0,
@@ -941,6 +976,7 @@ Required fields:
     ```
 
 **If `/log-implementation` fails:**
+
 - Do not mark the task as `[x]` (completion without a log is incomplete)
 - Report the error to the user and confirm whether to record the log manually or retry
 - If the `/log-implementation` skill is unavailable: Creating a markdown file manually in the `.spec-workflow/specs/{spec-name}/Implementation Logs/` directory is an acceptable alternative
@@ -948,6 +984,7 @@ Required fields:
 ### 8. Complete the Task
 
 Only after `/log-implementation` returns success:
+
 - Verify all success criteria from the `_Prompt` are met
 - Edit tasks.md: Change `[-]` to `[x]`
 
@@ -966,7 +1003,8 @@ git branch -d "$BRANCH"
 
 #### Session 更新（タスク完了時）
 
-マージ完了後、セッションの `completed_tasks` に記録する。`{commit-hash}` は review-worker が作成したコミット hash（マージ前のタスクコミット）:
+マージ完了後、セッションの `completed_tasks` に記録する。
+`{commit-hash}` は review-worker が作成したコミット hash（マージ前のタスクコミット）:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" complete-task {task-id} {commit-hash}
@@ -1064,6 +1102,7 @@ fi
 ```
 
 E2E テストファイルが存在しない場合（優先順位順に判定 — **このルールに厳密に従うこと**）:
+
 1. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → **SKIP (設計時除外)**（除外理由をログに記録）
 2. test-design.md に E2E テスト仕様が定義されている → **FAIL (実装漏れ)**。E2E テストが未実装であることをユーザーに報告
    - 「仕様あり」の判定: test-design.md に `## E2E Test Specifications` 見出しが存在し、かつそのセクション内に `### E2E-` で始まる見出しが 1 件以上ある場合
@@ -1093,9 +1132,11 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 # Final E2E Gate Report
 
 ## Spec: {spec-name}
+
 ## Date: {date}
 
 ## Results
+
 | Step | Result | Details |
 |------|--------|---------|
 | Build | PASS/FAIL/SKIP(ビルドコマンド未検出) | {details} |
@@ -1113,12 +1154,14 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 - **FAIL(実装漏れ)**: test-design.md に仕様があるのにテストファイルなし
 
 ## Notes
+
 {FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
 ```
 
 #### ウェーブ失敗時の処理
 
 マルチタスクウェーブの処理中に、いずれかのタスクが `retry_exhausted` になった場合:
+
 1. ウェーブ内の残りのタスクは**実行を継続**する — ウェーブ全体を中止しない
 2. ウェーブ内の全タスクが完了/失敗した後、ユーザーにサマリーを報告する:
    - 成功: [task-ids]
@@ -1137,6 +1180,7 @@ FAIL の場合は PR 作成をスキップし、修正フローに進む（9.3 �
 **重要:** オーケストレータ自身は `/create-pr` を直接実行してはならない（⛔ `git commit` 禁止ルール）。PR 作成は **review-worker に委譲**する。`/create-pr` 実行中の `git commit` / `git push`（スクリーンショット追加等）も review-worker の責務とする。
 
 review-worker へ以下の引数・情報を渡す:
+
 - `--spec {spec-name}`
 - `--skip-tests`（Final E2E Gate で全テスト実行済みのため）
 - `--title "{spec-name に基づく機能の要約}"`
@@ -1154,7 +1198,27 @@ PR 作成完了後、`/spec-status` スキルで最終ステータスを表示�
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" end
 ```
 
-lockfile が削除され、session 本体はそのまま `.implement-session.json` として残す（後から参照可能）。`spec-archive` 実施時に `session-manage.sh archive` で `.spec-workflow/archived/sessions/` に退避することもできる。
+lockfile が削除され、session 本体はそのまま `.implement-session.json` として残す（後から参照可能）。
+
+### Spec Archive（Orchestrator 完了時）
+
+全 wave 完了（Final E2E Gate PASS）かつ PR 作成完了後、実装 spec 本体を `/spec-archive` で
+`.spec-workflow/archive/specs/{spec-name}/` に退避する:
+
+```text
+/spec-archive {spec-name}
+```
+
+これにより:
+
+- `.spec-workflow/specs/{spec-name}/` → `.spec-workflow/archive/specs/{spec-name}/` に rename
+  （archive-service と同じパス規約）
+- ダッシュボードの Active タブから消え、Archived タブに表示される
+- 必要なら unarchive ボタンで戻せる
+- `.implement-session.json` も `session-manage.sh archive` で
+  `.spec-workflow/archive/sessions/` に退避可能
+
+FAIL / エスカレーション時は archive しない（実装継続のため active のまま残す）。
 
 ## Monitoring Progress
 
@@ -1163,6 +1227,7 @@ Use the `/spec-status` skill at any time to check overall progress and task coun
 ## Rules
 
 ### ⛔ Orchestrator Prohibited Rules (Highest Priority)
+
 - **Do not write code** — implementation is for parallel-worker only
 - **Do not write tests** — tests are also for parallel-worker only
 - **Do not run git commit** — commits are for review-worker only
@@ -1170,6 +1235,7 @@ Use the `/spec-status` skill at any time to check overall progress and task coun
 - **Agent calls for steps 4/5/6 are required** — no exceptions
 
 ### General Rules
+
 - **Do not use a whiteboard** — the whiteboard is exclusively for workflows that run multiple workers in parallel (e.g., wave-harness). Wave-based parallel execution in spec-implement uses independent worktrees instead. Do not pass `Whiteboard path` to parallel-worker / review-worker.
 - Feature names use kebab-case
 - One **wave** in-progress at a time (multiple tasks within a wave may be in-progress simultaneously)

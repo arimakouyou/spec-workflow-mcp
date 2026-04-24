@@ -250,7 +250,8 @@ cmd_end() {
 }
 
 cmd_archive() {
-  local archive_dir="${1:-${PROJECT_DIR}/.spec-workflow/archived/sessions}"
+  # デフォルト保存先は archive-service.ts と同じ `.spec-workflow/archive/` ルート
+  local archive_dir="${1:-${PROJECT_DIR}/.spec-workflow/archive/sessions}"
   if [ ! -f "$SESSION_FILE" ]; then
     echo "session-manage: no session to archive"
     return 0
