@@ -66,6 +66,27 @@ jobs:
           set -o pipefail
           cargo test --quiet 2>&1 | tee /tmp/test-output.txt
 
+      - name: Mutation testing (cargo-mutants, --in-diff, advisory)
+        id: mutation-testing
+        # plan-redesign #7: 差分モードで mutation testing を実行。
+        # PR で変更された行のみを対象に survived mutant を検出する。
+        # 初期は advisory (continue-on-error: true)。安定したら除去して blocking に昇格。
+        # cargo-mutants Skill の Core Command Pattern に整合。
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          cargo install cargo-mutants --locked
+          BASE_REF="${{ github.base_ref }}"
+          BASE_REF="${BASE_REF:-main}"
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff "origin/$BASE_REF" -- '*.rs' > git.diff
+          if [ -s git.diff ]; then
+            cargo mutants --no-shuffle -vV --in-diff git.diff --timeout 300
+          else
+            echo "No .rs changes vs $BASE_REF — skipping mutation testing"
+          fi
+          rm -f git.diff
+
       - name: Security audit
         id: security-audit
         run: |

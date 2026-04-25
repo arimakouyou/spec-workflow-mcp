@@ -34,6 +34,7 @@
 | VRT（Visual Regression） | test-design-template.md | E: Tests | Playwright VRT (Advisory) | — | — |
 | 品質 Issue 自動修正 | enforcement-levels.md | — | `auto-fix-quality.yml` | — | — |
 | 分岐カバレッジ (QC13) | quality-checks.md QC13 | E: Tests / E2-4 | scheduled-quality (advisory) → ci.yml (段階的 gate 化) | — | — |
+| Mutation testing | cargo-mutants Skill | E2-3 / E2-6 | ci-rust.yml `mutation-testing` step (PR `--in-diff`、advisory) | — | — |
 
 ## ルール昇格基準
 

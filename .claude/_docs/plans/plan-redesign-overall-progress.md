@@ -10,12 +10,12 @@
 | 段階 | DONE | PARTIAL / SKIP | 未着手 |
 |------|:---:|:---:|:---:|
 | 第 1 段階（#1-#4） | 2 | 2 | 0 |
-| 第 2 段階（#5-#8） | 3 | 0 | 1 |
+| 第 2 段階（#5-#8） | 4 | 0 | 0 |
 | 第 3 段階（#9-#12） | 3 | 1 | 0 |
 | 第 4 段階（#13-#16） | 0 | 2 | 2 |
-| **計** | **8/16** | **5/16** | **3/16** |
+| **計** | **9/16** | **5/16** | **2/16** |
 
-完了率の粗算: (8 + 5×0.5) / 16 ≈ **66%**
+完了率の粗算: (9 + 5×0.5) / 16 ≈ **72%**
 
 ## 第 1 段階: 即効性のある改善
 
@@ -32,7 +32,7 @@
 |---|------|:------:|----------|
 | 5 | UserPromptSubmit で spec.md 注入 | DONE | `cf5e525` — `inject-spec.sh` |
 | 6 | Stop hook でテスト実行確認 | DONE | `cf5e525` — `verify-tests-run.sh` |
-| 7 | cargo-mutants の CI 必須化 | 未着手 | Skill (`cargo-mutants`) は存在、CI workflow への統合がまだ |
+| 7 | cargo-mutants の CI 必須化 | DONE (advisory) | ci-rust.yml / ci-leptos.yml に PR `--in-diff` mutation step を追加（initial advisory）、enforcement-levels.md に行追加 |
 | 8 | 技術別 12 ファイルの Rule → Skill 降格 | DONE | `c06cb5e` — Phase B-2 |
 
 ## 第 3 段階: エージェント再構成
@@ -57,7 +57,6 @@
 
 ### 高優先
 
-- **#7 cargo-mutants の CI 必須化**: 既存 Skill を CI workflow テンプレート (`scheduled-quality-standalone.yml` or `ci-rust.yml`) に組み込むだけ。差分モード (`--in-diff`) で実行時間を抑えられる
 - **#3 残作業（CI 統合）**: QC13 の枠組みは整備済み。`scheduled-quality-standalone.yml` に line + branch coverage ステップを追加すれば advisory gate 化を達成
 
 ### 中優先
