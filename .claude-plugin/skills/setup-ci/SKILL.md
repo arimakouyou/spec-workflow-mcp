@@ -101,6 +101,14 @@ Read the reference templates matching the detected project type. **5 ファイ�
 
 `{type}` は `rust` / `leptos` / `dotnet` / `nodejs` に置換（`dotnet-blazor` は `dotnet` テンプレートを使用し、Blazor 固有ステップを追加）。
 
+**Rust / Leptos 限定の追加配置（プロジェクトルート）:**
+
+| 出力先 | テンプレート | 目的 |
+|--------|------------|------|
+| `clippy.toml` (リポジトリルート) | `references/clippy.toml.template` | TS-R4 (unwrap 禁止) を L3 CI で強制する補助設定。プロダクションコードで unwrap/expect/panic を deny し、テストコードでは許可（`allow-*-in-tests = true`）。CI 側 (`ci-rust.yml` / `ci-leptos.yml`) は `-D clippy::unwrap_used / clippy::expect_used / clippy::panic` を明示する |
+
+既にプロジェクトに `clippy.toml` が存在する場合は上書きせず、`allow-unwrap-in-tests` 等の必要キーが含まれているか確認のうえ、不足分のマージのみ提案する。
+
 Replace placeholders with the values gathered in Step 2:
 
 **Rust / Leptos:**

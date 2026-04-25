@@ -272,7 +272,7 @@ review-worker のカテゴリ B（Design and Structure）で以下を確認:
 | TS-R1 (Newtype) | L1 ドキュメント | L2 AI レビュー |
 | TS-R2 (安全キャスト) | L3 CI (`clippy::cast_possible_truncation`) | L3 維持 |
 | TS-R3 (網羅的 match) | L5 コンパイラ（`#[deny(unreachable_patterns)]`） | L5 維持 |
-| TS-R4 (unwrap 禁止) | L2 AI レビュー | L3 CI (`clippy::unwrap_used`) |
+| TS-R4 (unwrap 禁止) | L3 CI (`clippy::unwrap_used` / `clippy::expect_used` / `clippy::panic`、test は `clippy.toml` で除外) | L3 維持 |
 | TS-R5 (PhantomData) | L1 ドキュメント | L2 AI レビュー |
 | TS-C1 (NRT 有効化) | L5 コンパイラ（`<Nullable>enable</Nullable>`） | L5 維持 |
 | TS-C2 (Strong Typing) | L1 ドキュメント | L2 AI レビュー |

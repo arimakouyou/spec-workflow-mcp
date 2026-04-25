@@ -38,6 +38,7 @@ exclude = [
     # Specific files or patterns
     "CHANGELOG.md",
     "LICENSE.md",
+    "*.template",
 ]
 
 # Respect .gitignore files when scanning directories (default: true)

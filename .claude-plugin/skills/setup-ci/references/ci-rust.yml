@@ -51,7 +51,14 @@ jobs:
 
       - name: Clippy
         id: clippy
-        run: cargo clippy --quiet --all-targets -- -D warnings
+        # TS-R4 (unwrap 禁止) を L3 CI で強制: プロダクションコードで unwrap/expect/panic を deny。
+        # テストコードでの許可は clippy.toml の allow-*-in-tests で制御 (setup-ci/references/clippy.toml.template)。
+        run: |
+          cargo clippy --quiet --all-targets -- \
+            -D warnings \
+            -D clippy::unwrap_used \
+            -D clippy::expect_used \
+            -D clippy::panic
 
       - name: Tests
         id: tests
