@@ -83,6 +83,22 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" init {spec-name}
 > 可能性があるため、hook 側でも git 実状態を優先する前提で設計されている。
 > best-effort で更新すればよい。
 
+### レートリミット時の自動再開（オプション）
+
+レートリミットや長時間ジョブによる中断から自動復帰したい場合は、以下の wrapper script を
+ユーザー側で起動する:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/auto-resume.sh" {spec-name}
+```
+
+- `claude --print` で `/spec-implement --auto-resume` を非対話実行する
+- exit code 規約: `0` 完了 / `42` レートリミット (sleep + retry) / `43` ユーザー確認必要 / その他はエラー終了
+- `MAX_ATTEMPTS` (default 20) / `INITIAL_SLEEP` (60s) / `MAX_SLEEP` (300s) / `LOG_FILE` (`.auto-resume.log`)
+  を環境変数で調整可能
+- Orchestrator はレートリミットを検知したら**規約 exit code (42)** で終了し、wrapper が
+  exponential backoff で再起動する。完了まで `.implement-session.json` の状態を引き継ぎながらループする
+
 ---
 
 ## Step 0: Tool Verification (MANDATORY — DO NOT SKIP)

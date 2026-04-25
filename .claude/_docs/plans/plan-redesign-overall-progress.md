@@ -11,11 +11,11 @@
 |------|:---:|:---:|:---:|
 | 第 1 段階（#1-#4） | 2 | 2 | 0 |
 | 第 2 段階（#5-#8） | 4 | 0 | 0 |
-| 第 3 段階（#9-#12） | 3 | 1 | 0 |
+| 第 3 段階（#9-#12） | 4 | 0 | 0 |
 | 第 4 段階（#13-#16） | 0 | 2 | 2 |
-| **計** | **9/16** | **5/16** | **2/16** |
+| **計** | **10/16** | **4/16** | **2/16** |
 
-完了率の粗算: (9 + 5×0.5) / 16 ≈ **72%**
+完了率の粗算: (10 + 4×0.5) / 16 ≈ **75%**
 
 ## 第 1 段階: 即効性のある改善
 
@@ -41,7 +41,7 @@
 |---|------|:------:|----------|
 | 9 | 3 ロール構成集約 | CLOSED（partial closure） | `phase-3-9-role-consolidation.md` 参照。agents 10→7、α/β/γ partial/δ partial 完了、ε と δ remainder は意図的 skip |
 | 10 | セッションファイル拡張と再開ロジック | DONE | `dfdd138` — `session-manage.sh` |
-| 11 | Wrapper script でレートリミット自動再開 | PARTIAL | `tmp/auto-resume.sh` のみ、本番配置未着手 |
+| 11 | Wrapper script でレートリミット自動再開 | DONE | `.claude-plugin/scripts/auto-resume.sh` に本番配置（exec 権限付き）、spec-implement SKILL.md に使用手順追記 |
 | 12 | SessionStart hook で再開情報注入 | DONE | `db39423` — `resume-hint.sh` |
 
 ## 第 4 段階: 仕上げ（継続）
@@ -61,7 +61,6 @@
 
 ### 中優先
 
-- **#11 auto-resume wrapper 本番配置**: `tmp/auto-resume.sh` を `templates/` または `wrappers/` に移して setup 手順を整備
 - **#15 arch test 自動化**: `generate-arch-tests` の出力を CI で実行し、依存方向違反 / 循環依存を
   blocking にする
 
