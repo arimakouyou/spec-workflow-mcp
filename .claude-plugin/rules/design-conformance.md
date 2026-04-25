@@ -80,3 +80,18 @@ When performing a code review, review-worker reads `design.md` and checks the fo
 - Whether the paths, methods, and request/response types of implemented endpoints match the API definitions in design.md
 - Whether the fields of implemented Model / DTO match the data model definitions in design.md
 - Whether there are any additions not defined in design.md
+
+## Early Detection via Hook (PostToolUse)
+
+`.claude-plugin/hooks/design-conformance-check.sh` がコード or migration 編集時に
+軽量チェックを実行し、design.md との乖離を早期検出する:
+
+- **DC1**: migration ファイルの `CREATE TABLE` / `ALTER TABLE` が design.md に未記載なら warning
+- **DC2**: axum / ASP.NET Core / Express のルート定義 (`/path`) が design.md に未記載なら warning
+- **DC3**: 簡易 grep ベースのため false positive あり、最終判断は review-worker (カテゴリ F) で
+
+本 hook は **warning のみ** で実装をブロックしない。乖離検知時は以下のいずれかで対応:
+
+- design.md に既存定義から代替できないか確認 (上記 "Prohibited Actions During Implementation" 参照)
+- 代替不可なら **Phase Reset** または review-worker の `review_action: escalate`
+- table 別名 / route prefix 違いなど検出漏れの場合は無視可

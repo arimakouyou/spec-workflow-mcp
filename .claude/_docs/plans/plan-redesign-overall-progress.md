@@ -61,7 +61,7 @@
 
 | # | 項目 | Status | 関連 commit / メモ |
 |---|------|:------:|----------|
-| 13 | Rule に残したものの補強 Hook 実装 | CONTINUING | `cf5e525`/`db39423` — `auto-verify-spec.sh` / `detect-new-files.sh` / `inject-skill-hint.sh` / `inject-build-cache.sh` 実装済み。残 Rule (`design-conformance`、`security`、`failure-taxonomy` 等) を Hook で補強するかは個別の Rule ごとに必要性を評価する継続作業。Hook 化が過剰になると attention dilution を起こすため、`enforcement-levels.md` の昇格基準（同パターン違反 2 件以上）に照らして判断する |
+| 13 | Rule に残したものの補強 Hook 実装 | CONTINUING | `cf5e525`/`db39423` — 4 hooks 実装済み + `design-conformance-check.sh` 追加。残 Rule (`security`、`failure-taxonomy` 等) を Hook で補強するかは違反蓄積を観察してから個別判断 (YAGNI + false positive 抑制 + 累積オーバーヘッドの観点) |
 | 14 | skill description の磨き込み（discovery 精度向上） | BLOCKED（前提整備待ち） | skill description の効果を測る方法（plugin-dev:skill-creator が提供する eval / variance 計測の整備）が未着手。計測 framework が無い状態で description を改変しても改善か改悪かを判定できない。計測手段が整ってから着手 |
 | 15 | arch test / schema test による design-conformance L4 化 | DONE（最小達成） | `generate-arch-tests` Skill が arch test を生成、生成されたテストは既存の `cargo test` で実行される。`enforcement-levels.md` で「依存方向 / 循環依存」が L4 構造テストに割り当て済み。**追加の自動化（Hook で強制生成、CI に明示 step を追加）は CONTINUING として残す** |
 | 16 | 計測してボトルネックを見てからタスク間並列を導入 | BLOCKED（前提整備待ち） | plan で明示的に「計測してから」と継続扱い。計測 framework が無いため、現時点で並列化の正味効果を見積もれない。`resource-aware-parallelism` Skill は既に存在するが、ボトルネック計測は別問題。計測 framework が整ってから着手 |

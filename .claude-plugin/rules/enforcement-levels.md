@@ -23,7 +23,7 @@
 | セキュリティ（OWASP） | security.md | C: Security | `cargo audit` | — | — |
 | 仕様準拠 | — | D: Spec | — | — | — |
 | テスト品質 | — | E: Tests, E2: TDD | `cargo test` | — | — |
-| 設計適合 | design-conformance.md | F: Design Conformance | — | — | — |
+| 設計適合 | design-conformance.md | F: Design Conformance | `design-conformance-check.sh` (PostToolUse, advisory grep) | — | — |
 | API ドキュメント | — | G: API Docs | — | — | — |
 | 循環依存禁止 | design-principles.md D2 | B: Design | — | `/generate-arch-tests` | — |
 | 型安全性 | type-safety.md | B: Design | `cargo clippy` | — | コンパイラ |
