@@ -6,23 +6,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/lockfile-guard.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/lockfile-guard.sh\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/format-check-guard.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/format-check-guard.sh\"",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/security-audit-guard.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/security-audit-guard.sh\"",
             "timeout": 400
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-build-cache.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-build-cache.sh\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/timing-logger-pre.sh\"",
+            "timeout": 5
           }
         ]
       },
@@ -31,8 +36,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-skill-hint.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-skill-hint.sh\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/timing-logger-pre.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/timing-logger-pre.sh\"",
+            "timeout": 5
           }
         ]
       }
@@ -43,22 +63,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit.sh\"",
             "timeout": 20
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-verify-spec.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-verify-spec.sh\"",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/design-conformance-check.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/design-conformance-check.sh\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/arch-test-regen-hint.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/arch-test-regen-hint.sh\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/timing-logger-post.sh\"",
             "timeout": 5
           }
         ]
@@ -68,8 +93,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/detect-new-files.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/detect-new-files.sh\"",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/timing-logger-post.sh\"",
+            "timeout": 5
           }
         ]
       }
@@ -79,7 +114,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-spec.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-spec.sh\"",
             "timeout": 10
           }
         ]
@@ -90,12 +125,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/verify-tests-run.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/verify-tests-run.sh\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log-implementation.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/log-implementation.sh\"",
             "timeout": 15
           }
         ]
@@ -106,7 +141,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/resume-hint.sh\"",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/resume-hint.sh\"",
             "timeout": 5
           }
         ]

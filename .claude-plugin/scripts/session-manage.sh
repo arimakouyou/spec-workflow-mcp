@@ -7,14 +7,17 @@
 # detect-new-files / log-implementation）become active during /spec-implement.
 #
 # Subcommands:
-#   init <spec_id>              — 新規セッション作成（ロック取得）
-#   start-task <task_id> [phase]— current_task / current_phase を更新
+#   init <spec_id>                       — 新規セッション作成（ロック取得）
+#   start-task <task_id> [phase]         — current_task / current_phase を更新
 #   complete-task <task_id> [commit_hash] — completed_tasks に追加し current_task をクリア
-#   update-phase <phase>        — current_phase を更新（RED / GREEN / REFACTOR / REVIEW 等）
-#   mark-failure <category> [detail] — last_failure_* を更新
-#   clear-failure               — last_failure_* をクリア
-#   end                         — lockfile 削除 + セッションを完了マーク（本体は保持）
-#   archive                     — セッション本体を archived に退避（spec-archive 時）
+#   update-phase <phase>                 — current_phase を更新（RED / GREEN / REFACTOR / REVIEW 等）
+#   mark-failure <category> [detail]     — last_failure_* を更新
+#   clear-failure                        — last_failure_* をクリア
+#   start-phase <task_id> <phase>        — 計測: phase 開始イベントを metrics.jsonl に記録
+#   complete-phase <task_id> <phase>     — 計測: phase 完了イベントと duration を記録
+#   record-findings <task_id> <findings_json> — 計測: review-worker findings から rule_violation 記録
+#   end                                  — lockfile 削除 + セッションを完了マーク（本体は保持）
+#   archive                              — セッション本体を archived に退避（spec-archive 時）
 #
 # 特徴:
 #   - `CLAUDE_PROJECT_DIR` を優先、未設定なら pwd を使用
@@ -144,6 +147,19 @@ cmd_start_task() {
     echo "session-manage: jq not available, start-task best-effort only" >&2
   fi
 
+  # 計測 framework: task_start イベントを記録 + 開始時刻保存
+  if have_jq; then
+    local metrics_dir="${PROJECT_DIR}/.implement-session"
+    mkdir -p "$metrics_dir" 2>/dev/null || true
+    jq -nc \
+      --arg event "task_start" \
+      --arg task_id "$task_id" \
+      --arg ts "$ts" \
+      '{event:$event, task_id:$task_id, ts:$ts}' \
+      >> "$metrics_dir/metrics.jsonl" 2>/dev/null || true
+    date +%s%N > "$metrics_dir/.task-${task_id}.start" 2>/dev/null || true
+  fi
+
   echo "session-manage: start-task ${task_id} (phase=${phase})"
 }
 
@@ -195,6 +211,30 @@ cmd_complete_task() {
         phase_checkpoint: {}, \
         session_updated: \"${ts}\" \
       } | .completed_tasks += [{ task_id: \"${task_id}\", commit_hash: \"${commit_hash}\", completed_at: \"${ts}\" }]"
+  fi
+
+  # 計測 framework: task_end イベントを記録 (duration 付き)
+  if have_jq; then
+    local metrics_dir="${PROJECT_DIR}/.implement-session"
+    local start_file="$metrics_dir/.task-${task_id}.start"
+    local duration_ms=0
+    if [ -f "$start_file" ]; then
+      local t1 t2
+      t1=$(cat "$start_file" 2>/dev/null || echo 0)
+      t2=$(date +%s%N 2>/dev/null || echo 0)
+      if [ "$t1" != "0" ] && [ "$t2" != "0" ]; then
+        duration_ms=$(( (t2 - t1) / 1000000 ))
+      fi
+      rm -f "$start_file" 2>/dev/null || true
+    fi
+    mkdir -p "$metrics_dir" 2>/dev/null || true
+    jq -nc \
+      --arg event "task_end" \
+      --arg task_id "$task_id" \
+      --argjson duration "$duration_ms" \
+      --arg ts "$ts" \
+      '{event:$event, task_id:$task_id, duration_ms:$duration, ts:$ts}' \
+      >> "$metrics_dir/metrics.jsonl" 2>/dev/null || true
   fi
 
   echo "session-manage: complete-task ${task_id}"
@@ -249,6 +289,89 @@ cmd_end() {
   echo "session-manage: session ended (lockfile removed, session file preserved)"
 }
 
+cmd_start_phase() {
+  # 計測 framework: phase 開始イベントを metrics.jsonl に記録
+  # 関連: .claude/_docs/plans/measurement-framework.md
+  local task_id="${1:-}"
+  local phase="${2:-}"
+  if [ -z "$task_id" ] || [ -z "$phase" ]; then
+    echo "session-manage: start-phase requires <task_id> <phase>" >&2
+    return 0
+  fi
+  if ! have_jq; then
+    return 0
+  fi
+  local metrics_dir="${PROJECT_DIR}/.implement-session"
+  mkdir -p "$metrics_dir" 2>/dev/null || return 0
+  jq -nc \
+    --arg event "phase_start" \
+    --arg task_id "$task_id" \
+    --arg phase "$phase" \
+    --arg ts "$(now_iso)" \
+    '{event:$event, task_id:$task_id, phase:$phase, ts:$ts}' \
+    >> "$metrics_dir/metrics.jsonl" 2>/dev/null || true
+  # 開始時刻を保存して complete-phase で duration 計算
+  date +%s%N > "$metrics_dir/.phase-${task_id}-${phase}.start" 2>/dev/null || true
+}
+
+cmd_complete_phase() {
+  # 計測 framework: phase 完了イベントを metrics.jsonl に記録 (duration 付き)
+  local task_id="${1:-}"
+  local phase="${2:-}"
+  if [ -z "$task_id" ] || [ -z "$phase" ]; then
+    echo "session-manage: complete-phase requires <task_id> <phase>" >&2
+    return 0
+  fi
+  if ! have_jq; then
+    return 0
+  fi
+  local metrics_dir="${PROJECT_DIR}/.implement-session"
+  local start_file="$metrics_dir/.phase-${task_id}-${phase}.start"
+  local duration_ms=0
+  if [ -f "$start_file" ]; then
+    local t1 t2
+    t1=$(cat "$start_file" 2>/dev/null || echo 0)
+    t2=$(date +%s%N 2>/dev/null || echo 0)
+    if [ "$t1" != "0" ] && [ "$t2" != "0" ]; then
+      duration_ms=$(( (t2 - t1) / 1000000 ))
+    fi
+    rm -f "$start_file" 2>/dev/null || true
+  fi
+  mkdir -p "$metrics_dir" 2>/dev/null || return 0
+  jq -nc \
+    --arg event "phase_end" \
+    --arg task_id "$task_id" \
+    --arg phase "$phase" \
+    --argjson duration "$duration_ms" \
+    --arg ts "$(now_iso)" \
+    '{event:$event, task_id:$task_id, phase:$phase, duration_ms:$duration, ts:$ts}' \
+    >> "$metrics_dir/metrics.jsonl" 2>/dev/null || true
+}
+
+cmd_record_findings() {
+  # 計測 framework: review-worker findings の rule_ref を violation イベントとして記録
+  # 引数: <task_id> <findings_json>
+  # findings_json は review-worker の completion report の findings 配列を JSON 文字列で渡す
+  # 例: '[{"rule_ref":"security.md#C2","severity":"Moderate"},...]'
+  local task_id="${1:-}"
+  local findings_json="${2:-}"
+  if [ -z "$task_id" ] || [ -z "$findings_json" ]; then
+    echo "session-manage: record-findings requires <task_id> <findings_json>" >&2
+    return 0
+  fi
+  if ! have_jq; then
+    return 0
+  fi
+  local metrics_dir="${PROJECT_DIR}/.implement-session"
+  mkdir -p "$metrics_dir" 2>/dev/null || return 0
+  # findings 配列を反復して各要素を rule_violation イベントとして記録
+  printf '%s' "$findings_json" \
+    | jq -c --arg task_id "$task_id" --arg ts "$(now_iso)" \
+        '.[] | {event:"rule_violation", rule:(.rule_ref // "unknown"), severity:(.severity // "unknown"), task_id:$task_id, ts:$ts}' \
+        2>/dev/null \
+    >> "$metrics_dir/metrics.jsonl" 2>/dev/null || true
+}
+
 cmd_archive() {
   # デフォルト保存先は archive-service.ts と同じ `.spec-workflow/archive/` ルート
   local archive_dir="${1:-${PROJECT_DIR}/.spec-workflow/archive/sessions}"
@@ -269,16 +392,19 @@ main() {
   shift || true
 
   case "$subcmd" in
-    init)            cmd_init "$@" ;;
-    start-task)      cmd_start_task "$@" ;;
-    update-phase)    cmd_update_phase "$@" ;;
-    complete-task)   cmd_complete_task "$@" ;;
-    mark-failure)    cmd_mark_failure "$@" ;;
-    clear-failure)   cmd_clear_failure "$@" ;;
-    end)             cmd_end "$@" ;;
-    archive)         cmd_archive "$@" ;;
+    init)             cmd_init "$@" ;;
+    start-task)       cmd_start_task "$@" ;;
+    update-phase)     cmd_update_phase "$@" ;;
+    complete-task)    cmd_complete_task "$@" ;;
+    mark-failure)     cmd_mark_failure "$@" ;;
+    clear-failure)    cmd_clear_failure "$@" ;;
+    start-phase)      cmd_start_phase "$@" ;;
+    complete-phase)   cmd_complete_phase "$@" ;;
+    record-findings)  cmd_record_findings "$@" ;;
+    end)              cmd_end "$@" ;;
+    archive)          cmd_archive "$@" ;;
     "")
-      echo "session-manage: usage: $(basename "$0") <init|start-task|update-phase|complete-task|mark-failure|clear-failure|end|archive> [args...]" >&2
+      echo "session-manage: usage: $(basename "$0") <init|start-task|update-phase|complete-task|mark-failure|clear-failure|start-phase|complete-phase|record-findings|end|archive> [args...]" >&2
       ;;
     *)
       echo "session-manage: unknown subcommand '${subcmd}'" >&2

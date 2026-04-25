@@ -12,10 +12,10 @@
 | 第 1 段階（#1-#4） | 3 | 1 (#4 SKIP 維持判断) | 0 |
 | 第 2 段階（#5-#8） | 4 | 0 | 0 |
 | 第 3 段階（#9-#12） | 4 | 0 | 0 |
-| 第 4 段階（#13-#16） | 2 | 1 (CONTINUING) | 2 (BLOCKED — 計測 framework 待ち) |
-| **計** | **13/16** | **1/16** (CONTINUING #13) + **1 SKIP** (#4) | **2/16** (BLOCKED — 計測 framework 待ち) |
+| 第 4 段階（#13-#16） | 2 | 1 (CONTINUING) + 2 (READY — 計測 framework 完成) | 0 |
+| **計** | **13/16** | **3/16** (CONTINUING #13 + READY #14, #16) + **1 SKIP** (#4) | **0/16** |
 
-完了率の粗算: (13 + 1×0.5 + 1×0.5) / 16 ≈ **88%**
+完了率の粗算: (13 + 3×0.5 + 1×0.5) / 16 ≈ **94%**
 
 ### 進捗の解釈
 
@@ -62,9 +62,9 @@
 | # | 項目 | Status | 関連 commit / メモ |
 |---|------|:------:|----------|
 | 13 | Rule に残したものの補強 Hook 実装 | CONTINUING | `cf5e525`/`db39423` — 4 hooks 実装済み + `design-conformance-check.sh` 追加。残 Rule (`security`、`failure-taxonomy` 等) を Hook で補強するかは違反蓄積を観察してから個別判断 (YAGNI + false positive 抑制 + 累積オーバーヘッドの観点) |
-| 14 | skill description の磨き込み（discovery 精度向上） | BLOCKED（前提整備待ち） | skill description の効果を測る方法（plugin-dev:skill-creator が提供する eval / variance 計測の整備）が未着手。計測 framework が無い状態で description を改変しても改善か改悪かを判定できない。計測手段が整ってから着手 |
+| 14 | skill description の磨き込み（discovery 精度向上） | READY (計測 framework 完成、データ収集待ち) | `measurement-framework.md` で Hook + Tool + Rule (read / violation) + Phase 計測の framework が稼働。skill discovery 精度の eval set 整備は別途 (skill-creator の eval 機能を利用)。計測 framework 自体は本フェーズで整備完了 |
 | 15 | arch test / schema test による design-conformance L4 化 | DONE | `generate-arch-tests` Skill + `arch-test-regen-hint.sh` Hook (PostToolUse on design.md) + ci-rust.yml / ci-leptos.yml の `architecture-tests` 専用 step で完全自動化。design.md の Module Boundaries 変更時に再生成 hint、CI で `cargo test --test architecture` 明示実行 |
-| 16 | 計測してボトルネックを見てからタスク間並列を導入 | BLOCKED（前提整備待ち） | plan で明示的に「計測してから」と継続扱い。計測 framework が無いため、現時点で並列化の正味効果を見積もれない。`resource-aware-parallelism` Skill は既に存在するが、ボトルネック計測は別問題。計測 framework が整ってから着手 |
+| 16 | 計測してボトルネックを見てからタスク間並列を導入 | READY (計測 framework 完成、データ収集待ち) | `measurement-framework.md` で Phase 別所要時間 + Tool 別所要時間 + speedup ratio 算出可能。`aggregate-metrics.sh speedup` で並列化 ROI を見積もれる。実 wave 数件分のデータ蓄積後に並列化判断を行う |
 
 ## 残タスクと前提条件
 
@@ -75,12 +75,13 @@
 - **#13 追加 Hook**: 個別の Rule（`security` / `failure-taxonomy` 等）について、
   `enforcement-levels.md` の昇格基準（同パターン違反 2 件以上）に達した時点で個別に Hook 化を検討
 
-### 前提条件待ち（BLOCKED）
+### 計測データ蓄積後に着手 (READY)
 
-- **#14 skill description 磨き込み**: skill discovery 精度の **計測 framework** が前提。
-  `plugin-dev:skill-creator` の eval / variance 計測機能が整備されてから着手
-- **#16 タスク間並列**: ボトルネック計測 framework が前提。計測なしで並列化を入れると
-  複雑化のコストだけが残る（現行 `resource-aware-parallelism` の轍）
+- **#14 skill description 磨き込み**: 計測 framework は完成 (`measurement-framework.md`)。
+  rule_read / rule_violation の集計から「使われていない skill」候補を抽出可能。
+  skill 個別の eval set 整備は将来必要 (skill-creator の eval 機能と連携)
+- **#16 タスク間並列**: 計測 framework は完成。`aggregate-metrics.sh speedup` で
+  並列化 ROI を見積もれる。実 wave 数件分のデータ蓄積後に並列化判断
 
 ## 関連ドキュメント
 
