@@ -54,7 +54,7 @@
 
 | Sub | 内容 | 影響範囲 | DoD | Status |
 |-----|------|---------|-----|-------|
-| α | code-simplifier 削除 | spec-implement Step 5.5 削除のみ | `code-simplifier.md` 削除 / Step 5.5 削除 / 5.5 を参照する記述全削除 / vitest pass / rumdl 新規違反 0 | TODO |
+| α | code-simplifier 削除 | spec-implement Step 5.5 削除のみ | `code-simplifier.md` 削除 / Step 5.5 削除 / 5.5 を参照する記述全削除 / vitest pass / rumdl 新規違反 0 | DONE |
 | β | phase-review-team 廃止 | `phase-review-team/` 削除 + spec-implement 3.5.x 書き換え | skill 削除 / Phase 末尾は review-worker 単発呼び出しに置換 / vitest pass | TODO |
 | γ | integ-test-auditor 系 → reviewer 統合 | 2 agent 削除 + integration-test/integration-test-dotnet SKILL.md 更新 | ブロッカー A をユーザー判断後に着手 / reviewer に integration audit mode 追加 | BLOCKED (要 A 判断) |
 | δ | test engineer 3 種 → implementer 統合 | spec-implement Step 4-5 + tdd-skills + 各参照箇所 | implementer.md に mode 引数 / 5 agent 削除 / spec-implement 大量更新 | TODO（最大規模） |
@@ -73,7 +73,7 @@
 
 （各 sub 完了時にコミット hash と要点を追記）
 
-- (まだなし)
+- **α (2026-04-25)**: `code-simplifier.md` 削除 / spec-implement SKILL.md の Step 5.5 セクション削除 / review-worker.md Anti-Bias の「3段階」→「2段階」更新 / 関連 prompt から simplify_result 等を撤去。vitest 203 passed、rumdl 153→146 (新規違反 0)
 
 ## Appendix A: 影響ファイル一覧（2026-04-25 時点 grep 結果）
 

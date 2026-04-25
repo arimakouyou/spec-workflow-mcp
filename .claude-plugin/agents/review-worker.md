@@ -58,7 +58,7 @@ Inspect the diff with `git diff` and check all of the following aspects in order
 
 ### ⚠️ Anti-Bias Protocol (確証バイアス防止)
 
-このコードは parallel-worker (TDD)、test engineer (frontend-test-engineer or unit-test-engineer)、code-simplifier の3段階を通過している。しかし、「既に良いはず」という前提でレビューしてはならない。
+このコードは parallel-worker (TDD) と test engineer (frontend-test-engineer or unit-test-engineer) の2段階を通過している。しかし、「既に良いはず」という前提でレビューしてはならない。
 
 - **前提**: コードには問題がある。あなたの仕事はそれを見つけること
 - **禁止**: 「3段階通過しているから大丈夫」「TDD で書かれているから品質は高い」という推論

@@ -486,7 +486,7 @@ Proceed to step 7 (Log).
 If the task has `_TDDSkip: true_` (tasks that cannot be tested such as project initialization, Dockerfile, migrations, etc.), **skip the TDD cycle (step 4) and UT quality verification (step 5)** and instead:
 
 1. Instruct parallel-worker to implement directly without TDD (add `_TDDSkip: true, so skip the TDD cycle and perform direct implementation + quality checks only` to the prompt)
-2. After parallel-worker completes, skip step 5 (UT) and step 5.5 (code-simplifier) and proceed to step 6 (review-worker)
+2. After parallel-worker completes, skip step 5 (UT) and proceed to step 6 (review-worker)
 3. review-worker reviews across all aspects as usual (but skip category E: final test verification)
 
 ### 3.7 Prepare Worktrees
@@ -670,41 +670,8 @@ Agent({
 
 Capture from the result: **ut_action**, **added_tests**, **added_to_files**, **modified_implementation_files**, **coverage_summary**, **excluded_as_e2e**.
 
-- `ut_action: added` → run the tests, confirm all pass, and pass the additional info to step 5.5
-- `ut_action: verified_sufficient` → proceed directly to step 5.5
-
-### 5.5. Code Simplification (code-simplifier) [AGENT CALL REQUIRED]
-
-> ⛔ **Do not clean up code yourself. Always call the `code-simplifier` agent.**
-
-After TDD and UT verification are complete, improve code clarity and maintainability while preserving functionality.
-The output of `code-simplifier` is comprehensively reviewed by the subsequent step 6 (review-worker), so no dedicated review step is added.
-
-```javascript
-Agent({
-  subagent_type: "spec-workflow-mcp:code-simplifier",
-  description: "Simplify: improve clarity without changing behavior",
-  prompt: `Simplify and refine the following implementation files while preserving functionality.
-
-    Worktree path: {WORKTREE_PATH}
-    Implementation files: {implementation_file_paths from step 4 + modified_implementation_files from step 5}
-    Test files: {test_file_paths from step 4 + added_to_files from step 5}
-
-    **Important**: Always run cd {WORKTREE_PATH} before starting work.
-
-    After completing, run cargo test to confirm all tests pass.
-    The completion report must include:
-    - simplify_result: simplified (changes made) | no_change (no changes)
-    - changed_files: list of changed files (if simplified)
-    - test_result: pass | fail`
-})
-```
-
-Capture from the result: **simplify_result**, **changed_files** (if simplified), **test_result**.
-
-- `test_result: pass` → proceed to step 6 (pass `changed_files`)
-- `test_result: fail` → roll back only the files in `changed_files` using `git restore -- {changed_files}`, then proceed to step 6 (record as `simplify_result: reverted`)
-- `simplify_result: no_change` → proceed directly to step 6
+- `ut_action: added` → run the tests, confirm all pass, and proceed to step 6
+- `ut_action: verified_sufficient` → proceed directly to step 6
 
 ### 6. Code Review + Commit (review-worker) [AGENT CALL REQUIRED]
 
@@ -717,7 +684,7 @@ Agent({
   subagent_type: "spec-workflow-mcp:review-worker",
   description: "Review and commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
-    This code has passed through parallel-worker (TDD), test engineer (frontend-test-engineer or unit-test-engineer), and code-simplifier.
+    This code has passed through parallel-worker (TDD) and test engineer (frontend-test-engineer or unit-test-engineer).
     However, you MUST NOT assume it is correct because previous steps reported success.
     Previous results are provided as reference ONLY — your independent, critical review is mandatory.
     Treat this as if you are seeing the code for the first time. Your job is to find problems, not confirm success.
@@ -729,7 +696,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
-    Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5 + changed_files from step 5.5}
+    Changed files: {changed_files from step 4 + added_to_files from step 5 + modified_implementation_files from step 5}
     Task prompt: {paste the full _Prompt content here}
 
     **Important**: Always run \`cd {WORKTREE_PATH}\` before reviewing and committing.
@@ -742,17 +709,11 @@ Agent({
     - coverage_summary: {coverage_summary from step 5}
     - excluded_as_e2e: {excluded_as_e2e from step 5}
 
-    Simplification results (step 5.5):
-    - simplify_result: {simplify_result from step 5.5} (one of: simplified / no_change / reverted)
-    - changed_files: {changed_files from step 5.5 (only if simplified)}
-
     Notes:
     - Tests listed in added_tests have already been quality-verified by the appropriate test engineer (frontend-test-engineer or unit-test-engineer).
       In category E (final test verification), do not flag these tests as "insufficient".
     - excluded_as_e2e lists concerns intentionally deferred to E2E testing. Do not flag these as missing unit test coverage.
       However, style, naming, and sensitive data checks should be performed as usual.
-    - Files with simplify_result: simplified have been confirmed by code-simplifier to preserve functionality and pass tests.
-      In category A (style), evaluate the simplified code as the final form.
 
     ## Review Checklist (各カテゴリの具体的な確認項目)
     以下の各質問に対して、具体的な回答を observations に記録すること:
