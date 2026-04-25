@@ -395,8 +395,8 @@ Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.
 **Launch Pentagon** (launch first to put it in a review-request waiting state):
 ```
 Agent(
-  subagent_type: "spec-workflow-mcp:integ-test-dotnet-auditor",
-  prompt: "Whiteboard: {whiteboard_path}\nPlease wait for a review request from Command."
+  subagent_type: "spec-workflow-mcp:integ-test-auditor",
+  prompt: "Language: dotnet\nWhiteboard: {whiteboard_path}\nPlease wait for a review request from Command."
 )
 ```
 

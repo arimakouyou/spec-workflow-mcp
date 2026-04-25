@@ -44,12 +44,12 @@ Worker assignment:
 Launch Workers and Pentagon as sub-agents using agent definitions under `.claude-plugin/agents/`.
 
 **Launch order:**
-1. Pentagon (`subagent_type: "spec-workflow-mcp:integ-test-dotnet-auditor"`) — waits for review requests after launch
+1. Pentagon (`subagent_type: "spec-workflow-mcp:integ-test-auditor"` with `Language: dotnet`) — waits for review requests after launch
 2. Workers (`subagent_type: "spec-workflow-mcp:integ-test-worker"` with `Language: dotnet`) — launch alpha and bravo in parallel
 
 ```
 # Launch Pentagon
-Agent(subagent_type: "spec-workflow-mcp:integ-test-dotnet-auditor", prompt: "Whiteboard: {whiteboard_path}\nWait for review request.")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-auditor", prompt: "Language: dotnet\nWhiteboard: {whiteboard_path}\nWait for review request.")
 
 # Launch Workers (parallel)
 Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: dotnet\nWorker name: alpha\nDomain: {domain_a}\n...")

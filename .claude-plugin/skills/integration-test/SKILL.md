@@ -155,7 +155,7 @@ Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.
 ```
 Agent(
   subagent_type: "spec-workflow-mcp:integ-test-auditor",
-  prompt: "Whiteboard: {whiteboard_path}\nPlease wait for a review request from Command."
+  prompt: "Language: rust\nWhiteboard: {whiteboard_path}\nPlease wait for a review request from Command."
 )
 ```
 
