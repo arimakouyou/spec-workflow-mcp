@@ -126,7 +126,7 @@ Verify that the implementation followed the Red-Green-Refactor cycle, not just "
 | E2-3 | **Tests assert meaningful outcomes** | Tests that only assert `is_ok()` / `is_some()` / `!is_empty()` without checking actual values — a sign of after-the-fact "coverage padding" |
 | E2-4 | **Edge cases and error paths are tested** | Only happy-path tests exist; no boundary values, no error condition tests — suggests tests were written to pass, not to drive design |
 | E2-5 | **Test-to-implementation ratio is reasonable** | A large implementation with only 1-2 trivial tests, or tests that cover less than the core logic paths |
-| E2-6 | **No placeholder or empty tests** | `#[cfg(test)]` blocks contain only commented-out tests, `todo!()` panics, or empty test functions with no assertions |
+| E2-6 | **No placeholder or empty tests** | `#[cfg(test)]` blocks contain only commented-out tests, `todo!()` panics, or test functions whose bodies do not contain **any** of the following assertion mechanisms: Rust: `assert!` / `assert_eq!` / `assert_ne!` / `panic!` / `unreachable!` / `?` operator on a Result, or `#[should_panic]` attribute. C#: `Assert.*` (xUnit) / `Should().*` (FluentAssertions) / `Verify(*)` (NSubstitute/Moq). Side-effect-only tests (only `println!`, logging, or method calls without verification) are violations of this check |
 
 **Action on violation**: Severity is **Moderate** (same as B/C). Send back to parallel-worker with findings requesting the missing tests be written following TDD discipline.
 
