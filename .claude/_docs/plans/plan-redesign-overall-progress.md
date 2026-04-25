@@ -12,10 +12,10 @@
 | 第 1 段階（#1-#4） | 2 | 2 | 0 |
 | 第 2 段階（#5-#8） | 4 | 0 | 0 |
 | 第 3 段階（#9-#12） | 4 | 0 | 0 |
-| 第 4 段階（#13-#16） | 1 | 1 (CONTINUING) | 2 (BLOCKED — 計測 framework 待ち) |
-| **計** | **11/16** | **3/16** (1 CONTINUING + 2 PARTIAL) | **2/16** (BLOCKED — 計測 framework 待ち) |
+| 第 4 段階（#13-#16） | 2 | 1 (CONTINUING) | 2 (BLOCKED — 計測 framework 待ち) |
+| **計** | **12/16** | **2/16** (1 CONTINUING + 1 PARTIAL) | **2/16** (BLOCKED — 計測 framework 待ち) |
 
-完了率の粗算: (11 + 3×0.5) / 16 ≈ **78%**
+完了率の粗算: (12 + 2×0.5) / 16 ≈ **81%**
 
 ### 進捗の解釈
 
@@ -63,7 +63,7 @@
 |---|------|:------:|----------|
 | 13 | Rule に残したものの補強 Hook 実装 | CONTINUING | `cf5e525`/`db39423` — 4 hooks 実装済み + `design-conformance-check.sh` 追加。残 Rule (`security`、`failure-taxonomy` 等) を Hook で補強するかは違反蓄積を観察してから個別判断 (YAGNI + false positive 抑制 + 累積オーバーヘッドの観点) |
 | 14 | skill description の磨き込み（discovery 精度向上） | BLOCKED（前提整備待ち） | skill description の効果を測る方法（plugin-dev:skill-creator が提供する eval / variance 計測の整備）が未着手。計測 framework が無い状態で description を改変しても改善か改悪かを判定できない。計測手段が整ってから着手 |
-| 15 | arch test / schema test による design-conformance L4 化 | DONE（最小達成） | `generate-arch-tests` Skill が arch test を生成、生成されたテストは既存の `cargo test` で実行される。`enforcement-levels.md` で「依存方向 / 循環依存」が L4 構造テストに割り当て済み。**追加の自動化（Hook で強制生成、CI に明示 step を追加）は CONTINUING として残す** |
+| 15 | arch test / schema test による design-conformance L4 化 | DONE | `generate-arch-tests` Skill + `arch-test-regen-hint.sh` Hook (PostToolUse on design.md) + ci-rust.yml / ci-leptos.yml の `architecture-tests` 専用 step で完全自動化。design.md の Module Boundaries 変更時に再生成 hint、CI で `cargo test --test architecture` 明示実行 |
 | 16 | 計測してボトルネックを見てからタスク間並列を導入 | BLOCKED（前提整備待ち） | plan で明示的に「計測してから」と継続扱い。計測 framework が無いため、現時点で並列化の正味効果を見積もれない。`resource-aware-parallelism` Skill は既に存在するが、ボトルネック計測は別問題。計測 framework が整ってから着手 |
 
 ## 残タスクと前提条件
@@ -75,8 +75,8 @@
 - **#13 追加 Hook**: 個別の Rule（`design-conformance` / `security` / `failure-taxonomy` 等）に
   ついて、`enforcement-levels.md` の昇格基準（同パターン違反 2 件以上）に達した時点で個別に
   Hook 化を検討
-- **#15 自動化拡張**: `generate-arch-tests` の出力を Hook で強制生成し、CI に明示 step を
-  追加（現状は `cargo test` で実行されるため最低限は機能している）
+<!-- #15 は 3963c21 / 後続 commit で DONE -->
+
 
 ### 前提条件待ち（BLOCKED）
 

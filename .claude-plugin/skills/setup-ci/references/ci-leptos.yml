@@ -67,6 +67,18 @@ jobs:
           set -o pipefail
           cargo test --quiet 2>&1 | tee /tmp/test-output.txt
 
+      - name: Architecture tests (L4)
+        id: architecture-tests
+        # plan-redesign #15: design.md の Module Boundaries に基づく依存方向 / 循環依存テストを
+        # tests/architecture.rs として明示実行。/generate-arch-tests Skill で生成。
+        # ファイルが存在しない場合は skip (Module Boundaries 未定義のプロジェクト用)。
+        run: |
+          if [ -f tests/architecture.rs ]; then
+            cargo test --test architecture --quiet
+          else
+            echo "tests/architecture.rs not found — skipping (run /generate-arch-tests if Module Boundaries are defined)"
+          fi
+
       - name: Mutation testing (cargo-mutants, --in-diff, advisory)
         id: mutation-testing
         # plan-redesign #7: 差分モードで mutation testing を実行。
