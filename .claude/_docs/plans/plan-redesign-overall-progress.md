@@ -9,13 +9,13 @@
 
 | 段階 | DONE | PARTIAL / SKIP | 未着手 |
 |------|:---:|:---:|:---:|
-| 第 1 段階（#1-#4） | 2 | 2 | 0 |
+| 第 1 段階（#1-#4） | 3 | 1 (#4 SKIP 維持判断) | 0 |
 | 第 2 段階（#5-#8） | 4 | 0 | 0 |
 | 第 3 段階（#9-#12） | 4 | 0 | 0 |
 | 第 4 段階（#13-#16） | 2 | 1 (CONTINUING) | 2 (BLOCKED — 計測 framework 待ち) |
-| **計** | **12/16** | **2/16** (1 CONTINUING + 1 PARTIAL) | **2/16** (BLOCKED — 計測 framework 待ち) |
+| **計** | **13/16** | **1/16** (CONTINUING #13) + **1 SKIP** (#4) | **2/16** (BLOCKED — 計測 framework 待ち) |
 
-完了率の粗算: (12 + 2×0.5) / 16 ≈ **81%**
+完了率の粗算: (13 + 1×0.5 + 1×0.5) / 16 ≈ **88%**
 
 ### 進捗の解釈
 
@@ -32,7 +32,7 @@
 |---|------|:------:|----------|
 | 1 | clippy.toml / analyzer の厳格化 | DONE | `fc4cbfd` — TS-R4 を L3 CI に昇格、`clippy.toml.template` 提供、ci-rust/ci-leptos に `-D clippy::unwrap_used/expect_used/panic` 明示 |
 | 2 | assert 強制 lint | DONE (L2) | `5b7721d` — review-worker.md E2-6 で「assertion 機構を一切含まないテスト」を明示検出。Rust では構造的 lint が無いため L2 AI レビューで対応 |
-| 3 | 分岐カバレッジ別ゲート化 | PARTIAL | `6b95727` — quality-checks.md QC13 新設（Rust/.NET/Node.js コマンド + 段階的 gate 化方針）。CI への実ステップ統合は次段階 |
+| 3 | 分岐カバレッジ別ゲート化 | DONE (advisory) | `6b95727` (QC13 枠組み) + `(本コミット)` — `scheduled-quality-standalone.yml` に Rust/Leptos/.NET/Node.js の coverage step (line + branch) を追加し、threshold 未達時に Issue 投稿。`branch < line - 30pt` の場合は E2-4 finding 起票検討の signal も出力。`ci.yml` への blocking 統合は段階的 gate 化方針 (中期/成熟段階) に従い継続 |
 | 4 | security-audit-guard.sh の撤去 | SKIP（維持判断） | `c6a1ef9` で差分検出式に変更済み、UX 改善は達成。完全撤去は CI 二重化のメリットしかなく、ローカル早期検出（commit 阻止）の価値が大きいため維持を採用 |
 
 ## 第 2 段階: 構造防御の確立
@@ -70,13 +70,10 @@
 
 ### 単発作業として着手可能
 
-- **#3 残作業（CI 統合）**: QC13 の枠組みは整備済み。`scheduled-quality-standalone.yml` に
-  line + branch coverage ステップを追加すれば advisory gate 化を達成
-- **#13 追加 Hook**: 個別の Rule（`design-conformance` / `security` / `failure-taxonomy` 等）に
-  ついて、`enforcement-levels.md` の昇格基準（同パターン違反 2 件以上）に達した時点で個別に
-  Hook 化を検討
-<!-- #15 は 3963c21 / 後続 commit で DONE -->
-
+- **#3 中期 gate 化**: `ci.yml` に coverage step を warning 扱いで追加 (continue-on-error: true)。
+  運用が安定したら blocking に昇格 (quality-checks.md QC13 の段階的 gate 化方針に従う)
+- **#13 追加 Hook**: 個別の Rule（`security` / `failure-taxonomy` 等）について、
+  `enforcement-levels.md` の昇格基準（同パターン違反 2 件以上）に達した時点で個別に Hook 化を検討
 
 ### 前提条件待ち（BLOCKED）
 

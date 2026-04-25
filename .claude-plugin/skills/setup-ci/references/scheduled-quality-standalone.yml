@@ -115,6 +115,54 @@ jobs:
       #     find . -name '*.md' -not -path '*/node_modules/*' -not -path '*/target/*' -not -path '*/.spec-workflow/*' -print0 | \
       #       xargs -0 -I {} npx markdown-link-check {} 2>&1 | tee /tmp/link-check-output.txt
 
+      # --- 分岐カバレッジ (QC13 / plan-redesign #3) ---
+      # 該当する言語の step のみコメント解除する。初期は advisory (continue-on-error: true)。
+      # 推奨 threshold: line 70% / branch 50% (quality-checks.md QC13 参照、運用しながら段階的に引き上げ)。
+      # branch が line より大幅に低い場合はエラーパステスト不足のシグナル。
+
+      # - name: Coverage (Rust / Leptos, line + branch, advisory)
+      #   id: coverage-rust
+      #   continue-on-error: true
+      #   run: |
+      #     cargo install cargo-llvm-cov --locked
+      #     cargo llvm-cov --branch --json --output-path /tmp/coverage.json --summary-only
+      #     LINE=$(jq -r '.data[0].totals.lines.percent' /tmp/coverage.json)
+      #     BRANCH=$(jq -r '.data[0].totals.branches.percent' /tmp/coverage.json)
+      #     echo "COVERAGE_LINE=$LINE" >> "$GITHUB_ENV"
+      #     echo "COVERAGE_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      #     echo "::notice::Line coverage: ${LINE}% / Branch coverage: ${BRANCH}%"
+
+      # - name: Coverage (.NET, line + branch, advisory)
+      #   id: coverage-dotnet
+      #   continue-on-error: true
+      #   run: |
+      #     dotnet test --collect:"XPlat Code Coverage" -- \
+      #       DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+      #     COB=$(find . -name 'coverage.cobertura.xml' -print -quit)
+      #     if [ -n "$COB" ]; then
+      #       LINE_RATE=$(grep -oP 'line-rate="\K[0-9.]+' "$COB" | head -1)
+      #       BRANCH_RATE=$(grep -oP 'branch-rate="\K[0-9.]+' "$COB" | head -1)
+      #       LINE=$(awk "BEGIN {printf \"%.1f\", $LINE_RATE * 100}")
+      #       BRANCH=$(awk "BEGIN {printf \"%.1f\", $BRANCH_RATE * 100}")
+      #       echo "COVERAGE_LINE=$LINE" >> "$GITHUB_ENV"
+      #       echo "COVERAGE_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      #       echo "::notice::Line coverage: ${LINE}% / Branch coverage: ${BRANCH}%"
+      #     fi
+
+      # - name: Coverage (Node.js, line + branch, advisory)
+      #   id: coverage-nodejs
+      #   continue-on-error: true
+      #   run: |
+      #     npx vitest run --coverage --coverage.reporter=json-summary
+      #     SUMMARY=coverage/coverage-summary.json
+      #     if [ -f "$SUMMARY" ]; then
+      #       LINE=$(jq -r '.total.lines.pct' "$SUMMARY")
+      #       BRANCH=$(jq -r '.total.branches.pct' "$SUMMARY")
+      #       echo "COVERAGE_LINE=$LINE" >> "$GITHUB_ENV"
+      #       echo "COVERAGE_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+      #       echo "::notice::Line coverage: ${LINE}% / Branch coverage: ${BRANCH}%"
+      #     fi
+
       # --- ドキュメント鮮度チェック ---
       - name: Document freshness check
         id: doc-freshness
@@ -155,6 +203,8 @@ jobs:
           DOC_FRESHNESS_RESULT: ${{ steps.doc-freshness.outcome }}
           STALE_FOUND: ${{ env.STALE_FOUND }}
           LOCKFILE_MISSING: ${{ env.LOCKFILE_MISSING }}
+          COVERAGE_LINE: ${{ env.COVERAGE_LINE }}
+          COVERAGE_BRANCH: ${{ env.COVERAGE_BRANCH }}
         with:
           script: |
             const fs = require('fs');
@@ -171,6 +221,29 @@ jobs:
               : '';
             if (process.env.STALE_FOUND === 'true') {
               sections.push(`### :warning: Stale Documents (>90 days)\n\n${staleOutput}`);
+            }
+
+            // 分岐カバレッジ (QC13)
+            const coverageLine = process.env.COVERAGE_LINE;
+            const coverageBranch = process.env.COVERAGE_BRANCH;
+            if (coverageLine && coverageBranch) {
+              const lineThreshold = 70;
+              const branchThreshold = 50;
+              const lineNum = parseFloat(coverageLine);
+              const branchNum = parseFloat(coverageBranch);
+              const lineFail = lineNum < lineThreshold;
+              const branchFail = branchNum < branchThreshold;
+              const branchGap = lineNum - branchNum;
+              if (lineFail || branchFail) {
+                let coverageBody = `### :warning: Coverage Below Threshold (QC13)\n\n` +
+                  `- Line: ${coverageLine}% (threshold: ${lineThreshold}%)\n` +
+                  `- Branch: ${coverageBranch}% (threshold: ${branchThreshold}%)\n`;
+                if (branchGap > 30) {
+                  coverageBody += `\nBranch coverage が line coverage より ${branchGap.toFixed(1)}pt 低く、` +
+                    `エラーパス・例外分岐のテスト不足の signal です。review-worker の E2-4 で finding 起票検討。`;
+                }
+                sections.push(coverageBody);
+              }
             }
 
             // ドキュメント Lint (P5-03)
