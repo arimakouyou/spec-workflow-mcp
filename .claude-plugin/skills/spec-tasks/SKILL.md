@@ -25,7 +25,7 @@ If `requirements.md`, `design.md`, or `test-design.md` is missing — **STOP imm
 | request-spec.md | `/spec-request-spec` | Yes (if requirements.md exists) |
 | requirements.md | `/spec-requirements` | No |
 | design.md | `/spec-design` | No |
-| test-design.md | `/spec-test-design` |
+| test-design.md | `/spec-test-design` | No |
 
 ---
 
