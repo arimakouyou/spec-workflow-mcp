@@ -802,3 +802,65 @@ SKIP 時は必ずログに理由を記録し、Expert Team Review で補完す�
 | **FAIL (実装漏れ)** | test-design.md にテスト仕様ありだがテストファイルなし | テスト実装の漏れとしてユーザーに報告 |
 | **SKIP (設計上不要)** | テスト仕様自体が存在しない（設計書に未定義） | ログに SKIP 理由を記録し、次ステップに進む。Expert Team Review で補完 |
 | **SKIP (設計時除外)** | design.md の「Excluded Test Environments」で明示的に除外 | 除外理由をログに記録し、次ステップに進む |
+
+## QC13: Branch Coverage (Advisory → 段階的 Gate 化)
+
+例外パス・分岐網羅の不足を露呈するため、line coverage と branch coverage を**別々に**計測する。
+plan-redesign #3「分岐カバレッジ別ゲート化」に対応。
+
+### 計測コマンド
+
+#### Rust / Leptos
+
+```bash
+# cargo-llvm-cov (推奨、line + branch を同時取得)
+cargo install cargo-llvm-cov --locked
+cargo llvm-cov --branch --summary-only
+# JSON 出力で threshold check 可能:
+# cargo llvm-cov --branch --json --output-path coverage.json
+```
+
+#### .NET
+
+```bash
+# coverlet (XPlat) で line + branch
+dotnet test --collect:"XPlat Code Coverage" \
+  -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+# Cobertura XML から line-rate / branch-rate を抽出して threshold 比較
+```
+
+#### Node.js
+
+```bash
+# vitest --coverage (V8 provider) で line + branch
+npx vitest run --coverage --coverage.reporter=json-summary
+# coverage/coverage-summary.json から total.lines.pct / total.branches.pct を抽出
+```
+
+### 推奨 Threshold (初期、段階的に引き上げ)
+
+| 段階 | line | branch | 適用先 | gate 化 |
+|------|:---:|:---:|--------|:------:|
+| 初期 (advisory) | 70% | 50% | scheduled-quality (週次) | report-only |
+| 中期 | 80% | 65% | scheduled-quality + ci.yml | warning |
+| 成熟 | 85% | 75% | ci.yml (PR 時) | blocking |
+
+### 段階的 gate 化の方針
+
+- **初期段階**: `scheduled-quality.yml` でのみ計測。閾値未達は週次 Issue で報告（advisory）
+- **中期**: `ci.yml` に追加するが `continue-on-error: true` で warning 扱い
+- **成熟**: `ci.yml` でブロッキング。`continue-on-error: false` +
+  `--fail-under=<line>` / branch threshold 失敗で CI Fail
+
+### Branch coverage が line coverage より低い場合の解釈
+
+例外パス・エラーハンドリングのテストが不足している強い signal。
+review-worker の E (Tests) / E2-4 (Edge cases and error paths are tested) で
+finding を起票する根拠として使う。
+
+**典型例**:
+
+- line: 85%, branch: 40% → happy path のみテスト、`Result::Err` / `match` の各分岐がテストされていない
+- line: 60%, branch: 55% → 単純にテスト総量が不足
+
+両指標を分離して見ることで「コード行は通したが分岐は通していない」状態を捕捉できる。
