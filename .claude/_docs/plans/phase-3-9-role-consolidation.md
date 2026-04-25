@@ -29,6 +29,13 @@
 
 ## 設計ブロッカー（advisor 指摘）
 
+### D. δ の認知的分離降格（advisor 指摘）
+
+- 現状 Step 4 (parallel-worker) と Step 5 (test engineer) は別 agent process — 「実装した本人とは違う agent がテスト十分性を見直す」認知的分離自体が品質保証メカニズム
+- test engineer 2 種を implementer に統合すると、Step 5 が同 agent type になり、認知的分離が**構造的保証 → 手続き的注意事項**に降格（γ の A と同型）
+- **判断結果（2026-04-25）**: (ii) **δ partial** を採用。integ-test 2 種（rust + dotnet、90% 同一）のみ統合。test engineer 2 種は維持し fresh review の構造的保証を残す
+- 将来 ε で wave-harness 統合後に test engineer 統合の必要性を再評価可能
+
 ### A. tools 権限衝突 — auditor の read-only 保証
 
 - `integ-test-auditor` / `integ-test-dotnet-auditor`: `Write/Edit/Bash` を**意図的に持たない**（"Write No Code, Only Evaluate" / L3 強制）
@@ -57,7 +64,7 @@
 | α | code-simplifier 削除 | spec-implement Step 5.5 削除のみ | `code-simplifier.md` 削除 / Step 5.5 削除 / 5.5 を参照する記述全削除 / vitest pass / rumdl 新規違反 0 | DONE |
 | β | phase-review-team 廃止 | `phase-review-team/` 削除 + spec-implement 3.5.x 書き換え | skill 削除 / Phase 末尾は review-worker 単発呼び出しに置換 / vitest pass | DONE |
 | γ | integ-test-auditor 系 → reviewer 統合 | 2 agent 削除 + integration-test/integration-test-dotnet SKILL.md 更新 | ブロッカー A をユーザー判断後に着手 / reviewer に integration audit mode 追加 | BLOCKED (要 A 判断) |
-| δ | test engineer 3 種 → implementer 統合 | spec-implement Step 4-5 + tdd-skills + 各参照箇所 | implementer.md に mode 引数 / 5 agent 削除 / spec-implement 大量更新 | TODO（最大規模） |
+| δ | test engineer 3 種 → implementer 統合 | spec-implement Step 4-5 + tdd-skills + 各参照箇所 | implementer.md に mode 引数 / 5 agent 削除 / spec-implement 大量更新 | PARTIAL DONE（integ-test 2 種のみ統合、test engineer 2 種は維持） |
 | ε | wave-harness-worker 統合 | resource-aware-parallelism + wave-harness 呼び出し元 | ブロッカー B 解決後 / implementer に mode: wave 追加 | BLOCKED (要 B 判断) |
 
 ## 再開手順（次セッション着手時）
@@ -76,6 +83,7 @@
 - **α (2026-04-25)**: `code-simplifier.md` 削除 / spec-implement SKILL.md の Step 5.5 セクション削除 / review-worker.md Anti-Bias の「3段階」→「2段階」更新 / 関連 prompt から simplify_result 等を撤去。vitest 203 passed、rumdl 153→146 (新規違反 0)
 - **β (2026-04-25)**: `phase-review-team` Skill 削除 / spec-implement SKILL.md 3.5.2 (Expert Team Review 5 並列) を 3.5.2 review-worker 単発呼び出しに統合（CVE 監査 + 統合検証 + 多角レビューを 1 回の review-worker prompt に集約）/ resource-aware-parallelism から軽量エージェントセクション全削除（唯一の利用者だった phase-review-team が消えたため YAGNI 原則で）。vitest 203 passed、rumdl 146→105（新規違反 0）
 - **β-followup (2026-04-25)**: review-worker.md の Phase Review Context 節に CVE 監査結果評価サブセクションと多角観点レビューサブセクションを追加（advisor 指摘により agent 定義を spec-implement prompt の責務拡張に整合）。完了レポートに `cve-audit` キー追加。vitest 203 passed、rumdl 新規違反 0
+- **δ partial (2026-04-25)**: `integ-test-dotnet-worker` 削除 / `integ-test-worker` を `Language: rust|dotnet` 引数で 1 個に統合（共通手順 + 言語別セクション構成）/ integration-test SKILL.md と integration-test-dotnet SKILL.md の Agent 呼び出しに `Language:` 引数を明示。agents 9 → 8。test engineer 2 種は維持（認知的分離保持、ブロッカー D 判断結果）。vitest 203 passed、rumdl 新規違反 0
 
 ## Appendix A: 影響ファイル一覧（2026-04-25 時点 grep 結果）
 

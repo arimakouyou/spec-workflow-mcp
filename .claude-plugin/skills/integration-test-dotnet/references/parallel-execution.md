@@ -45,15 +45,15 @@ Launch Workers and Pentagon as sub-agents using agent definitions under `.claude
 
 **Launch order:**
 1. Pentagon (`subagent_type: "spec-workflow-mcp:integ-test-dotnet-auditor"`) — waits for review requests after launch
-2. Workers (`subagent_type: "spec-workflow-mcp:integ-test-dotnet-worker"`) — launch alpha and bravo in parallel
+2. Workers (`subagent_type: "spec-workflow-mcp:integ-test-worker"` with `Language: dotnet`) — launch alpha and bravo in parallel
 
 ```
 # Launch Pentagon
 Agent(subagent_type: "spec-workflow-mcp:integ-test-dotnet-auditor", prompt: "Whiteboard: {whiteboard_path}\nWait for review request.")
 
 # Launch Workers (parallel)
-Agent(subagent_type: "spec-workflow-mcp:integ-test-dotnet-worker", prompt: "Worker name: alpha\nDomain: {domain_a}\n...")
-Agent(subagent_type: "spec-workflow-mcp:integ-test-dotnet-worker", prompt: "Worker name: bravo\nDomain: {domain_b}\n...")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: dotnet\nWorker name: alpha\nDomain: {domain_a}\n...")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: dotnet\nWorker name: bravo\nDomain: {domain_b}\n...")
 ```
 
 ### P3: Monitor & Facilitate

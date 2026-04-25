@@ -163,7 +163,7 @@ Agent(
 ```
 Agent(
   subagent_type: "spec-workflow-mcp:integ-test-worker",
-  prompt: "Worker name: {worker_name}\nDomain: {domain}\nTest file: tests/integration/test_{domain}.rs\nTarget endpoints:\n{endpoint_list}\nWhiteboard: {whiteboard_path}"
+  prompt: "Language: rust\nWorker name: {worker_name}\nDomain: {domain}\nTest file: tests/integration/test_{domain}.rs\nTarget endpoints:\n{endpoint_list}\nWhiteboard: {whiteboard_path}"
 )
 ```
 

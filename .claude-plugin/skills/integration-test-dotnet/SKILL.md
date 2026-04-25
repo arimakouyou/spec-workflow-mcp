@@ -403,8 +403,8 @@ Agent(
 **Launch Workers** (fill in variables from [worker-prompt.md](references/worker-prompt.md)):
 ```
 Agent(
-  subagent_type: "spec-workflow-mcp:integ-test-dotnet-worker",
-  prompt: "Worker name: {worker_name}\nDomain: {domain}\nTest class: {Domain}EndpointTests.cs\nTarget endpoints:\n{endpoint_list}\nWhiteboard: {whiteboard_path}"
+  subagent_type: "spec-workflow-mcp:integ-test-worker",
+  prompt: "Language: dotnet\nWorker name: {worker_name}\nDomain: {domain}\nTest class: {Domain}EndpointTests.cs\nTarget endpoints:\n{endpoint_list}\nWhiteboard: {whiteboard_path}"
 )
 ```
 
