@@ -47,13 +47,16 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 ```
 
 > **What the plugin includes:**
-> - MCP server for spec-driven development workflow
-> - Skills: spec-request-spec, spec-requirements, spec-design, spec-test-design, spec-tasks, spec-implement, spec-review, integration-test, TDD, and more
-> - Agents: code-simplifier, review-worker, unit-test-engineer, frontend-test-engineer, parallel-worker, etc.
-> - Rules: project architecture, quality checks, security, design principles, etc.
-> - Hooks: automated task read guards, lockfile integrity, format check, post-edit formatter, and diff-aware security audit
+>
+> - **MCP server** for spec-driven development workflow
+> - **50+ skills** covering the full spec lifecycle (request-spec → requirements → design → test-design → tasks → implement → archive) plus integration testing (Rust / .NET), TDD, CI generation, mutation testing, arch test generation, PR comment handling, and more
+> - **7 specialized sub-agents** organized as Implementer (parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker / wave-harness-worker) and Reviewer (review-worker / integ-test-auditor) roles, with **multi-language support** (Rust + .NET via `Language:` argument)
+> - **17 rules** covering project architecture, QC1-QC13 quality checks, OWASP security, design principles, type safety (TS-R1-R5 / TS-C1-C5), failure taxonomy (FC1-FC6), and L1-L5 enforcement levels with promotion criteria
+> - **17 hooks** for spec injection, test verification, design conformance check, arch test regeneration, build cache, diff-aware security audit, plus a **measurement framework** (`_wrap.sh` + `timing-logger-pre/post.sh`) that records Hook / Tool / Phase / Rule events to `.implement-session/metrics.jsonl`
+> - **Helper scripts** for implementation session management (`session-manage.sh`), rate-limit auto-resume wrapper (`auto-resume.sh`), and metrics aggregation (`aggregate-metrics.sh` with `hooks` / `phases` / `rules` / `speedup` subcommands)
 
 > **Prerequisites for the plugin hooks:**
+>
 > - `jq` — required by every hook for JSON parsing
 > - GNU coreutils (`timeout`) — required by `security-audit-guard.sh` for fail-close audit timeouts (preinstalled on Linux; install via `brew install coreutils` on macOS)
 >
@@ -361,38 +364,78 @@ your-project/
 
 ### Plugin Structure (distributed via `.claude-plugin/`)
 
-```
+```text
 .claude-plugin/
   plugin.json              # Plugin manifest
   marketplace.json         # Marketplace listing
   .mcp.json                # MCP server configuration
-  hooks/
-    hooks.json             # Hook definitions (PostToolUse, etc.)
-    tasks-read-guard.sh    # Task read guard script
-  skills/                  # Spec-driven workflow skills
+
+  hooks/                   # 17 event-driven hooks
+    hooks.json             # Hook registrations (PreToolUse / PostToolUse / Stop / SessionStart / UserPromptSubmit)
+    _wrap.sh               # Measurement wrapper (records duration / exit code / preview)
+    timing-logger-pre.sh   # PreToolUse: tool start-time capture
+    timing-logger-post.sh  # PostToolUse: tool duration + rule_read recording
+    inject-spec.sh         # UserPromptSubmit: spec context injection
+    inject-skill-hint.sh   # PreToolUse Edit|Write: skill discovery hint
+    inject-build-cache.sh  # PreToolUse Bash: cargo / dotnet build cache hint
+    lockfile-guard.sh      # PreToolUse Bash: lockfile integrity guard
+    format-check-guard.sh  # PreToolUse Bash: format check
+    security-audit-guard.sh # PreToolUse Bash: diff-aware security audit (fail-close)
+    post-edit.sh           # PostToolUse Edit|Write: post-edit formatter
+    auto-verify-spec.sh    # PostToolUse Edit|Write: spec consistency check
+    detect-new-files.sh    # PostToolUse Write: orphan file detection
+    design-conformance-check.sh  # PostToolUse Edit|Write: design.md vs code drift
+    arch-test-regen-hint.sh      # PostToolUse Edit|Write: arch test regeneration prompt
+    verify-tests-run.sh    # Stop: test runner execution check
+    log-implementation.sh  # Stop: implementation log skeleton auto-generation
+    resume-hint.sh         # SessionStart: resume context injection
+
+  scripts/                 # Helper scripts (user-invokable)
+    session-manage.sh      # Implementation session state manager + Phase metrics
+    auto-resume.sh         # Rate-limit auto-resume wrapper (claude --print loop)
+    aggregate-metrics.sh   # Metrics aggregation (summary / hooks / tools / phases / rules / speedup)
+
+  skills/                  # 50+ skills (excerpt below)
+    spec-request-spec/     # Request spec creation
     spec-requirements/     # Requirements creation
     spec-design/           # Design document creation
     spec-test-design/      # Test design creation
     spec-tasks/            # Task breakdown
-    spec-implement/        # Implementation workflow
+    spec-implement/        # Implementation workflow (Orchestrator)
     spec-review/           # Code review
-    integration-test/      # Integration testing
+    spec-archive/          # Auto-archive completed specs
+    integration-test/      # Rust integration testing
+    integration-test-dotnet/ # .NET integration testing
     tdd-skills/            # TDD workflow
-    tdd-skills-rust/       # Rust-specific TDD
+    tdd-skills-rust/       # Rust TDD patterns
+    tdd-skills-dotnet/     # .NET TDD patterns (xUnit + NSubstitute / Moq)
+    cargo-mutants/         # Mutation testing
+    setup-ci/              # GitHub Actions CI generation (5 base + optional add-ons)
+    generate-arch-tests/   # Architecture test generation (L4 structural)
+    handle-pr-comments/    # PR review response
     knowhow-capture/       # Knowledge capture
-  agents/                  # Specialized sub-agents
-    code-simplifier.md     # Code simplification
-    review-worker.md       # Review automation
-    unit-test-engineer.md  # Rust unit test generation
-    frontend-test-engineer.md # Leptos frontend test generation
-    parallel-worker.md     # Parallel task execution
-    integ-test-worker.md   # Integration test worker
-    integ-test-auditor.md  # Integration test auditor
-  rules/                   # Project rules and conventions
-    quality-checks.md      # Quality enforcement
-    security.md            # Security guidelines
-    design-principles.md   # Design principles
-    ...
+    feedback-loop/         # Failure → rule promotion / demotion loop
+    resource-aware-parallelism/  # CPU / memory aware concurrency limits
+
+  agents/                  # 7 specialized sub-agents
+    parallel-worker.md         # TDD core (Implementer)
+    wave-harness-worker.md     # Wave-harness parallel framework worker
+    unit-test-engineer.md      # Unit test engineer (Rust + C#/.NET)
+    frontend-test-engineer.md  # Leptos frontend test engineer
+    integ-test-worker.md       # Integration test (Rust + .NET via Language: argument)
+    integ-test-auditor.md      # Integration test auditor (Rust + .NET, read-only L3)
+    review-worker.md           # Code review + commit + Phase Review (Reviewer)
+
+  rules/                   # 17 rules
+    quality-checks.md      # QC1-QC13 quality enforcement (lint / test / coverage / mutation)
+    enforcement-levels.md  # L1-L5 model + promotion / demotion criteria
+    security.md            # OWASP Top 10 + auth/authz
+    design-principles.md   # SOLID + dependency direction
+    design-conformance.md  # Prevent drift from approved design.md
+    type-safety.md         # TS-R1-R5 (Rust) + TS-C1-C5 (C#)
+    failure-taxonomy.md    # FC1-FC6 cross-worker failure vocabulary
+    diagnostic-reasoning.md # DR1-DR6 retry / divergent thinking protocol
+    ...                    # 17 rules total
 ```
 
 ## 🛠️ Development

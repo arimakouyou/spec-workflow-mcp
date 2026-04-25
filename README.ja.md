@@ -47,13 +47,16 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 ```
 
 > **プラグインに含まれるもの：**
-> - 仕様駆動開発ワークフロー用の MCP サーバー
-> - スキル：spec-request-spec、spec-requirements、spec-design、spec-test-design、spec-tasks、spec-implement、spec-review、integration-test、TDD など
-> - エージェント：code-simplifier、review-worker、unit-test-engineer、frontend-test-engineer、parallel-worker など
-> - ルール：プロジェクトアーキテクチャ、品質チェック、セキュリティ、設計原則など
-> - フック：タスク読み取りガード、lockfile 整合性、フォーマットチェック、編集後自動整形、差分検出式セキュリティ監査
+>
+> - **MCP サーバー** — 仕様駆動開発ワークフロー用
+> - **50+ スキル** — spec ライフサイクル全段階（request-spec → requirements → design → test-design → tasks → implement → archive）に加え、統合テスト（Rust / .NET）、TDD、CI 生成、mutation testing、arch test 生成、PR コメント対応など
+> - **7 専門サブエージェント** — Implementer ロール（parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker / wave-harness-worker）と Reviewer ロール（review-worker / integ-test-auditor）に整理。`Language:` 引数で **Rust / .NET 両言語サポート**
+> - **17 ルール** — プロジェクトアーキテクチャ、QC1-QC13 品質チェック、OWASP セキュリティ、設計原則、型安全（TS-R1-R5 / TS-C1-C5）、failure taxonomy（FC1-FC6）、L1-L5 段階的執行モデル
+> - **17 フック** — spec 注入、テスト実行確認、design.md 整合チェック、arch test 再生成促し、ビルドキャッシュ、差分検出式セキュリティ監査、加えて **計測 framework**（`_wrap.sh` + `timing-logger-pre/post.sh`）が Hook / Tool / Phase / Rule のイベントを `.implement-session/metrics.jsonl` に記録
+> - **ヘルパースクリプト** — 実装セッション状態管理（`session-manage.sh`）、レートリミット自動再開ラッパー（`auto-resume.sh`）、メトリクス集計（`aggregate-metrics.sh` の `hooks` / `phases` / `rules` / `speedup` サブコマンド）
 
 > **プラグインフック利用時の前提：**
+>
 > - `jq` — すべてのフックで JSON 解析に使用（必須）
 > - GNU coreutils (`timeout`) — `security-audit-guard.sh` の fail-close タイムアウト処理で使用（Linux は標準搭載、macOS は `brew install coreutils` で導入が必要）
 >
@@ -306,38 +309,78 @@ your-project/
 
 ### プラグイン構造（`.claude-plugin/` で配布）
 
-```
+```text
 .claude-plugin/
   plugin.json              # プラグインマニフェスト
   marketplace.json         # マーケットプレイスリスティング
   .mcp.json                # MCP サーバー設定
-  hooks/
-    hooks.json             # フック定義（PostToolUse など）
-    tasks-read-guard.sh    # タスク読み取りガードスクリプト
-  skills/                  # 仕様駆動ワークフロースキル
+
+  hooks/                   # 17 個のイベント駆動フック
+    hooks.json             # フック登録 (PreToolUse / PostToolUse / Stop / SessionStart / UserPromptSubmit)
+    _wrap.sh               # 計測ラッパー (所要時間 / exit code / preview を記録)
+    timing-logger-pre.sh   # PreToolUse: tool 開始時刻記録
+    timing-logger-post.sh  # PostToolUse: tool 所要時間 + rule_read 記録
+    inject-spec.sh         # UserPromptSubmit: spec context 注入
+    inject-skill-hint.sh   # PreToolUse Edit|Write: skill discovery hint
+    inject-build-cache.sh  # PreToolUse Bash: cargo / dotnet ビルドキャッシュ hint
+    lockfile-guard.sh      # PreToolUse Bash: lockfile 整合性ガード
+    format-check-guard.sh  # PreToolUse Bash: フォーマットチェック
+    security-audit-guard.sh # PreToolUse Bash: 差分検出式セキュリティ監査 (fail-close)
+    post-edit.sh           # PostToolUse Edit|Write: 編集後自動整形
+    auto-verify-spec.sh    # PostToolUse Edit|Write: spec 整合チェック
+    detect-new-files.sh    # PostToolUse Write: spec 未言及ファイル検出
+    design-conformance-check.sh  # PostToolUse Edit|Write: design.md とコードの乖離検出
+    arch-test-regen-hint.sh      # PostToolUse Edit|Write: arch test 再生成促し
+    verify-tests-run.sh    # Stop: テスト実行履歴チェック
+    log-implementation.sh  # Stop: 実装ログ skeleton 自動生成
+    resume-hint.sh         # SessionStart: 再開コンテキスト注入
+
+  scripts/                 # ヘルパースクリプト (ユーザー実行可)
+    session-manage.sh      # 実装セッション状態管理 + Phase メトリクス
+    auto-resume.sh         # レートリミット自動再開ラッパー (claude --print ループ)
+    aggregate-metrics.sh   # メトリクス集計 (summary / hooks / tools / phases / rules / speedup)
+
+  skills/                  # 50+ スキル (抜粋)
+    spec-request-spec/     # リクエスト仕様作成
     spec-requirements/     # 要件作成
     spec-design/           # 設計ドキュメント作成
     spec-test-design/      # テスト設計作成
     spec-tasks/            # タスク分割
-    spec-implement/        # 実装ワークフロー
+    spec-implement/        # 実装ワークフロー (Orchestrator)
     spec-review/           # コードレビュー
-    integration-test/      # 統合テスト
+    spec-archive/          # 完了 spec の自動アーカイブ
+    integration-test/      # Rust 統合テスト
+    integration-test-dotnet/ # .NET 統合テスト
     tdd-skills/            # TDD ワークフロー
-    tdd-skills-rust/       # Rust 特化 TDD
+    tdd-skills-rust/       # Rust TDD パターン
+    tdd-skills-dotnet/     # .NET TDD パターン (xUnit + NSubstitute / Moq)
+    cargo-mutants/         # Mutation testing
+    setup-ci/              # GitHub Actions CI 生成 (基本 5 + オプション)
+    generate-arch-tests/   # アーキテクチャテスト生成 (L4 構造テスト)
+    handle-pr-comments/    # PR レビュー対応
     knowhow-capture/       # ナレッジキャプチャ
-  agents/                  # 専門サブエージェント
-    code-simplifier.md     # コード簡素化
-    review-worker.md       # レビュー自動化
-    unit-test-engineer.md  # Rust ユニットテスト生成
-    frontend-test-engineer.md # Leptos フロントテスト生成
-    parallel-worker.md     # 並列タスク実行
-    integ-test-worker.md   # 統合テストワーカー
-    integ-test-auditor.md  # 統合テスト監査
-  rules/                   # プロジェクトルールと規約
-    quality-checks.md      # 品質チェック
-    security.md            # セキュリティガイドライン
-    design-principles.md   # 設計原則
-    ...
+    feedback-loop/         # 失敗 → ルール昇格 / 降格ループ
+    resource-aware-parallelism/  # CPU / メモリ認識並列制御
+
+  agents/                  # 7 個の専門サブエージェント
+    parallel-worker.md         # TDD コア (Implementer)
+    wave-harness-worker.md     # wave-harness 並列フレームワーク用
+    unit-test-engineer.md      # ユニットテスト (Rust + C#/.NET)
+    frontend-test-engineer.md  # Leptos フロントテスト
+    integ-test-worker.md       # 統合テスト (Rust + .NET、Language: 引数で分岐)
+    integ-test-auditor.md      # 統合テスト監査 (Rust + .NET、read-only L3)
+    review-worker.md           # コードレビュー + commit + Phase Review (Reviewer)
+
+  rules/                   # 17 ルール
+    quality-checks.md      # QC1-QC13 品質チェック (lint / test / coverage / mutation)
+    enforcement-levels.md  # L1-L5 段階的執行モデル + 昇格 / 降格基準
+    security.md            # OWASP Top 10 + 認証認可
+    design-principles.md   # SOLID + 依存方向ルール
+    design-conformance.md  # 承認済み design.md からの逸脱防止
+    type-safety.md         # TS-R1-R5 (Rust) + TS-C1-C5 (C#)
+    failure-taxonomy.md    # FC1-FC6 worker 横断 failure 共通語彙
+    diagnostic-reasoning.md # DR1-DR6 リトライ / divergent 思考プロトコル
+    ...                    # 計 17 ルール
 ```
 
 ## 🛠️ 開発
