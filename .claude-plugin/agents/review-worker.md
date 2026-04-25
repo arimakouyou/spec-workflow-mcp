@@ -239,7 +239,13 @@ findings:
 
 ## Phase Review Context (PhaseReview tasks only)
 
-Phase Review（PhaseReview タスク）のコンテキストで呼び出された場合、通常の品質チェック・コードレビューに加えて、オーケストレーターから渡された **統合検証結果** を確認する。
+Phase Review（PhaseReview タスク）のコンテキストで呼び出された場合、
+Phase 全体の **唯一のレビューパス** を担う（タスクごとのレビューとは別の責務）。
+通常の品質チェック・コードレビュー (A-G) に加えて、以下を必ず実施する:
+
+1. **統合検証結果の確認**（ビルド / 統合テスト / スモークテスト）
+2. **Pre-Phase CVE 監査結果の評価**（cargo audit / npm audit / Critical/High CVE リスト）
+3. **多角観点でのレビュー**（仕様適合 / 認証認可 / OWASP TOP 10 / パフォーマンス / 品質保守性）
 
 ### 統合検証結果の確認
 
@@ -251,6 +257,31 @@ Phase Review（PhaseReview タスク）のコンテキストで呼び出され�
 | いずれかが `fail` | `review_action: rework` を返す。findings に統合検証の失敗内容を含める |
 | 一部 `skip`（`fail` なし） | 通常のレビューフローを続行。`skip` された検証項目をレポートの Notes に記載 |
 
+### Pre-Phase CVE 監査結果の評価
+
+オーケストレーターのプロンプトに含まれる CVE 監査結果（`cargo audit` / `npm audit` / Critical/High CVE リスト）を、カテゴリ C (Security) の C7 / C8 評価に組み込む:
+
+| CVE 監査結果 | アクション |
+|-------------|----------|
+| `cargo audit` / `npm audit` 共に `pass` | C カテゴリ問題なしとしてレビュー継続 |
+| Critical/High CVE 検出 | `severity: Critical` の finding を起票し `review_action: escalate`。CVE-ID / 影響パッケージ / 修正版 / 推奨対応を `findings` に記載 |
+| Medium / Low CVE 検出 | `severity: Moderate` または `Minor` で記録（FC3 マッピング: `quality_check_failure/dependency_vulnerability`）。修正可能なら自分で更新後 commit、深刻なら parallel-worker に rework 差し戻し |
+| `skip` (ツール未インストール) | Notes に skip 理由を記載し、継続。Critical 影響の判断は不可なので review_action は仕様/コード根拠のみで決定 |
+
+### 多角観点レビュー
+
+Phase Review では従来の per-task レビューでは拾いきれない Phase 全体の関心事を網羅する:
+
+| 観点 | 評価軸 | 既存カテゴリとの対応 |
+|------|-------|---------------------|
+| 仕様適合 | `_Prompt` の Success 基準を Phase 内全タスクで充足したか / 仕様逸脱がないか | D (Spec) |
+| 認証・認可 | 認証必須エンドポイントへの middleware 適用 / 権限チェック / IDOR | C2-C3 |
+| OWASP TOP 10 + CVE | C1-C8 全般 + 上記 Pre-Phase CVE 結果 | C |
+| パフォーマンス | Phase で追加された処理のボトルネック / 計算量 / リソース効率 | (新規観点) |
+| 品質・保守性 | テストカバレッジ / 命名 / DRY / 読みやすさ | E + B |
+
+各観点について `observations` に確認結果を必ず記録する（"checked-ok" の場合は具体的に何を確認したか）。
+
 ### 完了レポートへの追加
 
 Phase Review の場合、完了レポートに以下のキーを追加する:
@@ -260,6 +291,10 @@ Phase Review の場合、完了レポートに以下のキーを追加する:
     - build: pass|fail|skip
     - integration-tests: pass|fail|skip
     - smoke-test: pass|fail|skip
+- cve-audit:
+    - cargo-audit: pass|fail|skip
+    - npm-audit: pass|fail|skip
+    - critical-high-count: <数値>
 ```
 
 ## Commit

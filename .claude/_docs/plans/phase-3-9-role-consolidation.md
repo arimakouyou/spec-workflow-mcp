@@ -75,6 +75,7 @@
 
 - **α (2026-04-25)**: `code-simplifier.md` 削除 / spec-implement SKILL.md の Step 5.5 セクション削除 / review-worker.md Anti-Bias の「3段階」→「2段階」更新 / 関連 prompt から simplify_result 等を撤去。vitest 203 passed、rumdl 153→146 (新規違反 0)
 - **β (2026-04-25)**: `phase-review-team` Skill 削除 / spec-implement SKILL.md 3.5.2 (Expert Team Review 5 並列) を 3.5.2 review-worker 単発呼び出しに統合（CVE 監査 + 統合検証 + 多角レビューを 1 回の review-worker prompt に集約）/ resource-aware-parallelism から軽量エージェントセクション全削除（唯一の利用者だった phase-review-team が消えたため YAGNI 原則で）。vitest 203 passed、rumdl 146→105（新規違反 0）
+- **β-followup (2026-04-25)**: review-worker.md の Phase Review Context 節に CVE 監査結果評価サブセクションと多角観点レビューサブセクションを追加（advisor 指摘により agent 定義を spec-implement prompt の責務拡張に整合）。完了レポートに `cve-audit` キー追加。vitest 203 passed、rumdl 新規違反 0
 
 ## Appendix A: 影響ファイル一覧（2026-04-25 時点 grep 結果）
 
