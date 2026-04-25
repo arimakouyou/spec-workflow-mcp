@@ -55,7 +55,7 @@
 | Sub | 内容 | 影響範囲 | DoD | Status |
 |-----|------|---------|-----|-------|
 | α | code-simplifier 削除 | spec-implement Step 5.5 削除のみ | `code-simplifier.md` 削除 / Step 5.5 削除 / 5.5 を参照する記述全削除 / vitest pass / rumdl 新規違反 0 | DONE |
-| β | phase-review-team 廃止 | `phase-review-team/` 削除 + spec-implement 3.5.x 書き換え | skill 削除 / Phase 末尾は review-worker 単発呼び出しに置換 / vitest pass | TODO |
+| β | phase-review-team 廃止 | `phase-review-team/` 削除 + spec-implement 3.5.x 書き換え | skill 削除 / Phase 末尾は review-worker 単発呼び出しに置換 / vitest pass | DONE |
 | γ | integ-test-auditor 系 → reviewer 統合 | 2 agent 削除 + integration-test/integration-test-dotnet SKILL.md 更新 | ブロッカー A をユーザー判断後に着手 / reviewer に integration audit mode 追加 | BLOCKED (要 A 判断) |
 | δ | test engineer 3 種 → implementer 統合 | spec-implement Step 4-5 + tdd-skills + 各参照箇所 | implementer.md に mode 引数 / 5 agent 削除 / spec-implement 大量更新 | TODO（最大規模） |
 | ε | wave-harness-worker 統合 | resource-aware-parallelism + wave-harness 呼び出し元 | ブロッカー B 解決後 / implementer に mode: wave 追加 | BLOCKED (要 B 判断) |
@@ -74,6 +74,7 @@
 （各 sub 完了時にコミット hash と要点を追記）
 
 - **α (2026-04-25)**: `code-simplifier.md` 削除 / spec-implement SKILL.md の Step 5.5 セクション削除 / review-worker.md Anti-Bias の「3段階」→「2段階」更新 / 関連 prompt から simplify_result 等を撤去。vitest 203 passed、rumdl 153→146 (新規違反 0)
+- **β (2026-04-25)**: `phase-review-team` Skill 削除 / spec-implement SKILL.md 3.5.2 (Expert Team Review 5 並列) を 3.5.2 review-worker 単発呼び出しに統合（CVE 監査 + 統合検証 + 多角レビューを 1 回の review-worker prompt に集約）/ resource-aware-parallelism から軽量エージェントセクション全削除（唯一の利用者だった phase-review-team が消えたため YAGNI 原則で）。vitest 203 passed、rumdl 146→105（新規違反 0）
 
 ## Appendix A: 影響ファイル一覧（2026-04-25 時点 grep 結果）
 

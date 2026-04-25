@@ -314,24 +314,24 @@ dotnet test --no-build --verbosity quiet
 
 | 結果 | アクション |
 |------|----------|
-| PASS | 3.5.2 Expert Team Review に進む |
+| PASS | 3.5.2 Code Review + Commit (review-worker) に進む |
 | FAIL (ビルド) | ビルドエラーを分析、根本原因タスクを特定。Phase 内タスク → `[x]` を `[-]` に戻して差し戻し、PhaseReview を `[ ]` に戻す。根本原因タスクの step 4 から再実行 |
 | FAIL (統合テスト) | 失敗テストを分析、根本原因タスク特定。Phase 内タスク → 差し戻し、前 Phase → ユーザーエスカレート |
 | FAIL (スモーク) | 起動ログを分析し根本原因特定、差し戻し |
 | FAIL (環境不備) | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、design.md / test-design.md の Required Tools テーブルの Install Command を提示。実装を停止（STOP） |
 | FAIL (実装漏れ) | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
-| SKIP (設計上不要) | テスト仕様自体が設計書に存在しない場合のみ（例: 統合テスト未定義、ヘルスチェック未定義）。ログに SKIP 理由を記録し、3.5.2 に進む。Expert Team Review で補完 |
+| SKIP (設計上不要) | テスト仕様自体が設計書に存在しない場合のみ（例: 統合テスト未定義、ヘルスチェック未定義）。ログに SKIP 理由を記録し、3.5.2 に進む。review-worker の Phase Review で補完 |
 | SKIP (設計時除外) | design.md の「Excluded Test Environments」で明示的に除外されたテスト。除外理由をログに記録し、3.5.2 に進む |
 
 **注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由で「SKIP」を選択してはならない。test-design.md / design.md の Required Tools に Required=Yes で記載されたツールやランタイムが不足している場合は、常に上記の「FAIL (環境不備)」として扱い、実装を停止（STOP）すること（quality-checks.md の Step C/D に SKIP と記載がある場合も同様）。
 
-統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の Expert Team Review に入力として渡すこと。
+統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の review-worker に入力として渡すこと。
 
 > **アーキテクチャ不変条件テスト**: Rust: `tests/architecture.rs`（`/generate-arch-tests` で生成）が存在する場合、step 3.5.1 の `cargo test` で自動実行される。.NET: NetArchTest.Rules / ArchUnitNET によるアーキテクチャテストが存在する場合、`dotnet test` で自動実行される。依存方向違反が検出された場合はテスト失敗として扱い、根本原因タスクの特定と差し戻しを行う。テストが存在しない場合、かつ design.md に `## Module Boundaries` セクションが存在する場合は、アーキテクチャテストの追加をユーザーに提案する。
 
 #### 3.5.1.6 CVE Audit (依存脆弱性監査)
 
-Expert Team Review の前に、依存ライブラリの脆弱性を機械的に検査する。
+Phase Review の review-worker 呼び出し前に、依存ライブラリの脆弱性を機械的に検査する。
 
 ##### Step A: 監査ツール実行
 
@@ -351,7 +351,7 @@ Expert Team Review の前に、依存ライブラリの脆弱性を機械的に�
 cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 ```
 
-未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、Expert Team Review のセキュリティ担当に委ねる。
+未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、review-worker のセキュリティ評価に委ねる。
 
 ##### Step B: 結果分類
 
@@ -364,7 +364,7 @@ cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 
 ##### Step C: 結果の引き渡し
 
-CVE 監査結果を Expert Team Review の入力に追加する:
+CVE 監査結果を review-worker の入力に追加する:
 
 ```text
 CVE Audit Results:
@@ -374,44 +374,13 @@ CVE Audit Results:
   - 各エントリ形式: CVE-ID | パッケージ名 | 現バージョン | 修正済みバージョン | 推奨対応
 ```
 
-Expert Team Review のセキュリティ担当がこの結果を踏まえてレビューし、Verdict（PASS / NEEDS_REWORK / BLOCK）を判定する。CVE の深刻度と対応方針の最終判断はセキュリティ担当に委ねる。
+Phase Review の review-worker がこの結果を踏まえてセキュリティ評価を行い、`review_action`（commit / rework / escalate）を判定する。CVE の深刻度と対応方針の最終判断は review-worker に委ねる。
 
-CVE 監査結果は統合検証結果と共に 3.5.2 の Expert Team Review に入力として渡すこと。
+CVE 監査結果は統合検証結果と共に 3.5.2 の review-worker に入力として渡すこと。
 
-#### 3.5.2 Expert Team Review (multi-perspective review)
+#### 3.5.2 Code Review + Commit (delegate to review-worker)
 
-Phase 完了時は、コミット前に専門家チームによる多角的コードレビューを実施する。詳細は `/phase-review-team` スキルを参照。
-
-**リソース制限**: 並列起動前に `resource-aware-parallelism` Skill のリソース検出を実行し、`MAX_LIGHT_AGENTS` に基づいて専門家をバッチ分割起動する。詳細は `/phase-review-team` スキル内の手順を参照。
-
-**チーム編成（最大5名を並列起動）:**
-
-| Role | Perspective |
-|------|-------------|
-| 実装担当 | 仕様書にある機能を網羅しているか、仕様を逸脱していないか |
-| セキュリティ担当1 | 認証、認可、データ漏洩 |
-| セキュリティ担当2 | OWASP TOP 10、最新の CVE |
-| パフォーマンス担当 | ボトルネック、計算量、リソース効率 |
-| 品質・保守性担当 | テストカバレッジ、読みやすさ、命名規則、DRY 原則 |
-
-**手順:**
-
-1. `MAX_LIGHT_AGENTS` に基づき、5名の専門家を Agent tool でバッチ分割起動（リソースが十分な場合は全員同時並列。プロンプト詳細は `/phase-review-team` スキルを参照）
-2. 各担当は独立して調査し、具体的な問題箇所と改善案を報告
-3. リーダー（オーケストレーター）は各報告を統合し、優先度付き最終レポートを作成
-4. レポートを `.spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md` に保存
-
-**Verdict に基づく分岐:**
-
-| Verdict | Condition | Action |
-|---------|-----------|--------|
-| **PASS** | P0 = 0, P1 = 0 | 3.5.3 に進む（review-worker にコミットを委譲） |
-| **NEEDS_REWORK** | P0 = 0, P1 > 0 | P1 の発見事項を parallel-worker に差し戻し。修正後、変更箇所のみ再レビュー（最大2回） |
-| **BLOCK** | P0 > 0 | ユーザーにエスカレート |
-
-#### 3.5.3 Code Review + Commit (delegate to review-worker)
-
-Expert Team Review で PASS 後、PhaseReview 専用の Worktree を作成し、review-worker にコミットを委譲する:
+Phase 完了時は、Pre-Phase CVE Audit と統合検証結果をまとめて PhaseReview 専用の Worktree を作成し、review-worker にコミットを委譲する。Phase 全体の最終レビューと commit は review-worker の単発呼び出しで行う:
 
 ```bash
 # PhaseReview 専用 Worktree を作成
@@ -431,10 +400,8 @@ Agent({
   subagent_type: "spec-workflow-mcp:review-worker",
   description: "Phase review: final commit",
   prompt: `⚠️ INDEPENDENT REVIEW REQUIRED ⚠️
-    Expert team review has already been completed, but you MUST perform your own independent review.
-    Previous review results are reference only — your job is to find problems, not confirm prior approval.
-
     As a phase review, please perform a final review and commit all files changed in the current Phase.
+    This is the **single review pass for the Phase** — earlier per-task reviews are scoped to individual tasks; the Phase-wide multi-perspective evaluation is your responsibility here.
 
     Project path: {project-path}
     Spec name: {spec-name}
@@ -450,7 +417,18 @@ Agent({
     - Integration Tests: {integration-verification.integration-tests}
     - Smoke Test: {integration-verification.smoke-test}
 
-    Expert team review report: .spec-workflow/specs/{spec-name}/reviews/phase-{phase-number}-review.md (reference only).
+    Pre-Phase CVE Audit Results (from step 3.5.1):
+    - cargo audit: {pre-phase-cve.cargo-audit}
+    - npm audit: {pre-phase-cve.npm-audit}
+    - Critical/High CVEs: {pre-phase-cve.critical-high-list}
+
+    Perform multi-perspective review covering:
+    - 仕様適合（_Prompt の Success 基準を逐一確認）
+    - 認証・認可・データ漏洩（C2-C4）
+    - OWASP TOP 10 と CVE 監査結果の評価（C1-C8 + 上記の Pre-Phase CVE 結果）
+    - パフォーマンス（ボトルネック、計算量、リソース効率）
+    - テストカバレッジ・命名・DRY などの品質観点
+
     Focus on final quality checks (rustfmt, clippy, tests) and commit.
     Review across all aspects (A–G) and report review_action as commit / rework / escalate.
     Include integration-verification results in your completion report.
@@ -460,13 +438,13 @@ Agent({
 })
 ```
 
-- **review_action: commit** → proceed to 3.5.4
+- **review_action: commit** → proceed to 3.5.3
 - **review_action: rework** → follow the normal rework flow (identify the root cause task and send it back to that task's parallel-worker)
 - **review_action: escalate** → follow the normal escalate flow
 
 > **CI フィードバック**: CI ワークフローが `/setup-ci` で構成されている場合、テスト結果サマリーが PR コメントに自動投稿される（sticky comment 方式で更新）。Phase Review 後に `/create-pr` で PR を作成した際、CI 実行結果を PR コメントから確認可能。`--no-pr-comments` で無効化されている場合はコメント投稿なし。
 
-#### 3.5.4 Complete
+#### 3.5.3 Complete
 
 review-worker has committed. Merge the PhaseReview worktree and clean up:
 

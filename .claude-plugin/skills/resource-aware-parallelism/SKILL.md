@@ -1,7 +1,7 @@
 ---
 name: resource-aware-parallelism
 description: |
-  並列エージェント起動前にシステムリソース (CPU コア数 / 空きメモリ) を動的検出し、最大並列数を自動調整するスキル。重量エージェント (parallel-worker, integ-test-worker など compile-heavy) には MAX_HEAVY_AGENTS、軽量エージェント (phase-review-team experts など read-mostly) には MAX_LIGHT_AGENTS を段階的閾値で算出し、SWM_MAX_PARALLEL_AGENTS 環境変数による上書きにも対応。spec-implement の wave 実行前、integration-test の Worker 割当前、phase-review-team の専門家起動前、任意の並列サブエージェント起動前に参照。
+  並列エージェント起動前にシステムリソース (CPU コア数 / 空きメモリ) を動的検出し、最大並列数を自動調整するスキル。重量エージェント (parallel-worker, integ-test-worker など compile-heavy) には MAX_HEAVY_AGENTS を段階的閾値で算出し、SWM_MAX_PARALLEL_AGENTS 環境変数による上書きにも対応。spec-implement の wave 実行前、integration-test の Worker 割当前、任意の並列サブエージェント起動前に参照。
 allowed-tools: [Read, Bash, Grep]
 ---
 
@@ -12,7 +12,6 @@ allowed-tools: [Read, Bash, Grep]
 - 複数の並列サブエージェントを起動する前の max concurrency 決定
 - `spec-implement` の wave 実行時のサブバッチ分割
 - `integration-test` / `integration-test-dotnet` の Worker 割当
-- `phase-review-team` の並列専門家起動
 - `wave-harness-worker` / `parallel-worker` などの並列フレームワーク利用時
 
 ## 対象外
@@ -65,18 +64,7 @@ else
   MAX_HEAVY_AGENTS=1
 fi
 
-# 軽量エージェント（読み取り中心: phase-review-team experts）
-if [ -n "$MAX_OVERRIDE" ]; then
-  MAX_LIGHT_AGENTS=$MAX_OVERRIDE
-elif [ "$CPU_CORES" -ge 4 ] && [ "$FREE_MEM_MB" -ge 4096 ]; then
-  MAX_LIGHT_AGENTS=5
-elif [ "$CPU_CORES" -ge 2 ] && [ "$FREE_MEM_MB" -ge 2048 ]; then
-  MAX_LIGHT_AGENTS=3
-else
-  MAX_LIGHT_AGENTS=2
-fi
-
-echo "[resource-check] CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY_AGENTS MAX_LIGHT_AGENTS=$MAX_LIGHT_AGENTS"
+echo "[resource-check] CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY_AGENTS"
 ```
 
 ### 2. エージェント種別分類
@@ -84,7 +72,6 @@ echo "[resource-check] CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_A
 | 種別 | 変数 | 対象エージェント | 特徴 |
 |---|---|---|---|
 | 重量 | `MAX_HEAVY_AGENTS` | `parallel-worker`, `integ-test-worker` | cargo build/test/clippy、高メモリ |
-| 軽量 | `MAX_LIGHT_AGENTS` | `general-purpose`（phase-review-team experts） | ほぼ読み取り専用 |
 
 ### 3. 閾値テーブル（重量エージェント）
 
@@ -95,24 +82,16 @@ echo "[resource-check] CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_A
 | >= 2 | >= 4GB | 2 | 最低限の並列化 |
 | < 2 or < 4GB | — | 1 | 逐次実行（安全策） |
 
-### 4. 閾値テーブル（軽量エージェント）
+### 4. ユーザー上書き
 
-| CPU コア | 空きメモリ | 最大並列 | 根拠 |
-|:---:|:---:|:---:|---|
-| >= 4 | >= 4GB | 5 | 読み取り中心のため制約が緩い |
-| >= 2 | >= 2GB | 3 | コンテキスト切替オーバーヘッド考慮 |
-| < 2 or < 2GB | — | 2 | 最小グループ |
-
-### 5. ユーザー上書き
-
-環境変数 `SWM_MAX_PARALLEL_AGENTS` で自動検出値を上書きできる（重量・軽量の区別なく両方に適用）:
+環境変数 `SWM_MAX_PARALLEL_AGENTS` で自動検出値を上書きできる:
 
 ```bash
 # 例: 最大 2 エージェントに制限
 export SWM_MAX_PARALLEL_AGENTS=2
 ```
 
-### 6. 適用ルール
+### 5. 適用ルール
 
 1. **並列エージェント起動前に必ずリソース検出を実行**
 2. wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合、wave を**サブバッチ**に分割する
@@ -136,7 +115,7 @@ export SWM_MAX_PARALLEL_AGENTS=2
 
 ## 関連 Rule / Skill
 
-- 関連 Skill: `spec-implement`, `integration-test`, `integration-test-dotnet`, `phase-review-team`
+- 関連 Skill: `spec-implement`, `integration-test`, `integration-test-dotnet`
 - 関連 Rule: `failure-taxonomy`（リソース枯渇で SIGKILL 発生時の分類）
 
 ## 参考リンク
