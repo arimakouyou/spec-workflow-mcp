@@ -143,9 +143,20 @@ Phase 2 step 3.5 と同様、AI の学習データのデフォルト値を使用
 
 ### 4. Generate Test Specifications via Subagents
 
-3つのサブエージェントを **並列で** 起動し、UT/IT/E2E 仕様をそれぞれ独立に導出する。
+複数のサブエージェントを **並列で** 起動し、UT/IT/ST/E2E 仕様をそれぞれ独立に導出する（CT は H-2 後に追加）。
 
-**重要**: 3つの Agent 呼び出しを **1つのメッセージ内で同時に** 行うこと（並列実行）。
+**重要**: 全 Agent 呼び出しを **1つのメッセージ内で同時に** 行うこと（並列実行）。
+
+#### 明示宣言ベースの derivation（K-7、`dapper-hardening-orchestrator.md` 参照）
+
+各 Subagent は、derivation の **最優先入力**として **design.md DES-N の `Test Layers:` フィールド宣言**（K-2 で必須化）と **requirements.md REQ-N.M の `Test Layers:` フィールド宣言**（K-1 で必須化）を読み込み、**宣言された層に対応する仕様のみ**を導出する。宣言外の層を heuristic で導出することを禁止。
+
+- DES-11 が `Test Layers: UT, CT, ST-1` と宣言 → Subagent A は UT-11.x、Subagent D（H-2 後）は CT-11、Subagent E は ST-1 を導出
+- DES-3 が `Test Layers: UT, IT-19` と宣言 → Subagent A は UT-3.x、Subagent B は IT-19 を導出。Subagent C/D/E は対応 spec を生成しない
+
+**フォールバック**: design.md / requirements.md に Test Layers 宣言が無い（legacy）場合のみ、各 Subagent は従来の heuristic で derivation する。新規 spec は宣言ベース必須（K-2 / K-1 / K-6 / K-7 が連動）。
+
+各 Subagent の prompt 内で、design.md / requirements.md の `Test Layers:` フィールドを読み取り、自身の責務層に該当するコンポーネント / 要件のみを処理対象とすること。
 
 #### Subagent A: UT 仕様の導出
 

@@ -917,7 +917,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | 項目 | sub-plan | POC plan | Status | 開始日 | 完了日 |
 |------|---------|---------|:------:|--------|--------|
 | **J-3 先行**: Test Taxonomy セクション | （J 内に統合）| （不要）| **DONE** | 2026-04-28 | 2026-04-28 |
-| **K**: 上流仕様書 content 拡張 | `upstream-spec-content-expansion.md` | （不要）| IN PROGRESS | 2026-04-28 | - |
+| **K**: 上流仕様書 content 拡張 | `upstream-spec-content-expansion.md` | （不要）| **DONE** (7/7、Subagent D 部分は H 後)| 2026-04-28 | 2026-04-28 |
 | **J**: テスト分類 + ST + Regression（残り） | `test-taxonomy-and-st-introduction.md` | （不要）| **DONE** (10/10、setup-ci 改訂は後続)| 2026-04-28 | 2026-04-28 |
 | **I**: UT 品質特性 enforce | `ut-quality-properties-enforce.md` | `nextest-shuffle-isolation-lints-poc.md` | **POC PENDING** | - | - |
 | **H**: CT 層導入 | `component-test-layer-introduction.md` | `wasm-bindgen-test-leptos-poc.md` | **POC PENDING** | - | - |
