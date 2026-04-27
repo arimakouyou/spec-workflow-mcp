@@ -10,9 +10,30 @@ allowed-tools: [Read, Edit, Write, Bash, Grep]
 ## 対象
 
 - ユーザーから報告されたバグの修正作業（RT1 に従って再現テストを先に作成）
-- 受け入れ基準 (REQ-N) とテスト (UT / IT / E2E) の紐付け設計
+- 受け入れ基準 (REQ-N) とテスト (UT / CT / IT / ST / E2E) の紐付け設計
 - Traceability Matrix の更新・検証
 - リグレッションスイートの構成レビュー
+
+## Regression は層ではなく cross-cutting type（J-8 で明示化）
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 J（J-8）。
+
+Regression は **テスト層ではなく cross-cutting type**（横断的属性）として位置付ける:
+
+- 既存のテスト分類（UT / CT / IT / ST / smoke / E2E、`quality-checks.md` の Test Taxonomy 参照）の **すべての層に regression marker を付けることができる**
+- たとえば backend バグの再発防止なら IT-regression、UI の状態遷移バグなら CT-regression、user journey の壊れたシナリオなら E2E-regression
+
+各層と regression の組合せ例:
+
+| 層 | regression test の例 | ファイル配置 / 命名 |
+|---|------|---|
+| UT | `regression_issue_123_login_fails_with_special_chars` | inline `#[cfg(test)] mod tests` 内 |
+| CT | `regression_issue_456_signal_does_not_fire_after_unmount` | `tests/component/` 内 |
+| IT | `regression_issue_789_db_constraint_violation` | `tests/integration/it_regression_*.rs` |
+| ST | `regression_issue_012_search_resets_after_filter_change` | `tests/system/st_regression_*.spec.ts` |
+| E2E | `regression #345: full checkout flow breaks on coupon` | `tests/e2e/e2e-regression-NNN.spec.ts` |
+
+RT1/RT2/RT3 はこれら **すべての層** に適用可能。バグの影響範囲が単一機能で UI を含むなら ST-regression、複数機能の連鎖が壊れる重大バグなら E2E-regression、というように層を選ぶ。
 
 ## 対象外
 
@@ -59,13 +80,17 @@ it('regression #123: login fails with special chars in username', () => {
 });
 ```
 
-#### テストレベル振り分け
+#### テストレベル振り分け（J-8 で更新、新 taxonomy 反映）
 
 | バグの影響範囲 | テストレベル | 配置先 |
 |---|---|---|
-| 単一関数 / メソッド | Unit Test | `src/` 内のテストモジュール |
-| コンポーネント間結合 | Integration Test | `tests/` |
-| ユーザージャーニー | E2E Test | `e2e/` or `tests/e2e/` |
+| 単一関数 / メソッド | UT (Unit Test) | inline `#[cfg(test)] mod tests` |
+| component reactivity（mount → signal → DOM） | **CT (Component Test)** | `tests/component/` または `*_ct.rs` |
+| backend HTTP API endpoint | IT (Integration Test、backend HTTP only) | `tests/integration/` or `crates/server/tests/it_regression_*.rs` |
+| 単一機能の full-stack 動作（UI → backend → UI） | **ST (System Test)** | `tests/system/` or `tests/e2e/st_regression_*.spec.ts` |
+| 複数機能の連鎖を含む user journey | E2E (End-to-End) | `tests/e2e/e2e-regression-NNN.spec.ts` |
+
+各層の責務範囲詳細は `quality-checks.md` の Test Taxonomy 参照。バグの本質が UT で再現可能なら UT、UI 統合が必要なら CT/ST、user journey が必要なら E2E、というように **最も狭い適切な層** を選ぶ（テストの安定性とコストを両立）。
 
 #### Issue テンプレート（推奨フィールド）
 
@@ -102,25 +127,29 @@ it('regression #123: login fails with special chars in username', () => {
 3. **全件 CI 実行**: `cargo test` / `npm test` などのデフォルト実行対象に含める
 4. **Traceability 維持**: 各テストに Requirement ID (REQ-N) をコメント or 命名で紐付け
 
-#### Traceability Matrix 例
+#### Traceability Matrix 例（J-8 で CT/ST 列追加）
 
 ```markdown
-| Requirement ID | UT Specs | IT Specs | E2E Specs | Notes |
-|---|---|---|---|---|
-| REQ-1 | UT-1.1, UT-1.2 | IT-1 | E2E-1 | |
+| Requirement ID | UT Specs | CT Specs | IT Specs | ST Specs | E2E Specs | Notes |
+|---|---|---|---|---|---|---|
+| REQ-1 | UT-1.1, UT-1.2 | CT-1 | IT-1 | ST-1 | E2E-1 | |
 ```
 
-**チェック方法**: 全 REQ-N に最低 1 つの UT + 関連する IT or E2E が紐付く。未カバーは Phase Review で検出・追加要求。
+**チェック方法**: 全 REQ-N に最低 1 つの UT + 関連する CT/IT/ST/E2E（責務に応じた層）が紐付く。未カバーは Phase Review で検出・追加要求。
 
 ### 3. RT3: リグレッションスイート管理
 
-#### スイート構成
+#### スイート構成（J-8 で CT/ST 列追加）
 
 | スイート | 実行タイミング | 内容 |
 |---|---|---|
 | Unit Regression | コミット前 / PR CI | 全 UT（バグ由来含む） |
-| Integration Regression | Phase Review / E2E Gate | 全 IT |
-| E2E Regression | Final E2E Gate | 全 E2E |
+| **Component Regression** | Phase Review / PR CI | 全 CT（バグ由来含む） |
+| Integration Regression | Phase Review / E2E Gate / PR CI | 全 IT（backend HTTP only） |
+| **System Regression** | Phase Review / Final E2E Gate / PR CI | 全 ST（単一機能 full-stack） |
+| E2E Regression | Final E2E Gate / PR CI | 全 E2E（user journey） |
+
+**CI gate 化（J-9 で QC16 として確定）**: PR / merge 時に **全層 + regression marked テスト** の全件 PASS を必須化。`regression_issue_*` パターンを git 履歴から自動収集。詳細は `quality-checks.md` QC16 参照。
 
 #### 健全性指標
 

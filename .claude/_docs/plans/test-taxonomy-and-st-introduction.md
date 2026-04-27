@@ -51,16 +51,16 @@
 
 ### J-8: regression-test-policy を新 taxonomy に整合させる改訂
 
-- [ ] `regression-test-policy/SKILL.md` 全面改訂
-- [ ] 「Regression は層ではなく cross-cutting type」を明示
-- [ ] RT1/RT2/RT3 を UT/CT/IT/ST/E2E すべての層に適用可能と再定義
-- [ ] 命名規則の統一（各層で `regression_issue_NNN_*` 規格）
+- [x] `regression-test-policy/SKILL.md`「Regression は層ではなく cross-cutting type」セクション新設
+- [x] RT1/RT2/RT3 の対象を UT / CT / IT / ST / E2E に拡張
+- [x] テストレベル振り分け表に CT / ST 行追加
+- [x] Traceability Matrix 例に CT / ST 列追加
+- [x] スイート構成表に Component Regression / System Regression 追加
 
 ### J-9: `quality-checks.md` 新規 QC16: Regression Gate
 
-- [ ] `quality-checks.md` に QC16 セクション追加
-- [ ] PR / merge 時に全層 + regression marked テスト必須実行を CI gate 化
-- [ ] `setup-ci/SKILL.md` 改訂で `regression_issue_*` 自動収集 step を追加
+- [x] `quality-checks.md` に QC16 セクション追加（PR / merge gate、命名規則、自動収集コマンド、Phase Review 連携）
+- [ ] `setup-ci/SKILL.md` 改訂で `regression_issue_*` 自動収集 step を追加（後続作業で対応）
 
 ### J-10: spec-tasks に `_RegressionBugId` メタデータ強制
 
@@ -82,7 +82,11 @@
 | 2026-04-28 | J-4: Step B Check 15 (TEST_LAYER_BOUNDARY) | 717a641 | 当初計画 Check 19 → 15 に番号調整（既存 14 まで） |
 | 2026-04-28 | J-5: spec-tasks 3.6 IT/ST/E2E 配置ルール改訂 | （これから commit）| spec-tasks 3.6 を IT/ST/E2E Test Tasks に拡張、配置ルール優先順序明示 |
 | 2026-04-28 | J-7: spec-tasks Step 7 Check 20 (ST_PLACEMENT) | （これから commit）| ST 仕様の task 化を強制 |
-| 2026-04-28 | J-10: spec-tasks _BugFix + _RegressionBugId | （これから commit）| Step 4 metadata 説明 + Step 7 Check 21 + bugfix task 例示。parallel-worker 改訂は後続 |
+| 2026-04-28 | J-10: spec-tasks _BugFix + _RegressionBugId | 151373e | Step 4 metadata 説明 + Step 7 Check 21 + bugfix task 例示。parallel-worker 改訂は後続 |
+| 2026-04-28 | J-5: spec-tasks 3.6 IT/ST/E2E 配置ルール改訂 | 151373e | spec-tasks 3.6 を IT/ST/E2E Test Tasks に拡張、配置ルール優先順序明示 |
+| 2026-04-28 | J-7: spec-tasks Step 7 Check 20 (ST_PLACEMENT) | 151373e | ST 仕様の task 化を強制 |
+| 2026-04-28 | J-8: regression-test-policy 新 taxonomy 整合 | （これから commit）| cross-cutting type 明示 + RT1/RT2/RT3 を全層に拡張 + Matrix / Suite 表更新 |
+| 2026-04-28 | J-9: QC16 Regression Gate | （これから commit）| quality-checks.md QC16 セクション追加。setup-ci 改訂は後続 |
 
 ## Check / Subagent 番号付け（実装で確定したもの）
 

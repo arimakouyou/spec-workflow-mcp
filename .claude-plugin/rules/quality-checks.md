@@ -963,3 +963,75 @@ finding を起票する根拠として使う。
 - line: 60%, branch: 55% → 単純にテスト総量が不足
 
 両指標を分離して見ることで「コード行は通したが分岐は通していない」状態を捕捉できる。
+
+---
+
+## QC16: Regression Gate (J-9 で新設)
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 J（J-9）。
+> Regression は cross-cutting type（`regression-test-policy/SKILL.md` 参照）。すべての層（UT / CT / IT / ST / E2E）に regression marker を付けた tests が含まれ得る。
+
+### 目的
+
+PR / merge 時に **全層 + regression marked テスト** の全件 PASS を必須化することで、修正による新規バグの流入を機械的に防ぐ。
+
+### Regression marked テストの命名規則
+
+`regression-test-policy/SKILL.md` の規約に従う:
+
+| 言語 / フレームワーク | パターン |
+|---|---|
+| Rust | `fn regression_issue_NNN_<description>()` |
+| TypeScript / JavaScript | `it('regression #NNN: <description>', ...)` |
+| C# / .NET | `[Fact] public void Regression_Issue_NNN_<Description>()` |
+
+### 自動収集と CI 統合
+
+PR / merge workflow で以下を実行:
+
+```bash
+# Rust: regression test を grep して run
+cargo test --workspace -- regression_issue_
+
+# TypeScript / Playwright
+npx playwright test --grep "regression #"
+
+# .NET / xUnit
+dotnet test --filter "FullyQualifiedName~Regression_Issue_"
+```
+
+CI workflow テンプレ（`/setup-ci` で生成、J-9 で改訂対応必要）:
+
+```yaml
+- name: Regression Gate (QC16)
+  run: |
+    # 全層 regression テスト実行
+    cargo test --workspace -- regression_issue_ 2>&1 | tee regression-rust.log
+    npx playwright test --grep "regression #" 2>&1 | tee regression-ts.log
+    # 失敗したら CI fail
+```
+
+### Phase Review 時の確認
+
+`spec-implement/SKILL.md` Step 3.5.2 (review-worker delegation) で、当該 Phase で修正したバグ系 task に対応する regression test が実装済みか確認:
+
+- task に `_BugFix: true` + `_RegressionBugId: BUG-NNN` がある（spec-tasks Step 7 Check 21）
+- 対応する regression test が存在する（ファイル grep で確認）
+- regression test が PASS している
+
+### 既存テストとの併用
+
+QC16 は既存の QC3 (test) / QC7 (Integration Verification) / QC13 (Branch Coverage) と **併用**する:
+
+- QC3 / QC7 は **すべてのテスト**を実行
+- QC16 は **regression marker を持つテスト**だけを抽出して別 step として実行（fail 時に「regression が壊れた」と明示）
+- QC16 は **必ず blocking**（advisory ではない。修正による新バグの流入を即検出するため）
+
+### 既存 spec の retrofit
+
+既存の bug fix commit で `regression_issue_*` 命名規則が適用されていない場合は warning。次バージョンから新規バグ修正は必須化。
+
+### 注意
+
+- QC14 (UI Smoke Render, E-3) と QC15 (UT Properties Gate, I-2) は **未実装**。本 QC16 は J-9 として先行実装
+- QC16 は **CI gate**（PR / merge 時の blocking）。Phase Review 内のローカル実行は QC3 / QC7 で間接的にカバー
