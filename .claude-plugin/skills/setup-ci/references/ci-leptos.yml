@@ -79,6 +79,44 @@ jobs:
             echo "tests/architecture.rs not found — skipping (run /generate-arch-tests if Module Boundaries are defined)"
           fi
 
+      - name: Component Tests (QC14, wasm-bindgen-test)
+        id: component-tests
+        # dapper-hardening H-1: Leptos component の reactivity test を
+        # cargo test --target wasm32-unknown-unknown で実行（wasm-pack 不要）。
+        # .cargo/config.toml に runner = "wasm-bindgen-test-runner" 設定 + Firefox/Chromium 必要。
+        # Component test (#[wasm_bindgen_test]) が存在しない場合は skip。
+        run: |
+          if grep -rq "wasm_bindgen_test" --include="*.rs" . 2>/dev/null; then
+            echo "Detected wasm-bindgen-test — running Component Tests"
+            # Firefox（snap/apt）or Chromium が必要。CI runner で event 前に install を想定
+            cargo test --target wasm32-unknown-unknown --lib --quiet 2>&1 | tee /tmp/ct-output.txt
+          else
+            echo "No wasm-bindgen-test found — Component Test Gate dormant"
+          fi
+
+      - name: Regression Gate (QC16)
+        id: regression-gate
+        # dapper-hardening J-9: regression_issue_NNN_* test を全件抽出して実行
+        run: |
+          set -o pipefail
+          if grep -rq "regression_issue_" --include="*.rs" . 2>/dev/null; then
+            cargo test --workspace --quiet -- regression_issue_ 2>&1 | tee /tmp/regression-output.txt
+          else
+            echo "No regression_issue_* tests detected — Regression Gate dormant"
+          fi
+
+      - name: UT Properties Gate (QC15)
+        id: ut-properties-gate
+        # dapper-hardening I-2: clippy disallowed-methods で clock/RNG/env/fs/HTTP の
+        # 直接呼出を deny-level で禁止
+        if: hashFiles('clippy.toml') != ''
+        run: |
+          if grep -q "disallowed-methods" clippy.toml 2>/dev/null; then
+            cargo clippy --all-targets --workspace -- -D clippy::disallowed_methods
+          else
+            echo "clippy.toml has no disallowed-methods — UT Properties Gate dormant"
+          fi
+
       - name: Mutation testing (cargo-mutants, --in-diff, advisory)
         id: mutation-testing
         # plan-redesign #7: 差分モードで mutation testing を実行。

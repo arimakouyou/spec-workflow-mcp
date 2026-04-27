@@ -83,6 +83,42 @@ When retry limits approach (per advisor-usage.md), include your diagnosis AND th
 - **RED phase**: `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` のパターンに従い、コンポーネントからロジックを抽出しテストを記述する。`view!` マクロ出力のテストは書かない
 - **GREEN phase**: テスト対象の抽出ロジック関数を先に実装し、次に `#[component]` と `view!` マクロに配線する
 - **Quality checks**: `cargo test` 通過後、`cargo leptos build` で WASM コンパイルを検証する（既存の Leptos Full-Stack Projects セクションに従う）
+- **Component Test (CT)（H で追加、dapper-hardening）**: `view!` 出力 / DOM 配線 / Suspense / Resource の検証は **CT 責務**。`tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 + `quality-checks.md` QC14 に従って `wasm-bindgen-test` で記述。CT 実行は `cargo test --target wasm32-unknown-unknown` で
+
+### Bug Fix Mode (RT1 フロー、J-10 で追加、dapper-hardening)
+
+タスクが `_BugFix: true_` を持つ場合、または `_Prompt` の Role が `Bug Fixer` の場合、**RT1 フロー** に従う（`regression-test-policy/SKILL.md` 参照）:
+
+1. **再現テストを先に作成（RED phase）**:
+   - `_RegressionBugId: BUG-NNN` (または `GH#NNN`) から バグ番号を抽出
+   - 命名規則 `regression_issue_NNN_<description>` (Rust) / `it('regression #NNN: ...')` (TS) で **失敗するテストを先に書く**
+   - バグの影響範囲に応じて適切な層を選ぶ:
+     - 単一関数のロジックバグ → UT (`#[cfg(test)] mod tests`)
+     - component reactivity バグ → CT (`tests/component/` または `*_ct.rs`)
+     - backend HTTP バグ → IT (`crates/server/tests/it_regression_*.rs`)
+     - 単一機能の full-stack バグ → ST (`tests/system/st_regression_*.spec.ts`)
+     - 複数機能連鎖バグ → E2E (`tests/e2e/e2e-regression-NNN.spec.ts`)
+   - テストが **fail することを確認**（RED）
+
+2. **バグ修正実装（GREEN phase）**:
+   - 通常の TDD GREEN フローに従い、テストが pass する最小実装を行う
+   - **既存テストを破壊しないこと**（regression test として永続化されるため、後の test design 変更で削除しないよう review-worker に申し送り）
+
+3. **REFACTOR phase**:
+   - 通常通り refactor + test 全件 PASS 確認
+
+4. **完了レポート**:
+   - 通常の completion report に加えて以下を記録:
+     - `bug_id`: BUG-NNN / GH#NNN
+     - `regression_test_path`: 作成した regression test のファイルパス + 関数名
+     - `regression_test_layer`: UT / CT / IT / ST / E2E
+     - `verification_steps`: 修正前に test が fail することを確認した手順
+
+5. **review-worker への引き継ぎ**:
+   - review-worker は spec-tasks Step 7 Check 21 (REGRESSION_BUG_ID) と整合する形で、`_RegressionBugId` と命名規則の一致を確認する
+   - QC16 (Regression Gate, J-9) で本 regression test が PR / merge gate に組み込まれることを確認
+
+詳細フロー: `regression-test-policy/SKILL.md` の RT1 セクション参照。
 
 ## Working Directory
 
