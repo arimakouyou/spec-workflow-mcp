@@ -30,6 +30,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 | **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is the test engineer's (`frontend-test-engineer` or `unit-test-engineer`) responsibility |
 | **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
 | **Do not skip agent calls** | Each step's agent call cannot be skipped |
+| **Do not invent concepts not in this spec** (A、dapper-hardening) | 「Auto Mode」「継続モード」「自動進行」など、**本 SKILL.md に存在しない概念を発明してユーザー確認をスキップしてはならない**。Phase 進行 / Wave 進行 / 大規模並列起動の前は user confirmation が必須。`auto-resume.sh` はレートリミット復旧専用であり、ユーザー意思確認の代替ではない。dojin-viewer での実事例: Claude が「Auto Mode のため Wave 2 へ進みます」と発言し、ユーザーから「指示を出したつもりはない」と指摘された |
 
 **For any reason whatsoever (e.g., "it's a simple task", "I can do it myself"), do not skip agent calls.**
 
@@ -286,6 +287,36 @@ Look at the task's `_Prompt` field for structured guidance:
 ### 3.5 Phase Review Tasks
 
 If the task has `_PhaseReview: true_`, **skip the TDD cycle (steps 4-5)** and instead:
+
+#### 3.5.0 Bookkeeping Commit（B で新設、dapper-hardening）
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 B（B-1）。
+> Phase Review worktree を切る前に、main 側に未 commit の bookkeeping ファイル（tasks.md `[x]` マーク更新、Implementation Logs/）を commit する。これがないと PhaseReview worktree (HEAD 派生) は bookkeeping を見ないため、PhaseReview commit 後にも main 側の差分が残ったままになる。
+
+```bash
+# main 側で未 commit の bookkeeping をチェック
+SPEC_DIR=".spec-workflow/specs/{spec-name}"
+BOOKKEEPING_FILES=$(git status --porcelain | grep -E "${SPEC_DIR}/(tasks\.md|Implementation Logs/)" || true)
+
+if [ -n "$BOOKKEEPING_FILES" ]; then
+  echo "Bookkeeping changes detected:"
+  echo "$BOOKKEEPING_FILES"
+
+  # bookkeeping のみを stage
+  git add ".spec-workflow/specs/{spec-name}/tasks.md" \
+          ".spec-workflow/specs/{spec-name}/Implementation Logs/"
+
+  # commit（コミットメッセージは機械的）
+  git commit -m "chore({spec-name}): bookkeeping for phase {phase-number}"
+
+  echo "[bookkeeping] committed"
+fi
+```
+
+これにより:
+- 次の PhaseReview worktree（HEAD 派生）は bookkeeping を含む状態から切り出される
+- review-worker は spec/ 配下の bookkeeping を **review 範囲から除外** してよい（機械的更新のため）
+- main 側に未 commit 差分が残らない（B 起点の問題が解消）
 
 #### 3.5.1 Run Tests
 

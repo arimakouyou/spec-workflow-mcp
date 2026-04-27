@@ -199,6 +199,14 @@ Key Design Decisions セクションの各決定事項から ADR (Architecture D
 
 ### 4. Architecture Confirmation (Present to User)
 
+> ⛔ **MUST: ユーザー確認は必須**（A 起点、dapper-hardening）
+>
+> Wave 1 → Wave 2 の遷移は、user reply `continue` でのみ許可される。**「Auto Mode のため省略」「継続モード」など、本仕様に存在しない概念を発明してユーザー確認をスキップしてはならない**。
+>
+> 過去事例（dojin-viewer）: Claude が「Auto Mode」を発明して Wave 1 完了後にユーザー確認なしで Wave 2 へ進み、ユーザーから「指示を出したつもりはないが、これは想定した動作か？」と指摘された。これは本 SKILL.md の仕様ではない（hallucination）。
+>
+> `auto-resume.sh` はレートリミット復旧専用であり、ユーザー意思確認の代替ではない。Wave/Phase 進行の前は **明示的な user reply を必ず受信する**。
+
 After creating the Wave 1 document, present the following to the user **without using the formal approval tool**:
 
 ```
@@ -501,6 +509,10 @@ Agent({
     10. TEST LAYERS PER DES (K-2, dapper-hardening): Every '### DES-N:' must declare a 'Test Layers:' field with values from quality-checks.md Test Taxonomy (UT/CT/IT/IT-N/ST/ST-N/E2E/E2E-N の組合せ)
     11. ARCHITECTURE FOR TESTABILITY (K-3): A '## Architecture for Testability' section must exist and contain all 5 sub-sections: Mock points, Clock injection, RNG injection, External I/O isolation, Test fixtures
     12. PHASE DELIVERABLES (K-4): A '## Phase Deliverables' section must exist with at least one '### Phase N:' heading, each declaring Deliverable / Test Layers / Smokeable
+    13. TYPE_REFERENCE_RESOLUTION (C-1, dapper-hardening): Every custom type referenced in DES-N の `Interfaces:` field signatures (e.g., `Result<X, E>`, `Vec<T>`, `Signal<T>`, `Callback<T>` の inner types) must be defined in either:
+        (a) `### MOD-N:` heading in the same design.md, or
+        (b) Standard library types (std::*, core::*, alloc::*) or known framework types (Leptos / Axum / .NET CLR / Node.js built-ins)
+        Undefined custom types → error: `undefined_type_reference`. Examples of failures: design.md interface uses `RelativePath` but no `### MOD-N: RelativePath` heading exists.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

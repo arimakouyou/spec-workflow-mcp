@@ -269,6 +269,8 @@ Phase 全体の **唯一のレビューパス** を担う（タスクごとの�
 2. **Pre-Phase CVE 監査結果の評価**（cargo audit / npm audit / Critical/High CVE リスト）
 3. **多角観点でのレビュー**（仕様適合 / 認証認可 / OWASP TOP 10 / パフォーマンス / 品質保守性）
 
+> **(B 拡張、dapper-hardening) Bookkeeping commit の扱い**: spec-implement Step 3.5.0 で `chore({spec-name}): bookkeeping for phase N` という機械的 commit が PhaseReview worktree 作成前に main 側で実施される。本 commit に含まれる `.spec-workflow/specs/{spec-name}/tasks.md` の `[x]` マーク更新 / `Implementation Logs/` の追記は **review 範囲から除外** してよい（実装変更ではなく進捗 bookkeeping のため）。本来のコードレビューは worktree 内の実装ファイルに集中する。
+
 ### 統合検証結果の確認
 
 オーケストレーターのプロンプトに含まれる統合検証結果（ビルド / 統合テスト / スモークテスト）を確認する:

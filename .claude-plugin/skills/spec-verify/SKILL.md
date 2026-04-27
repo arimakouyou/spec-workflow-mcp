@@ -140,6 +140,35 @@ Every `DES-N` in `design.md` should be reachable:
 - **`_DependsOn:` values** must reference existing task IDs within the same tasks.md → otherwise **error** (`task_dependency_dangling`)
 - **`_Leverage:` file paths** should exist (best-effort filesystem check) → otherwise **info** (`leverage_file_missing`; may be intentional for future files)
 
+#### Check 9: Type Reference Resolution (per C-3, dapper-hardening)
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 C（C-3）。
+> spec-design Step B Check 13 (TYPE_REFERENCE_RESOLUTION) と spec-test-design Step B Check 18 (SIGNATURE_MATCH) を spec-verify レベルで横断的に実行する。
+
+For each `### DES-N:` in design.md:
+
+1. Parse `Interfaces:` field for function signatures
+2. Extract custom type references (`Result<X, E>` の `X`/`E`、`Vec<T>` の `T`、`Signal<T>` の `T`、`Callback<T>` の `T` など)
+3. Check each custom type:
+   - Is it defined as `### MOD-N: <Type>` heading in the same design.md?
+   - Or is it a standard library type (std::*, core::*, alloc::*)?
+   - Or is it a known framework type allowlist (Leptos の `Signal`, `Resource`, `Callback`、Axum の `Json`, `Path`、.NET の `IActionResult` 等)?
+4. Undefined types → **error** (`undefined_type_reference`) with the type name and location
+
+For each test specification in test-design.md (UT-N.M / CT-N.M / IT-N / ST-N / E2E-N):
+
+1. If the test references a function or method from design.md DES-N, extract the assumed signature
+2. Compare with the actual signature in design.md DES-N の `Interfaces:` field
+3. Mismatch → **error** (`signature_mismatch`) with both signatures shown
+
+Allowlist:
+- Rust: `std::*`, `core::*`, `alloc::*`, `tokio::*`, `serde::*`, `chrono::*`
+- Leptos: `Signal`, `RwSignal`, `ReadSignal`, `WriteSignal`, `Resource`, `Memo`, `Callback`, `RwSignal`, `Effect`, `IntoView`
+- Axum: `Json`, `Path`, `Query`, `State`, `Extension`, `IntoResponse`, `Response`, `Request`
+- .NET: `Task`, `IActionResult`, `ActionResult<T>`, `IEnumerable<T>`, `List<T>`, `Dictionary<K,V>`, `Nullable<T>`
+- Node.js: built-in types (`Promise`, `Array`, `Map`, `Set`)
+- Generic types (`<T>`) are allowed without resolution
+
 #### Check 8: Requirement Test Layers Declaration (per K-1)
 
 > 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 K（K-1）。
