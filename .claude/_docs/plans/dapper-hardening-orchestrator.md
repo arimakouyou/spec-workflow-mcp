@@ -919,7 +919,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | **J-3 先行**: Test Taxonomy セクション | （J 内に統合）| （不要）| **DONE** | 2026-04-28 | 2026-04-28 |
 | **K**: 上流仕様書 content 拡張 | `upstream-spec-content-expansion.md` | （不要）| **DONE** (7/7、Subagent D 部分は H 後)| 2026-04-28 | 2026-04-28 |
 | **J**: テスト分類 + ST + Regression（残り） | `test-taxonomy-and-st-introduction.md` | （不要）| **DONE** (10/10、setup-ci 改訂は後続)| 2026-04-28 | 2026-04-28 |
-| **I**: UT 品質特性 enforce | `ut-quality-properties-enforce.md` | `nextest-shuffle-isolation-lints-poc.md` | **POC PENDING** | - | - |
+| **I**: UT 品質特性 enforce | （master plan で track）| `nextest-shuffle-isolation-lints-poc.md` | IN PROGRESS（POC 完了 2026-04-28、I-1/I-2/I-3/I-4 実装中）| 2026-04-28 | - |
 | **H**: CT 層導入 | `component-test-layer-introduction.md` | `wasm-bindgen-test-leptos-poc.md` | **POC PENDING** | - | - |
 | **D**: spec-tasks 強化 | `tasks-self-review-strengthening.md` | （不要）| TODO | - | - |
 | **E**: Smoke Gate 再設計 | `universal-smoke-gate-redesign.md` | （不要）| TODO | - | - |

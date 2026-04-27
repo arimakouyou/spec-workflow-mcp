@@ -66,9 +66,12 @@ Call `advisor()` at the following points:
 4. **実装**: `#[cfg(test)]` 内または既存テストファイルへ追記し、重複を避ける
 5. **報告**: 何を抽出し、どの観点を追加し、E2E 領域として除外したかを明示する
 
-## Required Test Aspects
+## Required Test Aspects（I-3 で 4 → 6 カテゴリに拡張）
 
-適用不能な項目は省略してよいが、その場合は理由をコメントまたは報告に残すこと。
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 I（I-3）。
+> 4 カテゴリ（Happy Path / Boundary Values / Error Handling / Edge Cases）は positive assertion 寄りだったため、**Negative Assertions** と **Isolation Properties** を追加。「実装時の UT は仕様の検証であり、コードが動くかの確認ではない」という frame を構造的に成立させる。
+
+適用不能な項目は省略してよいが、その場合は理由をコメントまたは報告に残すこと。Negative Assertions / Isolation Properties が "N/A" になる場合は pure function かつ副作用が原理的に無い場合のみ。
 
 ### 1. Happy Path
 - 有効な Props / 入力 / 状態で期待どおりに動く
@@ -90,6 +93,30 @@ Call `advisor()` at the following points:
 - 重複値
 - 長大入力
 - 連続操作、同一イベントの多重呼び出し、ゼロ除算相当の境界
+
+### 5. Negative Assertions（I-3 で追加、仕様外の挙動が起きないことの確認）
+
+- **Mutation 禁止**: 入力 props / signal が呼出後に変化していないこと（pure function は副作用ゼロ）
+- **副作用ゼロ**: 不要な log / metric / event を吐かないこと
+- **Panic 禁止**: 想定外の入力（境界外 / 不正型 / null）で panic ではなく適切な Error / `Option::None` で失敗すること
+- **未定義フィールド禁止**: signal 更新後に想定外フィールドを読み出さない / 出力に含めないこと
+- Leptos 特有の例:
+  - signal 更新後に `untracked()` で読んだ値が期待と一致
+  - Resource error 時に panic ではなく Error 状態で停止
+  - Effect が 1 回だけ実行される（連続発火しない）
+
+### 6. Isolation Properties（I-3 で追加、外部依存ゼロ + 順序非依存 + 決定性）
+
+- **外部依存ゼロ**: clock / RNG / env / fs / HTTP / DB の **直接呼出を test 内に書かない**（design.md K-3 で宣言された Mock 経由のみ）
+  - clippy `disallowed-methods` で機械的に enforce（quality-checks.md QC15 参照）
+- **順序非依存**: 他の test との状態共有 / 順序前提が無いこと
+  - 共有 global mut（`static AtomicX`、`OnceCell` mutable）に依存する test は禁止
+- **決定性**: 同じ入力で常に同じ結果。clock / RNG / 並列性に左右されないこと
+  - 必要なら `MockClock` / `MockRng` で固定値を inject
+- Leptos 特有の例:
+  - WASM target で `js-sys::Date::now()` を直接呼ばず、`MockClock` 経由
+  - fetch を `MockServer` 経由（mockito / wiremock）
+  - signal の初期化に乱数を使わない
 
 ## Leptos フロントエンドの原則
 

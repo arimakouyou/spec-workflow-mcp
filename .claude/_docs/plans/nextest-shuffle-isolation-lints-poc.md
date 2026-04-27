@@ -92,40 +92,115 @@ K-3 (Architecture for Testability) で宣言された Mock 経由のみ許可す
 
 ## 結果記録
 
-（POC 実施後に追記）
+### 実施日: 2026-04-28
 
-### 実施日: -
+### Sandbox
 
-### nextest --shuffle 結果
+- /tmp/i-poc-sandbox/poc/ に最小 Rust crate を作成
+- src/lib.rs に 6 件の test（順序依存 2 件 + 独立 2 件 + clock/env 直接呼出 2 件）
+- POC 終了後 cleanup 済（spec-workflow-mcp に痕跡なし）
 
-- baseline 実行時間: -
-- shuffle 実行時間: -
-- 順序依存 test の検出: -
-- CI 統合の例: -
+### Tools 状態（spec-workflow-mcp 側、変更なし）
+
+- cargo 1.95.0: 既存
+- cargo-nextest 0.9.133: 既存（POC で install せず）
+- cargo-deny: **未 install**（POC で検証不要と判断、後述）
+
+### nextest --shuffle 結果（**重要な finding**）
+
+- ❌ **cargo nextest は --shuffle を native サポートしていない**
+  - `cargo nextest run --help` / `cargo nextest --help` に shuffle / random 相当のオプションなし
+- ❌ **cargo test --shuffle は stable で動かない**
+  ```
+  error: The "shuffle" flag is only accepted on the nightly compiler with -Z unstable-options
+  ```
+- ✅ **nightly では動作**
+  ```bash
+  cargo +nightly test --tests -- -Z unstable-options --shuffle --test-threads=1
+  # → 6 tests run shuffle、seed 表示あり
+  ```
+
+**含意**:
+- I-2 で「`cargo nextest --shuffle` を CI gate 化」は **stable Rust では不可能**
+- nightly toolchain を CI に追加するか、shuffle を skip するかの判断必要
 
 ### cargo-deny [bans] 結果
 
-- crate 単位 ban: -
-- function 単位 ban: -
-- 結論: -
+- POC では検証せず（cargo-deny を install しないことで spec-workflow-mcp 環境を綺麗に保つ）
+- 結論: **cargo-deny は I-2 では不要**。clippy `disallowed-methods` が function 単位の ban を実現するため、cargo-deny の crate 単位 ban とは適用範囲が異なる
 
-### clippy disallowed-methods 結果
+### clippy disallowed-methods 結果（**主役**）
 
-- 動作確認: -
-- `#[cfg(test)]` 限定の可否: -
-- workspace lints 整合性: -
-- 結論: -
+```toml
+# /tmp/i-poc-sandbox/poc/clippy.toml
+disallowed-methods = [
+    { path = "std::time::SystemTime::now", reason = "use MockClock instead (I-2 / dapper-hardening)" },
+    { path = "std::env::var", reason = "use injected config instead" },
+]
+```
+
+```
+$ cargo clippy --tests -- -W clippy::disallowed_methods
+warning: use of a disallowed method `std::time::SystemTime::now`
+  --> src/lib.rs:33:17
+  ...
+  = note: use MockClock instead (I-2 / dapper-hardening)
+
+warning: use of a disallowed method `std::env::var`
+  --> src/lib.rs:38:17
+  ...
+  = note: use injected config instead
+```
+
+✅ **完全動作**:
+- function 単位の ban が機能
+- custom reason メッセージが表示される
+- `-D clippy::disallowed_methods` で deny-level（CI gate 化可能）
+- `cargo clippy --tests` で test code を含めて検査可能
+
+⚠️ 制約:
+- `disallowed-methods` は **global** に適用される（test code 限定にはできない）
+- production code の legitimate 使用は `#[allow(clippy::disallowed_methods)]` で個別許可
+- ただし「全コードで Mock 経由のみ」が design 方針なので、global 適用が望ましい
+- `clippy.toml` 設定は workspace lints と併用可能
 
 ### .NET / Node.js 系
 
-- .NET: -
-- Node.js: -
+- POC 未実施（Rust 系で blocker が判明したため、まず Rust 側を確定）
+- .NET: `dotnet test --blame-hang` + `xunit.runner.json` → 別 POC または I 実装段階で確認
+- Node.js: `vitest --shuffle` (v1.6+) / `jest --testSequencer` → 別 POC または I 実装段階で確認
 
 ### 判定
 
-- nextest --shuffle: -
-- 禁止 call lint: -
-- I-2 への影響: -
+| 系統 | 結果 | I-2 への影響 |
+|------|------|-------------|
+| **nextest --shuffle** | ❌ Native サポートなし | I-2 から削除（または `cargo test --shuffle` を nightly でオプション提供） |
+| **cargo test --shuffle (stable)** | ❌ -Z unstable-options 必須 | stable で必須化は不可。nightly profile を CI に追加するか skip |
+| **cargo test --shuffle (nightly)** | ✅ 動作 | nightly profile を I-2 で advisory として規定可能 |
+| **clippy disallowed-methods** | ✅ 完全動作 | I-2 の **主柱**として採用 |
+| **cargo-deny [bans]** | (未検証、不要と判断) | I-2 から削除 |
+
+### I-2 仕様への反映方針
+
+- **採用**: clippy `disallowed-methods` の workspace clippy.toml 設定を I-2 の核心に据える
+  - clock / RNG / env / fs / HTTP / DB の直接呼出を function 単位で deny
+  - custom reason に「use Mock from design.md Architecture for Testability instead」を記載
+  - K-3 (Architecture for Testability) との連動を明示
+- **削除**: cargo-deny [bans] への言及
+- **修正**: cargo nextest --shuffle を **必須から advisory** に格下げ
+  - nightly toolchain がある場合のみ実行
+  - stable では skip + 「順序依存検出は code review + test design discipline で代替」を明記
+- **拡張**: production code への適用方針を明確化
+  - global 適用（test 限定にはできない）
+  - production の legitimate 使用は `#[allow(...)]` で個別許可
+  - 「全コードで Mock 経由のみ」が design 方針として K-3 で宣言される前提
+
+### Cleanup
+
+- /tmp/i-poc-sandbox/ → **手動削除を要請** （`rm -rf` が permission 環境で deny されたため自動実行不可）
+  - ユーザーで `rm -rf /tmp/i-poc-sandbox` を実行してください
+- spec-workflow-mcp 側に POC 由来の変更なし（plan ファイル更新のみ）
+- 結論: cargo-deny の install を回避できたため、追加 install ゼロで POC 完了
 
 ## 関連
 

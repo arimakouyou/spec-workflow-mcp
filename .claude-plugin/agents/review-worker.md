@@ -114,6 +114,9 @@ Although the test engineer (frontend-test-engineer or unit-test-engineer) has al
 - Is there any hardcoded sensitive information in the test data (e.g., production DB connection strings)?
 - Are there any tests skipped with `#[ignore]`?
 - **test-design.md conformance**: If `Test design doc path` is provided, verify that implemented tests cover the UT specifications defined in test-design.md for the target component. Report any missing test cases as findings
+- **6 categories coverage (I-3, dapper-hardening)**: 確認するカテゴリは Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties** の 6 種。後 2 つを欠く場合は **Moderate finding** として起票:
+  - **Negative Assertions**: 仕様外の挙動が起きないことの test （mutation 禁止 / 副作用ゼロ / panic 禁止 / 未定義フィールド禁止）が含まれるか
+  - **Isolation Properties**: clock / RNG / env / fs / HTTP / DB の直接呼出が test 内に無いか（design.md K-3 で宣言された Mock 経由のみ）。`quality-checks.md` QC15 の clippy `disallowed-methods` で機械的検出されるが、review でも目視確認
 
 ### E2. TDD Process Verification
 

@@ -966,6 +966,119 @@ finding を起票する根拠として使う。
 
 ---
 
+## QC15: UT Properties Gate (I-2 で新設)
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 I（I-2）。
+> POC 結果反映: `.claude/_docs/plans/nextest-shuffle-isolation-lints-poc.md` 参照。
+
+### 目的
+
+UT が **仕様の検証**（仕様充足 + 仕様外不在）を満たし、**外部依存ゼロ + 順序非依存 + 決定性**（FIRST 原則）を保証していることを CI で機械的に enforce する。
+
+「実装時の UT は cargo test PASS（コードが動く）の確認ではなく、仕様の検証である」という frame を構造的に成立させる。
+
+### 構成
+
+#### A. External Dependency Lint（必須、blocking）
+
+**clippy `disallowed-methods` を主柱**として採用（POC で動作確認済）。
+
+`clippy.toml`（または `Cargo.toml` の `[workspace.lints.clippy]`）に以下を設定:
+
+```toml
+# clippy.toml
+disallowed-methods = [
+    # Clock 直接呼出（design.md K-3 Architecture for Testability で宣言された MockClock 経由のみ許可）
+    { path = "std::time::SystemTime::now", reason = "use MockClock from design.md Architecture for Testability instead (K-3)" },
+    { path = "std::time::Instant::now", reason = "use MockClock instead (K-3)" },
+    { path = "chrono::Utc::now", reason = "use MockClock instead (K-3)" },
+    { path = "chrono::Local::now", reason = "use MockClock instead (K-3)" },
+
+    # RNG 直接使用
+    { path = "rand::thread_rng", reason = "use injected MockRng (K-3)" },
+    { path = "rand::random", reason = "use injected MockRng (K-3)" },
+
+    # env 直接読取
+    { path = "std::env::var", reason = "use injected config (K-3)" },
+    { path = "std::env::var_os", reason = "use injected config (K-3)" },
+
+    # fs 直接呼出（tempfile / TestFs 経由が望ましい）
+    { path = "std::fs::read", reason = "use tempfile or injected fs adapter (K-3)" },
+    { path = "std::fs::write", reason = "use tempfile or injected fs adapter (K-3)" },
+    { path = "std::fs::read_to_string", reason = "use tempfile or injected fs adapter (K-3)" },
+
+    # HTTP 直接呼出（mockito / wiremock 経由）
+    { path = "reqwest::get", reason = "use mockito / wiremock (K-3)" },
+    { path = "reqwest::blocking::get", reason = "use mockito / wiremock (K-3)" },
+]
+```
+
+CI 実行コマンド（blocking）:
+
+```bash
+cargo clippy --all-targets --workspace -- -D clippy::disallowed_methods
+```
+
+**動作確認** (POC):
+- `std::time::SystemTime::now` / `std::env::var` を直接呼出 → custom reason 付きで warning 検出
+- `-D clippy::disallowed_methods` で deny-level 化 → CI fail
+- 詳細: `nextest-shuffle-isolation-lints-poc.md` 参照
+
+**例外（production code の legitimate 使用）**:
+
+production code で正当に必要な場合（例: 実 Clock 実装内）は `#[allow(clippy::disallowed_methods)]` で個別許可。原則として全コードで Mock 経由（K-3 設計に従う）。
+
+#### B. Order Independence（advisory、nightly のみ）
+
+POC で判明: **stable Rust では `--shuffle` を CI で必須化できない**（`-Z unstable-options` 必須）。
+
+**stable**: skip。代替として code review + test design discipline で order 依存を防ぐ。
+
+**nightly profile（オプション）**:
+
+```bash
+cargo +nightly test --tests -- -Z unstable-options --shuffle --test-threads=1
+```
+
+CI workflow に nightly profile を持つプロジェクトでは advisory として実行（fail しても CI は止めない）。順序依存が判明したら `Negative Assertions` / `Isolation Properties` カテゴリで明示的に修正。
+
+#### C. Determinism Check（advisory）
+
+clock / RNG モックの強制は clippy.toml の disallowed-methods で間接的に enforce される（直接呼出を deny → mock 経由を強制）。
+
+review-worker の Category E (Final Check of Test Code) で「test が clock / RNG / env に依存していないか」を補強的に確認（I-4 で改訂）。
+
+### 既存テストの retrofit
+
+clippy.toml を新設 → 既存 test で violation 多数発生する可能性あり。段階的 gate 化:
+
+| 段階 | 適用 |
+|------|------|
+| 初期 (advisory) | `-W clippy::disallowed_methods`（warning のみ）。violation を report |
+| 中期 | 新規・改修部分に `-D` 適用、既存は `#[allow]` で grandfathered |
+| 成熟 | 全コードで `-D` blocking。`#[allow]` は個別 review で justify |
+
+### .NET / Node.js 系（未確定）
+
+- .NET: `dotnet test --blame-hang` + `xunit.runner.json` の parallel 設定で order independence 検証の余地。`Stryker.NET` のテスト独立性チェック
+- Node.js: `vitest --shuffle` (v1.6+) は標準で動作 / `jest --testSequencer` でカスタム順序
+
+将来別 POC または I 実装拡張時に確定する。Rust 側は本 QC15 で確立。
+
+### 連携
+
+- **K-3 (Architecture for Testability)**: design.md で Mock points / Clock injection / RNG injection / External I/O isolation / Test fixtures が宣言される。QC15 の lint で禁止される call は **K-3 で宣言された Mock 経由のみ許可** されるという design ↔ enforcement の往復ループが成立
+- **I-1 (_TestFocus 6 カテゴリ)**: `Negative Assertions` / `Isolation Properties` の 2 カテゴリが QC15 と直接呼応。test 設計時から品質特性を担保
+- **review-worker Category E (I-4)**: 「テストが clock / RNG / env に依存していないか」を確認
+
+### 注意
+
+- QC14 (UI Smoke Render, E-3) は未実装
+- QC15 は **本実装で確立**
+- QC16 (Regression Gate, J-9) は f7a03f6 で実装済
+
+---
+
 ## QC16: Regression Gate (J-9 で新設)
 
 > 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 J（J-9）。

@@ -342,15 +342,31 @@ Also include:
   - _Prompt: Role: Bug Fixer | Task: GH#123 を修正。再現テスト regression_issue_123_login_fails_with_multibyte_username をまず RED phase で書き、その後修正 | Restrictions: 既存の login flow を破壊しない | Success: regression test PASS、既存テスト全件 PASS_
 ```
 
-#### _TestFocus Format
+#### _TestFocus Format（I-1 で 4→6 カテゴリに拡張）
 
-To align with the unit-test-engineer's required test coverage, use the following 4-category structure. Free-form text is not allowed.
+To align with the unit-test-engineer's required test coverage, use the following **6-category structure** (extended from 4 to 6 per I-1, `dapper-hardening-orchestrator.md`). Free-form text is not allowed.
 
 ```
-_TestFocus: Happy Path: {specific test targets} | Boundary Values: {specific boundaries} | Error Handling: {specific error cases} | Edge Cases: {specific cases}
+_TestFocus: Happy Path: {specific test targets} | Boundary Values: {specific boundaries} | Error Handling: {specific error cases} | Edge Cases: {specific cases} | Negative Assertions: {specific behaviors that must NOT happen} | Isolation Properties: {external dependency strategy}
 ```
 
-If a category does not apply, explicitly write "N/A" (do not omit it).
+カテゴリ説明:
+
+1. **Happy Path**: 仕様に基づく正常系の挙動を verify
+2. **Boundary Values**: 境界値（最小・最大・閾値直前後）の挙動
+3. **Error Handling**: エラー条件への対処（不正入力 / 失敗 / タイムアウト等）
+4. **Edge Cases**: 例外的な状況（マルチバイト / 重複 / 連続操作）
+5. **Negative Assertions（I-1 で追加）**: **仕様外の挙動が起きないことの確認**:
+   - 入力 mutation が起きないこと（pure function は副作用ゼロ）
+   - 不要な log / metric / event を吐かないこと
+   - 想定外の入力で panic しないこと（適切なエラーで失敗）
+   - 仕様外のフィールドを返さないこと
+6. **Isolation Properties（I-1 で追加）**: **外部依存ゼロ + 順序非依存 + 決定性**:
+   - clock / RNG / env / fs / HTTP / DB の直接呼出ゼロ（Mock 経由のみ）
+   - 順序非依存（他 test の状態に依存しない、share された global state を持たない）
+   - 決定性（同じ入力で常に同じ結果。clock や RNG に依存しない）
+
+If a category does not apply, explicitly write "N/A" (do not omit it). Negative Assertions / Isolation Properties が "N/A" になる場合は理由を明記（pure function で副作用が原理的に無い場合のみ）。
 - Instructions about marking task status in tasks.md and logging implementation with `/log-implementation` skill
 
 ### 5. Create the Document
@@ -465,6 +481,7 @@ Agent({
         every ST spec must have a system test task (J-7),
         every E2E spec must have an E2E test task
     13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/ST-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
+    19. TESTFOCUS_NEGATIVE (I-1, dapper-hardening): _TestFocus must include all 6 categories (Happy Path / Boundary Values / Error Handling / Edge Cases / Negative Assertions / Isolation Properties). If Negative Assertions or Isolation Properties is "N/A", the task must be a pure function with no side effects (and the reason must be explicitly noted)
     20. ST_PLACEMENT (J-7, dapper-hardening): For every ST-N spec in test-design.md, a corresponding task must exist in tasks.md, placed at the end of the Phase that completes the target feature's component / endpoint dependencies (after CT/IT, before final E2E Phase).
     21. REGRESSION_BUG_ID (J-10, dapper-hardening): Tasks marked with `_BugFix: true` (or with `Role: Bug Fixer` in _Prompt) must include a `_RegressionBugId: BUG-NNN` (or `GH#NNN`) metadata field. The corresponding regression test must follow the naming convention `regression_issue_NNN_*` (Rust) / `regression #NNN` (TS) per regression-test-policy/SKILL.md.
 

@@ -69,9 +69,12 @@ Call `advisor()` at the following points:
 4. **Dependency isolation**: Make tests deterministic with trait + `mockall` / manual Stub / Fake
 5. **Refactoring**: Improve readability and reusability (naming, data builders, helpers)
 
-## Required Test Aspects
+## Required Test Aspects（I-3 で 4 → 6 カテゴリに拡張）
 
-Cover all of the following aspects without omission. Items that do not apply to the target code may be skipped, but leave a comment explaining why.
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 I（I-3）。
+> 「実装時の UT は仕様の検証であり、コードが動くか（cargo test PASS）の確認ではない」という frame を構造的に成立させるため、Negative Assertions と Isolation Properties を追加。
+
+Cover all of the following aspects without omission. Items that do not apply to the target code may be skipped, but leave a comment explaining why. Negative Assertions / Isolation Properties が "N/A" になる場合は pure function かつ副作用が原理的に無い場合のみ。
 
 ### 1. Happy Path Tests
 - Verify behavior with representative valid inputs
@@ -101,6 +104,47 @@ Create test cases for each of the following categories:
 - When duplicate values exist
 - Special characters and multibyte character input
 - Very large or very long input (performance boundary)
+
+### 5. Negative Assertions（I-3 で追加、仕様外の挙動が起きないことの確認）
+
+Verify that the function does NOT do things outside its specification:
+- **Mutation 禁止**: 入力引数 / global state が呼出後に変化していないこと（pure function は副作用ゼロ）
+- **副作用ゼロ**: 不要な log / metric / event を吐かないこと
+- **Panic 禁止**: 想定外の入力（境界外 / 不正型 / null）で panic ではなく適切な `Err` / `Option::None` で失敗すること
+- **未定義フィールド禁止**: 仕様外のフィールド / メソッドを返さないこと（`#[serde(deny_unknown_fields)]` の test 等）
+- **idempotency 確認**: 該当する場合、同一入力で複数回呼んで結果が同じこと
+
+例:
+```rust
+#[test]
+fn next_index_does_not_mutate_input() {
+    let current = 2;
+    let _ = next_index(current, 5, Single, LTR);
+    assert_eq!(current, 2); // 入力 mutation なし
+}
+```
+
+### 6. Isolation Properties（I-3 で追加、外部依存ゼロ + 順序非依存 + 決定性）
+
+Verify FIRST principles (Fast / Isolated / Repeatable / Self-Validating / Timely):
+- **外部依存ゼロ**: clock / RNG / env / fs / HTTP / DB の **直接呼出を test 内に書かない**（design.md K-3 で宣言された Mock 経由のみ）
+  - clippy `disallowed-methods` で機械的に enforce（`quality-checks.md` QC15 参照）
+  - production code の legitimate 使用は `#[allow(clippy::disallowed_methods)]` で個別許可
+- **順序非依存**: 他の test との状態共有 / 順序前提が無いこと
+  - 共有 global mut（`static AtomicX`、`OnceCell` mutable）に依存する test は禁止
+  - test 関数間で共有されるリソースは `#[before_each]` 相当で明示的にリセット
+- **決定性**: 同じ入力で常に同じ結果。clock / RNG / 並列性に左右されないこと
+  - 必要なら `MockClock` / `MockRng` で固定値を inject
+
+例:
+```rust
+#[test]
+fn token_generation_is_deterministic_with_mock_clock() {
+    let clock = MockClock::new("2026-01-01T00:00:00Z");
+    let token = generate_token(&clock, "user-123");
+    assert_eq!(token.expires_at, "2026-01-01T01:00:00Z"); // 決定的
+}
+```
 
 ## Rust-Specific Test Structure
 

@@ -111,11 +111,16 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 | プロジェクトタイプ | 検出条件 | 適用する QC 項目 |
 |----------------|--------|----------------|
-| Rust | `Cargo.toml` | QC1 (rustfmt) / QC2 (clippy) / QC3 (cargo test) / QC4 (cargo-audit, cargo-udeps) |
+| Rust | `Cargo.toml` | QC1 (rustfmt) / QC2 (clippy) / QC3 (cargo test) / QC4 (cargo-audit, cargo-udeps) / **QC15 (UT Properties Gate, I-2)** |
 | Leptos フルスタック | `Cargo.toml` に `[package.metadata.leptos]` | 上記 + QC5 (cargo leptos build or WASM-specific clippy) |
 | .NET | `*.csproj` / `*.sln` | QC12 (dotnet format / build -warnaserror / test / dependency analysis) |
 | .NET Blazor | `Microsoft.AspNetCore.Components.WebAssembly` 参照 | 上記 + QC12.6 (dotnet publish -p:PublishTrimmed=true) |
 | Node.js | `package.json` | QC6 (npm test / lint / format / audit) |
+
+**QC15 (UT Properties Gate, I-2 で新設)**:
+- clippy `disallowed-methods` を `-D clippy::disallowed_methods` で deny-level 実行
+- clock / RNG / env / fs / HTTP の直接呼出を test 内で禁止（design.md K-3 で宣言された Mock 経由のみ許可）
+- 詳細: `quality-checks.md` QC15 セクション参照
 
 具体的なコマンド・タイムアウト・エラー処理は `quality-checks.md` を必ず参照すること。
 本 agent 内にコマンドを再記述しない（Single source of truth）。
