@@ -792,9 +792,44 @@ grep -q '"test:integration"' package.json 2>/dev/null || \
 | Node.js（スクリプトあり） | `npm run test:integration` |
 | Node.js（ファイルのみ） | `npm test -- --testPathPattern=integration` |
 
-### Step D: スモークテスト（API プロジェクトのみ）
+### Step D: スモークテスト（**全プロジェクトタイプ対応**、E-1 で改訂）
 
-API サーバを一時的に起動し、ヘルスチェックエンドポイントへの疎通を確認する。
+> E-1 で改訂（dapper-hardening）: 旧仕様「API プロジェクトのみ」を撤廃し、project-type 別 smoke 定義 + 4 層構造（L1〜L4）を採用。
+> Smoke は **wiring + 型境界の検証** であり、ping だけ・/health だけではない（`Test Taxonomy` セクション #smoke 参照）。
+
+#### Smoke Test Definition（E-1 で確定）
+
+| project-type | 検出条件 | Smoke 内容 |
+|------|------|------|
+| **API (HTTP server)** | `Cargo.toml` に `axum` / `actix-web` / `rocket` / `*.csproj` に Web 依存 / Express 等 | L1〜L4（下記）。全 method × 全 endpoint で 5xx を出さないこと |
+| **Library (crate / npm package)** | `[lib]` のみ / `package.json` で `main` のみ | `cargo build --lib --release` + crate root の doctest / 公開 API に対する「import + 1 メソッド呼び出し」smoke |
+| **CLI** | `[[bin]]` あり / `package.json` に `bin` | `<binary> --help` / `<binary> --version` + 主要サブコマンドの `--help` + 必須引数欠落で exit code 非ゼロ |
+| **UI / Frontend (CSR / WASM のみ)** | Trunk / `[package.metadata.leptos]` で SSR なし | WASM bundle build + headless browser で初期 render + 全 `data-testid` 要素が DOM 出現 (QC17 UI Smoke Render 参照) |
+| **Full-stack (Leptos SSR / Next.js)** | `[package.metadata.leptos]` あり / `next.config.js` 等 | API smoke (L1〜L4) + UI smoke (QC17) の組合せ |
+| **Worker / Daemon** | バイナリで HTTP server を持たない常駐プロセス | バイナリ起動 + 30 秒の crash-loop 監視 + 終了 |
+
+#### API Smoke 4 層構造（L1〜L4、E-1）
+
+| 層 | 内容 | 期待結果 | 失敗の意味 |
+|---|------|---------|----------|
+| **L1: Health** | `/health`, `/api/health`, `/healthz` への GET | 200 | サーバ起動失敗 |
+| **L2: Wiring smoke** | design.md の各 `### API-N:` から path / method を抽出。method 別に最小リクエスト送信:<br>・**GET**: クエリなし<br>・**POST/PUT/PATCH**: 空ボディ `{}`<br>・**DELETE**: パス末尾にプレースホルダID（`/users/00000000-0000-0000-0000-000000000000`） | **2xx / 3xx / 4xx いずれか（5xx 禁止）** | wiring バグ: ハンドラ未配線 / DI 不整合 / panic 不処理 |
+| **L3: Auth smoke** | design.md の各 endpoint で「Auth: required」のもの → Authorization ヘッダなしで送信 | 401 | 認可漏洩（200 が返ったらセキュリティ事故） |
+| **L4: 入力境界 smoke** | design.md API 定義から各引数（path/query/body field）の **型境界値** を 1 件ずつ生成して送信:<br>・String 必須: 空文字 `""`<br>・String maxLength: 制限+1 文字<br>・int min/max: ±1 オーバーフロー<br>・enum: 未定義値<br>・Optional 省略 | **400/422（5xx 禁止）** | validation 不足: deny_unknown_fields 漏れ / 型変換 panic / null 処理漏れ |
+
+**境界線**:
+- 正常系の business logic（POST で作成した entity が GET で取得できる）→ smoke の責務外（IT で検証）
+- 複合境界 / ビジネス境界（`user.age` 18〜120 等）→ smoke の責務外（UT/IT で検証）
+
+#### 旧 Step D との差分（E-1）
+
+旧仕様（「API プロジェクトのみ」「`/health` のみ」）から拡張:
+- ✅ project-type 別に smoke を定義（Library / CLI / UI / Full-stack / Worker も対応）
+- ✅ API smoke は GET だけでなく **全 method** を対象（L2 Wiring smoke）
+- ✅ 認証 smoke (L3) と 型境界 smoke (L4) を追加
+- ✅ 「Phase に smoke 可能な deliverable が無い」場合は SKIP ではなく **escalate** （E-2、Phase Deliverables 設計問題として）
+
+#### 既存 Step D 実装（API project の場合）の継続
 
 **コンテナベース（docker-compose.yml が存在する場合 — 優先）:**
 
@@ -1288,5 +1323,89 @@ QC16 は既存の QC3 (test) / QC7 (Integration Verification) / QC13 (Branch Cov
 
 ### 注意
 
-- QC14 (UI Smoke Render, E-3) と QC15 (UT Properties Gate, I-2) は **未実装**。本 QC16 は J-9 として先行実装
+- QC14 は **Component Test (CT) Gate** (H-1, dapper-hardening) として実装済。当初 E-3 用と計画していたが H-1 に振り直した
+- QC15 (UT Properties Gate, I-2) は実装済
 - QC16 は **CI gate**（PR / merge 時の blocking）。Phase Review 内のローカル実行は QC3 / QC7 で間接的にカバー
+- E-3 UI Smoke Render は **QC17** に振り直し（下記）
+
+---
+
+## QC17: UI Smoke Render (E-3 で新設、dapper-hardening)
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 E（E-3）。
+> CT (QC14) は単 component の reactivity 検証、本 QC17 は **system 全体の UI smoke**（playwright で headless browser 起動、AppRoot 全体 render → 全 testid 要素が DOM に出現）。
+
+### 目的
+
+CT (QC14) で各 component 単独の reactivity を検証する一方、全 component を組み合わせた **AppRoot レベルの smoke** が必要。「placeholder commit が存在しないこと」「全 testid が compiled HTML に出現すること」を Phase 単位で検証する。
+
+dapper-hardening Phase 4 で発生した「pure helper UT + data-testid 骨格 + placeholder view!」反パターンの **Phase Review 段階での検出**を担う。
+
+### 検証内容
+
+```bash
+# Leptos / Trunk / WASM
+cargo leptos serve &
+SERVER_PID=$!
+sleep 5
+
+# headless browser で / にアクセス
+npx playwright test tests/smoke/ui-smoke.spec.ts
+
+kill $SERVER_PID
+```
+
+```typescript
+// tests/smoke/ui-smoke.spec.ts (auto-generated 例)
+import { test, expect } from '@playwright/test';
+
+test('UI smoke: AppRoot renders with required testids', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+
+  // design.md Phase Deliverables (K-4) で当該 Phase に追加された testid を抽出
+  const requiredTestids = ['folder-tree', 'thumbnail-grid', 'detail-viewer'];
+
+  for (const testid of requiredTestids) {
+    await expect(page.locator(`[data-testid="${testid}"]`)).toBeVisible({
+      timeout: 5_000,
+    });
+  }
+
+  // testid 数が想定下限以上か確認
+  const allTestids = await page.locator('[data-testid]').count();
+  expect(allTestids).toBeGreaterThanOrEqual(requiredTestids.length);
+});
+```
+
+### Phase 別段階成長
+
+design.md Phase Deliverables (K-4) と連動して、Phase 進行に応じて要求 testid 数が増える:
+
+| Phase | 必須 testid（例） | 増分 |
+|---|---|---|
+| Phase 1 (Core domain) | （UI なし、QC17 SKIP） | - |
+| Phase 2 (HTTP server) | （UI なし、QC17 SKIP） | - |
+| Phase 3 (UI 骨格) | `app-root` | +1 |
+| Phase 4 (component 実装) | `folder-tree`, `thumbnail-grid`, `detail-viewer` | +3 |
+| Phase 5 (機能完成) | `info-panel`, `toolbar` | +2 |
+
+### 失敗時のアクション
+
+| 結果 | アクション |
+|------|----------|
+| 全 testid 出現 | PASS、Phase Review 続行 |
+| testid が想定数より少ない / 特定 testid が欠ける | **FAIL (placeholder detected)**: 該当 component の実装 task を `[-]` に戻して rework（spec-implement Step 3.5.1.5 失敗時差し戻しルールに新規分類追加） |
+| サーバ起動失敗 | FAIL（環境不備の可能性、Required Build Tools 確認） |
+
+### CT (QC14) との責務分離
+
+- **QC14 (Component Test)**: 単一 component の reactivity（mount + signal + DOM）— Phase 4 の各 component task で実行
+- **QC17 (UI Smoke Render)**: AppRoot レベルの smoke — Phase Review で実行（Phase 単位の品質ゲート）
+- 両方が必要: CT で個別 component が動くこと、Smoke で全体組合せが動くこと
+
+### 実装段階
+
+- **初期 (advisory)**: warning のみ。既存 spec の retrofit を待つ
+- **中期**: Phase Review で blocking。FAIL (placeholder detected) 分類で差し戻し
+- **成熟**: Phase Deliverables (K-4) と完全連動。Phase 別段階成長を CI で機械検証

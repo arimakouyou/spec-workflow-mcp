@@ -922,7 +922,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | **I**: UT 品質特性 enforce | （master plan で track）| `nextest-shuffle-isolation-lints-poc.md` | **DONE** (5/5、POC 完了)| 2026-04-28 | 2026-04-28 |
 | **H**: CT 層導入 | （master plan で track）| `wasm-bindgen-test-leptos-poc.md` | **DONE** (5/5、POC 完了 + 実装完了)| 2026-04-28 | 2026-04-28 |
 | **D**: spec-tasks 強化 | （master plan で track）| （不要）| **DONE** (Check 3 拡張 + 14/15/16 + UI Component template)| 2026-04-28 | 2026-04-28 |
-| **E**: Smoke Gate 再設計 | `universal-smoke-gate-redesign.md` | （不要）| TODO | - | - |
+| **E**: Smoke Gate 再設計 | （master plan で track）| （不要）| **DONE** (E-1/E-2/E-3 完了)| 2026-04-28 | 2026-04-28 |
 
 > γ 採用: J-3 (`quality-checks.md` の Test Taxonomy セクション) を先行で 1 commit 化済。これにより K-1/K-2/K-4 が参照する taxonomy 正規定義が確立。
 

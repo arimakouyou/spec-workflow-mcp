@@ -347,10 +347,12 @@ dotnet test --no-build --verbosity quiet
 | FAIL (ビルド) | ビルドエラーを分析、根本原因タスクを特定。Phase 内タスク → `[x]` を `[-]` に戻して差し戻し、PhaseReview を `[ ]` に戻す。根本原因タスクの step 4 から再実行 |
 | FAIL (統合テスト) | 失敗テストを分析、根本原因タスク特定。Phase 内タスク → 差し戻し、前 Phase → ユーザーエスカレート |
 | FAIL (スモーク) | 起動ログを分析し根本原因特定、差し戻し |
+| **FAIL (placeholder detected)（E-3 で追加、dapper-hardening）** | QC17 UI Smoke Render で testid 数が想定下限未満 / 特定 testid が欠ける場合。該当 component の実装 task を `[x]` から `[-]` に戻して rework |
 | FAIL (環境不備) | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、design.md / test-design.md の Required Tools テーブルの Install Command を提示。実装を停止（STOP） |
 | FAIL (実装漏れ) | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
-| SKIP (設計上不要) | テスト仕様自体が設計書に存在しない場合のみ（例: 統合テスト未定義、ヘルスチェック未定義）。ログに SKIP 理由を記録し、3.5.2 に進む。review-worker の Phase Review で補完 |
+| **escalate (Phase deliverable 不在)（E-2 で追加、dapper-hardening）** | Phase に smoke 可能な deliverable が無い場合は SKIP ではなく escalate。design.md Phase Deliverables (K-4) を見直し、Phase 境界の再設計をユーザーに提案 |
 | SKIP (設計時除外) | design.md の「Excluded Test Environments」で明示的に除外されたテスト。除外理由をログに記録し、3.5.2 に進む |
+| SKIP (設計上不要) | （E-2 で **Phase Review smoke では非推奨** に変更）テスト仕様自体が設計書に存在せず、Phase Deliverables にも該当 deliverable が無い場合のみ。ログに SKIP 理由を **ファイル名 + 該当行** とともに記録（透明性の確保）。Final Gate 以外では escalate に置き換える方向 |
 
 **注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由で「SKIP」を選択してはならない。test-design.md / design.md の Required Tools に Required=Yes で記載されたツールやランタイムが不足している場合は、常に上記の「FAIL (環境不備)」として扱い、実装を停止（STOP）すること（quality-checks.md の Step C/D に SKIP と記載がある場合も同様）。
 
