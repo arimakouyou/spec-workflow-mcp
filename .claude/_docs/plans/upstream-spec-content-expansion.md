@@ -122,8 +122,13 @@ K-2 / K-3 / K-4 の各 check はそれぞれの sub で個別記載するが、S
 | 日付 | sub-task | commit | 備考 |
 |------|---------|--------|------|
 | 2026-04-28 | （前提）J-3 Test Taxonomy セクション先行 | e0d3279 | `quality-checks.md` に挿入済。K-1/K-2/K-4 が参照する taxonomy 正規定義 |
-| 2026-04-28 | K-1: REQ Acceptance Criterion に Test Layers field 追加 | （未 commit） | spec-requirements SKILL.md / requirements-template.md / spec-verify Check 8 を更新。Check 番号は 9→8 に調整（C 未実装のため） |
-| 2026-04-28 | K-5: NFR Testability 必須項目 | （未 commit） | spec-requirements SKILL.md self-review check 3 / requirements-template.md NFR セクション を更新 |
+| 2026-04-28 | K-1: REQ Acceptance Criterion に Test Layers field 追加 | 1dfbb1c | spec-requirements SKILL.md / requirements-template.md / spec-verify Check 8 を更新。Check 番号は 9→8 に調整（C 未実装のため） |
+| 2026-04-28 | K-5: NFR Testability 必須項目 | 1dfbb1c | spec-requirements SKILL.md self-review check 3 / requirements-template.md NFR セクション を更新 |
+| 2026-04-28 | K-2: DES-N に Required Test Layers field | （未 commit） | spec-design SKILL.md Wave 2 / design-template.md DES-1/2 example を更新 |
+| 2026-04-28 | K-3: design.md Architecture for Testability section 新設 | （未 commit） | spec-design SKILL.md Wave 2 / design-template.md に 5 サブセクション必須化 |
+| 2026-04-28 | K-4: design.md Phase Deliverables section 必須化 | （未 commit） | spec-design SKILL.md Wave 1 list に追加 / design-template.md に section example |
+| 2026-04-28 | K-6: spec-design Step B (self-review check) 拡張 | （未 commit） | check 10/11/12 (Test Layers / Architecture for Testability / Phase Deliverables) 追加 |
+| - | K-7: spec-test-design Subagent 明示宣言ベース化 | **保留** | J / H 完了後（J-6 Subagent E + H-2 Subagent D が必要） |
 
 ## 影響範囲
 

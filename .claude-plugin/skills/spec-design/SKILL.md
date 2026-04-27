@@ -101,6 +101,7 @@ depends_on:
 3. **Component List** — Component names with a one-line description of each role only (details in Wave 2)
 4. **DB Schema** — Table definitions, columns, and constraints (critical decisions that form the implementation foundation)
 5. **Key Design Decisions** — Technologies and patterns chosen and why (include rejected alternatives)
+6. **Phase Deliverables**（K-4 で必須化） — 各 Phase で「**何を作るか** + **どの Test Layer で検証するか** + **smokeable な成果物**」を一元宣言。Wave 1 で Phase の境界と検証戦略を確定する。Phase ごとに「Deliverable / Test Layers / Smokeable」の 3 項目を記載
 
 **Wave 1 placeholder examples:**
 ```markdown
@@ -250,7 +251,19 @@ Describe each component in this format. Use `### DES-N: ComponentName` headings 
 - **Dependencies:** [Components / external services depended on]
 - **Reuses:** [Existing code to leverage (with concrete paths)]
 - **Satisfies:** [REQ-N.M list that this component addresses]
+- **Test Layers:** [UT / CT / IT-N / ST-N の組合せで宣言（K-2 必須）。詳細は quality-checks.md Test Taxonomy 参照]
 ```
+
+**Test Layers field（K-2 で必須化、`dapper-hardening-orchestrator.md` 参照）:**
+
+各 DES-N に対して、その component が **どの test 層で検証されるか** を明示宣言する:
+
+- UI component: `Test Layers: UT (extracted helpers), CT (mount + signal + DOM)`
+- Backend service: `Test Layers: UT, IT-N (HTTP)`
+- Library / utility: `Test Layers: UT`
+- 統合 component (機能の縦切り): `Test Layers: UT, CT, ST-N`
+
+具体 ID（`IT-19` 等）は test-design.md で確定後に back-fill 可。spec-design 段階では layer 名のみでも可（例: `Test Layers: UT, IT`）。`spec-test-design` の Subagent はこの宣言を最優先で derivation の入力とし、heuristic に基づく自動判定を排除する（K-7）。
 
 Data Models should use `### MOD-N: ModelName` and API sections (if present) should use `### API-N: EndpointName`.
 
@@ -280,6 +293,34 @@ For each endpoint, describe:
 >     created_at: DateTime<Utc>,
 > }
 > ```
+
+#### Architecture for Testability（K-3 必須）
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 K（K-3）。
+> I (UT Properties Gate, QC15) で禁止される clock / RNG / env / fs / HTTP / DB の直接呼出について、**ここで宣言された Mock 経由のみ許可** されるという design ↔ enforcement の往復ループを成立させる。
+
+`## Architecture for Testability` セクションを必須記載とし、以下 5 サブセクションを揃える:
+
+```markdown
+## Architecture for Testability
+
+### Mock points
+[trait 境界 / DI 注入点 / port-adapter 構造の設計図。例: `trait UserRepository` を `services/` から DI 注入、テスト時は `MockUserRepository` を bind]
+
+### Clock injection
+[`trait Clock` + `MockClock` の使用方針 / WASM target での `js-sys::Date` 取扱い]
+
+### RNG injection
+[`trait Rng` + `MockRng` の使用方針]
+
+### External I/O isolation
+[HTTP (mockito / wiremock) / fs (tempfile) / env (`dotenvy::from_path_override`) などで隔離する設計]
+
+### Test fixtures
+[共通 fixture の配置 / lifetime / clean-up 方針。docker-compose.test.yml と testcontainers の使い分けなど]
+```
+
+5 サブセクションがすべて揃っていない場合は spec-design Step B (Check) で error 判定（K-6）。
 
 #### Code Reuse Analysis Format
 
@@ -448,15 +489,18 @@ Agent({
     1. TEMPLATE: Every section from the template must exist with real content (no placeholders or '(to be written in Wave 2)' remaining)
     2. CROSS-REFERENCE: Read requirements.md — every requirement must have a corresponding design solution.
        No design component should exist without a backing requirement.
-    3. Must include: Overview, Architecture diagram, Component details (Purpose/Interfaces/Dependencies/Reuses),
+    3. Must include: Overview, Architecture diagram, Component details (Purpose/Interfaces/Dependencies/Reuses/Test Layers),
        Data Models, Error Handling table, Requirements Traceability Matrix, Code Reuse Analysis with concrete paths,
-       Required Build Tools table, Excluded Test Environments section
+       Required Build Tools table, Excluded Test Environments section, Phase Deliverables section, Architecture for Testability section
     4. Data models must cover all entities referenced in requirements
     5. Error Handling must have a complete table (not just scenario descriptions)
     6. Required Build Tools section must exist with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns)
     7. Excluded Test Environments section must exist (table may be empty if no exclusions, but section must be present)
     8. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: design, version, depends_on (file: requirements.md, refs: [REQ-...]) must exist at the top of the file
     9. IDENTIFIERS (spec-dependency-graph.md SD1): Components and Interfaces use '### DES-N: Name' headings, Data Models use '### MOD-N: Name', API sections use '### API-N: Name'. depends_on.refs must point to REQ-N (or REQ-N.M) that exist in requirements.md
+    10. TEST LAYERS PER DES (K-2, dapper-hardening): Every '### DES-N:' must declare a 'Test Layers:' field with values from quality-checks.md Test Taxonomy (UT/CT/IT/IT-N/ST/ST-N/E2E/E2E-N の組合せ)
+    11. ARCHITECTURE FOR TESTABILITY (K-3): A '## Architecture for Testability' section must exist and contain all 5 sub-sections: Mock points, Clock injection, RNG injection, External I/O isolation, Test fixtures
+    12. PHASE DELIVERABLES (K-4): A '## Phase Deliverables' section must exist with at least one '### Phase N:' heading, each declaring Deliverable / Test Layers / Smokeable
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

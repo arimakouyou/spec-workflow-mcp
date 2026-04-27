@@ -754,7 +754,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | requirements-template.md | 同上の書式を例示 |
 | `spec-verify/SKILL.md` 新規 Check 8: REQ_TEST_LAYERS_DECLARED | 「全 REQ-N.M に Test Layers が宣言されているか」「宣言された Test Layer が test-design.md に存在するか」を check<br>※ 当初 Check 9 で計画していたが、C (Check 8 予定) が未実装のため Check 8 に番号調整 |
 
-#### K-2: design.md DES-N に Required Test Layers フィールド追加
+#### K-2: design.md DES-N に Required Test Layers フィールド追加 ✅ DONE (2026-04-28)
 
 | 対象 | 変更内容 |
 |------|----------|
@@ -762,7 +762,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | design-template.md | 同上の書式を例示。component 性質別の典型例（UI / backend / library / utility）も記載 |
 | `spec-design/SKILL.md` Step B 拡張 | 新規 Check: 「全 DES-N に Test Layers が宣言されているか」「宣言された Test Layer が test-design.md にも対応する仕様があるか（spec-verify と協調）」 |
 
-#### K-3: design.md に「Architecture for Testability」セクション新設
+#### K-3: design.md に「Architecture for Testability」セクション新設 ✅ DONE (2026-04-28)
 
 | 対象 | 変更内容 |
 |------|----------|
@@ -771,7 +771,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | `spec-design/SKILL.md` Step B 拡張 | 「Architecture for Testability セクションが存在し、Mock points / Clock / RNG / External I/O / Test fixtures の 5 サブセクションが揃っているか」を error 判定 |
 | I (UT Properties Gate) との連携 | I-2 の lint（clock / RNG / env の直接呼出禁止）の **許可された逃げ口** が design.md K-3 で宣言された Mock 経由のみ、と紐付け |
 
-#### K-4: design.md の「Phase Deliverables」セクション（E-2 を K に統合）
+#### K-4: design.md の「Phase Deliverables」セクション（E-2 を K に統合） ✅ DONE (2026-04-28)
 
 | 対象 | 変更内容 |
 |------|----------|
@@ -788,7 +788,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | requirements-template.md | NFR Testability セクションを必須化、書式例 |
 | `spec-requirements/SKILL.md` Step 5 (self-review Check 3) | 「Non-Functional Requirements が **6 観点（Testability を含む）** をすべて記載しているか」を error 判定 |
 
-#### K-6: `spec-design` Step B (self-review check) 拡張
+#### K-6: `spec-design` Step B (self-review check) 拡張 ✅ DONE (2026-04-28)
 
 | 対象 | 変更内容 |
 |------|----------|
