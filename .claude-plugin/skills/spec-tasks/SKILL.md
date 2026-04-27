@@ -215,20 +215,38 @@ Group tasks into phases using `## Phase N: Title` headings. Each phase is a **ve
 - Each phase ends with a `_PhaseReview: true_` task for review and commit
 - Phases are ordered by dependency (core → API → UI → integration)
 
-### 3.6 Integration & E2E Test Tasks
+### 3.6 IT / ST / E2E Test Tasks（J-5 で改訂）
 
-test-design.md の IT 仕様と E2E 仕様を基に、Phase の適切な位置に IT/E2E テストタスクを配置する。
+test-design.md の IT / ST / E2E 仕様を基に、Phase の適切な位置にテストタスクを配置する。各層の責務範囲は `quality-checks.md` の Test Taxonomy 参照。
 
-#### IT タスク
+#### IT タスク（backend HTTP API only）
 - test-design.md の各 IT 仕様（IT-1, IT-2, ...）に対応するタスクを作成
-- 対象コンポーネントがすべて実装済みの Phase に配置（通常は PhaseReview の直前）
+- **配置**: 対象コンポーネントがすべて実装済みの Phase に配置（通常は backend Phase 完了直後の PhaseReview 直前）
 - `_TestFocus` は test-design.md の IT 仕様を参照し、Verification Points を列挙
-- `_Prompt` の Task に「test-design.md の IT-{N} 仕様に基づいて統合テストを実装する」と明記
+- `_Prompt` の Task に「test-design.md の IT-{N} 仕様に基づいて backend HTTP API 統合テストを実装する」と明記
+- **責務範囲**: UI 操作 / DOM 検証を含めない（`quality-checks.md` Test Taxonomy 参照）
 
-#### E2E タスク
-- test-design.md の各 E2E 仕様（E2E-1, E2E-2, ...）に対応するタスクを最終 Phase に配置
+#### ST タスク（単一機能の full-stack、J-7 で新設）
+- test-design.md の各 ST 仕様（ST-1, ST-2, ...）に対応するタスクを作成
+- **配置**: 対象機能の component / endpoint がすべて実装済みの Phase **末尾**（CT/IT 完了後、E2E より前）
+- `_TestFocus` は test-design.md の ST 仕様を参照し、Test Path / Verification Points を列挙
+- `_Prompt` の Task に「test-design.md の ST-{N} 仕様に基づいて単一機能の full-stack テストを実装する」と明記
+- **責務範囲**: 1 機能分のみ（複数機能の連鎖を含めない）
+
+#### E2E タスク（user journey only）
+- test-design.md の各 E2E 仕様（E2E-1, E2E-2, ...）に対応するタスクを **最終 Phase** に配置
 - `_TestFocus` は test-design.md の E2E 仕様を参照し、Scenario Steps と Success Criteria を列挙
-- `_Prompt` の Task に「test-design.md の E2E-{N} 仕様に基づいて E2E テストを実装する」と明記
+- `_Prompt` の Task に「test-design.md の E2E-{N} 仕様に基づいて user journey E2E テストを実装する」と明記
+- **責務範囲**: 複数機能の連鎖を含む user journey のみ（個別機能テストは ST に振る）
+
+#### 配置ルールの優先順序
+
+```
+Phase N (backend 実装):  ... → IT-N tasks → PhaseReview
+Phase M (UI 実装):       ... → CT-N tasks (H 実装後) → PhaseReview
+Phase L (機能完成):      ... → ST-N tasks → PhaseReview
+最終 Phase:              E2E-N tasks → Final PhaseReview
+```
 
 ### 3.7 TDD Task Design Rules
 
@@ -305,6 +323,24 @@ Also include:
 - `_Requirements`: Which requirements this task fulfills (traceability)
 - `_DependsOn`: Same Phase 内で、このタスクが依存する他タスクのID（カンマ区切り）。依存がない場合は省略する。依存があるタスクは、依存先が完了するまで実行されない。Phase 跨ぎの依存は不要（Phase 順序で暗黙保証）。例: `_DependsOn: 1.1, 1.2_`
 - `_TestFocus`: Written in the 4-category structured format (see below)
+- `_BugFix` / `_RegressionBugId` (J-10 で必須化、`dapper-hardening-orchestrator.md` 参照):
+  - バグ修正系 task の場合 `_BugFix: true_` を必須化、合わせて `_RegressionBugId: BUG-NNN_` （または `GH#NNN_`）を必須化
+  - 例: `- _BugFix: true_\n- _RegressionBugId: GH#123_`
+  - 対応する regression test は `regression-test-policy/SKILL.md` の命名規則 (`regression_issue_NNN_*` / `it('regression #NNN: ...')`) で実装する
+  - parallel-worker は `_BugFix: true` を検知したら RT1 フロー（修正前に再現テストを RED phase で書き、修正後 GREEN にする）に従う
+
+#### _BugFix task の例（J-10）
+
+```markdown
+- [ ] N.M Fix login failure on multibyte usernames
+  - File: src/services/login.rs, tests/regression/issue_123.rs
+  - _BugFix: true_
+  - _RegressionBugId: GH#123_
+  - _DependsOn: ...
+  - _Requirements: REQ-N
+  - _TestFocus: Happy Path: multibyte username login succeeds | Boundary Values: empty / 1-char / 256-char username | Error Handling: invalid byte sequence | Edge Cases: combining characters | Negative Assertions: login does NOT panic on invalid UTF-8 | Isolation Properties: Mock-only clock for token expiry test
+  - _Prompt: Role: Bug Fixer | Task: GH#123 を修正。再現テスト regression_issue_123_login_fails_with_multibyte_username をまず RED phase で書き、その後修正 | Restrictions: 既存の login flow を破壊しない | Success: regression test PASS、既存テスト全件 PASS_
+```
 
 #### _TestFocus Format
 
@@ -426,8 +462,11 @@ Agent({
     12. TEST-DESIGN TRACEABILITY: Read test-design.md —
         every UT spec must have a corresponding task with matching _TestFocus,
         every IT spec must have an integration test task,
+        every ST spec must have a system test task (J-7),
         every E2E spec must have an E2E test task
-    13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
+    13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/ST-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
+    20. ST_PLACEMENT (J-7, dapper-hardening): For every ST-N spec in test-design.md, a corresponding task must exist in tasks.md, placed at the end of the Phase that completes the target feature's component / endpoint dependencies (after CT/IT, before final E2E Phase).
+    21. REGRESSION_BUG_ID (J-10, dapper-hardening): Tasks marked with `_BugFix: true` (or with `Role: Bug Fixer` in _Prompt) must include a `_RegressionBugId: BUG-NNN` (or `GH#NNN`) metadata field. The corresponding regression test must follow the naming convention `regression_issue_NNN_*` (Rust) / `regression #NNN` (TS) per regression-test-policy/SKILL.md.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

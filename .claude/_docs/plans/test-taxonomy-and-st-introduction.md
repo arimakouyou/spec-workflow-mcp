@@ -31,10 +31,11 @@
 
 ### J-5: spec-tasks の IT/ST/E2E task 配置ルール改訂
 
-- [ ] `spec-tasks/SKILL.md` 3.6 を `### 3.6 IT / ST / E2E Test Tasks` に拡張
-- [ ] IT task: backend Phase 完了直後に配置
-- [ ] ST task: 対象機能 Phase 末尾（CT/IT 完了後、E2E より前）
-- [ ] E2E task: 全 Phase 完了後の最終 Phase
+- [x] `spec-tasks/SKILL.md` 3.6 を `### 3.6 IT / ST / E2E Test Tasks` に拡張
+- [x] IT task: backend Phase 完了直後に配置（責務範囲: backend HTTP API only）
+- [x] ST task: 対象機能 Phase 末尾（CT/IT 完了後、E2E より前。責務範囲: 単一機能 full-stack）
+- [x] E2E task: 全 Phase 完了後の最終 Phase（責務範囲: user journey only）
+- [x] 配置ルールの優先順序を明示
 
 ### J-6: spec-test-design に ST 仕様セクション追加
 
@@ -44,9 +45,9 @@
 
 ### J-7: spec-tasks に ST task 配置ルール追加
 
-- [ ] `spec-tasks/SKILL.md` 3.6 で ST task の特例規約を記載
-- [ ] `spec-tasks/SKILL.md` Step 7 新規 Check 20: ST_PLACEMENT
-- [ ] 既存 task テンプレ 4.x に ST task 例示
+- [x] `spec-tasks/SKILL.md` 3.6 で ST task の特例規約を記載（J-5 と統合実施）
+- [x] `spec-tasks/SKILL.md` Step 7 新規 Check 20: ST_PLACEMENT
+- [ ] 既存 task テンプレ 4.x に ST task 例示（必要時に追加、現状 _BugFix 例で代替）
 
 ### J-8: regression-test-policy を新 taxonomy に整合させる改訂
 
@@ -63,9 +64,9 @@
 
 ### J-10: spec-tasks に `_RegressionBugId` メタデータ強制
 
-- [ ] `spec-tasks/SKILL.md` Step 4 _Prompt template にバグ修正系 task の `_RegressionBugId:` フィールド追加
-- [ ] `spec-tasks/SKILL.md` Step 7 新規 Check 21: REGRESSION_BUG_ID
-- [ ] `parallel-worker/agent.md` バグ修正 mode に RT1 フロー実装
+- [x] `spec-tasks/SKILL.md` Step 4 _Prompt template にバグ修正系 task の `_RegressionBugId:` フィールド追加 + 例示
+- [x] `spec-tasks/SKILL.md` Step 7 新規 Check 21: REGRESSION_BUG_ID
+- [ ] `parallel-worker/agent.md` バグ修正 mode に RT1 フロー実装（後続作業で対応、本 commit には含めない）
 
 ## 完了記録
 
@@ -75,12 +76,28 @@
 | 2026-04-28 | J-1: IT 仕様 backend HTTP only 厳格化 | （これから commit）| spec-test-design Subagent B + test-design template 更新 |
 | 2026-04-28 | J-2: E2E 仕様 user journey only 厳格化 | （これから commit）| spec-test-design Subagent C + test-design template 更新 |
 | 2026-04-28 | J-4: Step B Check 15 (TEST_LAYER_BOUNDARY) | （これから commit）| 当初計画 Check 19 → 15 に番号調整（既存 14 まで） |
-| 2026-04-28 | J-6: ST 仕様 + Subagent E 新設 | （これから commit）| spec-test-design Subagent E + Section 5 Integrate + test-design template 追加 |
+| 2026-04-28 | J-6: ST 仕様 + Subagent E 新設 | 717a641 | spec-test-design Subagent E + Section 5 Integrate + test-design template 追加 |
+| 2026-04-28 | J-1: IT 仕様 backend HTTP only 厳格化 | 717a641 | spec-test-design Subagent B + test-design template 更新 |
+| 2026-04-28 | J-2: E2E 仕様 user journey only 厳格化 | 717a641 | spec-test-design Subagent C + test-design template 更新 |
+| 2026-04-28 | J-4: Step B Check 15 (TEST_LAYER_BOUNDARY) | 717a641 | 当初計画 Check 19 → 15 に番号調整（既存 14 まで） |
+| 2026-04-28 | J-5: spec-tasks 3.6 IT/ST/E2E 配置ルール改訂 | （これから commit）| spec-tasks 3.6 を IT/ST/E2E Test Tasks に拡張、配置ルール優先順序明示 |
+| 2026-04-28 | J-7: spec-tasks Step 7 Check 20 (ST_PLACEMENT) | （これから commit）| ST 仕様の task 化を強制 |
+| 2026-04-28 | J-10: spec-tasks _BugFix + _RegressionBugId | （これから commit）| Step 4 metadata 説明 + Step 7 Check 21 + bugfix task 例示。parallel-worker 改訂は後続 |
 
 ## Check / Subagent 番号付け（実装で確定したもの）
 
+**spec-tasks Step 7 Check** (既存 1-13 + 追加):
+- 14: COMPOSITION_TASK (D, 未実装)
+- 15: UI_OBSERVABILITY (D, 未実装)
+- 16: FIXTURE_REALIZATION (D, 未実装)
+- 17: PHASE_SMOKEABLE (E-2, 未実装)
+- 18: SUCCESS_BEHAVIORAL_VERIFICATION (H-4, 未実装)
+- 19: TESTFOCUS_NEGATIVE (I-1, 未実装)
+- **20: ST_PLACEMENT (J-7, 本 commit)**
+- **21: REGRESSION_BUG_ID (J-10, 本 commit)**
+
 **spec-test-design Step B Check** (既存 1-14 + 追加):
-- 15: TEST_LAYER_BOUNDARY (J-4) ← 当初 19 計画 → 15 に調整
+- **15: TEST_LAYER_BOUNDARY (J-4, 717a641)** ← 当初 19 計画 → 15 に調整
 - F (snapshot path / aria snapshot / complex state) は未実装、今後 16/17/18 を予定
 - H-2 (UT/CT existence / CT integration verify) は未実装、今後 19/20 を予定
 - C-2 (signature match) は未実装、今後 21 を予定
@@ -90,7 +107,7 @@
 - B: IT (J-1 で改訂、backend HTTP only)
 - C: E2E (J-2 で改訂、user journey only)
 - D: CT spec deriver (H-2 で予約、H 実装後に有効化)
-- E: ST spec deriver (J-6 で新設、本 commit で実装)
+- E: ST spec deriver (J-6 で新設、717a641 で実装)
 
 ## 影響範囲
 
