@@ -918,7 +918,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 |------|---------|---------|:------:|--------|--------|
 | **J-3 先行**: Test Taxonomy セクション | （J 内に統合）| （不要）| **DONE** | 2026-04-28 | 2026-04-28 |
 | **K**: 上流仕様書 content 拡張 | `upstream-spec-content-expansion.md` | （不要）| IN PROGRESS | 2026-04-28 | - |
-| **J**: テスト分類 + ST + Regression（残り） | `test-taxonomy-and-st-introduction.md` | （不要）| TODO（J-3 完了済）| - | - |
+| **J**: テスト分類 + ST + Regression（残り） | `test-taxonomy-and-st-introduction.md` | （不要）| IN PROGRESS（J-1/J-2/J-3/J-4/J-6 完了済）| 2026-04-28 | - |
 | **I**: UT 品質特性 enforce | `ut-quality-properties-enforce.md` | `nextest-shuffle-isolation-lints-poc.md` | **POC PENDING** | - | - |
 | **H**: CT 層導入 | `component-test-layer-introduction.md` | `wasm-bindgen-test-leptos-poc.md` | **POC PENDING** | - | - |
 | **D**: spec-tasks 強化 | `tasks-self-review-strengthening.md` | （不要）| TODO | - | - |

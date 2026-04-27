@@ -195,7 +195,9 @@ Agent({
 })
 ```
 
-#### Subagent B: IT 仕様の導出
+#### Subagent B: IT 仕様の導出（**backend HTTP API only**、J-1 で厳格化）
+
+> J-1 で責務範囲を厳格化: IT は **backend HTTP API のみ**を対象とする。フロントの Resource → server fn 境界を含む統合動作は CT (component reactivity) または ST (single feature full-stack) の責務であり、IT には含めない。「server fn 経由」という記述方法を禁止する。
 
 ```
 Agent({
@@ -209,18 +211,25 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Task:
-    design.md の **Architecture** 図と **Components and Interfaces** の Dependencies 記述から、コンポーネント間の重要な相互作用を特定しテストケース化せよ。
+    design.md の **Architecture** 図と **Components and Interfaces** の Dependencies 記述から、**backend HTTP API only** のコンポーネント間相互作用を特定しテストケース化せよ。
+
+    責務範囲（J-1 で厳格化）:
+    - **対象**: backend サーバ側の HTTP API endpoint 動作（status code / response body / DB 状態変化 / 認証認可）
+    - **対象外**: UI 操作 / DOM 検証 / フロントの Resource → server fn 境界。これらは CT (component reactivity) または ST (single feature full-stack) の責務。「server fn 経由」表記を IT 仕様で使うことを禁止
+    - 詳細は quality-checks.md の Test Taxonomy セクション参照
 
     導出ルール:
-    1. Architecture 図の矢印（依存関係）ごとに、結合テストシナリオを検討
-    2. DB アクセスを伴うコンポーネントには DB 統合テストを設計
-    3. 外部 API 連携がある場合はモック/スタブを使った統合テストを設計
+    1. Architecture 図の矢印（依存関係）のうち、**backend 内部のもの**ごとに HTTP 統合テストシナリオを検討
+    2. DB アクセスを伴うコンポーネントには DB 統合テストを設計（実 DB / TempDir / docker-compose.test.yml）
+    3. 外部 API 連携がある場合はモック/スタブ（mockito / wiremock）を使った統合テストを設計
+    4. UI 経由の動作確認が必要な相互作用は **IT ではなく ST または CT** に振る（Subagent E / Subagent D の責務）
 
     命名規則: IT-{シナリオ番号} (例: IT-1, IT-2)
 
     品質基準:
-    - design.md Architecture の全主要依存関係に IT 仕様が存在すること
+    - design.md DES-N の Test Layers field が `IT-N` または `IT` を含む component に IT 仕様が存在すること（K-2 と整合）
     - 各 IT に Components, Interaction, Technology, Preconditions, Steps, Expected Result, Verification Points を記載
+    - **UI 検証 / DOM 操作を含む IT 仕様は不可** （Step B Check 15 で検出）
 
     テスト技術コンテキスト:
     {メインエージェントが調査したテスト技術サマリーをここに挿入}
@@ -231,7 +240,9 @@ Agent({
 })
 ```
 
-#### Subagent C: E2E 仕様の導出
+#### Subagent C: E2E 仕様の導出（**user journey only**、J-2 で厳格化）
+
+> J-2 で責務範囲を厳格化: E2E は **user journey 専用**であり、複数機能の連鎖を含むエンドツーエンドのフローのみを対象とする。「個別機能のテスト」（zoom/rotate のみ、search のみ など）は ST (System Test) の責務であり、E2E には含めない。
 
 ```
 Agent({
@@ -245,24 +256,77 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/design.md
 
     Task:
-    requirements.md の **ユーザーストーリー** と **Acceptance Criteria** から、ユーザージャーニーレベルのテストシナリオを導出せよ。
+    requirements.md の **ユーザーストーリー** と **Acceptance Criteria** から、**user journey** レベル（複数機能の連鎖を含むエンドツーエンドのフロー）のテストシナリオを導出せよ。
+
+    責務範囲（J-2 で厳格化）:
+    - **対象**: 複数機能の連鎖を含む user journey（例: ログイン → 検索 → 結果クリック → 詳細表示 → ログアウト）
+    - **対象外**: 個別機能の単独テスト（例: zoom 機能のみ / 情報パネル開閉のみ / localStorage 永続化のみ）。これらは ST (System Test) の責務。「e2e-zoom-rotate.spec.ts」のような個別機能 E2E は禁止
+    - 詳細は quality-checks.md の Test Taxonomy セクション参照
 
     導出ルール:
-    1. 各ユーザーストーリーの正常フローを E2E シナリオ化
-    2. 重要な失敗シナリオ（認証エラー、権限不足等）も E2E シナリオに含める
-    3. design.md の API Design セクションがある場合、API レスポンスの検証ポイントを明記
+    1. 各ユーザーストーリーから **複数機能の連鎖** を含むハッピーパス user journey を E2E シナリオ化
+    2. 重要な失敗シナリオ（認証エラー、権限不足等）も user journey として E2E シナリオに含める
+    3. design.md の API Design セクションがある場合、user journey の各ステップで API レスポンスの検証ポイントを明記
+    4. **単一機能のテスト需要**は E2E ではなく ST 仕様（Subagent E）に振る
 
     命名規則: E2E-{シナリオ番号} (例: E2E-1, E2E-2)
 
     品質基準:
-    - requirements.md の全ユーザーストーリーに最低1つの E2E 仕様が存在すること
+    - 各 E2E に **複数機能の連鎖**が含まれていること（連鎖が無いなら ST 候補）
     - 各 E2E に User Story 参照、Test Type、Technology、Scenario Steps、Success Criteria、Failure Scenarios を記載
+    - **個別機能のテスト（連鎖なし）を E2E と称することを禁止**（Step B Check 15 で検出）
 
     テスト技術コンテキスト:
     {メインエージェントが調査したテスト技術サマリーをここに挿入}
 
     Output format:
     ## E2E Test Specifications のマークダウンセクションをそのまま出力せよ。
+    各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
+})
+```
+
+#### Subagent E: ST 仕様の導出（J-6 で新設）
+
+> J-6 で新設: ST (System Test) は **単一機能の full-stack 動作**（UI 操作 → backend 応答 → UI 反映）を対象とする。E2E (user journey) と CT (component reactivity 単独) の中間層。
+> Subagent D は CT spec deriver として H-2 で予約済（H 実装後に有効化）。本 Subagent は E。
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  description: "ST 仕様を導出",
+  prompt: "You are a test specification engineer. Generate System Test specifications.
+
+    Read the following files:
+    - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+    - {project-path}/.spec-workflow/specs/{spec-name}/design.md
+
+    Task:
+    requirements.md の各ユーザーストーリー / 個別機能から、**単一機能の full-stack** テストシナリオを導出せよ（UI でユーザー操作 → backend が応答 → UI に反映を 1 機能分検証）。
+
+    責務範囲（J-6 で確定）:
+    - **対象**: 単一機能の full-stack 動作（例: 「ログイン機能のみ」「検索機能のみ」「ズーム機能のみ」）
+    - **対象外**: 複数機能の連鎖（E2E 責務）/ pure logic（UT）/ component reactivity 単独（CT）/ backend HTTP API のみ（IT）
+    - 詳細は quality-checks.md の Test Taxonomy セクション参照
+
+    導出ルール:
+    1. 各 REQ-N / Acceptance Criteria を「単一機能の full-stack 観点」で分解、独立した機能単位でテストシナリオ化
+    2. design.md の DES-N の Test Layers field で `ST` または `ST-N` を宣言した component が ST 対象（K-2 と整合）
+    3. 実 server を起動した上で UI を操作し、backend 応答が UI に反映されることを検証
+    4. **複数機能の連鎖を含むシナリオは ST ではなく E2E（Subagent C）に振る**
+
+    命名規則: ST-{シナリオ番号} (例: ST-1: ログイン機能、ST-2: 検索機能)
+
+    品質基準:
+    - design.md DES-N の Test Layers field が `ST-N` または `ST` を含む機能に ST 仕様が存在すること
+    - 各 ST に Feature Scope（対象機能の範囲）, Test Path（UI → backend → UI の経路）, Verification Points, Expected Outcome を記載
+    - **複数機能の連鎖を含む ST は不可**（連鎖が必要なら E2E）
+
+    テスト技術コンテキスト:
+    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+
+    Output format:
+    ## System Test Specifications のマークダウンセクションをそのまま出力せよ。
     各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
 })
 ```
@@ -280,8 +344,10 @@ Agent({
 
 2. **サブエージェント結果を順序通り配置**:
    - Unit Test Specifications（Subagent A の出力）
-   - Integration Test Specifications（Subagent B の出力）
-   - E2E Test Specifications（Subagent C の出力）
+   - Integration Test Specifications（Subagent B の出力、backend HTTP API only — J-1）
+   - System Test Specifications（Subagent E の出力、単一機能 full-stack — J-6 で新設）
+   - E2E Test Specifications（Subagent C の出力、user journey only — J-2）
+   - ※ Component Test Specifications（Subagent D の出力）は H-2 実装後に追加
 
 3. **Requirements-Test Traceability Matrix** を構築:
    - 全サブエージェント結果を横断し、全 Requirement ID に UT/IT/E2E が紐づくことを確認
@@ -387,6 +453,11 @@ Agent({
     12. CONTAINER CONSISTENCY: IT/E2E specs Technology fields must be consistent with design.md Container Architecture and E2E Test Infrastructure section
     13. REQUIRED TEST TOOLS: Required Test Tools section must exist within Test Environment Requirements, with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns). All E2E test tools must be Required=Yes.
     14. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: test-design, version, depends_on (file entries pointing to requirements.md and design.md with refs) must exist at the top of the file. Every REQ-/DES- ID in depends_on.refs must exist in the referenced upstream file (SD4)
+    15. TEST_LAYER_BOUNDARY (J-4, dapper-hardening): Each test specification must respect its layer boundary as defined in quality-checks.md Test Taxonomy:
+       - IT-N specs must NOT include UI operations or DOM verifications (move to ST or E2E)
+       - E2E-N specs must include 複数機能の連鎖 (single-feature tests must be moved to ST)
+       - ST-N specs must NOT span multiple features (move to E2E if multi-feature journey)
+       - UT specs must NOT depend on external I/O (clock / RNG / env / fs / HTTP / DB) — must use Mock points declared in design.md Architecture for Testability (K-3)
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

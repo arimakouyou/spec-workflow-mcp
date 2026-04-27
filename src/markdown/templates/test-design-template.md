@@ -110,6 +110,8 @@ Notes:
 
 ## Integration Test Specifications
 
+> **責務範囲（J-1 で厳格化）**: IT は **backend HTTP API のみ**を対象とする。フロントの Resource → server fn 境界を含む統合動作は CT (Component Test) または ST (System Test) の責務。「server fn 経由」表記を IT 仕様で使うことは禁止。詳細は `quality-checks.md` の Test Taxonomy 参照。
+
 ### IT-1: [統合テストシナリオ名]
 - **Components:** [関与するコンポーネント一覧]
 - **Interaction:** [テスト対象の相互作用の説明]
@@ -147,7 +149,44 @@ Notes:
 
 ---
 
+## System Test Specifications
+
+> **責務範囲（J-6 で新設）**: ST は **単一機能の full-stack 動作**（UI 操作 → backend 応答 → UI 反映）を 1 機能分検証する。複数機能の連鎖を含むシナリオは E2E に振る。pure logic / component reactivity 単独 / backend HTTP API のみ は対象外。詳細は `quality-checks.md` の Test Taxonomy 参照。
+
+### ST-1: [機能名]
+- **Feature Scope:** [対象機能の範囲（例: ログイン機能のみ、検索機能のみ）]
+- **Requirement:** [対応する REQ-N / Acceptance Criteria]
+- **Technology:**
+  - **Runner:** Playwright | Cypress
+  - **App Container:** docker-compose up で実 server 起動
+  - **DB Setup:** migration + seed via container
+  - **Browser:** Chromium | Firefox | WebKit
+- **Test Path:**
+  1. [UI 操作1] → [backend 応答] → [UI 反映]
+  2. [UI 操作2] → [backend 応答] → [UI 反映]
+- **Verification Points:**
+  - [検証ポイント1: 例 — 入力に対して期待されるレスポンスが UI に表示されること]
+  - [検証ポイント2: 例 — エラー時に適切なメッセージが UI に表示されること]
+- **Expected Outcome:** [機能が期待通り動作する全体像]
+
+### ST-2: [機能名]
+- **Feature Scope:** [対象機能]
+- **Requirement:** [対応する REQ-N]
+- **Technology:**
+  - **Runner:** Playwright | Cypress
+- **Test Path:**
+  1. [UI 操作] → [backend 応答] → [UI 反映]
+- **Verification Points:**
+  - [検証ポイント]
+- **Expected Outcome:** [期待結果]
+
+[必要な機能分だけ繰り返す]
+
+---
+
 ## E2E Test Specifications
+
+> **責務範囲（J-2 で厳格化）**: E2E は **user journey 専用**（複数機能の連鎖を含むエンドツーエンドのフロー）。個別機能の単独テスト（zoom のみ、検索のみ など）は ST の責務。「e2e-zoom-rotate.spec.ts」のような単一機能 E2E は禁止。詳細は `quality-checks.md` の Test Taxonomy 参照。
 
 ### E2E-1: [ユーザージャーニー名]
 - **User Story:** [対応するユーザーストーリー（REQ-N の参照）]
