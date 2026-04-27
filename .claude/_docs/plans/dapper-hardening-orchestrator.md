@@ -926,7 +926,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | **B**: worktree bookkeeping flush | （master plan で track）| （不要）| **DONE** (Step 3.5.0 + review-worker exclusion note)| 2026-04-28 | 2026-04-28 |
 | **C**: spec semantic 整合性 (Type Reference Resolution) | （master plan で track）| （不要）| **DONE** (spec-design Check 13 + spec-test-design Check 18 + spec-verify Check 9)| 2026-04-28 | 2026-04-28 |
 | **F**: test-design 自己レビュー | （master plan で track）| （不要）| **DONE** (spec-test-design Check 19/20/21)| 2026-04-28 | 2026-04-28 |
-| **A**: LLM 幻覚抑止 | （master plan で track）| （不要）| **PARTIAL** (negative example 明記済、Hook は後続)| 2026-04-28 | - |
+| **A**: LLM 幻覚抑止 | （master plan で track）| （不要）| **DONE** (negative example + confirm-phase-progression.sh Hook)| 2026-04-28 | 2026-04-28 |
 
 > γ 採用: J-3 (`quality-checks.md` の Test Taxonomy セクション) を先行で 1 commit 化済。これにより K-1/K-2/K-4 が参照する taxonomy 正規定義が確立。
 
