@@ -24,6 +24,105 @@ Unified command specification for quality checks run by parallel-worker, review-
 
 ---
 
+## Test Taxonomy
+
+> spec-test-design / spec-tasks / parallel-worker / review-worker / spec-verify が参照する **テスト分類の正規定義**。
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 J（J-3）。
+
+各テスト層は **明確な責務範囲** を持ち、責務外のテストは別の層に振る。E2E に個別機能テストを書く / IT に UI 検証を含める / smoke に full integration を入れる、のような責務逸脱は禁止。
+
+### 7 層テスト分類
+
+| 層 | 責務 | 範囲 | 実行時間目安 | fixture | 実行時期 |
+|---|------|------|:--------:|:------:|:------:|
+| **UT** (Unit Test) | pure logic（仕様充足 + 仕様外不在） | 単関数 | ms | 不要 | TDD サイクル毎 / Phase Review / PR / merge |
+| **CT** (Component Test) | component reactivity（mount → signal → DOM 観測） | 単 component | 数秒 | mock signal | Phase Review / PR / merge |
+| **IT** (Integration Test) | **backend HTTP API only** | server crate | 秒〜十秒 | 実 DB / TempDir | backend Phase 完了後 / PR / merge |
+| **ST** (System Test) | **単一機能の full-stack**（UI 操作 → backend → UI 反映） | UI + server (機能 1 個分) | 数秒〜十秒 | 実 server + fixture | 対象機能 Phase 末尾 / PR / merge |
+| **smoke** | boot + wiring（全 method）+ 型境界 | system 全体 | 30s〜2m | 不要 | 各 Phase Review |
+| **E2E** (End-to-End) | **user journey only** | 全機能横断 | 分〜十数分 | 実 server + 完全 fixture | Final Gate のみ |
+| **Regression** (cross-cutting type) | 既知バグ再発防止 | UT/CT/IT/ST/E2E すべての層に **横断的に** mark | 各層と同じ | 各層と同じ | PR / merge（必須） |
+
+### 各層の詳細
+
+#### UT (Unit Test)
+- **検証内容**: 仕様充足（happy path / boundary）+ **仕様外不在**（mutation 禁止 / 副作用ゼロ / 想定外入力で panic しない）
+- **FIRST 原則必須**: Fast / Isolated / Repeatable / Self-Validating / Timely
+- **外部依存禁止**: clock / RNG / env / fs / HTTP / DB の直接呼出は禁止（Mock 経由のみ許容）
+- **実装**: Rust は inline `#[cfg(test)] mod tests`、.NET は xUnit、Node は vitest など
+- **`_TestFocus` 6 カテゴリ**: Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**
+
+#### CT (Component Test)
+- **検証内容**: component を mount し、signal 操作・event dispatch で reactivity が機能するか
+- **対象**: UI フレームワーク (Leptos / Blazor / React など) の component 内部の Resource / Suspense / on:click / on:submit / Effect の挙動
+- **実装手段**:
+  - Leptos: `wasm-bindgen-test` + `wasm-pack test --headless --chrome`（実用性 POC: `wasm-bindgen-test-leptos-poc.md`）
+  - .NET Blazor: bUnit
+  - React/Vue: @testing-library
+- **責務外**: pure logic（UT で十分）/ 実 server 通信（IT or ST）
+
+#### IT (Integration Test)
+- **検証内容**: backend の HTTP API endpoint の動作（status code / response body / DB 状態変化 / 認証認可）
+- **責務範囲**: server crate のみ。**フロントの Resource → server fn 境界を含めない**（含めるなら CT or ST）
+- **実装**: `tower::ServiceExt::oneshot` で Axum Router 直接呼び出し / TestClient で end-point 試験 など
+- **fixture**: 実 DB（TempDir / docker-compose.test.yml）
+- **責務外**: UI 操作 / DOM 検証 / pure logic
+
+#### ST (System Test)
+- **検証内容**: 単一機能の full-stack 動作（UI でユーザー操作 → backend が応答 → UI に反映）
+- **対象機能の例**: 「ログイン機能のみ」「検索機能のみ」「ズーム機能のみ」
+- **責務外**: 複数機能の連鎖（E2E 責務）/ pure logic（UT）/ component reactivity 単独（CT）
+- **実装**: Playwright / Selenium で実 server 起動 + UI 操作
+
+#### smoke
+- **検証内容**: 4 層構造
+  - L1 Health: `/health`, `/api/health`, `/healthz` への GET
+  - L2 Wiring: design.md の各 `### API-N:` から path / method を抽出。全 method × 全 endpoint で **5xx を出さないこと**（POST/PUT/PATCH は空ボディ `{}`、DELETE はプレースホルダ ID で送信）
+  - L3 Auth: design.md で「Auth: required」の endpoint に Authorization なしで送信して 401
+  - L4 入力境界: 各 path/query/body field の **型境界値**（String 空文字 / maxLength+1 / int overflow / enum 未定義値 / Optional 省略 / 不正 UUID）で 400/422
+- **責務外**: 業務ロジック（IT / UT で検証）/ 複合境界（UT/IT）/ ビジネス境界（IT/UT）/ user journey（E2E）
+
+#### E2E (End-to-End)
+- **検証内容**: 複数機能の連鎖を含む user journey（例: ログイン → 検索 → 結果クリック → 詳細 → ログアウト）
+- **責務外**: 個別機能のテスト（ST 責務）/ 単一 endpoint の応答確認（IT or smoke 責務）
+- **実行時期**: Final Gate のみ。Phase 内では走らない
+
+#### Regression（cross-cutting type）
+- **位置**: 層ではなく **type**。UT/CT/IT/ST/E2E のすべての層に横断的に mark が付く
+- **命名規則** (`regression-test-policy/SKILL.md` 参照):
+  - Rust: `fn regression_issue_NNN_<description>()` / TypeScript: `it('regression #NNN: ...')`
+- **CI gate**: PR / merge 時に regression marked テストの全件 PASS が必須（QC16 で gate 化予定）
+
+### 境界違反パターン（よくある誤り）
+
+#### IT に UI 検証が混入
+- **誤り**: IT-N で `assert dom.querySelector('[data-testid=...]')` を含める
+- **正しい**: UI 検証は CT (component 単独) か ST (full-stack 単一機能) か E2E (user journey)
+- **検出**: `spec-test-design/SKILL.md` Step B Check 19 (TEST_LAYER_BOUNDARY)
+
+#### E2E に個別機能テストが混入
+- **誤り**: `e2e-zoom-rotate.spec.ts` のような単一機能テストを E2E と称する
+- **正しい**: ST に振る (`st-zoom-rotate.spec.ts` または同等)
+- **検出**: `spec-test-design/SKILL.md` Step B Check 19
+
+#### smoke に full integration が混入
+- **誤り**: smoke で実データを作成して business logic を検証
+- **正しい**: smoke は wiring + 型境界のみ。business logic は IT / UT
+- **検出**: smoke 実行時間が 5 分超え（`spec-implement/SKILL.md` Step 3.5.1.5 で警告）
+
+#### ST が CT で代替できる
+- **疑問**: 「単一機能の full-stack」と称するが実 server を使わなくても CT で機能テストできる場合
+- **判断**: server fn コアロジック単独なら UT、UI + signal 統合なら CT、UI → server → UI の動作観察が必要なら ST
+- **検出**: spec-test-design 自己レビューで「server 起動が本当に必要か」をチェック
+
+### 参照
+
+- `regression-test-policy/SKILL.md`: Regression 命名規則 / CI gate / Traceability Matrix
+- `spec-test-design/SKILL.md`: 各層の Subagent (A: UT / B: IT / C: E2E / D: CT / E: ST) と Step B Check
+- `.claude/_docs/plans/dapper-hardening-orchestrator.md`: J-3 の起点と関連項目（K / I / H / E）
+
+---
+
 ## タスクレベルチェック（QC1〜QC6, QC8〜QC9）
 
 コミット前・PR 単位で実行するチェック。`/setup-ci` が生成する `ci.yml` および `scheduled-quality.yml` に組み込まれる。
