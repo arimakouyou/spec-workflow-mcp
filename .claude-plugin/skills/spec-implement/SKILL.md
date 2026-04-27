@@ -7,6 +7,19 @@ description: "Phase 5 of spec-driven development: implement tasks from an approv
 
 Execute tasks systematically from the approved tasks.md using a **TDD-driven workflow**. Each task follows the cycle: Start → Discover → Read Guidance → **TDD Implementation (parallel-worker)** → **UT Quality Verification** → **Code Review + Commit (review-worker)** → Log → Complete.
 
+## 🔑 MUST-READ: 実装時の UT が verify するもの (I-5, dapper-hardening)
+
+**実装時の UT は `cargo test PASS`（コードが動く）の確認ではない。仕様の検証である。**
+
+- ✅ **仕様充足**: 仕様で定められた挙動が正しく行われること
+- ✅ **仕様外不在**: 仕様で定められていない挙動が起きないこと（mutation 禁止 / 副作用ゼロ / 想定外入力で panic しない / 未定義フィールド禁止）
+- ✅ **外部依存ゼロ**: clock / RNG / env / fs / HTTP / DB の直接呼出を test に書かない（Mock 経由のみ、design.md K-3 で宣言）
+- ✅ **順序非依存・決定性**: 何回・どんな順で実行しても結果が同じ
+
+`_Prompt` の `Success` フィールドに `cargo test PASS` だけを書くのは **誤った frame**。代わりに「仕様 X が UT-N の Negative Assertion 込みで verify される」「QC15 (UT Properties Gate) で clippy `disallowed-methods` がゼロ violation」のような **動作証跡 + 品質特性証跡** で書く。
+
+詳細: `quality-checks.md` の **Test Taxonomy** および **QC15** を参照。`spec-tasks/SKILL.md` の `_TestFocus` 6 カテゴリ (Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**) も参照。
+
 ## ⛔ Orchestrator Prohibited Actions (ABSOLUTE RULES)
 
 You executing this skill are the **orchestrator**, not the **implementer**. Strictly follow these rules:

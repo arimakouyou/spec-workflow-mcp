@@ -13,6 +13,16 @@ description: >
 
 Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with Rust language features.
 
+## 🔑 MUST-READ: UT が verify するもの (I-5, dapper-hardening)
+
+**UT は `cargo test PASS`（コードが動く）の確認ではない。仕様の検証である。**
+
+- 仕様充足 + **仕様外不在**（Negative Assertions）の両方を verify する
+- 外部依存ゼロ（clock / RNG / env / fs / HTTP / DB の直接呼出は禁止、Mock 経由のみ）
+- 順序非依存・決定性（FIRST 原則）
+
+詳細は `_TestFocus` 6 カテゴリ（`spec-tasks/SKILL.md`）+ `quality-checks.md` の Test Taxonomy / QC15 を参照。
+
 ## Pre-check: Know-how Reference
 
 Read relevant know-how such as testing from the Know-how INDEX as described in the `feedback-loop` skill (FL2).
