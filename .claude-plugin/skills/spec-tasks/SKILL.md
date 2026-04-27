@@ -316,6 +316,31 @@ This is critical for implementation quality. Each task needs a `_Prompt` field w
   - _Prompt: Role: Code reviewer | Task: Review all Phase 1 changes, run tests, commit | Success: All tests pass, committed_
 ```
 
+#### UI Component task テンプレ（D で追加、dapper-hardening）
+
+UI component（Leptos / Blazor / React 等）の task は `_Prompt.Task` で以下を **必須記述**:
+
+1. **view! / 出力 DOM**: 「view! 内に `<img src=...>` `<button>...</button>` 等の {期待要素} をレンダリングする」と明示文字列で記述
+2. **依存配線**: design.md DES-N の `Dependencies:` 列の各 server fn / 外部 API / 兄弟 component を「{依存名} を呼び出す / 統合する / 受け取る」と明示
+3. **data-testid 付与**: test-design.md の CT/E2E 仕様で参照される testid を view! 内の該当位置に付与（test_ids.rs 等で定数化推奨）
+4. **event listener attach**: `on:click` / `on:submit` / `on:input` 等の event handler が signal を update するように配線
+
+`_Prompt.Success` は **動作証跡** で書く（grep だけでは不十分、Check 18 SUCCESS_BEHAVIORAL_VERIFICATION で error）:
+
+- CT-N が PASS（mount + signal + DOM 観測 chain）
+- 必要に応じて grep などの補助確認も併記可（単独では不可）
+
+```markdown
+- [ ] 4.4 Implement ThumbnailGrid component
+  - File: crates/app/src/components/thumbnail_grid.rs
+  - Render thumbnail items from list_folder Resource
+  - _DependsOn: 4.3
+  - _Leverage: crates/app/src/server_fns/list_folder.rs, crates/app/src/test_ids.rs
+  - _Requirements: REQ-2.1, REQ-2.2
+  - _TestFocus: Happy Path: 5枚画像表示 / Boundary Values: 0枚 / 1枚 / 200枚 / Error Handling: list_folder error 時のエラー表示 / Edge Cases: 多バイトパス / Negative Assertions: list_folder を 1 回しか呼ばない / Isolation Properties: list_folder は MockServer 経由
+  - _Prompt: Role: Frontend Component Engineer | Task: ThumbnailGrid component を実装。view! 内に Resource::new で list_folder を呼び出し、Suspense で pending 状態を表示、各画像に <img src="/api/thumbnails/{path}"> + data-testid="thumbnail-item" を付与。on:click で on_open callback を実行 | Restrictions: design.md DES-12 の Interfaces を変更しない。pure helper 抽出のみで終わらせない（Check 18） | Success: CT-12.1 (initial render) / CT-12.2 (5 件画像表示) / CT-12.3 (click → on_open 呼び出し) が全 PASS、view! 内に data-testid="thumbnail-grid" / "thumbnail-item" が grep で検出される_
+```
+
 **Note:** The Task field must focus on a single responsibility. Do not join multiple responsibilities with "and" (e.g., "Create model and implement repository").
 
 Also include:
@@ -465,7 +490,8 @@ Agent({
     3. CROSS-REFERENCE: Read requirements.md and design.md —
        every requirement must have at least one implementing task,
        every design component must have at least one creating task,
-       _Requirements IDs must match actual requirement IDs
+       _Requirements IDs must match actual requirement IDs,
+       **(D 拡張、dapper-hardening)** every DES-N の `Dependencies:` 列に列挙された全 server fn / 外部 API / 兄弟 component が、対応 task の `_Prompt.Task` 文に **「{依存名} を呼び出す/統合する/受け取る」と明示文字列で記載されているか** 確認
     4. TRACEABILITY: Verify that the Target Task ID column is filled in for all components in the Requirements Traceability Matrix in design.md.
        If any component row is empty, add a task to tasks.md and update the matrix in design.md.
     5. Tasks are atomic (1-3 files), in logical dependency order
@@ -481,6 +507,10 @@ Agent({
         every ST spec must have a system test task (J-7),
         every E2E spec must have an E2E test task
     13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/ST-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
+    14. COMPOSITION_TASK (D, dapper-hardening): If design.md の Component List に top-level (root) component（例: AppRoot, MainShell, RootRoute）が存在する場合、その配下 component を子要素として組み立てる **専用の composition task** が tasks.md に存在するか。task の `_Prompt.Task` には「N 個の子 component を view! 内に配置し、prop / signal を配線する」、`_Prompt.Success` には「すべての子 component が DOM tree に出現する E2E スモーク (後続 Phase で) が成立する前提を満たす」を明記
+    15. UI_OBSERVABILITY (D, dapper-hardening): UI component task の `_Prompt.Success` には「data-testid を {期待値} で付与する」「実 view! が {要求要素 (`<img>`, `<button>`, etc.)} をレンダリングする」が含まれているか。test-design.md の E2E / CT 仕様で `getByTestId(...)` / `query_selector("[data-testid=...]")` 参照されている testid が、対応する component task の `_Prompt.Success` に明示されているか
+    16. FIXTURE_REALIZATION (D, dapper-hardening): test-design.md の Test Data Requirements に列挙された fixture path（`tests/fixtures/...`、`photos/landscape/...` 等）が、いずれかの task の `File:` 列または `_Prompt.Task` 文で生成・配置される旨が記載されているか
+    17. PHASE_SMOKEABLE (E-2, dapper-hardening): 各 Phase の最後の `_PhaseReview: true_` task の前に、その Phase で smoke 可能な deliverable が **少なくとも 1 件存在するか**。design.md の Phase Deliverables（K-4 で必須化）と突合し、Phase が deliverable ゼロの場合は escalate（Phase 境界の見直し提案）
     18. SUCCESS_BEHAVIORAL_VERIFICATION (H-4, dapper-hardening): The `_Success` field must NOT be completed by static checks alone (e.g., grep for string existence / "the file exists" / "implementation contains X"). At least one **動作証跡 (behavioral evidence)** is required: test PASS (UT-N / CT-N / IT-N / ST-N) / smoke PASS / DOM observation. UI component task の `_Success` には CT-N PASS（mount + signal 操作 + DOM 観測）を必須化
     19. TESTFOCUS_NEGATIVE (I-1, dapper-hardening): _TestFocus must include all 6 categories (Happy Path / Boundary Values / Error Handling / Edge Cases / Negative Assertions / Isolation Properties). If Negative Assertions or Isolation Properties is "N/A", the task must be a pure function with no side effects (and the reason must be explicitly noted)
     20. ST_PLACEMENT (J-7, dapper-hardening): For every ST-N spec in test-design.md, a corresponding task must exist in tasks.md, placed at the end of the Phase that completes the target feature's component / endpoint dependencies (after CT/IT, before final E2E Phase).
