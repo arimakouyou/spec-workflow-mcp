@@ -108,6 +108,30 @@ Notes:
 
 ---
 
+## Component Test Specifications
+
+> **責務範囲（H-2 で新設）**: CT (Component Test) は **component reactivity**（mount → signal 操作 → DOM 観測）を対象とする。pure logic は UT の責務。実 server 通信は IT or ST。詳細は `quality-checks.md` QC14 + `tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 参照。
+
+### CT-1: [コンポーネント名 — 検証シナリオ]
+- **Component:** [対象 component（design.md DES-N の Test Layers に CT/CT-N が含まれること）]
+- **Mount Setup:** [例: `mount_to(test_wrapper, || view! { <SimpleCounter initial_value=0 /> })`]
+- **Action:** [signal 操作 or DOM event trigger。例: `inc_button.click(); tick().await;` (3 回連続 click)]
+- **DOM Verification:** [query_selector + text_content / inner_html。例: `wrapper.query_selector("[data-testid='counter-value']").text_content() == "3"`]
+- **Signal Verification (該当時):** [reactive update が正しく行われたか。例: counter signal の値が 3 になっていること（DOM 経由で間接観測）]
+- **Test Tool:** wasm-bindgen-test（Rust/Leptos）/ bUnit（.NET/Blazor）/ @testing-library（React/Vue）
+
+### CT-2: [コンポーネント名 — 検証シナリオ]
+- **Component:** [対象 component]
+- **Mount Setup:** [...]
+- **Action:** [...]
+- **DOM Verification:** [...]
+- **Signal Verification (該当時):** [...]
+- **Test Tool:** [...]
+
+[必要なシナリオ分だけ繰り返す]
+
+---
+
 ## Integration Test Specifications
 
 > **責務範囲（J-1 で厳格化）**: IT は **backend HTTP API のみ**を対象とする。フロントの Resource → server fn 境界を含む統合動作は CT (Component Test) または ST (System Test) の責務。「server fn 経由」表記を IT 仕様で使うことは禁止。詳細は `quality-checks.md` の Test Taxonomy 参照。

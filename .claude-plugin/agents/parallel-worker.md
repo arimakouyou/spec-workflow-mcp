@@ -112,9 +112,9 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 | プロジェクトタイプ | 検出条件 | 適用する QC 項目 |
 |----------------|--------|----------------|
 | Rust | `Cargo.toml` | QC1 (rustfmt) / QC2 (clippy) / QC3 (cargo test) / QC4 (cargo-audit, cargo-udeps) / **QC15 (UT Properties Gate, I-2)** |
-| Leptos フルスタック | `Cargo.toml` に `[package.metadata.leptos]` | 上記 + QC5 (cargo leptos build or WASM-specific clippy) |
+| Leptos フルスタック | `Cargo.toml` に `[package.metadata.leptos]` | 上記 + QC5 (cargo leptos build or WASM-specific clippy) + **QC14 (Component Test, H-1)** |
 | .NET | `*.csproj` / `*.sln` | QC12 (dotnet format / build -warnaserror / test / dependency analysis) |
-| .NET Blazor | `Microsoft.AspNetCore.Components.WebAssembly` 参照 | 上記 + QC12.6 (dotnet publish -p:PublishTrimmed=true) |
+| .NET Blazor | `Microsoft.AspNetCore.Components.WebAssembly` 参照 | 上記 + QC12.6 (dotnet publish -p:PublishTrimmed=true) + **QC14 (Component Test, bUnit)** |
 | Node.js | `package.json` | QC6 (npm test / lint / format / audit) |
 
 **QC15 (UT Properties Gate, I-2 で新設)**:

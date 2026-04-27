@@ -62,32 +62,112 @@ dojin-viewer の `crates/app/src/components/toolbar.rs` 相当の **最も単純
 
 ## 結果記録
 
-（POC 実施後に追記）
+### 実施日: 2026-04-28
 
-### 実施日: -
+### Setup 結果（POC で確立した最小構成）
 
-### Setup 結果
+**Cargo.toml**:
+```toml
+[dependencies]
+leptos = { version = "0.7", features = ["csr"] }
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Document", "Element", "HtmlElement", "Window"] }
 
-- Cargo.toml 追加内容: -
-- wasm-pack バージョン: -
-- chromedriver バージョン: -
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+```
+
+**.cargo/config.toml**（必須、これが無いと wasm test が動かない）:
+```toml
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"
+```
+
+**Tools 状態**:
+- `wasm-bindgen-cli` 0.2.118: 既存（spec-workflow-mcp 環境に install 済）
+  - `wasm-bindgen-test-runner` を提供
+- `wasm32-unknown-unknown` rustup target: 既存
+- `wasm-pack`: **不要**（cargo test で直接動作）
+- Firefox + geckodriver: snap install で auto-discovered（手動セットアップ不要）
+  - `chromedriver` 等の chrome 系も同様（試していないが可能性大）
 
 ### POC 実装結果
 
-- 対象 component: -
-- 実装した test: -
+対象 component: `SimpleCounter`（Leptos book testing.html を参考）
+
+3 件の test を実装、すべて PASS:
+
+```rust
+#[wasm_bindgen_test]
+fn renders_initial_value() {
+    // mount + query_selector + text_content 検証
+    // signal の初期値が DOM に反映されるか
+}
+
+#[wasm_bindgen_test]
+async fn click_increment_updates_dom() {
+    // click → signal update → tick().await → DOM 検証
+    // click 3 回で counter が "3" になることを verify
+}
+
+#[wasm_bindgen_test]
+async fn clear_resets_to_zero() {
+    // initial 42 → click clear → tick().await → DOM "0" 検証
+}
+```
 
 ### 計測結果
 
-- 1 test あたり実行時間: -
-- セットアップ所要時間: -
-- エルゴノミクス所感: -
-- CI 適性: -
+| 項目 | 値 |
+|------|---|
+| **総実行時間（compile + 3 tests + Firefox 起動）** | 4.9 秒 |
+| compile 時間 | 0.78 秒（依存解決後 incremental） |
+| 1 test あたり実行時間 | < 100ms |
+| Firefox 起動オーバーヘッド | 約 3 秒（最初の test のみ） |
+| セットアップ複雑度 | 中（.cargo/config.toml + Cargo.toml dev-deps 設定で完了） |
+| エルゴノミクス | 良（Leptos book pattern が直接通用） |
+| CI 適性 | 高（geckodriver / chromedriver を CI runner に install するだけ） |
 
 ### 判定
 
-- 結果: -
-- H への影響: -
+| 結果 | 判断 |
+|------|------|
+| ✅ **動く / 実用的** | H-1〜H-5 を予定通り実装。CT 層は実現可能 |
+
+#### Why this is sufficient
+
+- **Component reactivity の完全 verify**: signal 操作 → reactive update → DOM re-render の chain が test で観測できる
+- **Event handler 検証**: click 等の DOM event が signal を update することを verify できる
+- **tick().await pattern**: reactive system の async 性質に対応（gloo-timers で 0ms wait）
+- **DOM 構造検証**: query_selector + text_content / inner_html / outer_html で構造的検証可能
+- **fixture フリー**: 各 test で `fresh_wrapper()` を作成、状態共有なし（FIRST 原則の Isolated を満たす）
+- **数秒/test**: E2E より圧倒的に速い
+
+#### Architecture for Testability (K-3) との連携
+
+Leptos の Resource / Suspense / server fn は実 server を呼ぶため CT 層では mock が必要。design.md の K-3「External I/O isolation」で `mockito` / `wiremock` を経由する設計を宣言する前提。
+
+CT 層の典型例:
+- ✅ Pure component reactivity（signal、event handler、Effect）→ wasm-bindgen-test で直接 verify
+- ⚠️ Resource を含む component → server fn を mock 経由に切り替えた上で wasm-bindgen-test
+- ❌ 実 server を呼ぶ統合動作 → CT ではなく ST or E2E
+
+### Cleanup
+
+- /tmp/h-poc-sandbox/ → **手動削除を要請**（permission 環境で `rm -rf` deny のため）
+  - ユーザーで `rm -rf /tmp/h-poc-sandbox` を実行してください
+- spec-workflow-mcp 側に POC 由来の変更なし（plan ファイル + H 実装のみ）
+
+### Tool install への影響
+
+POC で **新規 install したツールはゼロ**:
+- wasm-bindgen-cli: 既に install 済（cargo install --list で確認）
+- gloo-timers: Cargo.toml の dev-dep（temp project 内のみ、global install なし）
+- Firefox: snap で既存
+- geckodriver: Firefox snap に bundled
+
+ユーザーの「I/H POC 終了後 cargo は不要」要望に応える形で、追加 install ゼロで POC を完了できた。
 
 ## 関連
 

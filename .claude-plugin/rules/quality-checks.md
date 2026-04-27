@@ -966,6 +966,148 @@ finding を起票する根拠として使う。
 
 ---
 
+## QC14: Component Test (CT) Gate (H-1 で新設)
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 H（H-1）。
+> POC `wasm-bindgen-test-leptos-poc.md` で実用性確認済（Leptos 0.7 + wasm-bindgen-test、5 秒で 3 tests PASS）。
+
+### 目的
+
+UT (pure logic) と E2E (user journey) の中間層として **CT (Component Test)** を定義し、component reactivity（mount → signal → DOM）を Phase 内で継続検証する。Phase 4 placeholder commit パターン（pure helper UT のみで `[x]` 完了する反パターン）を構造的に防ぐ。
+
+### 責務範囲
+
+`Test Taxonomy` セクション参照。CT は:
+
+- **対象**: 単 component の reactivity（mount → signal 操作 → DOM 観測）
+- **範囲**: UI 1 component
+- **実行時間**: 数秒/test
+- **fixture**: mock signal（design.md K-3 Architecture for Testability の宣言を経由）
+- **責務外**: pure logic（UT）/ 実 server 通信（IT or ST）/ user journey（E2E）
+
+### Rust / Leptos の場合
+
+**Setup**（POC で確立した最小構成）:
+
+```toml
+# Cargo.toml
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+web-sys = { version = "0.3", features = ["Document", "Element", "HtmlElement", "Window"] }
+```
+
+```toml
+# .cargo/config.toml
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"
+```
+
+**実行コマンド**:
+
+```bash
+cargo test --target wasm32-unknown-unknown --lib
+```
+
+**Test pattern**:
+
+```rust
+#[cfg(target_arch = "wasm32")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wasm_bindgen_test::*;
+    use leptos::mount::mount_to;
+    use wasm_bindgen::JsCast;
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    fn fresh_wrapper() -> web_sys::Element {
+        let document = web_sys::window().unwrap().document().unwrap();
+        let test_wrapper = document.create_element("section").unwrap();
+        let _ = document.body().unwrap().append_child(&test_wrapper);
+        test_wrapper
+    }
+
+    async fn tick() {
+        gloo_timers::future::TimeoutFuture::new(0).await;
+    }
+
+    #[wasm_bindgen_test]
+    async fn component_reactivity() {
+        let wrapper = fresh_wrapper();
+        let _dispose = mount_to(
+            wrapper.clone().unchecked_into(),
+            || view! { <MyComponent /> },
+        );
+
+        // signal を更新 / event を trigger
+        let button = wrapper
+            .query_selector("[data-testid='action-btn']")
+            .unwrap().unwrap()
+            .unchecked_into::<web_sys::HtmlElement>();
+        button.click();
+        tick().await;
+
+        // DOM 観測
+        let target = wrapper
+            .query_selector("[data-testid='target-value']")
+            .unwrap().unwrap();
+        assert_eq!(target.text_content().unwrap(), "expected");
+    }
+}
+```
+
+詳細: `tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 参照。
+
+### .NET / Blazor の場合
+
+**bUnit** を使用（標準ツール、堅牢）:
+
+```csharp
+[Fact]
+public void Counter_ClickIncrementsValue()
+{
+    using var ctx = new TestContext();
+    var cut = ctx.RenderComponent<Counter>(parameters => parameters
+        .Add(p => p.InitialValue, 0));
+
+    cut.Find("[data-testid='btn-inc']").Click();
+
+    Assert.Equal("1", cut.Find("[data-testid='counter-value']").TextContent);
+}
+```
+
+詳細: `tdd-skills-dotnet/references/blazor-component-testing.md`（後続で整備、現時点では bUnit 公式ドキュメント参照）
+
+### CI 統合
+
+```yaml
+- name: Component Test (QC14)
+  run: |
+    # Leptos: Firefox / geckodriver を install
+    sudo apt-get install -y firefox-esr
+    cargo test --target wasm32-unknown-unknown --lib
+    # .NET / Blazor:
+    dotnet test --filter "Category=ComponentTest"
+```
+
+### 段階的 gate 化
+
+| 段階 | 適用 |
+|------|------|
+| 初期（advisory） | CT が無い component には warning（spec-tasks Step 7 Check 17/18 で検出） |
+| 中期 | UI component task の `_Success` に「CT-N PASS」を必須化（H-4 / Check 18） |
+| 成熟 | review-worker Category E で CT 不在を Moderate finding として起票（H-5） |
+
+### POC で確認した制約
+
+- **wasm-pack は不要**（cargo test --target wasm32-unknown-unknown で直接動作）
+- **Firefox + geckodriver / Chromium + chromedriver のいずれかが CI に必要**
+- production code の Resource / server fn 呼び出しは mock を介してテスト（design.md K-3 で宣言）
+
+---
+
 ## QC15: UT Properties Gate (I-2 で新設)
 
 > 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 I（I-2）。

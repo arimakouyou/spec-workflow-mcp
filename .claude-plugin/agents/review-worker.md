@@ -104,6 +104,11 @@ Refer to `.claude-plugin/rules/security.md`. Check the following against the dif
 - Confirm each item in the `_Prompt` **Success** criteria one by one, and verify all are satisfied
 - Verify that the requirements referenced in `_Requirements` are reflected in the implementation
 - Verify that the constraints in `_Restrictions` are not violated
+- **(H-5 拡張) Success 基準の動作証跡確認**: `_Success` フィールドが **動作証跡を持たない**（grep / 文字列存在 / "実装されていることを確認" のような static check のみ）の場合、`review_action: escalate` で起票:
+  - 動作証跡の例: UT-N PASS / CT-N PASS / IT-N PASS / smoke PASS / DOM 観測
+  - grep + 動作証跡の合成は OK（grep だけが NG）
+  - 「ファイルが存在する」「文字列が存在する」では Phase 4 placeholder commit 反パターンを再発させる
+  - 詳細: `spec-tasks/SKILL.md` Step 7 Check 18 (SUCCESS_BEHAVIORAL_VERIFICATION) と整合
 
 ### E. Final Check of Test Code
 
@@ -133,6 +138,16 @@ Verify that the implementation followed the Red-Green-Refactor cycle, not just "
 
 **Action on violation**: Severity is **Moderate** (same as B/C). Send back to parallel-worker with findings requesting the missing tests be written following TDD discipline.
 
+#### E3. Component Test (CT) Coverage（H-5 で追加、UI component task のみ）
+
+UI component task の場合、追加で以下を確認:
+
+- **CT が存在するか**: `tests/component/` 内 / `*_ct.rs` ファイル / `#[cfg(target_arch = "wasm32")] mod tests` 内に wasm-bindgen-test based の CT が 1 件以上あるか
+- **mount + signal 操作 + DOM 観測の chain が含まれるか**: `mount_to(...)` + `signal.set(...)` または `HtmlElement::click()` + `tick().await` + `query_selector(...)` の組合せで verify されているか
+- **pure helper UT のみで終わっていないか**: UI component task が 4.4 ThumbnailGrid のような view! ベースなのに、テストが `extracted_helper_function` だけの状態は **Moderate finding として reject**（CT が無いことが理由）
+
+**Action on violation**: Severity is **Moderate**。dapper-hardening Phase 4 placeholder commit パターンの再発防止のため明示的に reject する。
+
 ### F. Design Conformance
 
 Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
@@ -141,6 +156,10 @@ Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design
 - **API**: Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
 - **Data Model**: Do the fields of Model/DTO match the definitions in design.md?
 - **Detection of additions**: Are there any tables, endpoints, or fields added that are not defined in design.md?
+- **(H-5 拡張) Code path 到達可能性**: 「placeholder ヒューリスティック」（`<p>"...placeholder"</p>` のような露骨な文字列）に頼らず、**code path の到達可能性で判断**する:
+  - design.md DES-N の `Dependencies:` 列に列挙された各 server fn / external API が、対応 component の view! 内で **実際に呼び出している箇所**を 1 件以上検出できるか（grep + 文脈確認）
+  - data-testid が DOM 出力位置に付与されており、test_ids.rs 等で定数化されているか
+  - 「extracted helper だけで終わっており、view! 内が `<p>placeholder</p>` だけ」という状態を **Critical として escalate**（dapper-hardening #4.3 FolderTree 事例の再発防止）
 
 If a deviation from the design is detected, escalate to the user with `review_action: escalate`. Implementers are not permitted to change the design on their own.
 

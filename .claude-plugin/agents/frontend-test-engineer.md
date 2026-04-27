@@ -118,25 +118,48 @@ Call `advisor()` at the following points:
   - fetch を `MockServer` 経由（mockito / wiremock）
   - signal の初期化に乱数を使わない
 
-## Leptos フロントエンドの原則
+## Leptos フロントエンドの原則（H-3 で改訂、dapper-hardening）
 
-### ユニットテスト対象
-- signal 状態遷移
-- 派生計算
+> **重要な変更（H-3）**: 旧仕様で「すべて E2E 責務」とされていた `view!` 出力 / DOM 配線 / Suspense / Resource / CSS クラス適用は **CT (Component Test) 責務に移管**された。POC `wasm-bindgen-test-leptos-poc.md` で `wasm-bindgen-test` による component reactivity test が実用的（5 秒で 3 tests PASS）と確認済み。
+
+### ユニットテスト (UT) 対象
+- signal 状態遷移（**抽出された pure function** として）
+- 派生計算（Memo 抽出ロジック）
 - バリデーション関数
-- `#[server]` のコアロジック
-- イベントハンドラ本体
+- `#[server]` のコアロジック（trait DI 経由）
+- イベントハンドラ本体（抽出された関数）
 - Props からの初期状態計算
 
-### ユニットテスト対象外
-- `view!` マクロの HTML 出力
-- DOM イベント配線
-- CSS クラス適用
-- Router 遷移
-- `Suspense` / `Resource` の表示切替
-- ハイドレーション挙動
+→ `cargo test`（host target）で実行。詳細は `tdd-skills-rust/references/leptos-frontend-testing.md` セクション 1〜5 参照。
 
-これらは E2E テスト（Playwright）で扱う。
+### Component Test (CT) 対象（H で新設、wasm-bindgen-test）
+- **`view!` の DOM 出力**（initial render の構造 / data-testid 検証）
+- **DOM イベント配線**（`on:click`、`on:submit` 等が signal を update することを verify）
+- **`Suspense` / `Resource` の表示切替**（mock 経由で pending / loaded / error 各状態を verify）
+- **CSS クラス適用**（`class:active=signal` の reactive 適用を verify、必要なら）
+- signal 駆動の DOM update 全般
+
+→ `cargo test --target wasm32-unknown-unknown` で wasm-bindgen-test 経由で実行。詳細は `quality-checks.md` QC14 + `tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 参照。
+
+### E2E (User Journey) 対象
+- ハイドレーション挙動（SSR → CSR 遷移）
+- Router 遷移（複数ページ間の navigation）
+- 複数機能の連鎖を含む user journey
+
+→ Playwright で実行。**個別機能の単独テストは E2E ではなく ST に振る**（J-2 で厳格化）。
+
+### 各層の責務分離（J-3 で確定した taxonomy 参照）
+
+| 検証対象 | UT | CT | ST | E2E |
+|---|:--:|:--:|:--:|:--:|
+| pure logic（抽出 helper） | ✅ | | | |
+| signal 状態遷移 | ✅ (抽出 logic) | ✅ (mount + signal + DOM) | | |
+| `view!` 出力 / DOM 構造 | | ✅ | | |
+| DOM event 配線 | | ✅ | | |
+| Suspense / Resource (mock 経由) | | ✅ | | |
+| 単一機能の full-stack（実 server） | | | ✅ | |
+| ハイドレーション / Router 遷移 | | | | ✅ |
+| 複数機能の連鎖（user journey） | | | | ✅ |
 
 ## 参照資料
 - `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md`

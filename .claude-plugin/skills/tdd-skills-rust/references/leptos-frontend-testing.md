@@ -426,18 +426,93 @@ mod tests {
 
 ---
 
-## 6. ユニットテストで扱わないもの
+## 6. UT で扱うもの / CT で扱うもの / E2E で扱うもの（H で改訂、dapper-hardening）
 
-以下は E2E テスト（Playwright）で検証する。
+> POC `wasm-bindgen-test-leptos-poc.md` で **CT (Component Test) 層が実用的**と確認済（5 秒で 3 tests PASS）。`view!` / event wiring / Suspense / Resource は **CT で verify する**ようになった（旧仕様の「すべて E2E 責務」を H-3 で改訂）。
 
-| 対象 | 理由 |
+### UT (pure logic、ms 単位、外部依存ゼロ)
+
+- 抽出された pure function（state 更新ロジック、derive 計算、バリデーション、server fn コア）
+- `cargo test` で実行
+- 詳細: 本ドキュメントのセクション 1〜5
+
+### CT (Component Test、wasm-bindgen-test、数秒)
+
+`wasm-bindgen-test` + `cargo test --target wasm32-unknown-unknown` で実 component を mount → signal 操作 → DOM 観測:
+
+```rust
+#[wasm_bindgen_test]
+async fn click_increment_updates_dom() {
+    let wrapper = fresh_wrapper();
+    let _dispose = mount_to(
+        wrapper.clone().unchecked_into(),
+        || view! { <SimpleCounter initial_value=0 /> },
+    );
+
+    let inc_button = wrapper
+        .query_selector("[data-testid='btn-inc']")
+        .unwrap().unwrap()
+        .unchecked_into::<web_sys::HtmlElement>();
+    inc_button.click();
+    tick().await; // gloo-timers で reactive update を待つ
+
+    let value_span = wrapper
+        .query_selector("[data-testid='counter-value']")
+        .unwrap().unwrap();
+    assert_eq!(value_span.text_content().unwrap(), "1");
+}
+```
+
+**CT で扱える対象**:
+
+| 対象 | CT で verify 可能か |
 |------|------|
-| `view!` マクロの HTML 出力 | SSR/CSR でレンダリング挙動が異なる、DOM 依存 |
-| DOM イベント配線（`on:click` が発火するか） | ブラウザ環境が必要 |
-| CSS クラスの適用（`class:active=signal`） | DOM 依存 |
-| ルーティング遷移（`<A href="...">`） | Router コンテキストが必要 |
-| `Suspense` / `Resource` のローディング表示 | 非同期レンダリングフロー |
-| ハイドレーション動作 | SSR → CSR 遷移はブラウザ環境必須 |
+| `view!` の DOM 出力（initial render） | ✅ query_selector + text_content |
+| DOM イベント配線（`on:click` 等） | ✅ HtmlElement::click() で trigger、tick().await で update 観測 |
+| signal 駆動の DOM update | ✅ tick().await 後に DOM 検証 |
+| `Suspense` / `Resource`（mock 経由） | ✅ design.md K-3 で宣言された Mock 経由（mockito 等） |
+| 派生計算の DOM 反映 | ✅ Memo / derive 経由の値が DOM に出ることを verify |
+
+**Setup 最小構成**（POC で確立）:
+
+```toml
+# Cargo.toml
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+```
+
+```toml
+# .cargo/config.toml
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"
+```
+
+実行: `cargo test --target wasm32-unknown-unknown`
+
+CI: Firefox + geckodriver（snap または apt）、または Chromium + chromedriver
+
+### E2E (Playwright、user journey only)
+
+- 複数機能の連鎖を含む user journey（CT / ST に振り切れない複合ケース）
+- ハイドレーション挙動（SSR → CSR 遷移）
+- ルーティング遷移（`<A href="...">` の navigation 検証）
+
+### 旧仕様からの変更（dapper-hardening H-3）
+
+旧 `frontend-test-engineer.md` L104-112「ユニットテスト対象外」リストで **すべて E2E 責務** とされていた以下は CT 責務に移管:
+
+| 対象 | 旧 | 新 |
+|------|---|---|
+| `view!` の DOM 出力 | E2E | CT で query_selector / inner_html 検証 |
+| DOM イベント配線（`on:click`） | E2E | CT で HtmlElement::click() trigger |
+| `Suspense` / `Resource` の表示切替 | E2E | CT で mock + tick().await で観測 |
+| CSS クラス適用（`class:active=signal`） | E2E | CT で classList 検証可能（必要なら） |
+
+**E2E に残るもの**:
+- ハイドレーション挙動（SSR → CSR）
+- ルーティング遷移（複数ページ間）
+- 複数機能の連鎖（user journey）
 
 ---
 

@@ -296,6 +296,55 @@ Agent({
 })
 ```
 
+#### Subagent D: CT 仕様の導出（H-2 で新設）
+
+> H-2 で新設: CT (Component Test) は **component reactivity**（mount → signal 操作 → DOM 観測）を対象とする。Leptos 0.7 + wasm-bindgen-test での実用性は POC `wasm-bindgen-test-leptos-poc.md` で確認済み。
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  description: "CT 仕様を導出",
+  prompt: "You are a test specification engineer. Generate Component Test specifications.
+
+    Read the following files:
+    - {project-path}/.spec-workflow/specs/{spec-name}/design.md
+    - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+
+    Task:
+    design.md DES-N の `Test Layers:` field（K-2 で必須化）に `CT` または `CT-N` が含まれる component について、**component reactivity** テスト仕様を導出せよ。
+
+    責務範囲（H-2 で確定）:
+    - **対象**: 単一 component の reactivity（mount → signal 操作 → DOM 観測）
+    - **対象外**: pure logic（UT 責務、抽出関数で verify）/ 実 server 通信（IT or ST）/ user journey（E2E）
+    - **典型的検証項目**:
+      1. initial render: signal の初期値が DOM に反映されるか（query_selector + text_content）
+      2. event 配線: on:click / on:submit / on:input が signal を update するか（HtmlElement::click() で trigger、tick().await 後に DOM 観測）
+      3. signal 駆動の DOM update: signal 変更 → reactive re-render → DOM 検証
+      4. Suspense / Resource: mock 経由（design.md K-3 で宣言）で pending / loaded / error 各状態を verify
+      5. Effect: signal 変更時に Effect が 1 回だけ呼ばれることを verify（連続発火しない）
+
+    実装手段:
+    - Rust / Leptos: wasm-bindgen-test + cargo test --target wasm32-unknown-unknown（wasm-pack 不要）
+    - .NET / Blazor: bUnit（標準）
+    - 詳細: quality-checks.md QC14 + tdd-skills-rust/references/leptos-frontend-testing.md 参照
+
+    命名規則: CT-{コンポーネント番号}.{テストケース番号} (例: CT-11.1, CT-11.2)
+
+    品質基準:
+    - design.md DES-N の Test Layers field が `CT` または `CT-N` を含む component に CT 仕様が存在すること（K-2 と整合）
+    - 各 CT に Mount Setup / Action（signal 操作 or event trigger）/ DOM Verification / Signal Verification の 4 フィールド必須
+    - **pure logic を CT で verify することを禁止**（UT に振る、Step B Check 17/18 で検出）
+
+    テスト技術コンテキスト:
+    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+
+    Output format:
+    ## Component Test Specifications のマークダウンセクションをそのまま出力せよ。
+    各シナリオをサブセクション (####) とし、Mount Setup / Action / DOM Verification / Signal Verification をテーブルまたは構造化リストで記載。"
+})
+```
+
 #### Subagent E: ST 仕様の導出（J-6 で新設）
 
 > J-6 で新設: ST (System Test) は **単一機能の full-stack 動作**（UI 操作 → backend 応答 → UI 反映）を対象とする。E2E (user journey) と CT (component reactivity 単独) の中間層。
@@ -355,10 +404,10 @@ Agent({
 
 2. **サブエージェント結果を順序通り配置**:
    - Unit Test Specifications（Subagent A の出力）
+   - Component Test Specifications（Subagent D の出力、component reactivity — H-2 で新設）
    - Integration Test Specifications（Subagent B の出力、backend HTTP API only — J-1）
    - System Test Specifications（Subagent E の出力、単一機能 full-stack — J-6 で新設）
    - E2E Test Specifications（Subagent C の出力、user journey only — J-2）
-   - ※ Component Test Specifications（Subagent D の出力）は H-2 実装後に追加
 
 3. **Requirements-Test Traceability Matrix** を構築:
    - 全サブエージェント結果を横断し、全 Requirement ID に UT/IT/E2E が紐づくことを確認
@@ -469,6 +518,8 @@ Agent({
        - E2E-N specs must include 複数機能の連鎖 (single-feature tests must be moved to ST)
        - ST-N specs must NOT span multiple features (move to E2E if multi-feature journey)
        - UT specs must NOT depend on external I/O (clock / RNG / env / fs / HTTP / DB) — must use Mock points declared in design.md Architecture for Testability (K-3)
+    16. CT_COVERAGE (H-2, dapper-hardening): For every UI component DES-N in design.md whose Test Layers field (K-2) declares `CT` or `CT-N`, a corresponding Component Test specification must exist in test-design.md `## Component Test Specifications` section. CT specs must include Mount Setup / Action / DOM Verification / Signal Verification fields
+    17. CT_INTEGRATION_VERIFY (H-2, dapper-hardening): Each CT-N spec must verify component reactivity (mount + signal + DOM observation), NOT pure logic. Pure logic verification belongs in UT. Specifically: each CT-N must specify (a) how the component is mounted (`mount_to(...)`), (b) what signal is updated or what event is triggered, (c) how DOM is observed (query_selector + text_content / inner_html / outer_html)
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
