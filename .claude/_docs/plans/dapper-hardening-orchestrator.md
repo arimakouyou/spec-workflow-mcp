@@ -746,13 +746,13 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 
 ### 修正対象 / 提案変更
 
-#### K-1: requirements.md の Acceptance Criterion に Test Layers フィールド追加
+#### K-1: requirements.md の Acceptance Criterion に Test Layers フィールド追加 ✅ DONE (2026-04-28)
 
 | 対象 | 変更内容 |
 |------|----------|
 | `spec-requirements/SKILL.md` Step 4 | 各 `### REQ-N:` の Acceptance Criterion 1〜M に **Test Layers** フィールドを追加。例:<br>`1. WHEN ... THEN ... SHALL ...` (REQ-N.1)<br>`   Test Layers: UT, ST-3, E2E-1`<br>UT/CT/IT-N/ST-N/E2E-N の組合せで宣言。`<!-- REQ-N.M -->` コメントの隣に置く |
 | requirements-template.md | 同上の書式を例示 |
-| `spec-verify/SKILL.md` 新規 Check 9: REQ_TEST_LAYERS_DECLARED | 「全 REQ-N.M に Test Layers が宣言されているか」「宣言された Test Layer が test-design.md に存在するか」を check |
+| `spec-verify/SKILL.md` 新規 Check 8: REQ_TEST_LAYERS_DECLARED | 「全 REQ-N.M に Test Layers が宣言されているか」「宣言された Test Layer が test-design.md に存在するか」を check<br>※ 当初 Check 9 で計画していたが、C (Check 8 予定) が未実装のため Check 8 に番号調整 |
 
 #### K-2: design.md DES-N に Required Test Layers フィールド追加
 
@@ -780,7 +780,7 @@ E2E を狭めた帰結として、「単一機能の full-stack テスト（UI +
 | `spec-design/SKILL.md` Step B 拡張 | 「全 Phase に Deliverable + Test Layers + Smokeable が記載されているか」を error 判定。E-2 の Phase Deliverable 検証も K-4 で統一 |
 | 既存 E-2（Phase Deliverable 宣言部分） | K-4 に統合（E-2 内では「smoke 観点」を扱い、Phase Deliverable 全般は K-4） |
 
-#### K-5: requirements.md NFR に「Testability」を必須項目として追加
+#### K-5: requirements.md NFR に「Testability」を必須項目として追加 ✅ DONE (2026-04-28)
 
 | 対象 | 変更内容 |
 |------|----------|

@@ -83,6 +83,26 @@ depends_on: []
 
 Use `### REQ-N: [Requirement Name]` for each requirement heading. Acceptance Criteria are numbered `1.`, `2.`, `3.` within the requirement — they form the implicit `REQ-N.M` identifiers that downstream specs reference. Add `<!-- REQ-N.M -->` comments after each Acceptance Criterion line so that downstream agents can locate them precisely.
 
+**Test Layers per Acceptance Criterion (per K-1, `dapper-hardening-orchestrator.md`):**
+
+Each Acceptance Criterion must declare which test layers verify it, by adding a `- Test Layers: ...` line immediately below the AC. Allowed layer values are defined in `quality-checks.md` の **Test Taxonomy** section:
+
+- `UT` — pure unit test
+- `CT` — component reactivity test (UI フレームワークの component が対象)
+- `IT-N` — backend HTTP integration test (specific spec ID; `N` は test-design.md で確定)
+- `ST-N` — system test (single feature full-stack)
+- `E2E-N` — end-to-end (user journey)
+
+複数の層を組み合わせて宣言してよい。具体的な test ID（IT-N / ST-N / E2E-N の `N`）は test-design.md で確定するため、requirements.md 段階では暫定 ID か layer 名のみでも可（例: `Test Layers: UT, IT, ST`）。test-design.md 完成後に back-fill する。
+
+書式例:
+```markdown
+1. WHEN [event] THEN [system] SHALL [response]  <!-- REQ-1.1 -->
+   - Test Layers: UT, IT-1, ST-3
+2. IF [precondition] THEN [system] SHALL [response]  <!-- REQ-1.2 -->
+   - Test Layers: UT, CT
+```
+
 ### 5. Self-Review via Subagent (before approval)
 
 Validate the document in **2 stages** before requesting approval.
@@ -132,9 +152,10 @@ Agent({
     Checks:
     1. TEMPLATE: Every section from the template must exist with real content (no [describe...] or TODO)
     2. Every requirement needs User Story ('As a [role]...') and EARS Acceptance Criteria (WHEN/IF...THEN...SHALL)
-    3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability
+    3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability, **Testability** (6 観点、Testability は K-5 で追加)
     4. Requirements must be uniquely identified as '### REQ-N:' headings (per spec-dependency-graph.md SD1)
     5. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: requirements, version, depends_on: [] must exist at the top of the file
+    6. TEST LAYERS (per K-1): Every Acceptance Criterion must have a `- Test Layers: ...` line declaring which test layers verify it. Layer values must be drawn from quality-checks.md Test Taxonomy (UT / CT / IT / ST / E2E)
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

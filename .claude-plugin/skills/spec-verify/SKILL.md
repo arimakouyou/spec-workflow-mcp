@@ -140,6 +140,23 @@ Every `DES-N` in `design.md` should be reachable:
 - **`_DependsOn:` values** must reference existing task IDs within the same tasks.md → otherwise **error** (`task_dependency_dangling`)
 - **`_Leverage:` file paths** should exist (best-effort filesystem check) → otherwise **info** (`leverage_file_missing`; may be intentional for future files)
 
+#### Check 8: Requirement Test Layers Declaration (per K-1)
+
+> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 K（K-1）。
+> Test Taxonomy は `quality-checks.md` の Test Taxonomy セクション参照（J-3 で確定）。
+
+For each Acceptance Criterion in `requirements.md` (numbered list under `### REQ-N:`):
+
+- The line immediately below the AC must contain `- Test Layers: ...` declaring which test layers verify the criterion
+- Allowed layer values: `UT`, `CT`, `IT-N` (or `IT`), `ST-N` (or `ST`), `E2E-N` (or `E2E`)
+  - 具体 ID 形式（`IT-3` 等）は test-design.md で確定後に back-fill。requirements.md 段階では layer 名のみでも可
+  - 複数組合せ可（例: `Test Layers: UT, IT-1, ST-3`）
+- Missing `Test Layers:` line for any AC → **error** (`req_test_layers_missing`)
+- Layer value not in allowed set → **error** (`req_test_layers_invalid_value`)
+- Specific ID (`IT-N`) referenced does not exist in test-design.md → **warn** (`req_test_layers_dangling_id`)（test-design.md 未確定段階では無視）
+
+Legacy specs without `Test Layers:` lines: emit **warn** (`req_test_layers_legacy`) instead of error, allowing gradual migration.
+
 ### 4. Generate Report
 
 Output a markdown report. Do not write to any spec file. Optionally save to `.spec-workflow/specs/{spec-name}/reviews/verify-{YYYY-MM-DD-HHMM}.md` if the user requests.
