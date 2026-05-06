@@ -3,8 +3,8 @@ name: adr
 description: >
   Create and manage Architecture Decision Records (ADRs) in .claude/_docs/adr/.
   Each ADR documents a significant architectural decision with status tracking
-  (Proposed, Accepted, Deprecated, Superseded). Triggers: 'create ADR', 'record decision',
-  'architecture decision', 'ADR', '意思決定記録', 'design decision',
+  (Proposed, Accepted, Deprecated, Superseded). Triggers on: 'create ADR', 'record decision',
+  'architecture decision', 'ADR', 'design decision', '意思決定記録',
   or any request to document an architectural choice.
 argument-hint: "<title> [--status Proposed|Accepted]"
 user-invokable: true

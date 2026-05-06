@@ -1,63 +1,63 @@
 ---
 name: context7
 description: |
-  Context7 MCP を活用して、ライブラリ・フレームワーク・外部ツールの**最新ドキュメント**を実装前・設定前・エラー対応時に取得するガイドライン。メモリベースの古い知識や古い Stack Overflow 回答に頼らず、Context7 MCP で公式ドキュメントを参照してから記述・修正する。ライブラリ API 利用時、設定ファイル (tsconfig, vite, eslint, etc.) 記述時、ライブラリ/ツール起因のエラー発生時、CLI オプション確認時に参照。
+  Guideline for using the Context7 MCP to fetch **up-to-date documentation** for libraries, frameworks, and external tools before implementation, before configuration, and when handling errors. Do not rely on stale memory-based knowledge or old Stack Overflow answers; consult the official docs via Context7 MCP before writing or fixing code. Use it when calling library APIs, writing config files (tsconfig, vite, eslint, etc.), resolving library/tool-induced errors, and verifying CLI options. Triggers on: 'context7', 'fetch latest docs', 'library documentation', 'check API usage', '最新ドキュメント取得', 'ライブラリのドキュメント参照'.
 allowed-tools: [Read, Edit, Write, Bash, Grep]
 ---
 
 # Context7 MCP Usage Skill
 
-## 対象
+## In Scope
 
-- ライブラリ / フレームワークの API 利用を含む新規実装
-- 設定ファイル（`tsconfig.json`, `vite.config.ts`, `eslint.config.mjs`, `pyproject.toml` など）の記述
-- CLI ツール（webpack, rollup, esbuild, etc.）の引数・設定の確認
-- ライブラリ起因のエラー解決（バージョン差分含む）
+- New implementation that calls library / framework APIs
+- Writing config files (`tsconfig.json`, `vite.config.ts`, `eslint.config.mjs`, `pyproject.toml`, etc.)
+- Verifying arguments and configuration for CLI tools (webpack, rollup, esbuild, etc.)
+- Resolving library-induced errors (including version differences)
 
-## 対象外
+## Out of Scope
 
-- プロジェクト内部のコード設計・リファクタリング（Context7 の責務外）
-- 公開されていない社内ツール・API（Context7 にドキュメントがない）
+- Internal project code design and refactoring (outside Context7's responsibility)
+- Non-public internal tools / APIs (Context7 has no docs for them)
 
-## 主要観点
+## Key Points
 
-### 1. ライブラリ利用時
+### 1. When Using Libraries
 
-ライブラリの API を呼び出すコードを書く前に、Context7 MCP で該当ライブラリの最新ドキュメントとコード例を取得する。メモリに残っている古い使い方で書かずに、Context7 が返す最新の使い方に合わせる。
+Before writing code that calls a library's API, fetch the latest documentation and code samples for that library via the Context7 MCP. Don't write based on stale usage patterns from memory; follow the current usage that Context7 returns.
 
 ```text
 (Bad)
-React の useState を呼び出すとき、memory にある書き方で実装する。
+When calling React's useState, write it the way you remember from memory.
 
 (Good)
-Context7 MCP で "react hooks useState" を検索 → 最新の usage を確認 → 実装する。
+Search "react hooks useState" via Context7 MCP → confirm the latest usage → implement.
 ```
 
-### 2. 外部ツール設定とシンタックス
+### 2. External Tool Configuration and Syntax
 
-設定ファイルの記述時、CLI オプションの指定時は、Context7 MCP で正しい option や format を確認してから書く。推測で書かない。
+When writing config files or specifying CLI options, confirm the correct option and format via Context7 MCP first. Don't write based on guesswork.
 
-### 3. エラー対応時
+### 3. When Handling Errors
 
-ライブラリ / ツール起因のエラーが発生したら、Context7 MCP で該当エラーの対処法を確認し、公式ドキュメントに基づいた修正を行う。古い Stack Overflow 回答やメモリ由来の推測に基づく修正は避ける。
+When a library-/tool-induced error occurs, look up the remedy via Context7 MCP and apply a fix grounded in the official documentation. Avoid fixes based on old Stack Overflow answers or memory-derived guesses.
 
-## よくある落とし穴
+## Common Pitfalls
 
-1. **「知ってるから大丈夫」で書き始める**: ライブラリのバージョンが変わって API も変わっているかもしれない。必ず Context7 を確認する
-2. **エラー発生後に Context7 を使わない**: 最初に試す対処法として Context7 は最も speed と正確性が高い
-3. **設定ファイルで古い書き方**: eslint flat config、vite v5、tsconfig の新オプションなど、移行を伴う変更は Context7 で最新確認する
+1. **Starting because "I already know it"**: The library version may have changed and the API along with it. Always check Context7
+2. **Skipping Context7 after an error**: Context7 is the fastest and most accurate first thing to try
+3. **Old patterns in config files**: Migration-bearing changes such as eslint flat config, vite v5, and new tsconfig options should be verified against the latest via Context7
 
-## プロジェクト固有の規約
+## Project-Specific Conventions
 
-- プラグイン `.claude-plugin/.mcp.json` に Context7 MCP が登録されているプロジェクトでは、このスキルを優先的に使う
-- Context7 が該当ライブラリのドキュメントを持っていない場合は、公式 docs サイトを WebFetch で取得する
+- In projects where Context7 MCP is registered in the plugin's `.claude-plugin/.mcp.json`, prefer this skill
+- If Context7 does not have docs for the library in question, fetch from the official docs site via WebFetch
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 関連 Skill: `spec-design`（設計フェーズで library 選定時に Context7 を参照）
-- `axum` / `diesel` / `leptos` などの技術別 Skill: 該当技術の Context7 検索クエリを明示的に提示する
+- Related Skill: `spec-design` (consult Context7 when selecting libraries during the design phase)
+- Technology-specific Skills like `axum` / `diesel` / `leptos`: explicitly suggest Context7 search queries for that technology
 
-## 参考リンク
+## References
 
 - Context7: <https://context7.com/>
 - Model Context Protocol: <https://modelcontextprotocol.io/>

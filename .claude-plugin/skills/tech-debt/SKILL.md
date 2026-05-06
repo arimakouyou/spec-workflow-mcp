@@ -1,170 +1,172 @@
 ---
 name: tech-debt
 description: >
-  技術的負債を .claude/_docs/tech-debt/ にレジスタ形式で記録・管理する。
-  ID 付きエントリ (TD-NNNN) で優先度・工数・ステータスを追跡し、
-  定期的なレビューで解消計画を維持する。
-  ADR（決定記録）とは別管理: ADR は「意思決定」、tech-debt は「既知の問題と改善計画」。
-  Triggers: 'record tech debt', 'tech debt', '技術的負債', 'add debt', '/tech-debt'.
+  Record and manage tech debt as a register under .claude/_docs/tech-debt/.
+  Track priority, effort, and status with ID-tagged entries (TD-NNNN), and
+  maintain a remediation plan via periodic review.
+  Managed separately from ADRs: ADRs record "decisions"; tech-debt records
+  "known issues and improvement plans".
+  Triggers on: 'record tech debt', 'tech debt', 'add debt', '/tech-debt', '技術的負債'.
 argument-hint: "[add|list|update <TD-ID> --status <status>|audit]"
 user-invokable: true
 ---
 
 # Tech Debt Register
 
-技術的負債を `.claude/_docs/tech-debt/` にレジスタ形式で記録・管理するスキル。
-P5-02（技術的負債がrepo内で一覧管理されている）に対応する。
+A skill that records and manages tech debt as a register under `.claude/_docs/tech-debt/`.
+Addresses P5-02 (tech debt is managed as a list inside the repo).
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 .claude/_docs/tech-debt/
-  INDEX.md              # 一覧（優先度順テーブル）
-  TD-0001-slug.md       # 個別エントリ
+  INDEX.md              # Index (priority-ordered table)
+  TD-0001-slug.md       # Individual entries
   TD-0002-slug.md
 ```
 
-## 引数パース
+## Argument Parsing
 
-| サブコマンド | 引数 | 説明 |
-|------------|------|------|
-| `add` | (なし — 対話的に収集) | 新規エントリ作成 |
-| `list` | (なし) | INDEX.md を読み取って一覧表示 |
-| `update` | `<TD-ID> --status <status>` | ステータス更新 |
-| `audit` | (なし) | コードベース走査で潜在的 tech debt を検出 |
+| Subcommand | Arguments | Description |
+|------------|-----------|-------------|
+| `add` | (none — collected interactively) | Create a new entry |
+| `list` | (none) | Read INDEX.md and show the list |
+| `update` | `<TD-ID> --status <status>` | Update status |
+| `audit` | (none) | Scan the codebase to detect potential tech debt |
 
-## 操作: add
+## Operation: add
 
-### Step 1: 情報収集
+### Step 1: Information Gathering
 
-ユーザーから以下の情報を収集する（省略された場合は対話で確認）:
+Collect the following from the user (ask interactively if omitted):
 
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
-| タイトル | Yes | 負債の簡潔な説明 |
-| 概要 | Yes | 負債の内容と所在 |
-| 影響 | Yes | この負債が引き起こす問題 |
-| 優先度 | Yes | Critical / High / Medium / Low |
-| 工数見積 | Yes | S(1-2h) / M(half-day) / L(1-3d) / XL(1w+) |
-| 改善計画 | No | 修正方法（後で追記可） |
-| 関連 ADR | No | 関連する ADR の ID（例: ADR-0003） |
+| Field | Required | Description |
+|-------|----------|-------------|
+| Title | Yes | Concise description of the debt |
+| Summary | Yes | What the debt is and where it lives |
+| Impact | Yes | Problems this debt causes |
+| Priority | Yes | Critical / High / Medium / Low |
+| Effort estimate | Yes | S(1-2h) / M(half-day) / L(1-3d) / XL(1w+) |
+| Remediation plan | No | How to fix it (can be added later) |
+| Related ADR | No | Related ADR ID (e.g., ADR-0003) |
 
-### Step 2: ID 採番
+### Step 2: ID Assignment
 
-`.claude/_docs/tech-debt/` 内の既存ファイルを走査し、最大 ID + 1 を採番する:
+Scan existing files in `.claude/_docs/tech-debt/` and assign max ID + 1:
 
 ```bash
-# 既存の最大 ID を取得
+# Get the existing max ID
 MAX_ID=$(ls .claude/_docs/tech-debt/TD-*.md 2>/dev/null | \
   grep -oP 'TD-\K\d+' | sort -n | tail -1)
 NEXT_ID=$(printf "%04d" $((${MAX_ID:-0} + 1)))
 ```
 
-### Step 3: ファイル作成
+### Step 3: File Creation
 
-`.claude-plugin/skills/tech-debt/references/tech-debt-template.md` のテンプレートに従い、
-`.claude/_docs/tech-debt/TD-{NEXT_ID}-{slug}.md` を作成する。
+Following the template in `.claude-plugin/skills/tech-debt/references/tech-debt-template.md`,
+create `.claude/_docs/tech-debt/TD-{NEXT_ID}-{slug}.md`.
 
-slug はタイトルを kebab-case に変換して生成する（例: "古い認証ミドルウェア" → `legacy-auth-middleware`）。
+The slug is derived from the title converted to kebab-case (e.g., "Legacy auth middleware" -> `legacy-auth-middleware`).
 
-### Step 4: INDEX.md 更新
+### Step 4: INDEX.md Update
 
-`.claude/_docs/tech-debt/INDEX.md` に行を追加する。INDEX.md が存在しない場合は新規作成:
+Append a row to `.claude/_docs/tech-debt/INDEX.md`. If INDEX.md does not exist, create it:
 
 ```markdown
 # Tech Debt Register
 
-| ID | タイトル | ステータス | 優先度 | 工数 | 作成日 | 関連 ADR |
-|----|---------|----------|--------|------|--------|---------|
-| TD-0001 | [タイトル] | Open | High | M | 2026-04-08 | — |
+| ID | Title | Status | Priority | Effort | Created | Related ADR |
+|----|-------|--------|----------|--------|---------|-------------|
+| TD-0001 | [Title] | Open | High | M | 2026-04-08 | — |
 ```
 
-テーブルは優先度順（Critical > High > Medium > Low）でソートする。
+Sort the table by priority (Critical > High > Medium > Low).
 
-## 操作: list
+## Operation: list
 
-INDEX.md を読み取り、ステータスでフィルタリングして表示する:
+Read INDEX.md, filter by status, and display:
 
 ```
 Tech Debt Register:
-  Open: 3 件 (Critical: 1, High: 1, Medium: 1)
-  In-Progress: 1 件
-  Resolved: 2 件
-  Accepted: 0 件
+  Open: 3 entries (Critical: 1, High: 1, Medium: 1)
+  In-Progress: 1 entry
+  Resolved: 2 entries
+  Accepted: 0 entries
 
-[INDEX.md のテーブルを表示]
+[Display the INDEX.md table]
 ```
 
-## 操作: update
+## Operation: update
 
-指定された TD-ID のエントリファイルの frontmatter を更新する:
+Update the frontmatter of the entry file specified by TD-ID:
 
-| ステータス遷移 | 許可 | 備考 |
-|--------------|------|------|
-| Open → In-Progress | Yes | 作業開始 |
-| Open → Accepted | Yes | 負債を許容する判断（意図的に修正しない） |
-| In-Progress → Resolved | Yes | `resolved` フィールドに日付を記入 |
-| In-Progress → Open | Yes | 作業中断 |
-| Resolved → Open | Yes | 再発した場合 |
+| Status transition | Allowed | Notes |
+|-------------------|---------|-------|
+| Open -> In-Progress | Yes | Work started |
+| Open -> Accepted | Yes | Decision to tolerate the debt (intentionally not fixing) |
+| In-Progress -> Resolved | Yes | Fill in the `resolved` field with the date |
+| In-Progress -> Open | Yes | Work paused |
+| Resolved -> Open | Yes | When recurrence is observed |
 
-INDEX.md のステータス列も同時に更新する。
+Also update the status column in INDEX.md.
 
-## 操作: audit
+## Operation: audit
 
-コードベースを走査して潜在的な技術的負債を検出する。
+Scan the codebase to detect potential tech debt.
 
-### 検出シグナル
+### Detection Signals
 
 ```bash
-# TODO/FIXME/HACK コメントの検出
+# Detect TODO/FIXME/HACK comments
 grep -rn 'TODO\|FIXME\|HACK\|XXX\|WORKAROUND' src/ --include='*.rs' --include='*.ts' --include='*.js' 2>/dev/null
 
-# 300行超の大きなファイル（複雑性の兆候）
+# Large files over 300 lines (complexity signal)
 find src/ -name '*.rs' -o -name '*.ts' -o -name '*.js' 2>/dev/null | while read f; do
   lines=$(wc -l < "$f")
   [ "$lines" -gt 300 ] && echo "LARGE_FILE ($lines lines): $f"
 done
 
-# 古い依存関係（Rust）
+# Outdated dependencies (Rust)
 cargo outdated --depth 1 2>/dev/null | grep -v "Up to date"
 
-# 古い依存関係（Node.js）
+# Outdated dependencies (Node.js)
 npx npm-check-updates 2>/dev/null | grep -v "All dependencies"
 ```
 
-### レポート
+### Report
 
 ```markdown
 ## Tech Debt Audit Report — {DATE}
 
-### 検出された潜在的負債
+### Detected Potential Debt
 
-| # | シグナル | ファイル/箇所 | 既存エントリ | 推奨アクション |
-|---|---------|-------------|------------|--------------|
-| 1 | TODO コメント (5件) | src/handlers/auth.rs | なし | `/tech-debt add` |
-| 2 | 大規模ファイル (450行) | src/services/payment.rs | TD-0003 | 既存エントリで管理中 |
-| 3 | 古い依存 (3件) | Cargo.toml | なし | `/tech-debt add` |
+| # | Signal | File/Location | Existing Entry | Recommended Action |
+|---|--------|---------------|----------------|--------------------|
+| 1 | TODO comments (5) | src/handlers/auth.rs | None | `/tech-debt add` |
+| 2 | Large file (450 lines) | src/services/payment.rs | TD-0003 | Tracked under existing entry |
+| 3 | Outdated deps (3) | Cargo.toml | None | `/tech-debt add` |
 ```
 
-各項目について、ユーザーに `/tech-debt add` で登録するか確認する。
-既存の tech-debt エントリでカバーされている場合はスキップする。
+For each item, ask the user whether to register it via `/tech-debt add`.
+Skip items already covered by an existing tech-debt entry.
 
-## ADR との関係
+## Relationship with ADRs
 
-| 記録対象 | 使用先 | 例 |
-|---------|--------|-----|
-| 意思決定とその根拠 | ADR (`/adr`) | "PostgreSQL を選定、DynamoDB は却下" |
-| 既知の問題と改善計画 | Tech Debt (`/tech-debt`) | "認証ミドルウェアが古く、セッショントークンの保存方法がコンプライアンス要件を満たしていない" |
+| Recorded subject | Where used | Example |
+|------------------|------------|---------|
+| Decisions and their rationale | ADR (`/adr`) | "Selected PostgreSQL; rejected DynamoDB" |
+| Known issues and improvement plans | Tech Debt (`/tech-debt`) | "Auth middleware is dated; session-token storage does not meet compliance requirements" |
 
-ADR の結果として生じた tech debt は `related-adr` フィールドでリンクする。
+Tech debt arising from an ADR should be linked via the `related-adr` field.
 
-## Know-how からの昇格
+## Promotion from Know-how
 
-`/knowhow-capture` で記録された know-how のうち、個別の tips ではなく構造的・慢性的な問題であるものは
-`/tech-debt add` に昇格させる。`feedback-loop` Skill の FL4 の昇格パスを参照。
+Among know-how recorded by `/knowhow-capture`, items that are structural / chronic problems
+rather than individual tips should be promoted via `/tech-debt add`.
+Refer to the FL4 promotion path in the `feedback-loop` Skill.
 
 ## Notes
 
-- ファイル作成後の staging/commit はユーザーが明示的に要求した場合のみ実行する
-- Accepted ステータスは「修正しない」という意図的な判断。理由を概要セクションに記載すること
-- `doc-freshness` Skill により、90日以上 Open のエントリはレビュー対象となる
+- Run staging/commit only when the user explicitly requests it after file creation
+- Accepted status is an intentional "do not fix" decision; record the reason in the Summary section
+- The `doc-freshness` Skill flags entries that have been Open for 90+ days for review

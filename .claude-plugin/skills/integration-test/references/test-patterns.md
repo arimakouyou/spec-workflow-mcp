@@ -1,29 +1,29 @@
-# テスト実装パターン
+# Test Implementation Patterns
 
-インテグレーションテストで使う典型的なパターン集。
+A collection of typical patterns used in integration tests.
 
-## ファイル構成テンプレート
+## File Layout Template
 
 ```
 tests/
-├── integration.rs           # テストバイナリエントリポイント（mod で下記を参照）
+├── integration.rs           # Test binary entry point (references the modules below via mod)
 ├── integration/
 │   ├── helpers/
-│   │   ├── mod.rs          # 共通ヘルパー
-│   │   ├── app.rs          # テスト用 Axum app 構築
-│   │   ├── db.rs           # testcontainers DB セットアップ
-│   │   └── auth.rs         # テスト用認証ヘッダー
-│   ├── test_users.rs       # ドメインごとのテストファイル
+│   │   ├── mod.rs          # Common helpers
+│   │   ├── app.rs          # Test Axum app construction
+│   │   ├── db.rs           # testcontainers DB setup
+│   │   └── auth.rs         # Test authentication headers
+│   ├── test_users.rs       # Test file per domain
 │   └── test_posts.rs
 ```
 
-## パターン1: リスト取得 (GET /)
+## Pattern 1: List (GET /)
 
 ```rust
 #[tokio::test]
 async fn list_users_returns_all_users() {
     let ctx = TestContext::new().await;
-    // Given: DB にテストデータを投入
+    // Given: insert test data into the DB
     ctx.seed_users(&[
         NewUser { name: "Alice", email: "alice@example.com" },
         NewUser { name: "Bob", email: "bob@example.com" },
@@ -39,7 +39,7 @@ async fn list_users_returns_all_users() {
 }
 ```
 
-## パターン2: 作成 (POST /)
+## Pattern 2: Create (POST /)
 
 ```rust
 #[tokio::test]
@@ -51,18 +51,18 @@ async fn create_user_returns_created() {
         .json(&json!({ "name": "Alice", "email": "alice@example.com" }))
         .await;
 
-    // Then: レスポンス検証
+    // Then: verify the response
     assert_eq!(response.status(), StatusCode::CREATED);
     let body: UserResponse = response.json().await;
     assert_eq!(body.name, "Alice");
 
-    // Then: DB にも保存されたことを検証
+    // Then: verify the record was persisted to the DB
     let user = ctx.find_user_by_email("alice@example.com").await;
     assert!(user.is_some());
 }
 ```
 
-## パターン3: 詳細取得 (GET /:id)
+## Pattern 3: Detail (GET /:id)
 
 ```rust
 #[tokio::test]
@@ -87,7 +87,7 @@ async fn get_user_returns_not_found_when_missing() {
 }
 ```
 
-## パターン4: 更新 (PUT /:id)
+## Pattern 4: Update (PUT /:id)
 
 ```rust
 #[tokio::test]
@@ -101,13 +101,13 @@ async fn update_user_modifies_existing_record() {
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    // DB も更新されたことを検証
+    // Verify the DB was also updated
     let updated = ctx.find_user_by_id(user.id).await.unwrap();
     assert_eq!(updated.name, "Alice Updated");
 }
 ```
 
-## パターン5: 削除 (DELETE /:id)
+## Pattern 5: Delete (DELETE /:id)
 
 ```rust
 #[tokio::test]
@@ -119,18 +119,18 @@ async fn delete_user_removes_record() {
 
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-    // DB から削除されたことを検証
+    // Verify the record was removed from the DB
     let deleted = ctx.find_user_by_id(user.id).await;
     assert!(deleted.is_none());
 }
 ```
 
-## パターン6: parametrize (rstest)
+## Pattern 6: parametrize (rstest)
 
 ```rust
 use rstest::rstest;
 
-const LONG_NAME: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // 256文字
+const LONG_NAME: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // 256 chars
 
 #[rstest]
 #[case("", StatusCode::BAD_REQUEST)]
@@ -151,7 +151,7 @@ async fn create_user_validates_name(
 }
 ```
 
-## パターン7: ページネーション
+## Pattern 7: Pagination
 
 ```rust
 #[tokio::test]
@@ -159,21 +159,21 @@ async fn list_users_supports_pagination() {
     let ctx = TestContext::new().await;
     ctx.seed_users_count(25).await;
 
-    // 1ページ目
+    // Page 1
     let response = ctx.get("/api/users?page=1&per_page=10").await;
     assert_eq!(response.status(), StatusCode::OK);
     let body: PaginatedResponse<UserResponse> = response.json().await;
     assert_eq!(body.items.len(), 10);
     assert_eq!(body.total, 25);
 
-    // 3ページ目（残り5件）
+    // Page 3 (5 remaining items)
     let response = ctx.get("/api/users?page=3&per_page=10").await;
     let body: PaginatedResponse<UserResponse> = response.json().await;
     assert_eq!(body.items.len(), 5);
 }
 ```
 
-## パターン8: 外部 API エラー時の挙動
+## Pattern 8: External API Failure Behavior
 
 ```rust
 #[tokio::test]
@@ -186,13 +186,13 @@ async fn create_user_returns_error_when_external_api_fails() {
 
     assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
 
-    // DB にはロールバックされていることを検証
+    // Verify the DB was rolled back
     let user = ctx.find_user_by_email("alice@example.com").await;
     assert!(user.is_none());
 }
 ```
 
-## パターン9: 認証エラー
+## Pattern 9: Authentication Errors
 
 ```rust
 #[tokio::test]
@@ -205,11 +205,11 @@ async fn unauthenticated_request_returns_401() {
 }
 ```
 
-## よくあるエラーと対処法
+## Common Errors and Remedies
 
-| エラー | 原因 | 対処 |
-|--------|------|------|
-| `connection refused` | testcontainers コンテナ未起動 | Docker デーモンが起動しているか確認 |
-| `table not found` | マイグレーション未実行 | TestContext でマイグレーション実行を確認 |
-| テスト間でデータが干渉 | トランザクション未ロールバック | 各テストで独立した DB / トランザクションを使用 |
-| `tokio runtime` エラー | `#[test]` を使っている | `#[tokio::test]` に変更 |
+| Error | Cause | Remedy |
+|-------|-------|--------|
+| `connection refused` | testcontainers container not started | Verify the Docker daemon is running |
+| `table not found` | Migrations not applied | Verify TestContext runs migrations |
+| Test data interferes across tests | Transaction not rolled back | Use an independent DB / transaction per test |
+| `tokio runtime` error | Using `#[test]` | Switch to `#[tokio::test]` |

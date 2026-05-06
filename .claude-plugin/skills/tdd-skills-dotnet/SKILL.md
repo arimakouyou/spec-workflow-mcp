@@ -13,15 +13,15 @@ description: >
 
 Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with .NET 10 language features.
 
-## 🔑 MUST-READ: UT が verify するもの (I-5, dapper-hardening)
+## MUST-READ: What UT verifies (I-5, dapper-hardening)
 
-**UT は `dotnet test` PASS（コードが動く）の確認ではない。仕様の検証である。**
+**A UT is not a check that `dotnet test` PASSes (the code works); it is verification of the specification.**
 
-- 仕様充足 + **仕様外不在**（Negative Assertions）の両方を verify する
-- 外部依存ゼロ（clock / RNG / env / fs / HTTP / DB の直接呼出は禁止、Mock 経由のみ）
-- 順序非依存・決定性（FIRST 原則）
+- Verify both spec satisfaction and **absence of out-of-spec behavior** (Negative Assertions)
+- Zero external dependencies (direct calls to clock / RNG / env / fs / HTTP / DB are forbidden; only via Mock)
+- Order-independent and deterministic (FIRST principles)
 
-詳細は `_TestFocus` 6 カテゴリ（`spec-tasks/SKILL.md`）+ `quality-checks.md` の Test Taxonomy / QC15 を参照。
+For details, see the 6 `_TestFocus` categories (`spec-tasks/SKILL.md`) and the Test Taxonomy / QC15 sections of `quality-checks.md`.
 
 ## Pre-check: Know-how Reference
 

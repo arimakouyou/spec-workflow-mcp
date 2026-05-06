@@ -1,124 +1,124 @@
-# 並列実行フロー詳細
+# Parallel Execution Flow Details
 
-Agent Teams を使った並列テスト作成の全フェーズ詳細。
+Detailed phases of parallel test creation using Agent Teams.
 
-## チーム構成
+## Team Structure
 
-| 役割 | 数 | 責務 |
-|------|:--:|------|
-| Command（司令塔） | 1 | 分析・分担・監視・最終検証 |
-| Workers（テスト実装） | 1-2 | テストファイル作成 |
-| Pentagon（品質レビュー） | 1 | 品質ゲート判定 |
+| Role | Count | Responsibility |
+|------|:-----:|----------------|
+| Command (orchestrator) | 1 | Analysis, assignment, monitoring, final verification |
+| Workers (test implementation) | 1-2 | Test file creation |
+| Pentagon (quality review) | 1 | Quality gate decisions |
 
-## フェーズ詳細
+## Phase Details
 
 ### P0: Parse & Analyze
 
 ```
-入力: /integration-test users,posts
+Input: /integration-test users,posts
   ↓
-カンマで分割 → ["users", "posts"]
+Split by comma → ["users", "posts"]
   ↓
-各対象を分析:
+Analyze each target:
   users → src/handlers/users.rs → src/db/repository/users.rs → src/models/user.rs
   posts → src/handlers/posts.rs → src/db/repository/posts.rs → src/models/post.rs
   ↓
-Worker 分担:
+Worker assignment:
   alpha → users (test_users.rs)
   bravo → posts (test_posts.rs)
 ```
 
 ### P1: Setup Team
 
-1. 共通ヘルパーの確認
-   - `tests/integration/helpers/` が存在するか
-   - TestContext が対象ドメインで動作するか
-   - 新規 fixture が必要なら Command が追加
+1. Verify common helpers
+   - Whether `tests/integration/helpers/` exists
+   - Whether TestContext works for the target domain
+   - Command adds new fixtures if required
 
-2. ホワイトボード作成
-   - `whiteboard-template.md` に従い作成
-   - Key Questions を 1-3 個設定
+2. Create the whiteboard
+   - Create following `whiteboard-template.md`
+   - Set 1-3 Key Questions
 
 ### P2: Launch Agents
 
-Workers と Pentagon を `.claude/agents/` のエージェント定義を使ってサブエージェントとして起動。
+Launch Workers and Pentagon as subagents using the agent definitions in `.claude/agents/`.
 
-**起動順序:**
-1. Pentagon（`subagent_type: "spec-workflow-mcp:integ-test-auditor"`、`Language: rust` 引数付き）— 起動後はレビュー依頼待ち
-2. Workers（`subagent_type: "spec-workflow-mcp:integ-test-worker"`、`Language: rust` 引数付き）— alpha, bravo を並列起動
+**Launch order:**
+1. Pentagon (`subagent_type: "spec-workflow-mcp:integ-test-auditor"` with the `Language: rust` argument) — waits for review requests after launch
+2. Workers (`subagent_type: "spec-workflow-mcp:integ-test-worker"` with the `Language: rust` argument) — alpha and bravo launched in parallel
 
 ```
-# Pentagon 起動
-Agent(subagent_type: "spec-workflow-mcp:integ-test-auditor", prompt: "Language: rust\nホワイトボード: {whiteboard_path}\nレビュー依頼を待機")
+# Launch Pentagon
+Agent(subagent_type: "spec-workflow-mcp:integ-test-auditor", prompt: "Language: rust\nWhiteboard: {whiteboard_path}\nWaiting for review requests")
 
-# Worker 起動（並列）
-Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: rust\nWorker名: alpha\nドメイン: {domain_a}\n...")
-Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: rust\nWorker名: bravo\nドメイン: {domain_b}\n...")
+# Launch Workers (parallel)
+Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: rust\nWorker name: alpha\nDomain: {domain_a}\n...")
+Agent(subagent_type: "spec-workflow-mcp:integ-test-worker", prompt: "Language: rust\nWorker name: bravo\nDomain: {domain_b}\n...")
 ```
 
 ### P3: Monitor & Facilitate
 
 ```
-while 未完了タスクが存在:
-  ├─ Worker 完了を検出
-  │   ├─ ホワイトボードに Findings 転記
-  │   ├─ Pentagon にレビュー依頼
-  │   └─ Pentagon 結果を待つ
-  │       ├─ PASS → Quality Gate 更新、次タスクがあれば割当
-  │       └─ FAIL → レビュー回数確認
-  │           ├─ < 3 回 → Worker に差し戻し
-  │           └─ = 3 回 → 残存指摘付きで完了
-  └─ 全タスク完了 → P4 へ
+while open tasks remain:
+  ├─ Detect Worker completion
+  │   ├─ Transcribe Findings to the whiteboard
+  │   ├─ Request a review from Pentagon
+  │   └─ Wait for the Pentagon result
+  │       ├─ PASS → Update Quality Gate; assign next task if any
+  │       └─ FAIL → Check the review count
+  │           ├─ < 3 → Send back to the Worker
+  │           └─ = 3 → Complete with remaining issues recorded
+  └─ All tasks complete → proceed to P4
 ```
 
-**差し戻し時の Worker 再実行:**
-- 元の prompt に Pentagon の指摘事項を追加
-- 「修正箇所」と「修正理由」を明示
+**Worker re-run on send-back:**
+- Append Pentagon's findings to the original prompt
+- Make the "fix locations" and "reasons for fix" explicit
 
 ### P4: Final Verification
 
 ```bash
-# 全テスト実行
+# Run all tests
 cargo test --test integration_users --test integration_posts -- --nocapture
 
-# コード品質チェック
+# Code quality checks
 rustfmt tests/integration/test_users.rs tests/integration/test_posts.rs
 cargo clippy --tests --quiet
 ```
 
-失敗した場合:
-- コンパイルエラー → Command が直接修正
-- テスト失敗 → 原因を特定し Command が修正 or Worker に再依頼
-- clippy 警告 → Command が修正
+On failure:
+- Compile errors → Command fixes directly
+- Test failure → identify the cause and have Command fix or re-request the Worker
+- clippy warnings → Command fixes
 
 ### P5: Cleanup & Report
 
-1. ホワイトボードを `.claude/_docs/deleted/` に移動
-2. 最終レポート出力
+1. Move the whiteboard to `.claude/_docs/deleted/`
+2. Print the final report
 
 ```
-integration-test 並列実装完了
+integration-test parallel implementation complete
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-対象: users, posts
+Targets: users, posts
 
-生成ファイル:
+Generated files:
   tests/integration/test_users.rs (12 tests)
   tests/integration/test_posts.rs (10 tests)
 
-テスト結果:
+Test results:
   22 tests passed, 0 failed
 
-品質ゲート:
+Quality gate:
   test_users.rs: PASS (cycle 1)
   test_posts.rs: PASS (cycle 2)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## タイムアウトと中断
+## Timeouts and Aborts
 
-| 状況 | 対処 |
-|------|------|
-| Worker が 10 分以上応答なし | Command が状態確認、必要なら再起動 |
-| Pentagon が 5 分以上応答なし | Command が状態確認、必要なら再起動 |
-| 3 回差し戻し後も品質不足 | 残存指摘付きで完了、レポートに注記 |
+| Situation | Remedy |
+|-----------|--------|
+| Worker silent for 10+ minutes | Command checks state and restarts if needed |
+| Pentagon silent for 5+ minutes | Command checks state and restarts if needed |
+| Quality still insufficient after 3 send-backs | Complete with remaining issues recorded; note in the report |

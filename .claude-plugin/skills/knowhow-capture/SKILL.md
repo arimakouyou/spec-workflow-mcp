@@ -57,15 +57,15 @@ Shall I add this to know-how?
 
 ### Pattern C: Proactive Knowledge Audit (P5-04)
 
-コードベースを走査して暗黙知の集中箇所を能動的に特定する。
+Scan the codebase to proactively identify hotspots of tacit knowledge.
 
-**Trigger**: `/knowhow-capture --audit`、または Phase Review で知識ギャップが検出された時。
+**Trigger**: `/knowhow-capture --audit`, or when a Phase Review detects a knowledge gap.
 
-**監査プロセス:**
+**Audit process:**
 
-1. **知識集中シグナルの検出**:
+1. **Detect knowledge-concentration signals**:
    ```bash
-   # 80% 以上が単一著者のファイルを検出
+   # Detect files where 80% or more comes from a single author
    for f in $(find src/ -name '*.rs' -o -name '*.ts' -o -name '*.js' 2>/dev/null); do
      total=$(git log --format='%an' -- "$f" 2>/dev/null | wc -l)
      if [ "$total" -gt 5 ]; then
@@ -76,23 +76,23 @@ Shall I add this to know-how?
    done
    ```
 
-2. **ドキュメント不足の検出**:
-   - 300行超のファイルに対応する know-how / ADR がない
-   - 非自明な設定値（マジックナンバー、環境変数）にコメントがない
-   - エラーハンドリングコードにドメイン固有のロジックがあるがドキュメントがない
+2. **Detect documentation gaps**:
+   - Files exceeding 300 lines without a corresponding know-how / ADR
+   - Non-obvious configuration values (magic numbers, environment variables) without comments
+   - Error-handling code with domain-specific logic but no documentation
 
-3. **Knowledge Gap Report の生成**:
+3. **Generate the Knowledge Gap Report**:
    ```markdown
    ## Knowledge Gap Report — {DATE}
 
-   | 領域 | シグナル | 既存ドキュメント | 推奨アクション |
+   | Area | Signal | Existing docs | Recommended action |
    |------|---------|----------------|--------------|
-   | {file/module} | 単一著者 90% | なし | know-how: {domain}/{slug} 作成 |
-   | {config} | 非自明な設定値 | 部分的 | know-how エントリで補完 |
-   | {module} | 300行超、ドキュメントなし | なし | ADR or know-how 作成 |
+   | {file/module} | Single author 90% | None | Create know-how: {domain}/{slug} |
+   | {config} | Non-obvious config value | Partial | Supplement with a know-how entry |
+   | {module} | >300 lines, no docs | None | Create ADR or know-how |
    ```
 
-4. **記録**: 各ギャップについてユーザーに記録するか確認し、Pattern A のフローで know-how を作成。
+4. **Record**: For each gap, confirm with the user whether to record it, then create the know-how via the Pattern A flow.
 
 ## Step-by-Step Recording Procedure
 

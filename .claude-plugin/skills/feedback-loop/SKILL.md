@@ -1,117 +1,120 @@
 ---
 name: feedback-loop
 description: |
-  フィードバックループ運用: know-how と built-in memory の使い分け (FL1)、
-  タスク開始時の know-how INDEX 参照 (FL2)、ユーザー訂正・再発フィードバック検知時の
-  know-how 記録 (FL3)、know-how から rule/ADR/tech-debt への昇格パス (FL4)、
-  Phase Review 完了時の定期知識監査 (FL5)、Agent 失敗パターン（reworkCount >= 2、
-  review_action: escalate 等）の分析・ハーネス改善サイクル (FL6) を扱う。
-  新タスク開始で関連 know-how を参照したいとき、ユーザーから訂正や
-  「覚えておいて」の指示を受けたとき、同じフィードバックが 2 回以上再発したとき、
-  know-how の成熟度判定やルール・ADR・tech-debt への昇格を検討するとき、
-  Phase Review で単一著者集中や暗黙知の監査を行うとき、
-  Agent の失敗パターン（差し戻し・エスカレーション）を分析してハーネス
-  （ルール・スキル・Agent 定義）を改善したいときに参照する。
+  Feedback loop operations: distinguishing know-how from built-in memory (FL1),
+  consulting the know-how INDEX at task start (FL2), recording know-how when
+  user corrections or recurring feedback are detected (FL3), the promotion path
+  from know-how to rule/ADR/tech-debt (FL4), periodic knowledge audits at Phase
+  Review completion (FL5), and the analysis and harness-improvement cycle for
+  agent failure patterns (reworkCount >= 2, review_action: escalate, etc.) (FL6).
+  Reference this when starting a new task and you want to consult related
+  know-how, when receiving a correction or a "remember this" instruction from
+  the user, when the same feedback recurs two or more times, when judging
+  know-how maturity or considering promotion to a rule/ADR/tech-debt, when
+  auditing single-author concentration or implicit knowledge during Phase
+  Review, and when analyzing agent failure patterns (rework, escalation) to
+  improve the harness (rules, skills, agent definitions).
+  Triggers on: 'feedback loop', 'know-how vs memory', 'capture feedback', 'promote know-how to rule', 'agent failure pattern', 'phase review knowledge audit', 'フィードバックループ', 'know-how 記録', 'ルール昇格', 'Agent 失敗パターン'.
 allowed-tools: [Read, Edit, Write, Bash, Grep]
 ---
 
 # Feedback Loop
 
-## FL1: know-how と built-in memory の使い分け
+## FL1: Distinguishing know-how from built-in memory
 
-- **know-how** (`.claude/_docs/know-how/`): プロジェクト固有の実践的知識。Git 管理下でチームと共有する。技術的判断、落とし穴、ベストプラクティス。
-- **built-in memory** (`~/.claude/projects/.../memory/`): 個人の好みや作業スタイル。Git 管理外。
+- **know-how** (`.claude/_docs/know-how/`): project-specific practical knowledge. Tracked under Git and shared with the team. Technical judgments, pitfalls, best practices.
+- **built-in memory** (`~/.claude/projects/.../memory/`): personal preferences and working style. Not tracked in Git.
 
-迷ったときの判断基準: 「チームメンバーが知るべきか?」 Yes → know-how / No → memory。
+Decision criterion when in doubt: "Should other team members know this?" Yes → know-how / No → memory.
 
-## FL2: タスク開始時の know-how 参照
+## FL2: Consulting know-how at task start
 
-タスク開始前に `.claude/_docs/know-how/INDEX.md` を確認し、関連する know-how が
-あれば対応ファイルを Read する。
+Before starting a task, check `.claude/_docs/know-how/INDEX.md` and Read the relevant
+files if any related know-how exists.
 
-参照フロー:
+Reference flow:
 
-1. INDEX.md のドメイン一覧を確認
-2. タスクのキーワード（例: "testing", "migration", "cache"）に一致するドメインを特定
-3. 該当 know-how の「チェックリスト」「反例」を実装判断に反映
+1. Review the domain list in INDEX.md
+2. Identify domains matching the task's keywords (e.g., "testing", "migration", "cache")
+3. Reflect the matching know-how's "checklist" and "counter-examples" into your implementation decisions
 
-INDEX.md が空、または一致ドメインが無ければこのステップはスキップしてよい。
+If INDEX.md is empty or no domain matches, you may skip this step.
 
-## FL3: フィードバックの検知と記録
+## FL3: Detecting and recording feedback
 
-以下のいずれかを検知した場合、`/knowhow-capture` スキルで know-how を記録する:
+When any of the following is detected, record know-how using the `/knowhow-capture` skill:
 
-- ユーザーが「覚えておいて」「次からは〜」などと発言 → Pattern A（即時記録）
-- ユーザーが AI の判断を訂正・否定 → Pattern B（提案型）
-- 同じフィードバックを 2 回以上受けている → Pattern B（提案型）
+- The user says "remember this" or "from now on, ..." → Pattern A (immediate recording)
+- The user corrects or rejects the AI's judgment → Pattern B (proposal-based)
+- The same feedback has been received two or more times → Pattern B (proposal-based)
 
-記録手順・フォーマット・ルール昇格については `/knowhow-capture` スキルに従う。
+Follow the `/knowhow-capture` skill for the recording procedure, format, and rule promotion.
 
-## FL4: 昇格パス
+## FL4: Promotion Path
 
-実践的 tips を超えて成熟した know-how は、より形式的なアーティファクトに昇格できる:
+Mature know-how that goes beyond practical tips can be promoted to more formal artifacts:
 
-| 移行元 | 移行先 | 条件 | スキル |
+| From | To | Condition | Skill |
 |------|----|-----------|-------|
-| know-how | `.claude-plugin/rules/` | 強制すべき確立された規約 | `/knowhow-capture`（"make it a rule"） |
-| know-how（ドメイン: architecture） | `.claude/_docs/adr/` | 重大かつ不可逆なアーキテクチャ判断 | `/adr` |
-| know-how（ドメイン: debugging/architecture） | `.claude/_docs/tech-debt/` | 個別の tips ではなく構造的・慢性的な問題 | `/tech-debt add` |
+| know-how | `.claude-plugin/rules/` | Established convention that should be enforced | `/knowhow-capture` ("make it a rule") |
+| know-how (domain: architecture) | `.claude/_docs/adr/` | Significant and irreversible architectural decision | `/adr` |
+| know-how (domain: debugging/architecture) | `.claude/_docs/tech-debt/` | Structural/chronic problem, not a single tip | `/tech-debt add` |
 
-- ADR に昇格する場合、know-how ファイルは背景コンテキストとして残し、ADR から参照する。
-- tech-debt に昇格する場合、know-how ファイルは残し、tech-debt エントリの概要から元 know-how を参照する。
+- When promoting to an ADR, keep the know-how file as background context and reference it from the ADR.
+- When promoting to tech-debt, keep the know-how file and reference the original know-how from the tech-debt entry summary.
 
-## FL5: 定期知識監査 (P5-04)
+## FL5: Periodic Knowledge Audit (P5-04)
 
-定期的に暗黙知を特定し、「あの人に聞けばわかる」状態を解消する。
+Periodically identify implicit knowledge to eliminate "ask that one person" situations.
 
-- **タイミング**: Phase Review 完了時、または `/knowhow-capture --audit` で手動実行
-- **対象**: 単一著者に集中しているファイル、ドキュメントのないドメインロジック、非自明な設定値
-- **出力**: Knowledge Gap Report → know-how 記録（Pattern A）または ADR 作成
-- **CI 連携**: `scheduled-quality.yml` に知識集中チェックを組み込み可能（`--with-scheduled` で有効化）
+- **Timing**: at Phase Review completion, or manually via `/knowhow-capture --audit`
+- **Targets**: files concentrated in a single author, undocumented domain logic, non-obvious configuration values
+- **Output**: Knowledge Gap Report → know-how recording (Pattern A) or ADR creation
+- **CI integration**: a knowledge concentration check can be added to `scheduled-quality.yml` (enable with `--with-scheduled`)
 
-## FL6: Agent 失敗パターン改善サイクル (P9-05)
+## FL6: Agent Failure Pattern Improvement Cycle (P9-05)
 
-Agent の失敗パターンを体系的に収集・分析し、ハーネス（ルール・スキル・Agent 定義）の改善に還元する継続的改善サイクル。
+A continuous improvement cycle that systematically collects and analyzes agent failure patterns and feeds them back into the harness (rules, skills, agent definitions).
 
-### 失敗シグナルの検出
+### Detecting Failure Signals
 
-以下のシグナルを Agent 失敗パターンとして検出する:
+Detect the following signals as agent failure patterns:
 
-| シグナル源 | 検出条件 | データ所在 |
+| Signal source | Detection condition | Data location |
 |-----------|---------|-----------|
-| reworkCount | >= 2（同一タスクで 2 回以上差し戻し） | `/log-implementation` の `reviewProcess.reworkCount` |
-| review_action: escalate | review-worker がユーザーエスカレーション判定 | review-worker 完了レポート |
-| FL3 同一修正 | セッション横断で同種の修正が 3 回以上 | know-how エントリの重複検出 |
-| wave エラー | CHECK_FAILED / IMPLEMENTATION_FAILED | wave-harness-worker エラーコード |
+| reworkCount | >= 2 (rework occurred two or more times for the same task) | `reviewProcess.reworkCount` in `/log-implementation` |
+| review_action: escalate | review-worker decides user escalation is needed | review-worker completion report |
+| FL3 same fix | Same fix occurs three or more times across sessions | Duplicate detection on know-how entries |
+| Wave error | CHECK_FAILED / IMPLEMENTATION_FAILED | wave-harness-worker error code |
 
-### 記録
+### Recording
 
-`/knowhow-capture` を使用して失敗パターンを記録する:
+Use `/knowhow-capture` to record failure patterns:
 
 - **Domain**: `agent-improvement`
-- **Pattern A**（即時記録）: `review_action: escalate` が発生した場合 — ユーザー介入が必要な重大な失敗
-- **Pattern B**（提案型）: `reworkCount >= 2` や FL3 同一修正検出の場合 — 「Agent 改善 know-how として記録しますか？」と提案
-- **記録必須フィールド**: Agent 名、失敗タイプ、発生頻度、根本原因仮説
+- **Pattern A** (immediate recording): when `review_action: escalate` occurs — a serious failure requiring user intervention
+- **Pattern B** (proposal-based): when `reworkCount >= 2` or FL3 same-fix detection occurs — propose "Record as agent-improvement know-how?"
+- **Required fields**: agent name, failure type, occurrence frequency, root cause hypothesis
 
-### 定期分析
+### Periodic Analysis
 
-FL5 の知識監査と連動して agent-improvement ドメインの know-how を定期分析する:
+Periodically analyze know-how in the agent-improvement domain in conjunction with the FL5 knowledge audit:
 
-- **タイミング**: Phase Review 完了時、または `/knowhow-capture --audit` で手動実行
-- **プロセス**: agent-improvement ドメインのエントリを失敗タイプ別に集約
-- **出力**: Agent 改善レポート（Agent 名 | 失敗パターン | 頻度 | 推奨アクション）
-- **閾値**: 同一パターン 3 回以上 → 改善アクション必須
+- **Timing**: at Phase Review completion, or manually via `/knowhow-capture --audit`
+- **Process**: aggregate entries in the agent-improvement domain by failure type
+- **Output**: Agent Improvement Report (agent name | failure pattern | frequency | recommended action)
+- **Threshold**: three or more occurrences of the same pattern → improvement action required
 
-### ハーネス改善アクション
+### Harness Improvement Actions
 
-分析結果に基づき、以下のアクションでハーネスを改善する:
+Based on the analysis, improve the harness with the following actions:
 
-| 失敗パターン | 改善対象 | アーティファクト |
+| Failure pattern | Improvement target | Artifact |
 |-------------|---------|----------------|
-| 特定カテゴリで繰り返し rework | ルールの明確化・反例追加 | `.claude-plugin/rules/` のルールファイル編集 |
-| Agent が要件を誤解 | スキル/Agent 定義の指示強化 | `.claude-plugin/agents/` or `skills/` の .md 編集 |
-| 品質チェックが問題を見逃し | チェック項目の追加・強化 | `quality-checks.md` 更新 + enforcement-levels 昇格 |
-| 構造的なハーネス欠陥 | アーキテクチャ決定として記録 | `/adr` で ADR 作成（know-how エントリを参照） |
+| Repeated rework in a specific category | Clarify the rule, add counter-examples | Edit a rule file under `.claude-plugin/rules/` |
+| Agent misunderstands requirements | Strengthen instructions in skill/agent definitions | Edit .md under `.claude-plugin/agents/` or `skills/` |
+| Quality checks miss the issue | Add or strengthen check items | Update `quality-checks.md` + promote enforcement-levels |
+| Structural harness defect | Record as an architectural decision | Create an ADR via `/adr` (referencing the know-how entry) |
 
-- 重大な変更は `/adr` で ADR を作成し、元の agent-improvement know-how エントリをコンテキストとして参照する。
-- 軽微な改善（プロンプト調整、閾値変更）は know-how エントリ自体のステータスを「適用済み」に更新する。
+- For significant changes, create an ADR via `/adr` and reference the original agent-improvement know-how entry as context.
+- For minor improvements (prompt tuning, threshold changes), update the status of the know-how entry itself to "applied".

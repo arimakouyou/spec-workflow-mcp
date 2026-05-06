@@ -1,72 +1,72 @@
 ---
 name: generate-arch-tests
 description: >
-  design.md の Module Boundaries セクションからアーキテクチャ不変条件テストを自動生成する。
-  レイヤー間の依存方向ルール（逆方向依存の禁止）をソースコードレベルで機械的に検証する
-  テストコードを生成する。現在は Rust に対応。
-  Triggers: 'generate arch tests', 'アーキテクチャテスト生成', '依存方向テスト', '/generate-arch-tests'.
+  Auto-generate architecture invariant tests from the Module Boundaries section of design.md.
+  Generates test code that mechanically verifies layer-to-layer dependency direction rules
+  (prohibiting reverse dependencies) at the source code level. Currently supports Rust.
+  Triggers on: 'generate arch tests', 'architecture invariant tests', 'dependency direction tests', 'アーキテクチャテスト生成', '依存方向テスト', '/generate-arch-tests'.
 argument-hint: "[--spec <spec-name>] [--output <path>]"
 user-invokable: true
 ---
 
-# アーキテクチャ不変条件テスト生成
+# Architecture Invariant Test Generation
 
-design.md の Module Boundaries（レイヤー定義・依存方向ルール）を読み取り、
-依存方向違反を機械的に検出するテストコードを自動生成する。
+Read the Module Boundaries (layer definitions and dependency direction rules) from design.md,
+and auto-generate test code that mechanically detects dependency direction violations.
 
-## 前提
+## Prerequisites
 
-- design.md に `## Module Boundaries` セクションが存在すること
-- 現在の対応言語: **Rust**（`use` / `mod` 文を解析）
+- A `## Module Boundaries` section must exist in design.md
+- Currently supported language: **Rust** (parses `use` / `mod` statements)
 
-## 引数パース
+## Argument Parsing
 
-| 引数 | デフォルト | 説明 |
-|------|-----------|------|
-| `--spec <spec-name>` | 省略時は最新の spec を自動検出 | Module Boundaries を読み取る design.md の spec 名 |
-| `--output <path>` | `tests/architecture.rs` | 生成するテストファイルのパス |
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--spec <spec-name>` | If omitted, auto-detects the latest spec | Name of the spec whose design.md Module Boundaries will be read |
+| `--output <path>` | `tests/architecture.rs` | Path of the test file to generate |
 
-## Step 1: Module Boundaries の読み取り
+## Step 1: Reading Module Boundaries
 
-`.spec-workflow/specs/{spec-name}/design.md` から `## Module Boundaries` セクションを読み取る。
+Read the `## Module Boundaries` section from `.spec-workflow/specs/{spec-name}/design.md`.
 
-### 期待するフォーマット
+### Expected Format
 
-design.md には以下の形式でレイヤー定義が記述されている:
+design.md contains layer definitions in the following form:
 
 ```markdown
 ## Module Boundaries
 
-### レイヤー定義
+### Layer Definitions
 
 | Layer | Directory | Description |
 |-------|-----------|-------------|
-| handlers | src/handlers/ | HTTP ハンドラ層（最上位） |
-| services | src/services/ | ビジネスロジック層（中間） |
-| infra | src/infra/ | インフラ層（最下層・横断的関心事） |
+| handlers | src/handlers/ | HTTP handler layer (topmost) |
+| services | src/services/ | Business logic layer (middle) |
+| infra | src/infra/ | Infrastructure layer (bottom / cross-cutting concerns) |
 
-### 依存方向ルール
+### Dependency Direction Rules
 
-| From (依存元) | Allowed Dependencies (許可) | Forbidden (禁止) |
-|--------------|---------------------------|-----------------|
-| handlers | services, infra | — |
+| From (dependent) | Allowed Dependencies | Forbidden |
+|------------------|----------------------|-----------|
+| handlers | services, infra | - |
 | services | infra | handlers |
-| infra | — | handlers, services |
+| infra | - | handlers, services |
 ```
 
-### パース処理
+### Parsing
 
-1. `## Module Boundaries` 見出しを検索
-2. `### レイヤー定義` テーブルからレイヤー名とディレクトリを抽出
-3. `### 依存方向ルール` テーブルから各レイヤーの禁止依存先を抽出
-4. パースに失敗した場合はエラーを報告し終了
+1. Search for the `## Module Boundaries` heading
+2. Extract layer names and directories from the `### Layer Definitions` table
+3. Extract each layer's forbidden dependencies from the `### Dependency Direction Rules` table
+4. If parsing fails, report an error and exit
 
-## Step 2: ソースコード構造の検証
+## Step 2: Validating Source Code Structure
 
-パースしたレイヤー定義に対応するディレクトリが実際に存在するか確認する:
+Verify that the directories corresponding to the parsed layer definitions actually exist:
 
 ```bash
-# 各レイヤーのディレクトリ存在確認
+# Confirm each layer's directory exists
 for dir in src/handlers src/services src/infra; do
   if [ ! -d "$dir" ]; then
     echo "WARNING: Layer directory not found: $dir"
@@ -74,51 +74,51 @@ for dir in src/handlers src/services src/infra; do
 done
 ```
 
-存在しないディレクトリがある場合は警告を出力するが、テスト生成は続行する（将来作成されるディレクトリを先行して保護するため）。
+If some directories do not exist, emit a warning but continue generating tests (so that future directories are protected proactively).
 
-## Step 3: テストコード生成（Rust）
+## Step 3: Test Code Generation (Rust)
 
-以下のテンプレートに基づいてアーキテクチャテストを生成する。
+Generate architecture tests based on the template below.
 
-### 生成テンプレート
+### Generation Template
 
 ```rust
-//! アーキテクチャ不変条件テスト
+//! Architecture invariant tests
 //!
-//! design.md の Module Boundaries に基づき、レイヤー間の依存方向ルールを
-//! ソースコードレベルで機械的に検証する。
+//! Based on the Module Boundaries in design.md, mechanically verify
+//! layer-to-layer dependency direction rules at the source code level.
 //!
-//! 自動生成: /generate-arch-tests スキル
-//! 元設計: .spec-workflow/specs/{spec-name}/design.md
+//! Auto-generated by: /generate-arch-tests skill
+//! Source design: .spec-workflow/specs/{spec-name}/design.md
 
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-/// レイヤー定義
+/// Layer definition
 struct Layer {
     name: &'static str,
     dir: &'static str,
 }
 
-/// 禁止された依存ルール
+/// Forbidden dependency rule
 struct ForbiddenDep {
     from_layer: &'static str,
     to_layer: &'static str,
     to_modules: &'static [&'static str],
 }
 
-// --- design.md から生成されたレイヤー定義 ---
+// --- Layer definitions generated from design.md ---
 const LAYERS: &[Layer] = &[
     {layers}
 ];
 
-// --- design.md から生成された禁止依存ルール ---
+// --- Forbidden dependency rules generated from design.md ---
 const FORBIDDEN_DEPS: &[ForbiddenDep] = &[
     {forbidden_deps}
 ];
 
-/// 指定ディレクトリ配下の .rs ファイルを再帰的に収集する
+/// Recursively collect .rs files under the given directory
 fn collect_rs_files(dir: &Path) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
     if !dir.exists() {
@@ -135,8 +135,8 @@ fn collect_rs_files(dir: &Path) -> Vec<std::path::PathBuf> {
     files
 }
 
-/// `use crate::...` 形式の 1 行からトップレベルモジュール名を抽出する
-/// 通常の `use crate::module::...` とグループ import `use crate::{a::..., b::...}` の両方に対応
+/// Extract top-level module names from a single `use crate::...` line.
+/// Handles both regular `use crate::module::...` and group imports `use crate::{a::..., b::...}`.
 fn extract_use_crate_modules(trimmed: &str) -> Vec<String> {
     let Some(rest) = trimmed.strip_prefix("use crate::") else {
         return Vec::new();
@@ -144,7 +144,7 @@ fn extract_use_crate_modules(trimmed: &str) -> Vec<String> {
 
     let rest = rest.trim().trim_end_matches(';').trim();
 
-    // use crate::{handlers::..., infra::...}; のようなグループ import に対応
+    // Handle group imports such as use crate::{handlers::..., infra::...};
     if let Some(group) = rest.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
         let mut modules = Vec::new();
         let mut current = String::new();
@@ -169,7 +169,7 @@ fn extract_use_crate_modules(trimmed: &str) -> Vec<String> {
         return modules;
     }
 
-    // 通常の use crate::module::... 形式
+    // Regular use crate::module::... form
     rest.split("::")
         .next()
         .and_then(|s| s.split_whitespace().next())
@@ -178,7 +178,7 @@ fn extract_use_crate_modules(trimmed: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// グループ import の 1 要素からトップレベルモジュール名を抽出する
+/// Extract the top-level module name from a single element of a group import
 fn extract_top_level_module(entry: &str) -> Option<String> {
     let entry = entry.trim();
     if entry.is_empty() { return None; }
@@ -190,26 +190,26 @@ fn extract_top_level_module(entry: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-/// ソースファイルから use / mod 文を抽出し、依存先モジュール名を返す
+/// Extract use / mod statements from a source file and return the dependency module names
 fn extract_dependencies(path: &Path) -> Vec<String> {
     let content = fs::read_to_string(path).unwrap_or_default();
     let mut deps = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
         deps.extend(extract_use_crate_modules(trimmed));
-        // mod module_name; の外部モジュール参照は除外（同一レイヤー内の構造定義）
+        // External module references via `mod module_name;` are excluded (structural definitions within the same layer)
     }
     deps
 }
 
-/// レイヤー名からディレクトリのトップレベルモジュール名を取得するマップを構築
-/// extract_dependencies が use crate::<first_segment>::... の先頭セグメントのみを
-/// 依存先として抽出するため、ここでも先頭セグメントのみを登録する。
+/// Build a map from layer name to directory top-level module names.
+/// extract_dependencies only extracts the first segment of `use crate::<first_segment>::...`,
+/// so we register only the first segment here as well.
 fn build_layer_modules_map() -> HashMap<&'static str, Vec<&'static str>> {
     let mut map = HashMap::new();
     for layer in LAYERS {
-        // ディレクトリパスからトップレベルモジュール名を推定
-        // src/handlers/ → "handlers", src/services/directory_scanner → "services"
+        // Infer the top-level module name from the directory path
+        // src/handlers/ -> "handlers", src/services/directory_scanner -> "services"
         if let Some(module) = layer.dir
             .trim_start_matches("src/")
             .trim_end_matches('/')
@@ -228,16 +228,16 @@ fn build_layer_modules_map() -> HashMap<&'static str, Vec<&'static str>> {
 {test_functions}
 ```
 
-### テスト関数の生成ルール
+### Test Function Generation Rule
 
-各禁止依存ルール（`FORBIDDEN_DEPS` の各エントリ）に対して、1つのテスト関数を生成する:
+Generate one test function for each forbidden dependency rule (each entry in `FORBIDDEN_DEPS`):
 
 ```rust
 #[test]
 fn {from_layer}_must_not_depend_on_{to_layer}() {
     let from_dir = Path::new("{from_dir}");
     if !from_dir.exists() {
-        // レイヤーディレクトリが未作成の場合はスキップ
+        // Skip when the layer directory has not been created yet
         return;
     }
 
@@ -250,10 +250,10 @@ fn {from_layer}_must_not_depend_on_{to_layer}() {
         for dep in &deps {
             if forbidden_modules.contains(&dep.as_str()) {
                 violations.push(format!(
-                    "  {} → {} ({})",
+                    "  {} -> {} ({})",
                     file.display(),
                     dep,
-                    "{from_layer} → {to_layer} は禁止"
+                    "{from_layer} -> {to_layer} is forbidden"
                 ));
             }
         }
@@ -261,22 +261,22 @@ fn {from_layer}_must_not_depend_on_{to_layer}() {
 
     assert!(
         violations.is_empty(),
-        "アーキテクチャ違反を検出:\n{}\n\n\
-         Fix: `use crate::` の import を削除するか、\
-         design.md Module Boundaries の依存方向ルールを見直してください。",
+        "Architecture violations detected:\n{}\n\n\
+         Fix: remove the `use crate::` import, or \
+         revisit the dependency direction rules in design.md Module Boundaries.",
         violations.join("\n")
     );
 }
 ```
 
-### 追加テスト: 循環依存検出（P2-02）
+### Additional Test: Circular Dependency Detection (P2-02)
 
-レイヤー間の循環依存（A→B かつ B→A）を検出するテストを生成する。依存方向ルールが正しく定義されていれば循環は発生しないが、ファイルレベルの `use crate::` を直接走査して実際の循環を検出する:
+Generate a test that detects cyclic dependencies (A->B and B->A) between layers. If dependency direction rules are correctly defined, no cycles should exist; this test directly walks file-level `use crate::` references to detect actual cycles:
 
 ```rust
 #[test]
 fn no_circular_dependencies_between_layers() {
-    // 各レイヤーの実際の依存先レイヤーを収集
+    // Collect each layer's actual dependency layers
     let mut layer_deps: HashMap<&str, Vec<&str>> = HashMap::new();
 
     for layer in LAYERS {
@@ -288,7 +288,7 @@ fn no_circular_dependencies_between_layers() {
         let mut deps_set = std::collections::HashSet::new();
         for file in &files {
             for dep in extract_dependencies(file) {
-                // 依存先モジュールがどのレイヤーに属するか特定
+                // Determine which layer the dependency module belongs to
                 for other in LAYERS {
                     if other.name == layer.name {
                         continue;
@@ -307,7 +307,7 @@ fn no_circular_dependencies_between_layers() {
         layer_deps.insert(layer.name, deps_set.into_iter().collect());
     }
 
-    // 循環検出: A→B かつ B→A のペアを検索
+    // Cycle detection: search for A->B and B->A pairs
     let mut cycles = Vec::new();
     let layer_names: Vec<&str> = LAYERS.iter().map(|l| l.name).collect();
     for (i, &a) in layer_names.iter().enumerate() {
@@ -315,22 +315,22 @@ fn no_circular_dependencies_between_layers() {
             let a_deps_b = layer_deps.get(a).is_some_and(|d| d.contains(&b));
             let b_deps_a = layer_deps.get(b).is_some_and(|d| d.contains(&a));
             if a_deps_b && b_deps_a {
-                cycles.push(format!("  {} ↔ {} (双方向依存)", a, b));
+                cycles.push(format!("  {} <-> {} (bidirectional dependency)", a, b));
             }
         }
     }
 
     assert!(
         cycles.is_empty(),
-        "循環依存を検出:\n{}",
+        "Circular dependencies detected:\n{}",
         cycles.join("\n")
     );
 }
 ```
 
-### 追加テスト: レイヤー網羅性チェック
+### Additional Test: Layer Coverage Check
 
-全ての `src/` 直下モジュールがいずれかのレイヤーに属していることを検証するテストも生成する:
+Generate a test that verifies every module directly under `src/` belongs to some layer:
 
 ```rust
 #[test]
@@ -354,86 +354,86 @@ fn all_modules_belong_to_a_layer() {
 
     assert!(
         orphans.is_empty(),
-        "レイヤー未定義のモジュールを検出（design.md Module Boundaries への追加が必要）:\n  {}",
+        "Modules not assigned to any layer detected (must be added to design.md Module Boundaries):\n  {}",
         orphans.join(", ")
     );
 }
 ```
 
-### 追加テスト: 共有型配置検証 (P5-06)
+### Additional Test: Shared Type Placement Verification (P5-06)
 
-design.md の `### 共有型定義` テーブルが存在する場合、共有型ファイルが指定された配置先ディレクトリに存在するか検証するテストを生成する:
+If a `### Shared Type Definitions` table exists in design.md, generate a test that verifies the shared type files exist at the designated directories:
 
 ```rust
 #[test]
 fn shared_types_exist_in_designated_directories() {
-    // design.md の共有型定義テーブルから配置先を取得
+    // Get placement directories from the shared type definitions table in design.md
     let shared_type_dirs: &[&str] = &[{shared_type_directories}];
 
     for dir in shared_type_dirs {
         let path = Path::new(dir);
         assert!(
             path.exists(),
-            "共有型ディレクトリが見つかりません（design.md 共有型定義で指定）: {}",
+            "Shared type directory not found (specified in design.md Shared Type Definitions): {}",
             dir
         );
     }
 }
 ```
 
-このテストは `### 共有型定義` テーブルが design.md に存在する場合のみ生成する。テーブルが存在しない場合はスキップする。
+This test is generated only if a `### Shared Type Definitions` table exists in design.md. If the table is missing, skip it.
 
-## Step 4: ファイル出力
+## Step 4: File Output
 
-1. `--output` パス（デフォルト: `tests/architecture.rs`）に書き出し
-2. `tests/` ディレクトリが存在しない場合は作成
-3. 既存ファイルがある場合は差分を表示し、上書き前にユーザーに確認
-4. 生成ファイルの先頭にヘッダコメントを付与:
+1. Write to the `--output` path (default: `tests/architecture.rs`)
+2. Create the `tests/` directory if it does not exist
+3. If the file already exists, show a diff and confirm with the user before overwriting
+4. Prepend a header comment to the generated file:
    ```rust
-   //! 自動生成: /generate-arch-tests (do not edit manually)
-   //! 元設計: .spec-workflow/specs/{spec-name}/design.md — Module Boundaries
-   //! 再生成: /generate-arch-tests --spec {spec-name}
+   //! Auto-generated by: /generate-arch-tests (do not edit manually)
+   //! Source design: .spec-workflow/specs/{spec-name}/design.md - Module Boundaries
+   //! Regenerate: /generate-arch-tests --spec {spec-name}
    ```
 
-## Step 5: 動作確認
+## Step 5: Verification
 
-生成したテストが正常にコンパイル・実行できるか確認する:
+Verify that the generated tests compile and run correctly:
 
 ```bash
 cargo test --test architecture --quiet
 ```
 
-- **PASS**: テストが通過（アーキテクチャ違反なし）→ 完了
-- **FAIL (コンパイルエラー)**: 生成コードに問題あり → 修正して再出力
-- **FAIL (テスト失敗)**: 既存コードにアーキテクチャ違反あり → 違反箇所をユーザーに報告
+- **PASS**: tests pass (no architecture violations) -> done
+- **FAIL (compile error)**: generated code has issues -> fix and regenerate
+- **FAIL (test failure)**: existing code has architecture violations -> report violations to the user
 
-## Step 6: 完了レポート
+## Step 6: Completion Report
 
 ```
-## /generate-arch-tests 完了レポート
+## /generate-arch-tests Completion Report
 
 - Spec: {spec-name}
-- 出力先: {output-path}
-- レイヤー数: {N}
-- 禁止依存ルール数: {M}
-- 生成テスト関数数: {K} (依存方向 {M} + 循環依存 1 + 網羅性 1)
-- 総アサーション数: {A} (目標: 20以上)
-- テスト実行結果: {PASS / FAIL}
-- アーキテクチャ違反: {0件 / N件（詳細は上記）}
+- Output: {output-path}
+- Layer count: {N}
+- Forbidden dependency rule count: {M}
+- Generated test function count: {K} (dependency direction {M} + circular dependency 1 + coverage 1)
+- Total assertions: {A} (target: 20 or more)
+- Test execution result: {PASS / FAIL}
+- Architecture violations: {0 / N (details above)}
 
-> **P2-08 基準**: アーキテクチャ不変条件テストには 20 個以上のアサーションが必要。レイヤー数が少なくアサーションが不足する場合は、以下の追加テストを検討すること:
-> - 命名規約テスト（ハンドラは `_handler` サフィックス等）
-> - エクスポート規則テスト（内部モジュールが `pub` で公開されていないか）
-> - ファイル配置テスト（テストファイルが `tests/` 配下にあるか）
+> **P2-08 standard**: Architecture invariant tests require at least 20 assertions. If the layer count is small and assertions are insufficient, consider the following additional tests:
+> - Naming convention tests (e.g., handlers use the `_handler` suffix)
+> - Export rule tests (verify internal modules are not exposed as `pub`)
+> - File placement tests (verify test files are under `tests/`)
 ```
 
-## 将来拡張
+## Future Extensions
 
-現在は Rust のみ対応。以下の言語サポートを将来的に追加予定:
+Currently only Rust is supported. The following languages are planned for future support:
 
-| 言語 | 解析対象 | テスト形式 |
-|------|---------|-----------|
-| TypeScript | `import` / `require` 文 | Jest / Vitest テスト |
-| Go | `import` ブロック | `_test.go` ファイル |
+| Language | Parse Target | Test Format |
+|----------|--------------|-------------|
+| TypeScript | `import` / `require` statements | Jest / Vitest tests |
+| Go | `import` block | `_test.go` files |
 
-言語追加時は Step 3 のテンプレートを言語別に分岐させる。フレームワーク検出（`Cargo.toml` / `package.json`）は `/generate-api-docs` と同じロジックを再利用する。
+When adding a language, branch the Step 3 template per language. Reuse the same framework detection logic (`Cargo.toml` / `package.json`) as `/generate-api-docs`.

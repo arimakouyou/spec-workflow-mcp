@@ -1,30 +1,30 @@
 ---
 name: aspnet-core
 description: |
-  ASP.NET Core (.NET 10) のベストプラクティス。Minimal APIs (`app.MapGet` / `MapGroup` / `RouteGroupBuilder`) によるエンドポイント定義、DI (Scoped / Singleton / Transient + `IOptions<T>` / `IOptionsMonitor<T>`)、ミドルウェアパイプライン順序 (Exception Handler → HSTS → HTTPS Redirection → CORS → Authn → Authz → Routing → Endpoints)、`IMiddleware` / 規約ベースのカスタムミドルウェア、`TypedResults` と `Results<T1,T2>` による型安全レスポンス、ProblemDetails (RFC 9457)、`IExceptionHandler` による集中エラーハンドリング、JwtBearer 認証 + `AuthorizationBuilder` policy、`WebApplicationFactory<Program>` 統合テスト、graceful shutdown (`IHostApplicationLifetime` / `BackgroundService`) をカバー。ASP.NET Core エンドポイント追加、DI 設定、middleware 実装、認証・認可実装、統合テスト記述時に参照。
+  ASP.NET Core (.NET 10) best practices. Covers endpoint definitions via Minimal APIs (`app.MapGet` / `MapGroup` / `RouteGroupBuilder`), DI (Scoped / Singleton / Transient + `IOptions<T>` / `IOptionsMonitor<T>`), middleware pipeline order (Exception Handler -> HSTS -> HTTPS Redirection -> CORS -> Authn -> Authz -> Routing -> Endpoints), `IMiddleware` / convention-based custom middleware, type-safe responses via `TypedResults` and `Results<T1,T2>`, ProblemDetails (RFC 9457), centralized error handling via `IExceptionHandler`, JwtBearer authentication + `AuthorizationBuilder` policy, `WebApplicationFactory<Program>` integration tests, and graceful shutdown (`IHostApplicationLifetime` / `BackgroundService`). Reference when adding ASP.NET Core endpoints, configuring DI, implementing middleware, implementing authentication/authorization, or writing integration tests. Triggers on: 'aspnet core', 'minimal api', 'add endpoint', 'configure DI', 'implement middleware', 'integration test', 'ASP.NET Core エンドポイント追加', 'DI 設定', 'middleware 実装', '認証・認可実装', '統合テスト'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # ASP.NET Core Best Practices (.NET 10)
 
-## 対象
+## Scope
 
-- Minimal API のエンドポイント追加、`MapGroup` によるグループ化
-- DI 設定（Scoped / Singleton / Transient）と `IOptions<T>` / `IOptionsMonitor<T>` 利用
-- Middleware パイプラインの構築（`UseExceptionHandler`, `UseAuthentication` / `UseAuthorization` など）
-- カスタム middleware 実装（`IMiddleware` / 規約ベース）
-- `TypedResults` と `ProblemDetails` による型安全レスポンス
-- `IExceptionHandler` による集中エラーハンドリング
-- JwtBearer 認証 + `AuthorizationBuilder` policy
-- `WebApplicationFactory<Program>` を使った統合テスト
-- `IHostApplicationLifetime` / `BackgroundService` による graceful shutdown
+- Adding Minimal API endpoints and grouping with `MapGroup`
+- DI configuration (Scoped / Singleton / Transient) and use of `IOptions<T>` / `IOptionsMonitor<T>`
+- Building the middleware pipeline (`UseExceptionHandler`, `UseAuthentication` / `UseAuthorization`, etc.)
+- Implementing custom middleware (`IMiddleware` / convention-based)
+- Type-safe responses via `TypedResults` and `ProblemDetails`
+- Centralized error handling via `IExceptionHandler`
+- JwtBearer authentication + `AuthorizationBuilder` policy
+- Integration tests using `WebApplicationFactory<Program>`
+- Graceful shutdown via `IHostApplicationLifetime` / `BackgroundService`
 
-## 対象外
+## Out of Scope
 
-- EF Core クエリ・DbContext → `entity-framework-core` Skill
-- Blazor コンポーネント → `blazor` Skill
-- プロジェクト構成 → `csproj` Skill
-- C# コードスタイル → `csharp-style` Rule
+- EF Core queries and DbContext -> `entity-framework-core` Skill
+- Blazor components -> `blazor` Skill
+- Project configuration -> `csproj` Skill
+- C# code style -> `csharp-style` Rule
 
 ## Endpoint Configuration
 
@@ -42,7 +42,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// エンドポイントを拡張メソッドで登録
+// Register endpoints via extension methods
 app.MapUserEndpoints();
 app.MapOrderEndpoints();
 
@@ -78,7 +78,7 @@ public static class UserEndpoints
 ```
 
 ```csharp
-// RouteGroupBuilder でフィルターを共有する例
+// Sharing filters via RouteGroupBuilder
 var api = app.MapGroup("/api")
     .AddEndpointFilter<ApiKeyFilter>();
 
@@ -99,7 +99,7 @@ v2.MapGet("/items", GetItemsV2);
 - Use `IOptions<T>` for static configuration, `IOptionsSnapshot<T>` for per-request reload, and `IOptionsMonitor<T>` for runtime change notifications
 
 ```csharp
-// Program.cs — サービス登録
+// Program.cs - service registration
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
@@ -115,7 +115,7 @@ builder.Services.AddHttpClient<IGitHubClient, GitHubClient>(client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("MyApp/1.0");
 });
 
-// 設定バインディング
+// Configuration binding
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<SmtpSettings>(
@@ -123,7 +123,7 @@ builder.Services.Configure<SmtpSettings>(
 ```
 
 ```csharp
-// IOptions<T> の利用例
+// Example using IOptions<T>
 public class TokenService(IOptions<JwtSettings> jwtOptions)
 {
     private readonly JwtSettings _settings = jwtOptions.Value;
@@ -131,7 +131,7 @@ public class TokenService(IOptions<JwtSettings> jwtOptions)
     public string GenerateToken(User user) { /* _settings.SecretKey, _settings.Issuer ... */ }
 }
 
-// IOptionsMonitor<T> — ランタイムでの設定変更を監視
+// IOptionsMonitor<T> - watch for runtime configuration changes
 public class FeatureFlagService(IOptionsMonitor<FeatureFlags> monitor)
 {
     public bool IsEnabled(string flag) => monitor.CurrentValue.EnabledFlags.Contains(flag);
@@ -146,10 +146,10 @@ public class FeatureFlagService(IOptionsMonitor<FeatureFlags> monitor)
 - Use `app.UseStatusCodePages()` alongside `ProblemDetails` for consistent error responses
 
 ```csharp
-// Program.cs — ミドルウェアパイプラインの正しい順序
+// Program.cs - correct middleware pipeline order
 var app = builder.Build();
 
-// 1. 例外処理（最初に配置）
+// 1. Exception handling (place first)
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -159,18 +159,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// 2. HTTPS とセキュリティヘッダー
+// 2. HTTPS and security headers
 app.UseHsts();
 app.UseHttpsRedirection();
 
 // 3. CORS
 app.UseCors("AllowFrontend");
 
-// 4. 認証・認可
+// 4. Authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 5. エンドポイント
+// 5. Endpoints
 app.MapUserEndpoints();
 app.MapOrderEndpoints();
 
@@ -178,7 +178,7 @@ app.Run();
 ```
 
 ```csharp
-// カスタムミドルウェア（IMiddleware インターフェース方式 — DI 対応）
+// Custom middleware (IMiddleware interface style - DI-friendly)
 public class RequestTimingMiddleware(ILogger<RequestTimingMiddleware> logger) : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
@@ -188,20 +188,20 @@ public class RequestTimingMiddleware(ILogger<RequestTimingMiddleware> logger) : 
         stopwatch.Stop();
 
         logger.LogInformation(
-            "リクエスト {Method} {Path} は {Elapsed}ms で完了",
+            "Request {Method} {Path} completed in {Elapsed}ms",
             context.Request.Method,
             context.Request.Path,
             stopwatch.ElapsedMilliseconds);
     }
 }
 
-// 登録
+// Registration
 builder.Services.AddTransient<RequestTimingMiddleware>();
 app.UseMiddleware<RequestTimingMiddleware>();
 ```
 
 ```csharp
-// カスタムミドルウェア（規約ベース方式）
+// Custom middleware (convention-based style)
 public class CorrelationIdMiddleware(RequestDelegate next, ILogger<CorrelationIdMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
@@ -228,7 +228,7 @@ public class CorrelationIdMiddleware(RequestDelegate next, ILogger<CorrelationId
 - Apply `[ApiController]` on controllers for automatic model validation (returns `ValidationProblem` on invalid input)
 
 ```csharp
-// TypedResults による型安全なレスポンス
+// Type-safe responses via TypedResults
 app.MapGet("/api/users/{id:int}", async Task<Results<Ok<UserDto>, NotFound, ProblemHttpResult>>
     (int id, IUserRepository repo) =>
 {
@@ -252,7 +252,7 @@ app.MapPost("/api/users", async Task<Results<Created<UserDto>, ValidationProblem
 ```
 
 ```csharp
-// ProblemDetails サービスの登録（.NET 10）
+// Registering ProblemDetails services (.NET 10)
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -271,7 +271,7 @@ builder.Services.AddProblemDetails(options =>
 - Never leak internal exception details to clients in production
 
 ```csharp
-// IExceptionHandler による集中エラーハンドリング（.NET 10 推奨パターン）
+// Centralized error handling via IExceptionHandler (.NET 10 recommended pattern)
 public class GlobalExceptionHandler(
     ILogger<GlobalExceptionHandler> logger,
     IProblemDetailsService problemDetailsService) : IExceptionHandler
@@ -281,14 +281,14 @@ public class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "未処理の例外が発生: {Message}", exception.Message);
+        logger.LogError(exception, "Unhandled exception occurred: {Message}", exception.Message);
 
         var (statusCode, title) = exception switch
         {
-            NotFoundException => (StatusCodes.Status404NotFound, "リソースが見つかりません"),
-            ValidationException => (StatusCodes.Status400BadRequest, "バリデーションエラー"),
-            UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "アクセスが拒否されました"),
-            _ => (StatusCodes.Status500InternalServerError, "内部サーバーエラー")
+            NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
+            ValidationException => (StatusCodes.Status400BadRequest, "Validation error"),
+            UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Access denied"),
+            _ => (StatusCodes.Status500InternalServerError, "Internal server error")
         };
 
         httpContext.Response.StatusCode = statusCode;
@@ -300,7 +300,7 @@ public class GlobalExceptionHandler(
             {
                 Title = title,
                 Status = statusCode,
-                // Production 環境では例外詳細を隠す（情報漏洩防止）
+                // Hide exception details in production environments (prevent information leakage)
                 Detail = httpContext.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment()
                     ? exception.Message : null
             }
@@ -308,7 +308,7 @@ public class GlobalExceptionHandler(
     }
 }
 
-// 登録
+// Registration
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -316,14 +316,14 @@ app.UseExceptionHandler();
 ```
 
 ```csharp
-// カスタム例外型の定義
+// Custom exception type definitions
 public abstract class AppException(string message, int statusCode) : Exception(message)
 {
     public int StatusCode { get; } = statusCode;
 }
 
 public class NotFoundException(string resource, object id)
-    : AppException($"{resource} (ID: {id}) は見つかりません", 404);
+    : AppException($"{resource} (ID: {id}) was not found", 404);
 
 public class ConflictException(string message)
     : AppException(message, 409);
@@ -337,7 +337,7 @@ public class ConflictException(string message)
 - Apply authorization at the endpoint level with `RequireAuthorization()` or `[Authorize]`
 
 ```csharp
-// Program.cs — 認証・認可の設定
+// Program.cs - authentication and authorization configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -363,7 +363,7 @@ builder.Services.AddScoped<IAuthorizationHandler, UserEditAuthorizationHandler>(
 ```
 
 ```csharp
-// カスタム認可ハンドラー
+// Custom authorization handler
 public class UserEditRequirement : IAuthorizationRequirement { }
 
 public class UserEditAuthorizationHandler(IUserRepository repo)
@@ -377,7 +377,7 @@ public class UserEditAuthorizationHandler(IUserRepository repo)
         var currentUserId = int.Parse(
             context.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        // 自分自身の編集か、管理者のみ許可
+        // Allow only the user themselves or administrators
         if (currentUserId == userId || context.User.IsInRole("Admin"))
         {
             context.Succeed(requirement);
@@ -387,14 +387,14 @@ public class UserEditAuthorizationHandler(IUserRepository repo)
 ```
 
 ```csharp
-// エンドポイントへの認可ポリシー適用
+// Applying authorization policies to endpoints
 app.MapDelete("/api/users/{id:int}", DeleteUser)
     .RequireAuthorization("AdminOnly");
 
 app.MapPut("/api/users/{id:int}", UpdateUser)
     .RequireAuthorization("CanEditUser");
 
-// 認可不要の公開エンドポイント
+// Public endpoint requiring no authorization
 app.MapGet("/api/health", () => TypedResults.Ok("Healthy"))
     .AllowAnonymous();
 ```
@@ -408,20 +408,20 @@ app.MapGet("/api/health", () => TypedResults.Ok("Healthy"))
 - Make `Program` accessible to tests by adding `InternalsVisibleTo` or a partial class marker
 
 ```csharp
-// テストプロジェクトからアクセス可能にするマーカー（Program.cs の末尾）
+// Marker to make Program accessible from the test project (end of Program.cs)
 public partial class Program;
 ```
 
 ```csharp
-// 統合テスト用のカスタムファクトリ
+// Custom factory for integration tests
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
-            // 本番の DbContext をテスト用 Testcontainers DB に差し替え
-            // 注意: InMemory DB は統合テストには使用しない（挙動が実 DB と乖離するため）
+            // Swap the production DbContext for a Testcontainers DB used in tests
+            // Note: do not use InMemory DB for integration tests (its behavior diverges from real DBs)
             var descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
             if (descriptor is not null)
@@ -430,7 +430,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(TestDatabaseContainer.ConnectionString));
 
-            // 外部サービスをモックに差し替え
+            // Swap external services for mocks
             services.AddScoped<IEmailSender, FakeEmailSender>();
         });
 
@@ -440,19 +440,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 ```
 
 ```csharp
-// 統合テストの例
+// Integration test example
 public class UserEndpointsTests(CustomWebApplicationFactory factory)
     : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
-    public async Task GetUser_存在するユーザー_200OKを返す()
+    public async Task GetUser_ExistingUser_Returns200OK()
     {
-        // Arrange — テストデータの準備
+        // Arrange - prepare test data
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Users.Add(new User { Id = 1, Name = "テストユーザー" });
+        db.Users.Add(new User { Id = 1, Name = "Test User" });
         await db.SaveChangesAsync();
 
         // Act
@@ -461,11 +461,11 @@ public class UserEndpointsTests(CustomWebApplicationFactory factory)
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var user = await response.Content.ReadFromJsonAsync<UserDto>();
-        user!.Name.Should().Be("テストユーザー");
+        user!.Name.Should().Be("Test User");
     }
 
     [Fact]
-    public async Task GetUser_存在しないユーザー_404NotFoundを返す()
+    public async Task GetUser_NonExistentUser_Returns404NotFound()
     {
         var response = await _client.GetAsync("/api/users/99999");
 
@@ -477,7 +477,7 @@ public class UserEndpointsTests(CustomWebApplicationFactory factory)
 ```
 
 ```csharp
-// WireMock.NET による外部APIモック
+// External API mocking via WireMock.NET
 public class ExternalApiTests : IClassFixture<CustomWebApplicationFactory>, IAsyncLifetime
 {
     private readonly WireMockServer _mockServer = WireMockServer.Start();
@@ -505,7 +505,7 @@ public class ExternalApiTests : IClassFixture<CustomWebApplicationFactory>, IAsy
 - Configure shutdown timeout with `HostOptions.ShutdownTimeout` if the default 30 seconds is insufficient
 
 ```csharp
-// CancellationToken をハンドラーに伝搬
+// Propagate CancellationToken into handlers
 app.MapGet("/api/long-operation", async (
     ILongRunningService service,
     CancellationToken cancellationToken) =>
@@ -516,7 +516,7 @@ app.MapGet("/api/long-operation", async (
 ```
 
 ```csharp
-// IHostApplicationLifetime によるライフサイクルフック
+// Lifecycle hooks via IHostApplicationLifetime
 public class ApplicationLifetimeService(
     IHostApplicationLifetime lifetime,
     ILogger<ApplicationLifetimeService> logger) : IHostedService
@@ -524,13 +524,13 @@ public class ApplicationLifetimeService(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         lifetime.ApplicationStarted.Register(() =>
-            logger.LogInformation("アプリケーションが起動しました"));
+            logger.LogInformation("Application started"));
 
         lifetime.ApplicationStopping.Register(() =>
-            logger.LogInformation("アプリケーションの停止処理を開始します..."));
+            logger.LogInformation("Beginning application shutdown..."));
 
         lifetime.ApplicationStopped.Register(() =>
-            logger.LogInformation("アプリケーションが停止しました"));
+            logger.LogInformation("Application stopped"));
 
         return Task.CompletedTask;
     }
@@ -538,19 +538,19 @@ public class ApplicationLifetimeService(
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
-// 登録
+// Registration
 builder.Services.AddHostedService<ApplicationLifetimeService>();
 ```
 
 ```csharp
-// BackgroundService による安全な停止処理
+// Safe shutdown handling via BackgroundService
 public class QueueProcessorService(
     IMessageQueue queue,
     ILogger<QueueProcessorService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("キュープロセッサーを開始します");
+        logger.LogInformation("Starting queue processor");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -561,25 +561,25 @@ public class QueueProcessorService(
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                logger.LogInformation("キュープロセッサーの停止が要求されました");
+                logger.LogInformation("Queue processor shutdown requested");
                 break;
             }
         }
 
-        logger.LogInformation("キュープロセッサーが正常に停止しました");
+        logger.LogInformation("Queue processor stopped cleanly");
     }
 }
 ```
 
 ```csharp
-// シャットダウンタイムアウトの設定
+// Configuring the shutdown timeout
 builder.Services.Configure<HostOptions>(options =>
 {
     options.ShutdownTimeout = TimeSpan.FromSeconds(60);
 });
 ```
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-C1-C5), `api-validation` Skill (AV-C1-C5)
-- 関連 Skill: `csproj`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet`
+- Universal constraints: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-C1-C5), `api-validation` Skill (AV-C1-C5)
+- Related Skills: `csproj`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet`

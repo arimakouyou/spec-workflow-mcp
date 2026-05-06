@@ -53,25 +53,25 @@ Check for a custom template first, then fall back to the default:
 
 ### 2.5 Detect New Project
 
-新規プロジェクトかどうかを検出し、Git 初期化タスクの追加要否を判断する。
+Detect whether this is a new project and decide whether to add a Git initialization task.
 
 ```bash
-# Git リポジトリが存在するか確認
+# Check whether a Git repository exists
 git -C "{project-path}" rev-parse --is-inside-work-tree 2>/dev/null
 echo $?
 ```
 
-**結果に応じた分岐（終了コード優先）:**
+**Branching by result (exit code takes precedence):**
 
-| 終了コード | `--is-inside-work-tree` の出力 | 判定 | アクション |
-|-----------|-------------------------------|------|-----------|
-| `0` | `true` | 既存リポジトリ（作業ツリーあり） | Git 初期化タスク不要。Phase 0 に含めない |
-| `0` | `false` | 既存リポジトリ（bare repo または `.git` ディレクトリ直下） | Git 初期化タスク不要。必要であれば、bare から通常リポジトリへの移行タスクを別途検討 |
-| `128` | （任意） | 新規プロジェクト（Git未初期化） | Phase 0 の先頭に Git 初期化タスクを追加 |
-| `127` | （任意） | git コマンドが見つからない | ユーザーにエラー報告: 「git がインストールされていません。git をインストールしてから再実行してください。」タスク生成を中断 |
-| その他 | （任意） | パス不正・権限エラー等 | ユーザーにエラー報告: 「プロジェクトパスの確認中にエラーが発生しました（exit code: {N}）。パスとアクセス権限を確認してください。」タスク生成を中断 |
+| Exit Code | `--is-inside-work-tree` Output | Verdict | Action |
+|-----------|-------------------------------|---------|--------|
+| `0` | `true` | Existing repository (with working tree) | No Git init task needed. Do not include in Phase 0 |
+| `0` | `false` | Existing repository (bare repo or directly inside `.git` directory) | No Git init task needed. If necessary, consider a separate task to migrate from bare to a normal repository |
+| `128` | (any) | New project (Git not initialized) | Add Git init task at the top of Phase 0 |
+| `127` | (any) | `git` command not found | Report to user: "git is not installed. Please install git and re-run." Abort task generation |
+| Other | (any) | Invalid path / permission error, etc. | Report to user: "An error occurred while checking the project path (exit code: {N}). Please verify the path and access permissions." Abort task generation |
 
-新規プロジェクト（exit code 128）の場合、Phase 0 の先頭（他のすべてのタスクの前）に以下のタスクを自動追加する:
+For a new project (exit code 128), automatically add the following task at the top of Phase 0 (before all other tasks):
 
 ```markdown
 ## Phase 0: Project Setup
@@ -83,49 +83,49 @@ echo $?
   - _Prompt: Role: DevOps Engineer | Task: Initialize a Git repository, create an appropriate .gitignore for the project type (Rust: target/, *.swp, .env etc.), and make the initial commit | Restrictions: Do not include secrets or build artifacts in the initial commit. The .gitignore must cover the project's language/framework (e.g., /target for Rust, node_modules for Node.js). Do not configure remote repository (user will do this manually) | Success: `git log` shows the initial commit, `.gitignore` exists and covers the project type_
 ```
 
-**注意:**
-- Git 初期化タスクは常に Phase 0 の最初のタスク（0.0）とする
-- 後続のタスク番号は 0.1 から始める
-- 既存リポジトリの場合、タスク番号は従来通り 0.1 から始まる
+**Notes:**
+- The Git init task is always the first task in Phase 0 (0.0)
+- Subsequent task numbers start from 0.1
+- For existing repositories, task numbers start from 0.1 as before
 
 ### 2.6 Detect Container Requirements
 
-design.md の Container Architecture セクションを読み、コンテナセットアップタスクの要否を判断する。
+Read the Container Architecture section of design.md and decide whether to add container setup tasks.
 
-**検出ロジック:**
-1. design.md に「Container Architecture」セクションが存在するか
-2. Service Dependencies テーブルにサービスが列挙されているか
+**Detection logic:**
+1. Whether design.md has a "Container Architecture" section
+2. Whether services are listed in the Service Dependencies table
 
-**Container Architecture が存在する場合**、Phase 0 に以下のタスクを追加する（Git 初期化タスクの後、他のセットアップタスクの前）:
+**If Container Architecture exists**, add the following tasks to Phase 0 (after the Git init task, before other setup tasks):
 
 ```markdown
 - [ ] 0.1 Create Dockerfile and docker-compose.yml
   - File: Dockerfile, docker-compose.yml, .dockerignore
   - _TDDSkip: true_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: design.md の Container Architecture に基づいて Dockerfile (multi-stage build) と docker-compose.yml を作成する。Service Dependencies テーブルの全サービスを含める | Restrictions: シークレットを Dockerfile に埋め込まない。.dockerignore で不要ファイルを除外。ポート番号は design.md の定義に従う | Success: `docker-compose up -d` で全サービスが起動する_
+  - _Prompt: Role: DevOps Engineer | Task: Create a Dockerfile (multi-stage build) and docker-compose.yml based on the Container Architecture in design.md. Include all services from the Service Dependencies table | Restrictions: Do not embed secrets in the Dockerfile. Exclude unnecessary files via .dockerignore. Port numbers must follow the definitions in design.md | Success: `docker-compose up -d` starts all services_
 
 - [ ] 0.2 Create test container configuration
   - File: docker-compose.test.yml
   - _TDDSkip: true_
   - _DependsOn: 0.1_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: テスト用の docker-compose.test.yml を作成する。外部ポートは固定値ではなく環境変数（例: ${TEST_DB_PORT}:5432）で指定し、起動スクリプトで5桁のランダムポート（10000-65535）を生成して渡す方式にする。TEST_DB_PORT が未設定の場合は起動を失敗させる。DB にはテスト用の初期化スクリプトを含める | Restrictions: 本番用 docker-compose.yml を修正しない。テスト用ボリュームは永続化しない（tmpfs 推奨）。固定オフセットポート（5432→15432 等）は他プロセスとの競合リスクがあるため使用しない | Success: ランダムポートで `docker-compose -f docker-compose.test.yml up -d` が起動し、本番用と共存できる_
+  - _Prompt: Role: DevOps Engineer | Task: Create docker-compose.test.yml for tests. External ports must be specified via environment variables (e.g., ${TEST_DB_PORT}:5432) rather than fixed values; the startup script generates a random 5-digit port (10000-65535) and passes it in. If TEST_DB_PORT is unset, fail startup. Include a test initialization script for the DB | Restrictions: Do not modify the production docker-compose.yml. Do not persist test volumes (tmpfs recommended). Do not use fixed offset ports (e.g., 5432→15432) since they risk collision with other processes | Success: `docker-compose -f docker-compose.test.yml up -d` starts on a random port and coexists with the production stack_
 ```
 
-**Container Architecture が存在しない場合**: コンテナタスクを追加しない（従来通り）。
+**If Container Architecture does not exist**: Do not add container tasks (as before).
 
-**注意:** Git 初期化タスク (0.0) がある場合、コンテナタスクは 0.1, 0.2 とし、他のセットアップタスクは 0.3 から始める。
+**Note:** When the Git init task (0.0) exists, the container tasks become 0.1 and 0.2, and other setup tasks start from 0.3.
 
 ### 2.7 Detect CI Workflow Requirements
 
-`.github/workflows/` 配下に PR トリガーの CI ワークフローが存在するか確認し、CI セットアップタスクの要否を判断する。
+Check whether a PR-triggered CI workflow exists under `.github/workflows/`, and decide whether to add a CI setup task.
 
-**検出ロジック:**
+**Detection logic:**
 
 ```bash
-# PR トリガーの CI ワークフローが存在するか
-# pull_request: (マッピング形式)、- pull_request (リスト形式)、[..., pull_request, ...] (インライン配列) を検出
+# Whether a PR-triggered CI workflow exists
+# Detects pull_request: (mapping form), - pull_request (list form), [..., pull_request, ...] (inline array form)
 if test -d .github/workflows; then
   grep -rEl '(^\s*pull_request:|^\s*-\s*pull_request|\[\s*.*pull_request)' .github/workflows --include='*.yml' --include='*.yaml'
   echo $?
@@ -134,51 +134,51 @@ else
 fi
 ```
 
-| 結果 | 判定 | アクション |
-|------|------|-----------|
-| ファイルが見つかった（exit 0） | PR トリガーの CI ワークフローが既に存在 | CI タスクを追加しない |
-| ファイルが見つからない（exit 1）| PR トリガーの CI ワークフローが未作成 | Phase 0 に CI セットアップタスクを追加 |
-| `.github/workflows/` が存在しない | CI 未構成 | Phase 0 に CI セットアップタスクを追加 |
+| Result | Verdict | Action |
+|--------|---------|--------|
+| File found (exit 0) | PR-triggered CI workflow already exists | Do not add a CI task |
+| No file found (exit 1) | PR-triggered CI workflow not yet created | Add a CI setup task to Phase 0 |
+| `.github/workflows/` does not exist | CI not configured | Add a CI setup task to Phase 0 |
 
-**PR トリガーの CI ワークフローが存在しない場合**、Phase 0 に以下のタスクを追加する（Git 初期化 → コンテナ → CI の順）:
+**If no PR-triggered CI workflow exists**, add the following task to Phase 0 (in the order: Git init → container → CI):
 
 ```markdown
 - [ ] 0.N Create CI workflow
   - File: .github/workflows/ci.yml
   - _TDDSkip: true_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: /setup-ci スキルを使用して、プロジェクトタイプに応じた PR トリガーの GitHub Actions CI ワークフローを生成する。.claude-plugin/rules/quality-checks.md に定義された品質チェックコマンドと同一のステップを含めること。design.md に Container Architecture がある場合は --with-services オプションを使用する | Restrictions: シークレットをワークフローにハードコードしない。既存の CI ワークフロー（npm-publish.yml 等）を変更しない | Success: PR 作成時に CI が自動実行され、.claude-plugin/rules/quality-checks.md に定義された品質チェックが通る_
+  - _Prompt: Role: DevOps Engineer | Task: Use the /setup-ci skill to generate a PR-triggered GitHub Actions CI workflow appropriate for the project type. Include the same steps as the quality check commands defined in .claude-plugin/rules/quality-checks.md. If design.md has a Container Architecture, use the --with-services option | Restrictions: Do not hard-code secrets in the workflow. Do not modify existing CI workflows (e.g., npm-publish.yml) | Success: CI runs automatically on PR creation and the quality checks defined in .claude-plugin/rules/quality-checks.md pass_
 ```
 
-**注意:** タスク番号 `0.N` は Phase 0 内の順序に応じて割り振る（Git 初期化 0.0 → コンテナ 0.1, 0.2 → CI 0.3 の順。コンテナタスクがない場合は繰り上げる）。
+**Note:** Assign the task number `0.N` based on the order within Phase 0 (Git init 0.0 → container 0.1, 0.2 → CI 0.3. If there is no container task, shift up).
 
 ### 2.8 Detect ADR Directory
 
-`.claude/_docs/adr/` ディレクトリが存在するか確認し、ADR プロセスの初期化タスクの要否を判断する。
+Check whether the `.claude/_docs/adr/` directory exists and decide whether to add an ADR process initialization task.
 
-**検出ロジック:**
+**Detection logic:**
 
 ```bash
 test -d .claude/_docs/adr && test -f .claude/_docs/adr/INDEX.md
 echo $?
 ```
 
-| 結果 | 判定 | アクション |
-|------|------|-----------|
-| exit 0 | ADR ディレクトリと INDEX.md が存在 | タスクを追加しない |
-| exit 1 | ADR が未初期化 | Phase 0 に ADR 初期化タスクを追加 |
+| Result | Verdict | Action |
+|--------|---------|--------|
+| exit 0 | ADR directory and INDEX.md exist | Do not add a task |
+| exit 1 | ADR not initialized | Add an ADR init task to Phase 0 |
 
-**ADR が未初期化の場合**、Phase 0 に以下のタスクを追加する（CI タスクの後）:
+**If ADR is not initialized**, add the following task to Phase 0 (after the CI task):
 
 ```markdown
 - [ ] 0.N Initialize ADR directory
   - File: .claude/_docs/adr/INDEX.md
   - _TDDSkip: true_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: .claude/_docs/adr/ ディレクトリと INDEX.md を作成する。INDEX.md には ADR テーブルのヘッダー（ADR, Title, Status, Date）のみ記載する。design.md の Key Design Decisions から /adr スキルを使用して初期 ADR を生成する | Restrictions: 既存の .claude/ 配下のファイルを変更しない | Success: .claude/_docs/adr/INDEX.md が存在し、design.md の主要決定に対応する ADR ファイルが作成されている_
+  - _Prompt: Role: DevOps Engineer | Task: Create the .claude/_docs/adr/ directory and INDEX.md. INDEX.md should contain only the ADR table header (ADR, Title, Status, Date). Use the /adr skill to generate initial ADRs from design.md's Key Design Decisions | Restrictions: Do not modify existing files under .claude/ | Success: .claude/_docs/adr/INDEX.md exists, and ADR files corresponding to the major decisions in design.md have been created_
 ```
 
-**注意:** タスク番号は Phase 0 内の最後のセットアップタスクとする（Git 初期化 → コンテナ → CI → ADR の順）。
+**Note:** This task number is the last setup task in Phase 0 (in the order: Git init → container → CI → ADR).
 
 ### 3. Create Tasks
 
@@ -215,37 +215,37 @@ Group tasks into phases using `## Phase N: Title` headings. Each phase is a **ve
 - Each phase ends with a `_PhaseReview: true_` task for review and commit
 - Phases are ordered by dependency (core → API → UI → integration)
 
-### 3.6 IT / ST / E2E Test Tasks（J-5 で改訂）
+### 3.6 IT / ST / E2E Test Tasks (revised by J-5)
 
-test-design.md の IT / ST / E2E 仕様を基に、Phase の適切な位置にテストタスクを配置する。各層の責務範囲は `quality-checks.md` の Test Taxonomy 参照。
+Based on the IT / ST / E2E specs in test-design.md, place test tasks at the appropriate position in each Phase. See `quality-checks.md` Test Taxonomy for the responsibilities of each layer.
 
-#### IT タスク（backend HTTP API only）
-- test-design.md の各 IT 仕様（IT-1, IT-2, ...）に対応するタスクを作成
-- **配置**: 対象コンポーネントがすべて実装済みの Phase に配置（通常は backend Phase 完了直後の PhaseReview 直前）
-- `_TestFocus` は test-design.md の IT 仕様を参照し、Verification Points を列挙
-- `_Prompt` の Task に「test-design.md の IT-{N} 仕様に基づいて backend HTTP API 統合テストを実装する」と明記
-- **責務範囲**: UI 操作 / DOM 検証を含めない（`quality-checks.md` Test Taxonomy 参照）
+#### IT tasks (backend HTTP API only)
+- Create one task per IT spec (IT-1, IT-2, ...) in test-design.md
+- **Placement**: in the Phase where all target components are already implemented (typically immediately before PhaseReview at the end of the backend Phase)
+- `_TestFocus` references the IT spec in test-design.md and enumerates Verification Points
+- The `_Prompt` Task explicitly states "Implement a backend HTTP API integration test based on the IT-{N} spec in test-design.md"
+- **Scope**: Do not include UI operations / DOM checks (see `quality-checks.md` Test Taxonomy)
 
-#### ST タスク（単一機能の full-stack、J-7 で新設）
-- test-design.md の各 ST 仕様（ST-1, ST-2, ...）に対応するタスクを作成
-- **配置**: 対象機能の component / endpoint がすべて実装済みの Phase **末尾**（CT/IT 完了後、E2E より前）
-- `_TestFocus` は test-design.md の ST 仕様を参照し、Test Path / Verification Points を列挙
-- `_Prompt` の Task に「test-design.md の ST-{N} 仕様に基づいて単一機能の full-stack テストを実装する」と明記
-- **責務範囲**: 1 機能分のみ（複数機能の連鎖を含めない）
+#### ST tasks (single-feature full-stack, newly introduced by J-7)
+- Create one task per ST spec (ST-1, ST-2, ...) in test-design.md
+- **Placement**: at the **end** of the Phase that completes all components / endpoints for the target feature (after CT/IT, before E2E)
+- `_TestFocus` references the ST spec in test-design.md and enumerates Test Path / Verification Points
+- The `_Prompt` Task explicitly states "Implement a single-feature full-stack test based on the ST-{N} spec in test-design.md"
+- **Scope**: A single feature only (do not chain multiple features)
 
-#### E2E タスク（user journey only）
-- test-design.md の各 E2E 仕様（E2E-1, E2E-2, ...）に対応するタスクを **最終 Phase** に配置
-- `_TestFocus` は test-design.md の E2E 仕様を参照し、Scenario Steps と Success Criteria を列挙
-- `_Prompt` の Task に「test-design.md の E2E-{N} 仕様に基づいて user journey E2E テストを実装する」と明記
-- **責務範囲**: 複数機能の連鎖を含む user journey のみ（個別機能テストは ST に振る）
+#### E2E tasks (user journey only)
+- Place a task per E2E spec (E2E-1, E2E-2, ...) in the **final Phase**
+- `_TestFocus` references the E2E spec in test-design.md and enumerates Scenario Steps and Success Criteria
+- The `_Prompt` Task explicitly states "Implement a user journey E2E test based on the E2E-{N} spec in test-design.md"
+- **Scope**: Only user journeys that chain multiple features (assign individual feature tests to ST)
 
-#### 配置ルールの優先順序
+#### Placement order
 
 ```
-Phase N (backend 実装):  ... → IT-N tasks → PhaseReview
-Phase M (UI 実装):       ... → CT-N tasks (H 実装後) → PhaseReview
-Phase L (機能完成):      ... → ST-N tasks → PhaseReview
-最終 Phase:              E2E-N tasks → Final PhaseReview
+Phase N (backend implementation):  ... → IT-N tasks → PhaseReview
+Phase M (UI implementation):       ... → CT-N tasks (after H implementation) → PhaseReview
+Phase L (feature completion):      ... → ST-N tasks → PhaseReview
+Final Phase:                       E2E-N tasks → Final PhaseReview
 ```
 
 ### 3.7 TDD Task Design Rules
@@ -316,19 +316,19 @@ This is critical for implementation quality. Each task needs a `_Prompt` field w
   - _Prompt: Role: Code reviewer | Task: Review all Phase 1 changes, run tests, commit | Success: All tests pass, committed_
 ```
 
-#### UI Component task テンプレ（D で追加、dapper-hardening）
+#### UI Component task template (added by D, dapper-hardening)
 
-UI component（Leptos / Blazor / React 等）の task は `_Prompt.Task` で以下を **必須記述**:
+A task for a UI component (Leptos / Blazor / React, etc.) **must describe** all of the following in `_Prompt.Task`:
 
-1. **view! / 出力 DOM**: 「view! 内に `<img src=...>` `<button>...</button>` 等の {期待要素} をレンダリングする」と明示文字列で記述
-2. **依存配線**: design.md DES-N の `Dependencies:` 列の各 server fn / 外部 API / 兄弟 component を「{依存名} を呼び出す / 統合する / 受け取る」と明示
-3. **data-testid 付与**: test-design.md の CT/E2E 仕様で参照される testid を view! 内の該当位置に付与（test_ids.rs 等で定数化推奨）
-4. **event listener attach**: `on:click` / `on:submit` / `on:input` 等の event handler が signal を update するように配線
+1. **view! / output DOM**: Explicitly state "render {expected elements} such as `<img src=...>` and `<button>...</button>` inside view!"
+2. **Dependency wiring**: For each server fn / external API / sibling component listed in design.md DES-N's `Dependencies:` column, explicitly state "call / integrate with / receive {dependency name}"
+3. **data-testid attachment**: Attach the testids referenced in the CT/E2E specs of test-design.md at the corresponding positions in view! (defining constants in test_ids.rs etc. is recommended)
+4. **Event listener attach**: Wire event handlers such as `on:click` / `on:submit` / `on:input` so they update signals
 
-`_Prompt.Success` は **動作証跡** で書く（grep だけでは不十分、Check 18 SUCCESS_BEHAVIORAL_VERIFICATION で error）:
+Write `_Prompt.Success` as **behavioral evidence** (grep alone is insufficient; Check 18 SUCCESS_BEHAVIORAL_VERIFICATION will error):
 
-- CT-N が PASS（mount + signal + DOM 観測 chain）
-- 必要に応じて grep などの補助確認も併記可（単独では不可）
+- CT-N PASSes (mount + signal + DOM observation chain)
+- Auxiliary checks such as grep may be added if needed (cannot stand alone)
 
 ```markdown
 - [ ] 4.4 Implement ThumbnailGrid component
@@ -337,8 +337,8 @@ UI component（Leptos / Blazor / React 等）の task は `_Prompt.Task` で以�
   - _DependsOn: 4.3
   - _Leverage: crates/app/src/server_fns/list_folder.rs, crates/app/src/test_ids.rs
   - _Requirements: REQ-2.1, REQ-2.2
-  - _TestFocus: Happy Path: 5枚画像表示 / Boundary Values: 0枚 / 1枚 / 200枚 / Error Handling: list_folder error 時のエラー表示 / Edge Cases: 多バイトパス / Negative Assertions: list_folder を 1 回しか呼ばない / Isolation Properties: list_folder は MockServer 経由
-  - _Prompt: Role: Frontend Component Engineer | Task: ThumbnailGrid component を実装。view! 内に Resource::new で list_folder を呼び出し、Suspense で pending 状態を表示、各画像に <img src="/api/thumbnails/{path}"> + data-testid="thumbnail-item" を付与。on:click で on_open callback を実行 | Restrictions: design.md DES-12 の Interfaces を変更しない。pure helper 抽出のみで終わらせない（Check 18） | Success: CT-12.1 (initial render) / CT-12.2 (5 件画像表示) / CT-12.3 (click → on_open 呼び出し) が全 PASS、view! 内に data-testid="thumbnail-grid" / "thumbnail-item" が grep で検出される_
+  - _TestFocus: Happy Path: render 5 images / Boundary Values: 0 / 1 / 200 images / Error Handling: error display when list_folder errors / Edge Cases: multi-byte path / Negative Assertions: list_folder is called only once / Isolation Properties: list_folder goes through MockServer
+  - _Prompt: Role: Frontend Component Engineer | Task: Implement the ThumbnailGrid component. Inside view!, call list_folder via Resource::new, show pending state with Suspense, attach <img src="/api/thumbnails/{path}"> + data-testid="thumbnail-item" to each image, and execute the on_open callback on:click | Restrictions: Do not change the Interfaces of design.md DES-12. Do not stop at extracting pure helpers only (Check 18) | Success: CT-12.1 (initial render) / CT-12.2 (5-image render) / CT-12.3 (click → on_open invocation) all PASS, and grep detects data-testid="thumbnail-grid" / "thumbnail-item" inside view!_
 ```
 
 **Note:** The Task field must focus on a single responsibility. Do not join multiple responsibilities with "and" (e.g., "Create model and implement repository").
@@ -346,15 +346,15 @@ UI component（Leptos / Blazor / React 等）の task は `_Prompt.Task` で以�
 Also include:
 - `_Leverage`: Existing files/utilities to reuse (copied from the Code Reuse Analysis table in design.md)
 - `_Requirements`: Which requirements this task fulfills (traceability)
-- `_DependsOn`: Same Phase 内で、このタスクが依存する他タスクのID（カンマ区切り）。依存がない場合は省略する。依存があるタスクは、依存先が完了するまで実行されない。Phase 跨ぎの依存は不要（Phase 順序で暗黙保証）。例: `_DependsOn: 1.1, 1.2_`
+- `_DependsOn`: IDs (comma-separated) of other tasks within the same Phase that this task depends on. Omit if there are no dependencies. A task with dependencies is not run until its dependencies finish. Cross-Phase dependencies are unnecessary (implicitly guaranteed by Phase order). Example: `_DependsOn: 1.1, 1.2_`
 - `_TestFocus`: Written in the 4-category structured format (see below)
-- `_BugFix` / `_RegressionBugId` (J-10 で必須化、`dapper-hardening-orchestrator.md` 参照):
-  - バグ修正系 task の場合 `_BugFix: true_` を必須化、合わせて `_RegressionBugId: BUG-NNN_` （または `GH#NNN_`）を必須化
-  - 例: `- _BugFix: true_\n- _RegressionBugId: GH#123_`
-  - 対応する regression test は `regression-test-policy/SKILL.md` の命名規則 (`regression_issue_NNN_*` / `it('regression #NNN: ...')`) で実装する
-  - parallel-worker は `_BugFix: true` を検知したら RT1 フロー（修正前に再現テストを RED phase で書き、修正後 GREEN にする）に従う
+- `_BugFix` / `_RegressionBugId` (made mandatory by J-10; see `dapper-hardening-orchestrator.md`):
+  - For bug-fix tasks, `_BugFix: true_` is mandatory, along with `_RegressionBugId: BUG-NNN_` (or `GH#NNN_`)
+  - Example: `- _BugFix: true_\n- _RegressionBugId: GH#123_`
+  - The corresponding regression test is implemented under the naming convention of `regression-test-policy/SKILL.md` (`regression_issue_NNN_*` / `it('regression #NNN: ...')`)
+  - When parallel-worker detects `_BugFix: true`, it follows the RT1 flow (write a reproducing test in the RED phase before fixing, then make it GREEN after the fix)
 
-#### _BugFix task の例（J-10）
+#### _BugFix task example (J-10)
 
 ```markdown
 - [ ] N.M Fix login failure on multibyte usernames
@@ -364,10 +364,10 @@ Also include:
   - _DependsOn: ...
   - _Requirements: REQ-N
   - _TestFocus: Happy Path: multibyte username login succeeds | Boundary Values: empty / 1-char / 256-char username | Error Handling: invalid byte sequence | Edge Cases: combining characters | Negative Assertions: login does NOT panic on invalid UTF-8 | Isolation Properties: Mock-only clock for token expiry test
-  - _Prompt: Role: Bug Fixer | Task: GH#123 を修正。再現テスト regression_issue_123_login_fails_with_multibyte_username をまず RED phase で書き、その後修正 | Restrictions: 既存の login flow を破壊しない | Success: regression test PASS、既存テスト全件 PASS_
+  - _Prompt: Role: Bug Fixer | Task: Fix GH#123. First write the reproducing test regression_issue_123_login_fails_with_multibyte_username in the RED phase, then implement the fix | Restrictions: Do not break the existing login flow | Success: Regression test PASSes, all existing tests PASS_
 ```
 
-#### _TestFocus Format（I-1 で 4→6 カテゴリに拡張）
+#### _TestFocus Format (extended from 4 to 6 categories by I-1)
 
 To align with the unit-test-engineer's required test coverage, use the following **6-category structure** (extended from 4 to 6 per I-1, `dapper-hardening-orchestrator.md`). Free-form text is not allowed.
 
@@ -375,23 +375,23 @@ To align with the unit-test-engineer's required test coverage, use the following
 _TestFocus: Happy Path: {specific test targets} | Boundary Values: {specific boundaries} | Error Handling: {specific error cases} | Edge Cases: {specific cases} | Negative Assertions: {specific behaviors that must NOT happen} | Isolation Properties: {external dependency strategy}
 ```
 
-カテゴリ説明:
+Category descriptions:
 
-1. **Happy Path**: 仕様に基づく正常系の挙動を verify
-2. **Boundary Values**: 境界値（最小・最大・閾値直前後）の挙動
-3. **Error Handling**: エラー条件への対処（不正入力 / 失敗 / タイムアウト等）
-4. **Edge Cases**: 例外的な状況（マルチバイト / 重複 / 連続操作）
-5. **Negative Assertions（I-1 で追加）**: **仕様外の挙動が起きないことの確認**:
-   - 入力 mutation が起きないこと（pure function は副作用ゼロ）
-   - 不要な log / metric / event を吐かないこと
-   - 想定外の入力で panic しないこと（適切なエラーで失敗）
-   - 仕様外のフィールドを返さないこと
-6. **Isolation Properties（I-1 で追加）**: **外部依存ゼロ + 順序非依存 + 決定性**:
-   - clock / RNG / env / fs / HTTP / DB の直接呼出ゼロ（Mock 経由のみ）
-   - 順序非依存（他 test の状態に依存しない、share された global state を持たない）
-   - 決定性（同じ入力で常に同じ結果。clock や RNG に依存しない）
+1. **Happy Path**: Verify normal-path behavior per the spec
+2. **Boundary Values**: Behavior at boundaries (minimum / maximum / just before and after thresholds)
+3. **Error Handling**: Handling of error conditions (invalid input / failures / timeouts, etc.)
+4. **Edge Cases**: Exceptional situations (multi-byte, duplicates, repeated operations)
+5. **Negative Assertions (added by I-1)**: **Confirm that out-of-spec behavior does not occur**:
+   - No input mutation (pure functions have zero side effects)
+   - Do not emit unnecessary logs / metrics / events
+   - Do not panic on unexpected input (fail with an appropriate error)
+   - Do not return out-of-spec fields
+6. **Isolation Properties (added by I-1)**: **Zero external dependencies + order-independent + deterministic**:
+   - Zero direct calls to clock / RNG / env / fs / HTTP / DB (Mock only)
+   - Order-independent (does not depend on other tests' state, no shared global state)
+   - Deterministic (same input always yields the same result; does not depend on clock or RNG)
 
-If a category does not apply, explicitly write "N/A" (do not omit it). Negative Assertions / Isolation Properties が "N/A" になる場合は理由を明記（pure function で副作用が原理的に無い場合のみ）。
+If a category does not apply, explicitly write "N/A" (do not omit it). When Negative Assertions / Isolation Properties is "N/A", explicitly note the reason (only when the function is pure and side effects are impossible by design).
 - Instructions about marking task status in tasks.md and logging implementation with `/log-implementation` skill
 
 ### 5. Create the Document
@@ -403,7 +403,7 @@ Write the tasks document to:
 
 **Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2, SD6):**
 
-以下の YAML frontmatter をファイル冒頭に追加する。これは tasks.md **全体**が依存する上流仕様書 ID の宣言であり、タスク個別の `_Requirements:` / `_DependsOn:` メタデータとは粒度が異なる直交情報:
+Add the following YAML frontmatter to the top of the file. This declares the upstream spec IDs that tasks.md as a **whole** depends on; it is orthogonal to per-task `_Requirements:` / `_DependsOn:` metadata, which operate at a different granularity:
 
 ```yaml
 ---
@@ -412,13 +412,13 @@ phase: tasks
 version: 1
 depends_on:
   - file: design.md
-    refs: [DES-1, DES-2]  # 実装対象のコンポーネント
+    refs: [DES-1, DES-2]  # Components to implement
   - file: test-design.md
-    refs: [UT-1.1, IT-1]  # 満たすべきテスト仕様
+    refs: [UT-1.1, IT-1]  # Test specs to satisfy
 ---
 ```
 
-タスク個別メタデータ（`_Requirements:` / `_Leverage:` / `_DependsOn:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`）は従来通り維持する（SD6）。
+Per-task metadata (`_Requirements:` / `_Leverage:` / `_DependsOn:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`) is preserved as before (SD6).
 
 Task status markers:
 - `- [ ]` = Pending
@@ -491,7 +491,7 @@ Agent({
        every requirement must have at least one implementing task,
        every design component must have at least one creating task,
        _Requirements IDs must match actual requirement IDs,
-       **(D 拡張、dapper-hardening)** every DES-N の `Dependencies:` 列に列挙された全 server fn / 外部 API / 兄弟 component が、対応 task の `_Prompt.Task` 文に **「{依存名} を呼び出す/統合する/受け取る」と明示文字列で記載されているか** 確認
+       **(D extension, dapper-hardening)** verify that every server fn / external API / sibling component listed in each DES-N's `Dependencies:` column appears as an **explicit string in the corresponding task's `_Prompt.Task`, e.g., "call / integrate with / receive {dependency name}"**
     4. TRACEABILITY: Verify that the Target Task ID column is filled in for all components in the Requirements Traceability Matrix in design.md.
        If any component row is empty, add a task to tasks.md and update the matrix in design.md.
     5. Tasks are atomic (1-3 files), in logical dependency order
@@ -507,11 +507,11 @@ Agent({
         every ST spec must have a system test task (J-7),
         every E2E spec must have an E2E test task
     13. FRONTMATTER (spec-dependency-graph.md SD2, SD6): Valid YAML frontmatter with spec_id, phase: tasks, version, depends_on (file entries pointing to design.md and test-design.md with refs) must exist at the top of the file. DES-/UT-/IT-/ST-/E2E- IDs in depends_on.refs must exist in the referenced upstream files (SD4). Task-level metadata (_Requirements, _Leverage, _DependsOn) remains orthogonal to this frontmatter
-    14. COMPOSITION_TASK (D, dapper-hardening): If design.md の Component List に top-level (root) component（例: AppRoot, MainShell, RootRoute）が存在する場合、その配下 component を子要素として組み立てる **専用の composition task** が tasks.md に存在するか。task の `_Prompt.Task` には「N 個の子 component を view! 内に配置し、prop / signal を配線する」、`_Prompt.Success` には「すべての子 component が DOM tree に出現する E2E スモーク (後続 Phase で) が成立する前提を満たす」を明記
-    15. UI_OBSERVABILITY (D, dapper-hardening): UI component task の `_Prompt.Success` には「data-testid を {期待値} で付与する」「実 view! が {要求要素 (`<img>`, `<button>`, etc.)} をレンダリングする」が含まれているか。test-design.md の E2E / CT 仕様で `getByTestId(...)` / `query_selector("[data-testid=...]")` 参照されている testid が、対応する component task の `_Prompt.Success` に明示されているか
-    16. FIXTURE_REALIZATION (D, dapper-hardening): test-design.md の Test Data Requirements に列挙された fixture path（`tests/fixtures/...`、`photos/landscape/...` 等）が、いずれかの task の `File:` 列または `_Prompt.Task` 文で生成・配置される旨が記載されているか
-    17. PHASE_SMOKEABLE (E-2, dapper-hardening): 各 Phase の最後の `_PhaseReview: true_` task の前に、その Phase で smoke 可能な deliverable が **少なくとも 1 件存在するか**。design.md の Phase Deliverables（K-4 で必須化）と突合し、Phase が deliverable ゼロの場合は escalate（Phase 境界の見直し提案）
-    18. SUCCESS_BEHAVIORAL_VERIFICATION (H-4, dapper-hardening): The `_Success` field must NOT be completed by static checks alone (e.g., grep for string existence / "the file exists" / "implementation contains X"). At least one **動作証跡 (behavioral evidence)** is required: test PASS (UT-N / CT-N / IT-N / ST-N) / smoke PASS / DOM observation. UI component task の `_Success` には CT-N PASS（mount + signal 操作 + DOM 観測）を必須化
+    14. COMPOSITION_TASK (D, dapper-hardening): If a top-level (root) component exists in design.md's Component List (e.g., AppRoot, MainShell, RootRoute), verify that tasks.md has a **dedicated composition task** that assembles the child components beneath it. The task's `_Prompt.Task` must explicitly state "place N child components inside view! and wire up props / signals", and `_Prompt.Success` must explicitly state "satisfies the preconditions for an E2E smoke (in a later Phase) where all child components appear in the DOM tree"
+    15. UI_OBSERVABILITY (D, dapper-hardening): Verify that a UI component task's `_Prompt.Success` includes "attach data-testid with {expected values}" and "the actual view! renders {required elements (`<img>`, `<button>`, etc.)}". Verify that any testid referenced by `getByTestId(...)` / `query_selector("[data-testid=...]")` in the E2E / CT specs of test-design.md is explicitly stated in the corresponding component task's `_Prompt.Success`
+    16. FIXTURE_REALIZATION (D, dapper-hardening): Verify that fixture paths listed in test-design.md's Test Data Requirements (e.g., `tests/fixtures/...`, `photos/landscape/...`) are stated as being created or placed in some task's `File:` column or `_Prompt.Task` body
+    17. PHASE_SMOKEABLE (E-2, dapper-hardening): Before the last `_PhaseReview: true_` task of each Phase, verify that **at least one smokeable deliverable exists** in that Phase. Cross-check against design.md's Phase Deliverables (made mandatory by K-4); if a Phase has zero deliverables, escalate (propose revising Phase boundaries)
+    18. SUCCESS_BEHAVIORAL_VERIFICATION (H-4, dapper-hardening): The `_Success` field must NOT be completed by static checks alone (e.g., grep for string existence / "the file exists" / "implementation contains X"). At least one piece of **behavioral evidence** is required: test PASS (UT-N / CT-N / IT-N / ST-N) / smoke PASS / DOM observation. A UI component task's `_Success` must require CT-N PASS (mount + signal manipulation + DOM observation)
     19. TESTFOCUS_NEGATIVE (I-1, dapper-hardening): _TestFocus must include all 6 categories (Happy Path / Boundary Values / Error Handling / Edge Cases / Negative Assertions / Isolation Properties). If Negative Assertions or Isolation Properties is "N/A", the task must be a pure function with no side effects (and the reason must be explicitly noted)
     20. ST_PLACEMENT (J-7, dapper-hardening): For every ST-N spec in test-design.md, a corresponding task must exist in tasks.md, placed at the end of the Phase that completes the target feature's component / endpoint dependencies (after CT/IT, before final E2E Phase).
     21. REGRESSION_BUG_ID (J-10, dapper-hardening): Tasks marked with `_BugFix: true` (or with `Role: Bug Fixer` in _Prompt) must include a `_RegressionBugId: BUG-NNN` (or `GH#NNN`) metadata field. The corresponding regression test must follow the naming convention `regression_issue_NNN_*` (Rust) / `regression #NNN` (TS) per regression-test-policy/SKILL.md.

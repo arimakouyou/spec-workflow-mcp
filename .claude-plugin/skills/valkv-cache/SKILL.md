@@ -1,44 +1,44 @@
 ---
 name: valkv-cache
 description: |
-  Valkey (Redis 互換のインメモリデータストア) を Rust の redis-rs クライアントで利用するパターン集。MultiplexedConnection による多重化、ConnectionManager による自動再接続、AsyncCommands による型安全なコマンド実行、パイプライン、キー名前空間設計、Cache-Aside パターン、セッション管理、エラーハンドリング、避けるべき本番アンチパターン (KEYS *, 大きな値, TTL なし, FLUSHALL) をカバー。Valkey/Redis のキャッシュ・セッションストア実装、接続戦略、キャッシュ更新戦略の判断時に参照。
+  Patterns for using Valkey (a Redis-compatible in-memory data store) from Rust via the redis-rs client. Covers multiplexing with MultiplexedConnection, automatic reconnection with ConnectionManager, type-safe command execution via AsyncCommands, pipelines, key namespace design, the Cache-Aside pattern, session management, error handling, and production anti-patterns to avoid (KEYS *, large values, no TTL, FLUSHALL). Use when implementing a Valkey/Redis cache or session store, deciding connection strategy, or choosing a cache update strategy. Triggers on: 'valkey cache', 'redis cache', 'redis-rs', 'cache-aside pattern', 'Valkeyキャッシュ', 'Redisキャッシュ', 'セッションストア'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Valkey (Redis-compatible) + redis-rs Skill
 
-## 対象
+## Targets
 
-- Valkey あるいは Redis をキャッシュ / セッションストア / pub-sub として使う Rust コードの実装
-- `redis-rs` クライアントによる接続管理（MultiplexedConnection / ConnectionManager）
-- キャッシュ戦略（Cache-Aside）の設計・実装
-- Key Expiration (TTL) 戦略の設計
-- Valkey/Redis エラーと `AppError` との変換
+- Rust code that uses Valkey or Redis as a cache / session store / pub-sub
+- Connection management with the `redis-rs` client (MultiplexedConnection / ConnectionManager)
+- Design and implementation of cache strategies (Cache-Aside)
+- Design of key expiration (TTL) strategies
+- Conversion between Valkey/Redis errors and `AppError`
 
-## 対象外
+## Out of Scope
 
-- Redis サーバ自体の運用 / 監視 → インフラ側ドキュメント参照
-- NATS JetStream → 用途が異なる（Request/Reply や永続キュー向け）
-- pub-sub の詳細設計 → 本スキルはキャッシュ中心。必要なら別 Skill 新設
+- Operation / monitoring of the Redis server itself -> refer to infrastructure docs
+- NATS JetStream -> different use case (request/reply or durable queues)
+- Detailed pub-sub design -> this skill focuses on caching; create a separate Skill if needed
 
-## 主要観点
+## Key Aspects
 
-### 1. 依存関係
+### 1. Dependencies
 
 ```toml
 [dependencies]
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 ```
 
-- `tokio-comp`: 非同期サポート
-- `connection-manager`: 自動再接続
-- クラスター利用時は `cluster-async` を追加
+- `tokio-comp`: async support
+- `connection-manager`: automatic reconnection
+- For cluster usage, add `cluster-async`
 
-### 2. 接続管理
+### 2. Connection Management
 
-- 非同期接続は `MultiplexedConnection` を使う（Clone 可能、スレッドセーフ、接続プール不要）
-- 自動再接続が必要なら `ConnectionManager`（`connection-manager` feature）
-- ブロッキングコマンド（`BLPOP` / `BRPOP` など）は別の専用接続で
+- For async connections, use `MultiplexedConnection` (clonable, thread-safe, no connection pool needed)
+- If automatic reconnection is required, use `ConnectionManager` (`connection-manager` feature)
+- For blocking commands (`BLPOP` / `BRPOP`, etc.), use a separate dedicated connection
 
 ```rust
 use redis::Client;
@@ -53,7 +53,7 @@ struct AppState {
 }
 ```
 
-### 3. ConnectionManager による自動再接続
+### 3. Automatic Reconnection with ConnectionManager
 
 ```rust
 use redis::aio::ConnectionManager;
@@ -62,11 +62,11 @@ let client = Client::open("redis://127.0.0.1:6379/")?;
 let conn = ConnectionManager::new(client).await?;
 ```
 
-### 4. コマンド実行
+### 4. Command Execution
 
-- `AsyncCommands` トレイトを import して高レベル API を使う
-- 型パラメータで戻り値型を指定
-- 存在しないキーは `Option<T>` で受ける
+- Import the `AsyncCommands` trait to use the high-level API
+- Specify return type via type parameter
+- Receive missing keys with `Option<T>`
 
 ```rust
 use redis::AsyncCommands;
@@ -80,9 +80,9 @@ let name: String = conn.hget("user:1", "name").await?;
 let _: () = conn.del("key").await?;
 ```
 
-### 5. パイプライン
+### 5. Pipelines
 
-ネットワークラウンドトリップ削減用。バッチ処理・キャッシュウォームアップで使う。
+For reducing network round-trips. Use for batch processing and cache warm-up.
 
 ```rust
 let (k1, k2): (i32, i32) = redis::pipe()
@@ -94,17 +94,17 @@ let (k1, k2): (i32, i32) = redis::pipe()
     .await?;
 ```
 
-### 6. キー設計
+### 6. Key Design
 
-- プレフィックス + コロン区切りで名前空間: `{entity}:{id}:{attribute}`
-- 例: `user:123:profile`, `session:abc123`, `cache:posts:page:1`
-- キー名は短く、ただし可読性を確保
-- TTL を必ず設定（期限なしキーはメモリリークの原因）
+- Namespace with prefix + colon-separated form: `{entity}:{id}:{attribute}`
+- Examples: `user:123:profile`, `session:abc123`, `cache:posts:page:1`
+- Keep key names short while preserving readability
+- Always set a TTL (keys with no expiry cause memory leaks)
 
-### 7. Cache-Aside パターン
+### 7. Cache-Aside Pattern
 
-- キャッシュミス時に DB 取得 → キャッシュ書き込み
-- 更新時はキャッシュを**削除**（更新ではなく削除が安全）
+- On cache miss, fetch from DB -> write to cache
+- On update, **delete** the cache (deletion is safer than update)
 
 ```rust
 async fn get_user_cached(
@@ -142,37 +142,37 @@ async fn update_user(/* ... */) -> Result<User, AppError> {
 }
 ```
 
-### 8. セッション管理
+### 8. Session Management
 
-- セッションデータはハッシュ型で格納
-- セッション ID はランダム生成（推測不可能）
-- TTL を必ず設定（例: 24 時間）
+- Store session data as a hash type
+- Generate session IDs randomly (unguessable)
+- Always set a TTL (e.g., 24 hours)
 
-### 9. エラーハンドリング
+### 9. Error Handling
 
-- `redis::RedisError` から `AppError` への `From` 実装
-- 接続エラー時はリトライ（`ConnectionManager` 使用時は自動）
-- Valkey 不在時にも degraded mode で動作できる設計にする
+- Implement `From` conversion from `redis::RedisError` to `AppError`
+- Retry on connection errors (automatic when using `ConnectionManager`)
+- Design for degraded-mode operation when Valkey is unavailable
 
-## よくある落とし穴
+## Common Pitfalls
 
-1. **`KEYS *` を本番で使う**: 全キー走査はブロッキング。`SCAN` を使う
-2. **大きな値を単一キーに保存**: > 1MB は避ける。分割または別ストアへ
-3. **Lua スクリプトで長時間ブロック**: EVAL は単一スレッドで実行される
-4. **TTL なしキャッシュ**: メモリ無制限増加につながる
-5. **`FLUSHALL` / `FLUSHDB` を本番で使用**: 取り返しがつかない
+1. **Using `KEYS *` in production**: scans all keys and blocks. Use `SCAN`
+2. **Storing large values under a single key**: avoid > 1 MB. Split or use a different store
+3. **Long-blocking Lua scripts**: EVAL runs single-threaded
+4. **Cache without TTL**: leads to unbounded memory growth
+5. **Using `FLUSHALL` / `FLUSHDB` in production**: irreversible
 
-## プロジェクト固有の規約
+## Project-Specific Conventions
 
-- キャッシュキーの命名: スキーマ変更時に古いキーをヒットさせないため、バージョン prefix（例: `v1:user:123`）を検討
-- TTL 既定値の目安: セッション 24h、API レスポンスキャッシュ 5m、静的データキャッシュ 1h（プロジェクト側で運用標準を決める）
+- Cache key naming: consider a version prefix (e.g., `v1:user:123`) so old keys do not match after a schema change
+- TTL default guidelines: session 24 h, API response cache 5 m, static-data cache 1 h (each project should set its own operational baseline)
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `design-principles` (D4: エラーハンドリング), `security` (A5: 認証・セッション)
-- 関連 Skill: `axum` (AppState に MultiplexedConnection を格納)、`diesel` (DB + キャッシュの二層構成)、`integration-test` (testcontainers で Valkey 起動)
+- Universal constraints: `design-principles` (D4: error handling), `security` (A5: authentication / sessions)
+- Related Skills: `axum` (store MultiplexedConnection in AppState), `diesel` (DB + cache two-tier composition), `integration-test` (boot Valkey via testcontainers)
 
-## 参考リンク
+## References
 
 - redis-rs docs: <https://docs.rs/redis/>
 - Valkey: <https://valkey.io/>

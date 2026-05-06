@@ -1,53 +1,53 @@
 ---
 name: cargo-toml
 description: |
-  Cargo.toml のフォーマットと構造に関する規約。`[package]` セクションの配置とキー順 (name → version → ... → description)、インデント (4 spaces)、行幅 (100 文字)、配列/テーブル値の書き方、SPDX ライセンス式、authors 形式、依存衛生（`cargo +nightly udeps` による未使用検出、`cargo audit` による脆弱性チェック）をカバー。Cargo.toml 編集時、依存追加時、パッケージメタデータ設定時、workspace 設定時、Rust プロジェクトのマニフェスト review 時に参照。
+  Conventions for the formatting and structure of Cargo.toml. Covers placement and key order of the `[package]` section (name → version → ... → description), indentation (4 spaces), line width (100 characters), how to write array/table values, SPDX license expressions, the authors format, and dependency hygiene (detecting unused dependencies with `cargo +nightly udeps`, checking vulnerabilities with `cargo audit`). Reference this when editing Cargo.toml, adding dependencies, configuring package metadata, configuring a workspace, or reviewing a Rust project manifest. Triggers on: 'cargo toml format', 'package metadata', 'workspace configuration', 'dependency hygiene', 'Cargo.toml 編集', '依存追加', 'workspace 設定'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Cargo.toml Style & Structure
 
-## 対象
+## Scope
 
-- Cargo.toml の新規作成および編集
-- 依存関係の追加・更新
-- パッケージメタデータ (authors, license, description) の設定
-- workspace 設定（`[workspace]`、member crate）の編集
-- Rust プロジェクト manifest のレビュー
+- Creating new and editing existing Cargo.toml files
+- Adding and updating dependencies
+- Setting package metadata (authors, license, description)
+- Editing workspace configuration (`[workspace]`, member crates)
+- Reviewing Rust project manifests
 
-## 対象外
+## Out of Scope
 
-- Rust ソースコードのスタイル → `rust-style` Rule を参照
-- ビルドキャッシュの設定 → `rust-build-cache` Rule を参照
-- 依存関係の脆弱性検出の CI 組み込み → `setup-ci` Skill を参照
+- Style for Rust source code → see the `rust-style` Rule
+- Build cache configuration → see the `rust-build-cache` Rule
+- Integrating dependency vulnerability detection into CI → see the `setup-ci` Skill
 
-## 主要観点
+## Key Points
 
 ### 1. Formatting
 
-- インデントは 4 スペース（Rust コードと同じ）
-- 最大行幅は 100 文字
-- セクション間には空行 1 行を入れる（セクションヘッダとその key-value の間には空行を入れない）
+- Use 4-space indentation (same as Rust code)
+- Maximum line width is 100 characters
+- Insert one blank line between sections (no blank line between a section header and its key-value lines)
 
 ### 2. Section Order
 
-- `[package]` はファイル最上部に配置
-- `[package]` 内: `name` → `version` → その他のキー → `description`（最後）
-- その他のセクション内: キー名をアルファベット順（version sort）
+- Place `[package]` at the very top of the file
+- Within `[package]`: `name` → `version` → other keys → `description` (last)
+- Within other sections: alphabetical (version sort) on key names
 
 ### 3. Key-Value Pairs
 
-- 標準的なキー名は bare keys（quote なし）
-- `=` の周囲は半角スペース 1 つ: `name = "my-crate"`
-- キー名は行頭から記述（インデントなし）
+- Standard key names are bare keys (no quoting)
+- One ASCII space around `=`: `name = "my-crate"`
+- Key names start at the beginning of the line (no indentation)
 
 ### 4. Array Values
 
 ```toml
-# 1 行に収まる場合
+# When it fits on one line
 default = ["feature1", "feature2"]
 
-# 収まらない場合: block indent + trailing comma
+# When it does not: block indent + trailing comma
 some_feature = [
     "another_feature",
     "yet_another_feature",
@@ -58,11 +58,11 @@ some_feature = [
 ### 5. Table Values
 
 ```toml
-# 1 行に収まる場合: inline
+# When it fits on one line: inline
 [dependencies]
 crate1 = { path = "crate1", version = "1.2.3" }
 
-# 収まらない場合: expanded form
+# When it does not: expanded form
 [dependencies.long_crate_name]
 path = "long_path_name"
 version = "4.5.6"
@@ -70,38 +70,38 @@ version = "4.5.6"
 
 ### 6. Strings
 
-- 改行を含む値は multi-line string を使う（`\n` エスケープを避ける）
+- Use multi-line strings for values that contain newlines (avoid `\n` escapes)
 
 ### 7. Metadata
 
-- `authors`: `Full Name <email@address>` 形式
-- `license`: 有効な SPDX 表現（例: `MIT OR Apache-2.0`）
-- `description`: 80 桁で折り返し、crate 名で書き出さない
+- `authors`: `Full Name <email@address>` format
+- `license`: a valid SPDX expression (e.g., `MIT OR Apache-2.0`)
+- `description`: wrap at 80 columns; do not start with the crate name
 
 ### 8. Dependency Hygiene
 
-- 未使用の依存は削除する。`cargo +nightly udeps` で検出（詳細は `quality-checks` Rule の "Dependency Analysis" を参照）
-- 継続的にメンテナンスされ既知の脆弱性がない依存を優先する（`cargo audit` で検証）
+- Remove unused dependencies. Detect with `cargo +nightly udeps` (see "Dependency Analysis" in the `quality-checks` Rule for details)
+- Prefer dependencies that are actively maintained and have no known vulnerabilities (verify with `cargo audit`)
 
-## よくある落とし穴
+## Common Pitfalls
 
-1. **`[package]` 内のキー順違反**: `description` を先頭に書く / `version` が `name` の上 → 規定順に並べ直す
-2. **セクションヘッダと key-value の間に空行**: 意図せず空行を入れる → 削除する
-3. **`license` に自由記述**: 「MIT License」などではなく SPDX 表現を使う
-4. **`authors` に email なし**: `Taro Tanaka <taro@example.com>` の形式を守る
-5. **未使用依存の放置**: ビルド時間とセキュリティ面の負債。`cargo +nightly udeps` で定期確認
+1. **Key order violation in `[package]`**: writing `description` first, or `version` before `name` → reorder to the prescribed order
+2. **Blank line between section header and key-value lines**: an unintentional blank line → remove it
+3. **Free-form text in `license`**: use SPDX expressions instead of phrases like "MIT License"
+4. **`authors` without an email**: keep the `Taro Tanaka <taro@example.com>` format
+5. **Leaving unused dependencies in place**: a debt in build time and security. Check periodically with `cargo +nightly udeps`
 
-## プロジェクト固有の規約
+## Project-Specific Conventions
 
-- workspace 利用時: ルート `Cargo.toml` と member crate の `Cargo.toml` で `[package]` フィールドの共通部分を `[workspace.package]` に集約する
-- `[workspace.dependencies]` でバージョン統一を行い、各 member crate は `{ workspace = true }` で継承
+- When using a workspace: consolidate the common parts of `[package]` fields between the root `Cargo.toml` and member crates' `Cargo.toml` into `[workspace.package]`
+- Unify versions in `[workspace.dependencies]` and have each member crate inherit them via `{ workspace = true }`
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `rust-style`, `quality-checks`（Dependency Analysis セクション）
-- 関連 Skill: `setup-ci`（CI に `cargo audit` / `cargo +nightly udeps` を組み込む）、`rust-build-cache`（sccache 設定）
+- Universal constraints: `rust-style`, `quality-checks` (Dependency Analysis section)
+- Related Skills: `setup-ci` (integrate `cargo audit` / `cargo +nightly udeps` into CI), `rust-build-cache` (sccache configuration)
 
-## 参考リンク
+## References
 
 - Rust Style Guide (Cargo.toml): <https://doc.rust-lang.org/nightly/style-guide/>
 - Cargo Book — Manifest Format: <https://doc.rust-lang.org/cargo/reference/manifest.html>

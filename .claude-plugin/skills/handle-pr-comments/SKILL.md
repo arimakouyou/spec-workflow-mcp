@@ -1,342 +1,342 @@
 ---
 name: handle-pr-comments
-description: "PRレビューコメントを取得し、カテゴリ分類して対応する。コード修正が必要なコメントは修正を実施し、質問には回答、承認は記録。修正後は品質チェックを実行しプッシュ。Triggers on: 'handle PR comments', 'address review comments', 'fix PR feedback', 'PR #N comments', 'レビュー対応', 'PRコメント対応', '/handle-pr-comments'."
+description: "Fetch PR review comments, categorize them, and respond. Code-fix comments get implemented, questions get answered, approvals get logged. After fixes, run quality checks and push. Triggers on: 'handle PR comments', 'address review comments', 'fix PR feedback', 'PR #N comments', '/handle-pr-comments', 'レビュー対応', 'PRコメント対応'."
 user-invokable: true
 argument-hint: "<pr-number>"
 ---
 
-# PR コメント対応 — レビューコメントワークフロー
+# Handle PR Comments — Review Comment Workflow
 
-PR のレビューコメントを取得・分類し、体系的に対応する。
+Fetch and classify PR review comments and respond to them systematically.
 
-## 実行コンテキスト
+## Execution Context
 
-このスキルは以下のコンテキストで使用される:
+This skill is used in the following contexts:
 
-| コンテキスト | コミット/プッシュの責務 |
-|-------------|----------------------|
-| **スタンドアロン実行** (`/handle-pr-comments` を直接実行) | このスキル自身がコミット/プッシュを実行する |
-| **spec-implement 文脈で使用する場合** | review-worker がこのスキルを実行する。コミット/プッシュは review-worker の責務 |
+| Context | Commit/push responsibility |
+|---------|----------------------------|
+| **Standalone execution** (running `/handle-pr-comments` directly) | This skill itself performs the commit/push |
+| **Used inside spec-implement** | review-worker invokes this skill; commit/push is review-worker's responsibility |
 
-## 入力
+## Input
 
-- **pr**: PR 番号（例: `#123`, `123`）または PR URL。`$ARGS` の最初の引数として受け取る。
+- **pr**: PR number (e.g., `#123`, `123`) or PR URL. Received as the first argument of `$ARGS`.
 
-**呼び出し形式**: `/handle-pr-comments <pr-number>` （例: `/handle-pr-comments 123` または `/handle-pr-comments #123`）
+**Invocation form**: `/handle-pr-comments <pr-number>` (e.g., `/handle-pr-comments 123` or `/handle-pr-comments #123`)
 
-引数が未指定の場合はユーザーに PR 番号を確認する。
+If the argument is missing, ask the user for the PR number.
 
-**入力の正規化**: まず `$ARGS` の最初の引数を `PR_INPUT` として取り出す。`PR_INPUT` が URL 形式（`https://github.com/.../pull/123` 等）の場合は、`gh pr view "$PR_INPUT" --json number -q .number` で PR 番号を抽出する。`#123` 形式の場合は `#` を除去して数値のみにする。以降の手順では正規化された数値 PR 番号を `{number}` として使用する。
+**Input normalization**: First take the first argument of `$ARGS` as `PR_INPUT`. If `PR_INPUT` is in URL form (e.g., `https://github.com/.../pull/123`), extract the PR number with `gh pr view "$PR_INPUT" --json number -q .number`. If in `#123` form, strip the leading `#`. Use the normalized numeric PR number as `{number}` in subsequent steps.
 
-## 前提条件チェック（MANDATORY）
+## Prerequisite Checks (MANDATORY)
 
-以下のチェックを順番に実行する。いずれかが失敗した場合は **STOP** し、対処方法を案内する。
+Run the following checks in order. If any fails, **STOP** and provide remediation guidance.
 
-### 1. gh CLI 認証確認
+### 1. gh CLI Authentication
 
 ```bash
 gh auth status
 ```
 
-失敗時: 「`gh auth login` を実行して GitHub CLI を認証してください」と案内して STOP。
+On failure: prompt "Run `gh auth login` to authenticate the GitHub CLI" and STOP.
 
-### 2. リポジトリ確認
+### 2. Repository Check
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
-# API コール用に owner と repo を分割
+# Split owner and repo for API calls
 OWNER="${REPO%%/*}"
 REPO_NAME="${REPO##*/}"
 ```
 
-失敗時: 「GitHub リポジトリのルートディレクトリで実行してください」と案内して STOP。
+On failure: prompt "Run this from the root directory of a GitHub repository" and STOP.
 
-以降の API コール（`gh api repos/${OWNER}/${REPO_NAME}/...`）では `${OWNER}/${REPO_NAME}` を使用する。
+Subsequent API calls (`gh api repos/${OWNER}/${REPO_NAME}/...`) use `${OWNER}/${REPO_NAME}`.
 
-### 3. PR 状態確認
+### 3. PR State Check
 
 ```bash
 gh pr view {number} --json state,headRefName,baseRefName -q '.state'
 ```
 
-- `MERGED` の場合 → 「この PR は既にマージ済みです」と警告し、続行するか確認
-- `CLOSED` の場合 → 「この PR はクローズ済みです」と警告し、続行するか確認
+- `MERGED` -> warn "This PR has already been merged" and confirm whether to continue
+- `CLOSED` -> warn "This PR is closed" and confirm whether to continue
 
-### 4. ワーキングツリー確認
+### 4. Working Tree Check
 
 ```bash
 git status --porcelain
 ```
 
-未コミットの変更がある場合: 「ワーキングツリーに未コミットの変更があります。コミットまたは stash してから再実行してください」と案内して STOP。
+If uncommitted changes exist: prompt "The working tree has uncommitted changes. Commit or stash them and rerun" and STOP.
 
-### 5. PR ブランチへの切り替え
+### 5. Switch to PR Branch
 
 ```bash
 gh pr checkout {number}
 ```
 
-切り替え失敗時: ブランチ名を表示し、手動チェックアウトを案内する。
+On switch failure: display the branch name and instruct manual checkout.
 
-## 手順
+## Procedure
 
-### 1. PR 情報とコメントの取得
+### 1. Fetch PR Information and Comments
 
-以下の API コールで PR の全コメントと resolved 状態を取得する。
+Use the following API calls to fetch all PR comments and resolved state.
 
 ```bash
-# PR のメタ情報
+# PR meta info
 gh pr view {number} --json title,body,state,headRefName,baseRefName,reviewDecision,reviews,comments
 
-# インラインコードコメント（レビューコメント）
+# Inline code comments (review comments)
 gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/comments --paginate
 
-# レビューサマリー
+# Review summary
 gh api repos/${OWNER}/${REPO_NAME}/pulls/{number}/reviews --paginate
 
-# レビュースレッドの resolved 状態（GraphQL 経由）
+# Resolved status of review threads (via GraphQL)
 gh pr view {number} --json reviewThreads -q '.reviewThreads[] | {id: .id, isResolved: .isResolved, comments: [.comments[] | {id: .id, databaseId: .databaseId, createdAt: .createdAt, path: .path, line: .line, body: .body}]}'
 ```
 
-`${OWNER}/${REPO_NAME}` は前提条件チェック 2 で取得・分割した値を使用する。
+Use the value of `${OWNER}/${REPO_NAME}` obtained and split in prerequisite check 2.
 
-**取得する情報**:
-- REST: 各コメントの `id`、`body`、`path`（ファイル）、`line`（行番号）、`user`、`created_at`
-- GraphQL (`reviewThreads`): 各スレッドの `isResolved` と、スレッド内コメントの `id`、`databaseId`、`createdAt`、`path`、`line`
-- レビューの決定ステータス（`APPROVED`、`CHANGES_REQUESTED`、`COMMENTED`）
+**Information to collect**:
+- REST: each comment's `id`, `body`, `path` (file), `line`, `user`, `created_at`
+- GraphQL (`reviewThreads`): each thread's `isResolved` and the in-thread comments' `id`, `databaseId`, `createdAt`, `path`, `line`
+- Review decision status (`APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`)
 
-**resolved 判定**: REST API (`pulls/{number}/comments`) ではスレッドの resolved 状態を取得できないため、`gh pr view --json reviewThreads` を使用する。resolved 状態を REST のコメントへマッピングする際は、`reviewThreads` 側で取得したコメントの `id` / `databaseId` を最優先で突合に用いる。これらが直接使えない場合のみ、`createdAt` + `path` + `line` などの複合キーで対応付ける。`body` 文字列だけで突合してはならない（同一文面のコメントで誤マッピングが発生するため）。
+**Resolved judgment**: The REST API (`pulls/{number}/comments`) does not expose a thread's resolved state, so use `gh pr view --json reviewThreads`. When mapping resolved state onto REST comments, prefer the `id` / `databaseId` of the comments retrieved from the `reviewThreads` side as the primary join key. Only fall back to a composite key (`createdAt` + `path` + `line`) when those are unavailable. Never join on the `body` string alone (identical comment bodies cause mismatches).
 
-### 2. コメントのカテゴリ分類
+### 2. Categorize Comments
 
-取得した各コメントを以下の5カテゴリに分類する。
+Classify each comment into one of the following five categories.
 
-| カテゴリ | 判定基準 | アクション |
-|---------|---------|-----------|
-| **コード修正必須** | 具体的なコード変更を要求している（「〜に変更して」「〜を修正して」「〜を削除して」） | 修正を実施 |
-| **質問・確認** | 「なぜ〜？」「〜の意図は？」「〜で合っていますか？」形式 | コメントで回答 |
-| **スタイル・フォーマット** | 命名規則、インデント、フォーマット、コメント追加の指摘 | 修正を実施 |
-| **承認・LGTM** | 「LGTM」「いいですね」「問題なし」等の肯定的コメント | 記録のみ |
-| **提案（任意）** | "nit:", "suggestion:", "考慮:", "optional:", "余裕があれば" | ユーザーに判断を委ねる |
+| Category | Criterion | Action |
+|----------|-----------|--------|
+| **Code fix required** | Requests a concrete code change ("Change X", "Fix Y", "Remove Z") | Apply the fix |
+| **Question / clarification** | "Why ...?", "What's the intent of ...?", "Is this correct?" form | Reply via comment |
+| **Style / formatting** | Naming conventions, indentation, formatting, comment-addition feedback | Apply the fix |
+| **Approval / LGTM** | "LGTM", "Looks good", "No issues", and similar positive comments | Record only |
+| **Suggestion (optional)** | "nit:", "suggestion:", "consider:", "optional:", "if you have time" | Defer to user judgment |
 
-**分類ルール**:
-- `resolved` 済みのコメントはスキップ（対応済みとして記録のみ）
-- `APPROVED` レビューに付随するコメントは優先度を下げる
-- 1つのコメントが複数カテゴリに該当する場合は、より高い対応レベルのカテゴリを採用
+**Classification rules**:
+- Skip already `resolved` comments (record as handled)
+- Lower priority for comments attached to `APPROVED` reviews
+- If a comment fits multiple categories, adopt the higher-action category
 
-### 2.5 指摘の妥当性検証（MANDATORY — Copilot 提案の鵜呑み禁止）
+### 2.5 Validity Verification of Feedback (MANDATORY — Do Not Blindly Trust Copilot Suggestions)
 
-カテゴリ分類後、**対応計画を作る前**に各コメントの妥当性を検証する。Copilot bot のような機械レビュアーは誤検出・過剰指摘を含むことがあるため、以下の原則に従って必ずソースを読んで裏取りする。
+After categorization and **before drafting the response plan**, verify the validity of each comment. Machine reviewers like Copilot bot can produce false positives or over-flagging, so always read the source for confirmation following the principles below.
 
-**検証原則（自己完結）**:
+**Verification principles (self-contained)**:
 
-- レビュー指摘への対応で**既存の品質保証レベル・整合性を下げない**。品質を下げる方向の提案は、たとえレビュアーが妥当に見えても採用しない
-- 機械レビュアーの提案を**鵜呑みにしない**。一見もっともらしい指摘でも、リポジトリの規則・既存実装の意図と突合して妥当性を独立判断する
-- 指摘と既存実装のどちらが正しいか判断に迷うときは、**ユーザーに確認**する（勝手に追従しない）
+- Responses to review feedback **must not lower existing quality assurance levels or consistency**. Do not adopt suggestions that lower quality, even if the reviewer seems plausible
+- **Do not blindly trust** machine reviewer suggestions. Even seemingly reasonable feedback must be independently judged for validity by cross-checking with repository rules and the intent of existing implementation
+- When unsure whether the feedback or the existing implementation is correct, **ask the user** (do not silently follow)
 
-各コメントについて以下を実施:
+For each comment:
 
-1. **指摘対象の実在確認**: コメントが指す `path:line` を Read で開き、指摘された事象が本当にそこに存在するか確認
-2. **仕様・文脈との整合**: プロジェクトの `rules/` / `design.md` / 既存実装の意図と指摘が矛盾していないかチェック
-3. **過去 PR での対応状況**: 類似指摘が既にマージ済み PR で対応されていないか（PR description / `git log` / `CHANGELOG.md` を確認）
-4. **妥当性の 3 段階判定**:
-   - `valid` — 指摘が正しく、対応すべき
-   - `partial` — 指摘の方向性は正しいが、具体的修正案には問題あり（別案で対応）
-   - `invalid` — 指摘が誤り（ソースの誤読、既解決、仕様適合範囲内）。対応せず、コメント返信で説明する
+1. **Verify the target exists**: open `path:line` referenced by the comment with Read and confirm the issue actually exists there
+2. **Consistency with spec / context**: check the feedback against the project's `rules/` / `design.md` / intent of existing implementation
+3. **Past PR resolution status**: check whether similar feedback was already addressed in merged PRs (PR description / `git log` / `CHANGELOG.md`)
+4. **Three-level validity decision**:
+   - `valid` — feedback is correct and should be addressed
+   - `partial` — direction is right but the specific fix is problematic (handle with an alternative)
+   - `invalid` — feedback is wrong (source misread, already resolved, within spec). Do not act; explain in a reply
 
-**判定例**:
+**Decision examples**:
 
-| 判定 | 例 |
-|-----|-----|
-| valid | 「`### REQ-1.1:` 見出しは `### REQ-1:` + AC コメントの規則と矛盾」 → テンプレ実態と照合して確認 |
-| partial | 「`unwrap()` を削除すべき」→ 削除方針は正しいが具体案の `?` より `map_err` が設計規約に沿う |
-| invalid | 「`### REQ-N.M:` 見出しを使え」→ 規則は逆（`REQ-N:` + AC コメント）、指摘が誤り |
+| Decision | Example |
+|----------|---------|
+| valid | "`### REQ-1.1:` heading conflicts with the `### REQ-1:` + AC comment rule" -> verify against the actual template |
+| partial | "Remove `unwrap()`" -> removal direction is right, but `map_err` aligns with the design rule better than `?` |
+| invalid | "Use `### REQ-N.M:` heading" -> rule is the opposite (`REQ-N:` + AC comment); feedback is incorrect |
 
-**品質低下リスクのある指摘の扱い**:
+**Handling feedback that risks quality regression**:
 
-- 機械的な指摘に従うと既存の品質ゲート・整合性を**下げる**恐れがある場合は、対応前にユーザーに確認する
-- 判断に迷う場合は `advisor()` を呼んで second opinion を得る
+- If following the machine feedback risks **lowering** existing quality gates or consistency, ask the user before acting
+- When in doubt, call `advisor()` for a second opinion
 
-検証結果を次の Step 3 の対応計画にマージし、各コメントに `validity: valid | partial | invalid` を付記する。
+Merge the verification result into the Step 3 response plan and annotate each comment with `validity: valid | partial | invalid`.
 
-### 3. 対応計画の提示
+### 3. Present Response Plan
 
-分類結果をユーザーに提示し、**実行前に必ず確認を取る**。
+Show the classification result to the user and **always get confirmation before executing**.
 
 ```
-## PR #{number} レビューコメント対応計画
+## PR #{number} Review Comment Response Plan
 
-### 自動対応（コード修正必須 + スタイル）: {N}件
-| # | ファイル | 行 | レビュアー | 内容要約 | 対応方針 |
-|---|---------|-----|----------|---------|---------|
+### Auto-handle (code fix required + style): {N} items
+| # | File | Line | Reviewer | Summary | Plan |
+|---|------|------|----------|---------|------|
 | 1 | {path} | {line} | {user} | {summary} | {plan} |
 | ... | | | | | |
 
-### 質問への回答: {N}件
-| # | ファイル | 行 | レビュアー | 質問内容 | 回答案 |
-|---|---------|-----|----------|---------|--------|
+### Question replies: {N} items
+| # | File | Line | Reviewer | Question | Draft answer |
+|---|------|------|----------|----------|--------------|
 | 1 | {path} | {line} | {user} | {question} | {answer} |
 | ... | | | | | |
 
-### ユーザー判断が必要（提案）: {N}件
-| # | ファイル | 行 | レビュアー | 提案内容 |
-|---|---------|-----|----------|---------|
+### User decision required (suggestions): {N} items
+| # | File | Line | Reviewer | Suggestion |
+|---|------|------|----------|------------|
 | 1 | {path} | {line} | {user} | {suggestion} |
 | ... | | | | |
 
-### スキップ（解決済み / 承認）: {N}件
+### Skipped (resolved / approved): {N} items
 
-**上記の計画で進めてよいですか？**
+**Proceed with the plan above?**
 ```
 
-ユーザーが「提案」カテゴリの対応を決定し、計画を承認するまで待機する。
+Wait until the user has decided how to handle "suggestion" items and approved the plan.
 
-### 4. コメント対応の実施
+### 4. Execute Comment Responses
 
-ユーザー承認後、以下の順序で対応する。
+After user approval, address comments in the following order.
 
-#### 4.0 同種問題の網羅調査（MANDATORY）
+#### 4.0 Comprehensive Search for Same-Kind Issues (MANDATORY)
 
-対応を始める前に、各 `valid` / `partial` 指摘について **同種問題がリポジトリ内に他にも存在しないか** を機械的に探索する。PR レビューで挙がった指摘 1 件の背後に、同じパターンの問題が複数箇所で眠っていることが多い（pr-review-patterns.md の全体所見: 指摘の 35% は「同じ情報の多重管理」由来）。
+Before addressing items, mechanically search the repository for **other instances of the same kind of issue** for each `valid` / `partial` comment. A single piece of PR-review feedback often implies that the same pattern lurks in multiple places (overall finding from pr-review-patterns.md: 35% of feedback stems from "duplicate management of the same information").
 
-**探索手法**:
+**Search techniques**:
 
-| 指摘タイプ | 探索クエリ例 |
-|-----------|-------------|
-| ID / キー名の誤り（例: `N-th` → `M-th`） | `grep -rn "N-th\|N 番目" .` でリポジトリ全域から残存検出 |
-| 用語・コマンドの不統一（例: `-warnaserror` vs `--warnaserror`） | 指摘の両形式で全域 grep |
-| 配置位置の揺れ（例: key の top-level vs nested） | `grep -rn "<key-name>" .` で全箇所確認 |
-| ネストフェンス / placeholder | コードブロックと placeholder パターンを全域 grep |
-| shell 堅牢性（例: `jq` 前提） | `grep -rn "jq " <スクリプト配置先ディレクトリ>` |
+| Feedback type | Example search query |
+|---------------|----------------------|
+| ID / key-name error (e.g., `N-th` -> `M-th`) | `grep -rn "N-th\|N 番目" .` to find residuals across the repo |
+| Inconsistent terms / commands (e.g., `-warnaserror` vs `--warnaserror`) | grep both forms across the repo |
+| Inconsistent placement (e.g., key at top-level vs nested) | `grep -rn "<key-name>" .` to check every occurrence |
+| Nested fences / placeholders | grep code blocks and placeholder patterns across the repo |
+| Shell robustness (e.g., assumes `jq`) | `grep -rn "jq " <directory containing scripts>` |
 
-発見した同種問題は **同じ PR / 同じコミット** で一緒に修正する（「別機会に」と分散させるとテストしにくい）。発見件数を Step 3 の対応計画に追記してユーザーに見える化する:
+Fix discovered same-kind issues together in **the same PR / same commit** (splitting them out makes testing harder). Annotate the discovery counts in the Step 3 response plan to make them visible to the user:
 
 ```
-### 対応計画（同種問題の網羅含む）
-- 指摘 #N-th → M-th 修正: 1 件（元指摘） + 2 件（grep で発見、同ファイル内）
+### Response plan (including same-kind issues)
+- N-th -> M-th fix: 1 item (original feedback) + 2 items (discovered via grep, in the same file)
 ```
 
-#### 4.1 矛盾するフィードバックの検出
+#### 4.1 Detect Conflicting Feedback
 
-対応開始前に、矛盾するフィードバックがないかチェックする:
+Before starting, check for conflicting feedback:
 
-- **同一ファイル・同一行範囲**に対する複数レビュアーからの相反する指摘
-- **同一トピック**に対する対立する意見（例: 「この関数を分割すべき」vs「この関数はこのままで良い」）
+- Conflicting feedback from multiple reviewers on the **same file / same line range**
+- Opposing opinions on the **same topic** (e.g., "Split this function" vs "Keep this function as-is")
 
-矛盾を検出した場合:
-1. 矛盾するコメントのペアをユーザーに提示
-2. 各レビュアーのレビューステータス（`APPROVED` / `CHANGES_REQUESTED`）を参考情報として表示
-3. どちらのフィードバックを優先するかユーザーの判断を待つ
+When conflicts are detected:
+1. Present the conflicting comment pair to the user
+2. Display each reviewer's review status (`APPROVED` / `CHANGES_REQUESTED`) as informational
+3. Wait for the user's decision on which feedback to prioritize
 
-#### 4.2 コード修正（コード修正必須 + スタイル + 承認された提案）
+#### 4.2 Apply Code Fixes (code fix required + style + accepted suggestions)
 
-各コメントに対して:
+For each comment:
 
-1. 対象ファイルの該当箇所を Read で読み取る
-2. コメントの要求に従って修正を実施
-3. 修正が正しいことを確認
+1. Read the relevant location in the target file
+2. Apply the fix as the comment requests
+3. Confirm the fix is correct
 
-全ての修正が完了したら、まとめて品質チェック（手順 5）に進む。
+After all fixes are complete, proceed to the quality checks (Step 5) collectively.
 
-#### 4.3 質問への回答
+#### 4.3 Reply to Questions
 
-各質問コメントに対する回答を `gh api` で投稿する:
+Post replies to each question comment via `gh api`:
 
 ```bash
-# インラインコメントへの返信
+# Reply to an inline comment
 gh api repos/${OWNER}/${REPO_NAME}/pulls/comments/{comment_id}/replies \
-  -f body="{回答内容}"
+  -f body="{reply body}"
 
-# 一般コメントへの返信
+# Reply on the general comment thread
 gh api repos/${OWNER}/${REPO_NAME}/issues/{number}/comments \
-  -f body="{回答内容}"
+  -f body="{reply body}"
 ```
 
-#### 4.4 セルフレビュー（MANDATORY）
+#### 4.4 Self-Review (MANDATORY)
 
-品質チェック（Step 5）と push（Step 6）の前に、**修正後の diff 全体をセルフレビュー** する。修正によって新たな不整合（例: 一部ファイルだけ更新して他が取り残された、参照先の ID や命名が揃っていない、コメント文と実装が食い違っている等）が生まれていないかを検出する。
+Before quality checks (Step 5) and push (Step 6), **self-review the entire post-fix diff**. Detect new inconsistencies introduced by the fix (e.g., only some files were updated and others were left behind, referenced IDs/naming are no longer aligned, comment text disagrees with implementation, etc.).
 
 ```bash
 git diff "origin/{baseRefName}..HEAD"
 ```
 
-観点:
+Review angles:
 
-- 同種パターンの grep 網羅（リネーム・ID 変更など 1 箇所の修正が他箇所にも反映されているか）
-- 既存テスト・既存 API に対する破壊的変更の有無
-- 修正漏れ・一部だけ更新で他ファイルと齟齬になっていないか
-- プロジェクト固有のレビューチェックリストがあれば（例: `.claude/_docs/know-how/pr-review-patterns.md`）、そのカテゴリに沿って再点検
-- codex / 他のレビュー系プラグインが enable されていれば `/codex:review` 等で追加観点を取る
+- Comprehensive grep for same-kind patterns (does a single rename/ID change reflect everywhere?)
+- Any breaking changes against existing tests or APIs
+- Missed fixes / partial updates causing inconsistency with other files
+- If the project has its own review checklist (e.g., `.claude/_docs/know-how/pr-review-patterns.md`), re-inspect along its categories
+- If codex or other review-style plugins are enabled, take additional angles via `/codex:review` etc.
 
-Critical / Moderate 相当の問題が見つかった場合は Step 4.2 に戻って追加修正。Minor のみならユーザーに提示して判断を仰ぐ。
+If Critical / Moderate problems are found, return to Step 4.2 for additional fixes. For Minor only, present to the user and request judgment.
 
-**セルフレビューをスキップする条件**: 修正量が極めて軽微（1 行の typo 等）の場合のみ、ユーザーの明示同意でスキップ可。
+**Conditions for skipping self-review**: only when the fix is extremely minor (e.g., a one-line typo) and with the user's explicit consent.
 
-### 5. 品質チェック
+### 5. Quality Checks
 
-プロジェクトの `quality-checks.md` ルールに従った品質チェックを実行する。
+Run quality checks per the project's `quality-checks.md` rule.
 
-品質チェック失敗時:
-1. 失敗原因を分析し自動修正を試行（最大3回）
-2. 自動修正で解決できない場合はユーザーに報告し対応を相談
+On quality-check failure:
+1. Analyze the cause and attempt automatic fixes (max 3 times)
+2. If automatic fixes do not resolve, report to the user and discuss
 
-### 6. コミットとプッシュ
+### 6. Commit and Push
 
 ```bash
-git add {修正したファイル}
-git commit -m "fix: レビューコメント対応 — {変更内容の要約}
+git add {fixed files}
+git commit -m "fix: address review comments — {summary of changes}
 
-対応コメント:
-- {コメント1の要約}
-- {コメント2の要約}
+Addressed comments:
+- {summary of comment 1}
+- {summary of comment 2}
 ..."
 git push
 ```
 
-**コミットルール**:
-- 修正内容が多岐にわたる場合は、関連性でグループ化して複数コミットに分ける
-- 各コミットメッセージにどのレビューコメントに対応したかを記載
+**Commit rules**:
+- If fixes span many areas, group by relevance into multiple commits
+- Each commit message states which review comments it addresses
 
-### 7. レビュアーへの返信
+### 7. Reply to Reviewers
 
-コード修正を伴うコメントに対し、対応完了を通知する:
+Notify reviewers of completion for comments that involved code fixes:
 
 ```bash
 gh api repos/${OWNER}/${REPO_NAME}/pulls/comments/{comment_id}/replies \
-  -f body="対応しました。{変更内容の簡潔な説明}"
+  -f body="Addressed. {brief description of the change}"
 ```
 
-### 8. 完了レポート
+### 8. Completion Report
 
-全ての対応が完了したら、サマリーを表示する:
+When all responses are done, display the summary:
 
 ```
-## PR #{number} レビューコメント対応完了
+## PR #{number} Review Comment Response Complete
 
-### 対応サマリー
-- コード修正: {N}件 完了
-- 質問回答: {N}件 完了
-- スタイル修正: {N}件 完了
-- 提案対応: {N}件（{M}件採用、{K}件見送り）
-- スキップ: {N}件（解決済み/承認）
+### Response Summary
+- Code fixes: {N} done
+- Question replies: {N} done
+- Style fixes: {N} done
+- Suggestions: {N} ({M} adopted, {K} declined)
+- Skipped: {N} (resolved / approved)
 
-### コミット
+### Commits
 - {commit-hash}: {commit-message}
 - ...
 
-### 品質チェック結果: {PASS/FAIL}
+### Quality check result: {PASS/FAIL}
 
-### 未対応（ある場合）
-- {未対応コメントの説明と理由}
+### Outstanding (if any)
+- {description and reason for unhandled comments}
 ```
 
-## ルール
+## Rules
 
-- 対応計画は実行前に必ずユーザーに提示し確認を取る
-- 矛盾するフィードバックはユーザーにエスカレートし、独断で判断しない
-- `resolved` 済みのコメントは再対応しない
-- `APPROVED` レビューのコメントは優先度を下げる（ブロッキングではない）
-- プッシュ前に品質チェックが PASS していることを確認する
-- 各コミットメッセージに対応したレビューコメントを記載する
-- コメント返信は修正プッシュ後に行う（プッシュ前に返信しない）
-- PR が `MERGED` / `CLOSED` の場合は原則として対応しない（ユーザーの明示的指示がある場合のみ続行）
+- Always present the response plan to the user and get confirmation before executing
+- Escalate conflicting feedback to the user; do not decide unilaterally
+- Do not re-handle already-`resolved` comments
+- Lower priority for comments on `APPROVED` reviews (non-blocking)
+- Confirm quality checks PASS before pushing
+- Each commit message must list the review comments addressed
+- Reply to comments after pushing the fix (do not reply before push)
+- Do not handle PRs in `MERGED` / `CLOSED` state by default (continue only with explicit user instruction)

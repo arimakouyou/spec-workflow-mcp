@@ -1,25 +1,25 @@
 ---
 name: axum
 description: |
-  Axum Web フレームワーク (Rust) のベストプラクティス。Router の分割と合成 (merge/nest)、`#[derive(Clone)]` な AppState の設計と `State` extractor、Extractor の引数順序 (body 消費系は最後)、`AppError` + `IntoResponse` の実装、tower `ServiceBuilder` によるミドルウェア構成、graceful shutdown、handler テスト (`tower::ServiceExt`) をカバー。Axum ハンドラ新規追加、API エンドポイント追加、ミドルウェア追加、認証・認可レイヤ挿入、Rust バックエンド実装時に参照。
+  Best practices for the Axum web framework (Rust). Covers Router splitting and composition (merge/nest), `#[derive(Clone)]` `AppState` design with the `State` extractor, extractor argument order (body-consuming extractors last), `AppError` + `IntoResponse` implementation, middleware composition via tower `ServiceBuilder`, graceful shutdown, and handler tests (`tower::ServiceExt`). Reference when adding Axum handlers, adding API endpoints, adding middleware, inserting authentication/authorization layers, or implementing a Rust backend. Triggers on: 'Axum handler', 'add API endpoint', 'add middleware', 'auth layer', 'Rust backend', 'Axumハンドラ追加', 'APIエンドポイント追加', 'ミドルウェア追加', '認証・認可レイヤ', 'Rustバックエンド実装'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Axum Best Practices
 
-## 対象
+## In scope
 
-- Axum ハンドラの新規追加と既存エンドポイントの修正
-- Router 構成の変更（分割、合成、ネスト）
-- `AppState` の設計および DI
-- middleware の追加（認証、トレース、CORS、timeout）
-- Axum handler のユニット/統合テスト記述
+- Adding new Axum handlers and modifying existing endpoints
+- Changes to Router structure (splitting, composing, nesting)
+- `AppState` design and DI
+- Adding middleware (authentication, tracing, CORS, timeout)
+- Writing unit / integration tests for Axum handlers
 
-## 対象外
+## Out of scope
 
-- Diesel クエリの書き方 → `diesel` Skill
-- Valkey/Redis キャッシュ → `valkv-cache` Skill
-- Leptos との統合（`leptos_axum`） → `leptos` Skill
+- How to write Diesel queries -> `diesel` Skill
+- Valkey/Redis cache -> `valkv-cache` Skill
+- Integration with Leptos (`leptos_axum`) -> `leptos` Skill
 
 ## Router Configuration
 
@@ -167,7 +167,7 @@ async fn shutdown_signal() {
 - Construct a test `AppState` to inject test DBs or mocks
 - Send actual HTTP requests in integration tests
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `rust-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-R1-R5), `api-validation` Skill (AV-R1-R5)
-- 関連 Skill: `diesel`, `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test`
+- Universal constraints: `rust-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-R1-R5), `api-validation` Skill (AV-R1-R5)
+- Related Skills: `diesel`, `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test`

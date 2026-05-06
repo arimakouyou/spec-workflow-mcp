@@ -1,7 +1,7 @@
 ---
 name: leptos
 description: |
-  Leptos フルスタック WASM フレームワーク (Rust) のベストプラクティス。`ssr` / `hydrate` / `csr` feature flag による target 分離、`#[cfg(feature = "ssr")]` による server-only コードの分離、`leptos_axum` での Axum 統合、`#[component]` マクロ、`signal()` と派生計算 (closure/Memo)、`provide_context` での状態共有、`#[server]` 関数、`Resource` + `Suspense`、`ActionForm` 進化的フォーム、`leptos_router` routing、コンポーネントロジックを純粋関数に抽出する TDD 戦略、`cargo leptos build` による WASM 検証をカバー。Leptos フロントエンド/フルスタック開発時に参照。`project-architecture.md` よりも優先される。
+  Best practices for the Leptos full-stack WASM framework (Rust). Covers target separation via the `ssr` / `hydrate` / `csr` feature flags, isolating server-only code with `#[cfg(feature = "ssr")]`, Axum integration with `leptos_axum`, the `#[component]` macro, `signal()` and derived computations (closures / Memo), state sharing with `provide_context`, `#[server]` functions, `Resource` + `Suspense`, the `ActionForm` progressively-enhanced form, `leptos_router` routing, a TDD strategy that extracts component logic into pure functions, and WASM verification via `cargo leptos build`. Reference when developing Leptos front-end / full-stack code. Takes precedence over `project-architecture.md`. Triggers on: 'Leptos', 'leptos_axum', '#[component]', 'cargo leptos build', 'ssr feature flag', 'Leptos フロントエンド', 'Leptos フルスタック開発'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
@@ -10,22 +10,22 @@ allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 When using a Leptos full-stack configuration, this skill takes precedence over the `project-architecture` Rule.
 All Diesel, Valkey, and Axum code must be wrapped in `#[cfg(feature = "ssr")]`.
 
-## 対象
+## In Scope
 
-- Leptos コンポーネント (`#[component]`) の新規作成と修正
-- Signal / Memo を使ったリアクティブ state の設計
-- `#[server]` 関数の追加・修正（DB 接続、外部 API 呼び出し）
-- `Resource` + `Suspense` / `Transition` による非同期データ取得
-- `ActionForm` / `ServerAction` を使ったフォーム
-- `leptos_router` によるルーティング設定
-- Leptos フルスタックプロジェクトの feature flag 構成
+- Creating and modifying Leptos components (`#[component]`)
+- Designing reactive state with Signal / Memo
+- Adding and modifying `#[server]` functions (DB connections, external API calls)
+- Async data fetching with `Resource` + `Suspense` / `Transition`
+- Forms using `ActionForm` / `ServerAction`
+- Routing configuration with `leptos_router`
+- Feature flag structure for a Leptos full-stack project
 
-## 対象外
+## Out of Scope
 
-- 純粋な Axum API サーバー（Leptos を使わない） → `axum` Skill
-- Diesel モデル定義 → `diesel` Skill
-- Valkey 接続管理 → `valkv-cache` Skill
-- WASM 非対応の API 利用（`std::fs`, `std::net` など）は `#[cfg(feature = "ssr")]` でガードする
+- Pure Axum API servers (no Leptos) -> `axum` Skill
+- Diesel model definitions -> `diesel` Skill
+- Valkey connection management -> `valkv-cache` Skill
+- WASM-incompatible API use (`std::fs`, `std::net`, etc.) must be guarded with `#[cfg(feature = "ssr")]`
 
 ## Project Structure
 
@@ -324,39 +324,39 @@ This command builds both SSR and WASM targets. Common WASM-only compilation erro
 
 ### TDD with Leptos
 
-#### テスト戦略
+#### Test Strategy
 
-`cargo test` は SSR ターゲットでのみコンパイルする。Leptos フロントエンドコード（コンポーネント、シグナル、リアクティブロジック）は、`view!` マクロからロジックを**抽出**することで標準の `#[test]` でテスト可能。
+`cargo test` only compiles for the SSR target. Leptos front-end code (components, signals, reactive logic) is testable with standard `#[test]` by **extracting** logic out of the `view!` macro.
 
-#### ユニットテスト対象
+#### Unit-Testable Concerns
 
-| フロントエンド関心事 | テストアプローチ |
+| Front-end concern | Test approach |
 |---|---|
-| シグナル状態遷移 | 状態更新ロジックを純粋関数に抽出、signal 値をアサート |
-| 派生計算 / Memo | 計算ロジックを純粋関数に抽出、入出力をアサート |
-| バリデーションロジック | コンポーネントから validate 関数を抽出、直接テスト |
-| サーバー関数ロジック | `#[server]` のコア計算を async 関数に抽出、依存を trait モック |
-| Callback/ハンドラロジック | `on:click`/`on:submit` の本体を名前付き関数に抽出、テスト |
-| コンポーネント初期状態 | Props から初期シグナル値を導出するロジックをテスト |
+| Signal state transitions | Extract state-update logic into a pure function and assert signal values |
+| Derived computation / Memo | Extract the computation into a pure function and assert input/output |
+| Validation logic | Extract a validate function from the component and test it directly |
+| Server-function logic | Extract the core computation of `#[server]` into an async function and trait-mock its dependencies |
+| Callback / handler logic | Extract the body of `on:click` / `on:submit` into a named function and test it |
+| Component initial state | Test the logic that derives initial signal values from Props |
 
-#### ユニットテスト対象外（E2E に委譲）
+#### Out of Scope for Unit Tests (Defer to E2E)
 
-- `view!` マクロの HTML 出力
-- DOM イベント配線（`on:click` が発火するか）
-- CSS クラスの動的適用（`class:active=signal`）
-- ルーティング遷移
-- `Suspense` / `Resource` のローディング表示
+- HTML output of the `view!` macro
+- DOM event wiring (whether `on:click` actually fires)
+- Dynamic CSS class application (`class:active=signal`)
+- Route transitions
+- Loading display of `Suspense` / `Resource`
 
-#### 例: コンポーネントロジック抽出テスト
+#### Example: Extracted Component-Logic Test
 
 ```rust
-/// バリデーションロジックをコンポーネントから抽出
+/// Extract validation logic out of the component
 pub fn validate_username(name: &str) -> Result<(), String> {
     if name.is_empty() {
-        return Err("名前は必須です".into());
+        return Err("Name is required".into());
     }
     if name.chars().count() > 50 {
-        return Err("名前は50文字以内です".into());
+        return Err("Name must be 50 characters or fewer".into());
     }
     Ok(())
 }
@@ -389,11 +389,11 @@ mod tests {
 }
 ```
 
-#### GREEN 後のビルド検証
+#### Post-GREEN Build Verification
 
-GREEN phase でテストが通過した後、必ず `cargo leptos build` を実行して WASM コンパイルを検証する。WASM コンパイル失敗は `#[cfg(feature = "ssr")]` ガードの不足を示す。
+After tests pass in the GREEN phase, always run `cargo leptos build` to verify WASM compilation. A WASM compile failure indicates a missing `#[cfg(feature = "ssr")]` guard.
 
-詳細なテストパターンは TDD Skills (Rust) リファレンス: [leptos-frontend-testing.md](../tdd-skills-rust/references/leptos-frontend-testing.md) を参照。
+For detailed test patterns, see TDD Skills (Rust) reference: [leptos-frontend-testing.md](../tdd-skills-rust/references/leptos-frontend-testing.md).
 
 ## Performance
 
@@ -402,7 +402,7 @@ GREEN phase でテストが通過した後、必ず `cargo leptos build` を実�
 - Set keys correctly on the `For` component to minimize list re-rendering
 - Use `Suspense` to isolate async data loading and reduce rendering blocks
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `rust-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-R1-R5)
-- 関連 Skill: `axum` (SSR 時の Router 構成), `diesel` (SSR 時の DB アクセス), `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-code`, `spec-impl-test-write`
+- Universal constraints: `rust-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-R1-R5)
+- Related Skills: `axum` (Router structure for SSR), `diesel` (DB access for SSR), `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-code`, `spec-impl-test-write`

@@ -55,116 +55,116 @@ The same **spec name** used in previous phases (kebab-case, e.g., `user-authenti
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
 
-### 3. Analyze (メインエージェント)
+### 3. Analyze (Main Agent)
 
-メインエージェントが以下を調査・決定する。サブエージェントに渡すコンテキストとなる。
+The main agent investigates and decides the following. This becomes context handed to subagents.
 
-#### 3.1 コンテナ・テストインフラの技術選定
+#### 3.1 Container / Test Infrastructure Technology Selection
 
-プロジェクトタイプとコンテナ構成を検出し、テスト技術を選定する:
+Detect the project type and container configuration, and select test technologies:
 
-1. **コンテナ構成の確認**:
-   - design.md の Container Architecture セクションを読む
-   - docker-compose.yml / Dockerfile の存在確認
+1. **Confirm container configuration**:
+   - Read the Container Architecture section of design.md
+   - Confirm whether docker-compose.yml / Dockerfile exist
 
-2. **DB テスト戦略の決定**:
-   - DB 依存あり → testcontainers（デフォルト）
-   - docker-compose.test.yml が既存 → それを活用
-   - DB なし → 不要
+2. **Decide DB test strategy**:
+   - DB dependency present → testcontainers (default)
+   - docker-compose.test.yml already exists → leverage it
+   - No DB → not needed
 
-3. **E2E テストランナーの決定**:
-   - フロントエンドあり（HTML テンプレート、JSX/TSX、Leptos view! マクロ）→ Playwright
-   - API のみ → reqwest (Rust) / supertest (Node.js)
+3. **Decide E2E test runner**:
+   - Frontend present (HTML templates, JSX/TSX, Leptos view! macro) → Playwright
+   - API only → reqwest (Rust) / supertest (Node.js)
 
-#### 3.2 既存テストパターンの把握
+#### 3.2 Existing Test Pattern Survey
 
-コードベースを探索し、既存のテストフレームワーク・パターン・ヘルパーを把握する:
+Explore the codebase and survey existing test frameworks, patterns, and helpers:
 
 ```bash
-# テストファイルの構造を確認
+# Check test file structure
 find . -name "*test*" -o -name "*spec*" | head -20
 
-# テストフレームワークの確認
+# Check test framework
 grep -r "mockall\|rstest\|jest\|pytest\|vitest" Cargo.toml package.json 2>/dev/null
 
-# 既存のテストヘルパー
+# Existing test helpers
 find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*util*" | head -10
 ```
 
-調査結果を以下の形式でまとめ、サブエージェントへの入力とする:
+Summarize the findings as input to subagents in the following form:
 ```
-テスト技術サマリー:
-- テストフレームワーク: [vitest / jest / rstest / pytest 等]
-- DB テスト戦略: [testcontainers / docker-compose.test.yml / 不要]
-- E2E テストランナー: [Playwright / reqwest / supertest 等]
-- 既存テストヘルパー: [ファイルパスのリスト]
-- 既存テストパターン: [パターンの概要]
+Test technology summary:
+- Test framework: [vitest / jest / rstest / pytest, etc.]
+- DB test strategy: [testcontainers / docker-compose.test.yml / not needed]
+- E2E test runner: [Playwright / reqwest / supertest, etc.]
+- Existing test helpers: [list of file paths]
+- Existing test patterns: [summary of patterns]
 ```
 
-#### 3.3 テスト用ツール要件の列挙
+#### 3.3 Enumerate Required Test Tools
 
-セクション 3.1 と 3.2 の結果に基づき、テスト実行に必要なツールを Required Test Tools テーブル形式で列挙する:
+Based on the results of sections 3.1 and 3.2, list the tools required for test execution in Required Test Tools table form:
 
-1. **テストフレームワーク**（cargo test, vitest, jest 等）→ Check Command と共に Required=Yes で記録
-2. **コンテナランタイム**（testcontainers 使用時）→ docker (Required=Yes)
-3. **E2E テストランナー**（Playwright, Cypress 等）→ Required=Yes、Install Command 含めて記録
-4. **ブラウザエンジン**（Browser E2E 時）→ chromium (Required=Yes) — **環境依存スキップ不可**
-5. **DB ツール**（diesel_cli, prisma 等）→ Required=Yes
-6. **ビルドキャッシュ等の最適化ツール** → Recommended
+1. **Test framework** (cargo test, vitest, jest, etc.) → record with Check Command and Required=Yes
+2. **Container runtime** (when using testcontainers) → docker (Required=Yes)
+3. **E2E test runner** (Playwright, Cypress, etc.) → Required=Yes, recorded with Install Command
+4. **Browser engine** (for Browser E2E) → chromium (Required=Yes) — **Environment-dependent skipping not allowed**
+5. **DB tools** (diesel_cli, prisma, etc.) → Required=Yes
+6. **Optimization tools such as build cache** → Recommended
 
-結果を以下の形式でまとめ、Step 5 で test-design.md に挿入する:
+Summarize results in the following form, to be inserted into test-design.md in Step 5:
 ```
-テスト用ツール一覧:
+Required test tools:
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
 | ... | ... | ... | ... | ... | ... |
 ```
 
-**重要**: E2E テストに必要なツール（Playwright, Chrome等）は必ず Required=Yes とする。design.md の「Excluded Test Environments」で明示的に除外されているテスト以外は、すべて実行必須。
+**Important**: Tools required for E2E tests (Playwright, Chrome, etc.) must always be Required=Yes. Except for tests explicitly excluded under "Excluded Test Environments" in design.md, every test is mandatory to run.
 
-#### 3.3.1 テストツールバージョン検証
+#### 3.3.1 Test Tool Version Verification
 
-Required Test Tools テーブルの各ツールについて、**「インストール済みバージョンの検出」** と **「最新安定版の調査」** を分けて扱うこと。`Min Version` に採用するのは、前者ではなく**後者で確認した最新安定版**である。
+For each tool in the Required Test Tools table, treat **"detecting the installed version"** and **"researching the latest stable version"** separately. The `Min Version` is taken from the **latest stable confirmed in the latter**, not from the former.
 
-1. WebSearch またはレジストリ CLI で**最新安定版**を確認する
-   - crates.io / npm のパッケージの場合のみレジストリ CLI を使ってよい
+1. Confirm the **latest stable version** via WebSearch or registry CLI
+   - You may use registry CLI only for crates.io / npm packages
      - `npm view {pkg} version`
-     - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` （完全一致を確認）
-   - それ以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認
-   - Playwright: `npm view playwright version` で最新安定版を確認する
-   - Chromium: Playwright バージョンに対応するバンドル版を使用（`npx playwright install chromium`）。Min Version は `(bundled with playwright)` と記載
-2. 必要に応じて、ローカル環境・プロジェクト依存として**現在インストール済みのバージョン**を別途検出する
-   - Playwright: `npx playwright --version` は最新安定版の調査ではなく、インストール済みバージョンの検出として扱う
-3. `Min Version` は、手順 1 で検証した最新安定版を採用して更新する。手順 2 の結果は差分確認用の参考情報であり、`Min Version` の根拠にしない
+     - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` (verify exact match)
+   - For other tools (docker, chromium, etc.), confirm via WebSearch on the official release page
+   - Playwright: confirm the latest stable via `npm view playwright version`
+   - Chromium: use the bundled version corresponding to the Playwright version (`npx playwright install chromium`). Record Min Version as `(bundled with playwright)`
+2. If needed, separately detect the **currently installed version** as a local environment / project dependency
+   - Playwright: `npx playwright --version` is treated as installed-version detection, not as latest-stable research
+3. Update `Min Version` with the latest stable verified in step 1. Step 2 results are only diff-check reference info, not the basis for `Min Version`
 
-Phase 2 step 3.5 と同様、AI の学習データのデフォルト値を使用しない。
+As in Phase 2 step 3.5, do not use defaults from AI training data.
 
 ---
 
 ### 4. Generate Test Specifications via Subagents
 
-複数のサブエージェントを **並列で** 起動し、UT/IT/ST/E2E 仕様をそれぞれ独立に導出する（CT は H-2 後に追加）。
+Launch multiple subagents **in parallel** to derive UT/IT/ST/E2E specs independently (CT is added after H-2).
 
-**重要**: 全 Agent 呼び出しを **1つのメッセージ内で同時に** 行うこと（並列実行）。
+**Important**: Make all Agent calls **simultaneously in a single message** (parallel execution).
 
-#### 明示宣言ベースの derivation（K-7、`dapper-hardening-orchestrator.md` 参照）
+#### Declaration-based derivation (K-7; see `dapper-hardening-orchestrator.md`)
 
-各 Subagent は、derivation の **最優先入力**として **design.md DES-N の `Test Layers:` フィールド宣言**（K-2 で必須化）と **requirements.md REQ-N.M の `Test Layers:` フィールド宣言**（K-1 で必須化）を読み込み、**宣言された層に対応する仕様のみ**を導出する。宣言外の層を heuristic で導出することを禁止。
+Each Subagent reads, as the **highest-priority input** for derivation, **the `Test Layers:` field declaration in design.md DES-N** (made mandatory by K-2) and **the `Test Layers:` field declaration in requirements.md REQ-N.M** (made mandatory by K-1), and derives **only specs corresponding to the declared layers**. Heuristic derivation of non-declared layers is forbidden.
 
-- DES-11 が `Test Layers: UT, CT, ST-1` と宣言 → Subagent A は UT-11.x、Subagent D（H-2 後）は CT-11、Subagent E は ST-1 を導出
-- DES-3 が `Test Layers: UT, IT-19` と宣言 → Subagent A は UT-3.x、Subagent B は IT-19 を導出。Subagent C/D/E は対応 spec を生成しない
+- If DES-11 declares `Test Layers: UT, CT, ST-1` → Subagent A derives UT-11.x, Subagent D (after H-2) derives CT-11, Subagent E derives ST-1
+- If DES-3 declares `Test Layers: UT, IT-19` → Subagent A derives UT-3.x, Subagent B derives IT-19. Subagents C/D/E do not generate specs for it
 
-**フォールバック**: design.md / requirements.md に Test Layers 宣言が無い（legacy）場合のみ、各 Subagent は従来の heuristic で derivation する。新規 spec は宣言ベース必須（K-2 / K-1 / K-6 / K-7 が連動）。
+**Fallback**: Only when design.md / requirements.md lack Test Layers declarations (legacy), each Subagent falls back to the conventional heuristic derivation. New specs require declaration-based derivation (K-2 / K-1 / K-6 / K-7 are linked).
 
-各 Subagent の prompt 内で、design.md / requirements.md の `Test Layers:` フィールドを読み取り、自身の責務層に該当するコンポーネント / 要件のみを処理対象とすること。
+Each Subagent's prompt must read the `Test Layers:` field from design.md / requirements.md and only process components / requirements corresponding to its responsibility layer.
 
-#### Subagent A: UT 仕様の導出
+#### Subagent A: Derive UT Specs
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "UT 仕様を導出",
+  description: "Derive UT specs",
   prompt: "You are a test specification engineer. Generate Unit Test specifications.
 
     Read the following files:
@@ -172,49 +172,49 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Task:
-    design.md の **Components and Interfaces** セクションから、各コンポーネントのユニットテスト仕様を導出せよ。
+    From the **Components and Interfaces** section of design.md, derive unit test specs for each component.
 
-    導出ルール:
-    1. 各コンポーネントの公開インターフェース（メソッド/関数）を列挙
-    2. 各インターフェースに対して、4カテゴリ（Happy Path / Boundary Values / Error Handling / Edge Cases）のテストケースを設計
-    3. コンポーネントの **Dependencies** からモック対象を特定
-    4. design.md の **Error Handling** テーブルから、各エラーコードに対応するエラーハンドリングテストを設計
-    5. **Leptos フロントエンドコンポーネント**: コンポーネントが Leptos フロントエンドコンポーネント（view! マクロ、#[component]、signal 使用、pages/ / components/ ディレクトリ配置）の場合:
-       - HTML レンダリングや DOM 構造のテストは指定しない
-       - 代わりに以下のテストを指定:
-         a. シグナル状態遷移（初期状態、更新後の値）
-         b. 派生計算の正しさ（クロージャ、Memo の値）
-         c. バリデーションロジック（コンポーネントから抽出）
-         d. Callback/ハンドラロジック（抽出した関数の動作）
-         e. サーバー関数ビジネスロジック（コア計算）
-       - UT テーブルの Verification 列に「Test target: extracted logic function」と注記
+    Derivation rules:
+    1. Enumerate each component's public interfaces (methods / functions)
+    2. For each interface, design test cases across 4 categories (Happy Path / Boundary Values / Error Handling / Edge Cases)
+    3. Identify mock targets from each component's **Dependencies**
+    4. From the **Error Handling** table in design.md, design error-handling tests for each error code
+    5. **Leptos frontend components**: When a component is a Leptos frontend component (uses view! macro, #[component], signals; located under pages/ / components/):
+       - Do NOT specify tests for HTML rendering or DOM structure
+       - Instead, specify the following tests:
+         a. Signal state transitions (initial state, value after update)
+         b. Correctness of derived computations (closures, Memo values)
+         c. Validation logic (extracted from the component)
+         d. Callback / handler logic (behavior of extracted functions)
+         e. Server function business logic (core computation)
+       - Annotate the Verification column of the UT table with 'Test target: extracted logic function'
 
-    命名規則: UT-{コンポーネント番号}.{テストケース番号} (例: UT-1.1, UT-1.2, UT-2.1)
+    Naming convention: UT-{component number}.{test case number} (e.g., UT-1.1, UT-1.2, UT-2.1)
 
-    品質基準:
-    - design.md の全コンポーネントに対して UT 仕様が存在すること
-    - 各 UT は 4カテゴリのうち該当するカテゴリを網羅していること
-    - テストケースの Input / Expected Output / Verification が具体的であること（プレースホルダー不可）
-    - Leptos フロントエンドコンポーネントの UT 仕様は抽出可能なロジック（シグナル、バリデーション、計算）を対象とし、HTML レンダリングは対象としないこと
+    Quality criteria:
+    - Every component in design.md must have a UT spec
+    - Each UT must cover the applicable categories among the 4
+    - Each test case's Input / Expected Output / Verification must be concrete (no placeholders)
+    - Leptos frontend component UT specs target extractable logic (signals, validation, computation), not HTML rendering
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## Unit Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各コンポーネントをサブセクション (###) とし、テストケースをテーブル形式で記載。"
+    Output the ## Unit Test Specifications markdown section as-is.
+    Each component is a subsection (###); list test cases in table form."
 })
 ```
 
-#### Subagent B: IT 仕様の導出（**backend HTTP API only**、J-1 で厳格化）
+#### Subagent B: Derive IT Specs (**backend HTTP API only**, tightened by J-1)
 
-> J-1 で責務範囲を厳格化: IT は **backend HTTP API のみ**を対象とする。フロントの Resource → server fn 境界を含む統合動作は CT (component reactivity) または ST (single feature full-stack) の責務であり、IT には含めない。「server fn 経由」という記述方法を禁止する。
+> J-1 tightens scope: IT targets the **backend HTTP API only**. Integrations crossing the frontend Resource → server fn boundary are the responsibility of CT (component reactivity) or ST (single feature full-stack); they are not IT. The phrasing "via server fn" is forbidden.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "IT 仕様を導出",
+  description: "Derive IT specs",
   prompt: "You are a test specification engineer. Generate Integration Test specifications.
 
     Read the following files:
@@ -222,44 +222,44 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Task:
-    design.md の **Architecture** 図と **Components and Interfaces** の Dependencies 記述から、**backend HTTP API only** のコンポーネント間相互作用を特定しテストケース化せよ。
+    From the **Architecture** diagram and the Dependencies sections of **Components and Interfaces** in design.md, identify component-to-component interactions for the **backend HTTP API only** and turn them into test cases.
 
-    責務範囲（J-1 で厳格化）:
-    - **対象**: backend サーバ側の HTTP API endpoint 動作（status code / response body / DB 状態変化 / 認証認可）
-    - **対象外**: UI 操作 / DOM 検証 / フロントの Resource → server fn 境界。これらは CT (component reactivity) または ST (single feature full-stack) の責務。「server fn 経由」表記を IT 仕様で使うことを禁止
-    - 詳細は quality-checks.md の Test Taxonomy セクション参照
+    Scope (tightened by J-1):
+    - **In scope**: HTTP API endpoint behavior on the backend server (status code / response body / DB state changes / authentication and authorization)
+    - **Out of scope**: UI operations / DOM checks / the frontend Resource → server fn boundary. These belong to CT (component reactivity) or ST (single feature full-stack). The phrasing "via server fn" is forbidden in IT specs
+    - See the Test Taxonomy section in quality-checks.md for details
 
-    導出ルール:
-    1. Architecture 図の矢印（依存関係）のうち、**backend 内部のもの**ごとに HTTP 統合テストシナリオを検討
-    2. DB アクセスを伴うコンポーネントには DB 統合テストを設計（実 DB / TempDir / docker-compose.test.yml）
-    3. 外部 API 連携がある場合はモック/スタブ（mockito / wiremock）を使った統合テストを設計
-    4. UI 経由の動作確認が必要な相互作用は **IT ではなく ST または CT** に振る（Subagent E / Subagent D の責務）
+    Derivation rules:
+    1. Among the arrows (dependencies) in the Architecture diagram, design HTTP integration test scenarios for each **backend-internal** edge
+    2. Design DB integration tests for components that touch the DB (real DB / TempDir / docker-compose.test.yml)
+    3. For external API integrations, design integration tests using mocks / stubs (mockito / wiremock)
+    4. Interactions that require UI-driven behavior verification go to **ST or CT, not IT** (Subagent E / Subagent D's responsibility)
 
-    命名規則: IT-{シナリオ番号} (例: IT-1, IT-2)
+    Naming convention: IT-{scenario number} (e.g., IT-1, IT-2)
 
-    品質基準:
-    - design.md DES-N の Test Layers field が `IT-N` または `IT` を含む component に IT 仕様が存在すること（K-2 と整合）
-    - 各 IT に Components, Interaction, Technology, Preconditions, Steps, Expected Result, Verification Points を記載
-    - **UI 検証 / DOM 操作を含む IT 仕様は不可** （Step B Check 15 で検出）
+    Quality criteria:
+    - An IT spec must exist for components whose `Test Layers:` field in design.md DES-N includes `IT-N` or `IT` (consistent with K-2)
+    - Each IT must record Components, Interaction, Technology, Preconditions, Steps, Expected Result, and Verification Points
+    - **IT specs that include UI verification / DOM operations are not allowed** (detected by Step B Check 15)
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## Integration Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
+    Output the ## Integration Test Specifications markdown section as-is.
+    Each scenario is a subsection (###); record details in a table or structured list."
 })
 ```
 
-#### Subagent C: E2E 仕様の導出（**user journey only**、J-2 で厳格化）
+#### Subagent C: Derive E2E Specs (**user journey only**, tightened by J-2)
 
-> J-2 で責務範囲を厳格化: E2E は **user journey 専用**であり、複数機能の連鎖を含むエンドツーエンドのフローのみを対象とする。「個別機能のテスト」（zoom/rotate のみ、search のみ など）は ST (System Test) の責務であり、E2E には含めない。
+> J-2 tightens scope: E2E is **strictly for user journeys**, covering only end-to-end flows that chain multiple features. "Tests of individual features" (e.g., zoom/rotate only, search only) belong to ST (System Test) and are not E2E.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "E2E 仕様を導出",
+  description: "Derive E2E specs",
   prompt: "You are a test specification engineer. Generate End-to-End Test specifications.
 
     Read the following files:
@@ -267,44 +267,44 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/design.md
 
     Task:
-    requirements.md の **ユーザーストーリー** と **Acceptance Criteria** から、**user journey** レベル（複数機能の連鎖を含むエンドツーエンドのフロー）のテストシナリオを導出せよ。
+    From the **user stories** and **Acceptance Criteria** in requirements.md, derive **user journey** test scenarios (end-to-end flows that chain multiple features).
 
-    責務範囲（J-2 で厳格化）:
-    - **対象**: 複数機能の連鎖を含む user journey（例: ログイン → 検索 → 結果クリック → 詳細表示 → ログアウト）
-    - **対象外**: 個別機能の単独テスト（例: zoom 機能のみ / 情報パネル開閉のみ / localStorage 永続化のみ）。これらは ST (System Test) の責務。「e2e-zoom-rotate.spec.ts」のような個別機能 E2E は禁止
-    - 詳細は quality-checks.md の Test Taxonomy セクション参照
+    Scope (tightened by J-2):
+    - **In scope**: User journeys that chain multiple features (e.g., login → search → click result → view details → logout)
+    - **Out of scope**: Tests of individual features in isolation (e.g., zoom feature only / info panel toggle only / localStorage persistence only). These belong to ST (System Test). Per-feature E2E names like 'e2e-zoom-rotate.spec.ts' are forbidden
+    - See the Test Taxonomy section in quality-checks.md for details
 
-    導出ルール:
-    1. 各ユーザーストーリーから **複数機能の連鎖** を含むハッピーパス user journey を E2E シナリオ化
-    2. 重要な失敗シナリオ（認証エラー、権限不足等）も user journey として E2E シナリオに含める
-    3. design.md の API Design セクションがある場合、user journey の各ステップで API レスポンスの検証ポイントを明記
-    4. **単一機能のテスト需要**は E2E ではなく ST 仕様（Subagent E）に振る
+    Derivation rules:
+    1. From each user story, turn the happy-path user journey containing **multiple feature chains** into an E2E scenario
+    2. Include important failure scenarios (auth errors, insufficient permissions, etc.) as user-journey E2E scenarios
+    3. If design.md has an API Design section, explicitly state API response verification points for each step of the user journey
+    4. **Single-feature test demand** goes to ST specs (Subagent E), not E2E
 
-    命名規則: E2E-{シナリオ番号} (例: E2E-1, E2E-2)
+    Naming convention: E2E-{scenario number} (e.g., E2E-1, E2E-2)
 
-    品質基準:
-    - 各 E2E に **複数機能の連鎖**が含まれていること（連鎖が無いなら ST 候補）
-    - 各 E2E に User Story 参照、Test Type、Technology、Scenario Steps、Success Criteria、Failure Scenarios を記載
-    - **個別機能のテスト（連鎖なし）を E2E と称することを禁止**（Step B Check 15 で検出）
+    Quality criteria:
+    - Each E2E must include **chains of multiple features** (no chain → ST candidate)
+    - Each E2E must record User Story reference, Test Type, Technology, Scenario Steps, Success Criteria, and Failure Scenarios
+    - **Calling individual-feature tests (no chain) E2E is forbidden** (detected by Step B Check 15)
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## E2E Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
+    Output the ## E2E Test Specifications markdown section as-is.
+    Each scenario is a subsection (###); record details in a table or structured list."
 })
 ```
 
-#### Subagent D: CT 仕様の導出（H-2 で新設）
+#### Subagent D: Derive CT Specs (newly added by H-2)
 
-> H-2 で新設: CT (Component Test) は **component reactivity**（mount → signal 操作 → DOM 観測）を対象とする。Leptos 0.7 + wasm-bindgen-test での実用性は POC `wasm-bindgen-test-leptos-poc.md` で確認済み。
+> Newly added by H-2: CT (Component Test) targets **component reactivity** (mount → signal manipulation → DOM observation). Practicality on Leptos 0.7 + wasm-bindgen-test is confirmed in POC `wasm-bindgen-test-leptos-poc.md`.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "CT 仕様を導出",
+  description: "Derive CT specs",
   prompt: "You are a test specification engineer. Generate Component Test specifications.
 
     Read the following files:
@@ -312,49 +312,49 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Task:
-    design.md DES-N の `Test Layers:` field（K-2 で必須化）に `CT` または `CT-N` が含まれる component について、**component reactivity** テスト仕様を導出せよ。
+    For components whose `Test Layers:` field in design.md DES-N (made mandatory by K-2) contains `CT` or `CT-N`, derive **component reactivity** test specs.
 
-    責務範囲（H-2 で確定）:
-    - **対象**: 単一 component の reactivity（mount → signal 操作 → DOM 観測）
-    - **対象外**: pure logic（UT 責務、抽出関数で verify）/ 実 server 通信（IT or ST）/ user journey（E2E）
-    - **典型的検証項目**:
-      1. initial render: signal の初期値が DOM に反映されるか（query_selector + text_content）
-      2. event 配線: on:click / on:submit / on:input が signal を update するか（HtmlElement::click() で trigger、tick().await 後に DOM 観測）
-      3. signal 駆動の DOM update: signal 変更 → reactive re-render → DOM 検証
-      4. Suspense / Resource: mock 経由（design.md K-3 で宣言）で pending / loaded / error 各状態を verify
-      5. Effect: signal 変更時に Effect が 1 回だけ呼ばれることを verify（連続発火しない）
+    Scope (finalized by H-2):
+    - **In scope**: Reactivity of a single component (mount → signal manipulation → DOM observation)
+    - **Out of scope**: Pure logic (UT's responsibility; verify with extracted functions) / real server communication (IT or ST) / user journeys (E2E)
+    - **Typical verification items**:
+      1. initial render: whether the signal's initial value is reflected in the DOM (query_selector + text_content)
+      2. event wiring: whether on:click / on:submit / on:input update the signal (trigger via HtmlElement::click(); observe DOM after tick().await)
+      3. signal-driven DOM update: signal change → reactive re-render → DOM verification
+      4. Suspense / Resource: verify pending / loaded / error states via mocks (declared in design.md K-3)
+      5. Effect: verify that on signal change, the Effect runs exactly once (no repeated firing)
 
-    実装手段:
-    - Rust / Leptos: wasm-bindgen-test + cargo test --target wasm32-unknown-unknown（wasm-pack 不要）
-    - .NET / Blazor: bUnit（標準）
-    - 詳細: quality-checks.md QC14 + tdd-skills-rust/references/leptos-frontend-testing.md 参照
+    Implementation:
+    - Rust / Leptos: wasm-bindgen-test + cargo test --target wasm32-unknown-unknown (wasm-pack not required)
+    - .NET / Blazor: bUnit (standard)
+    - Details: see quality-checks.md QC14 + tdd-skills-rust/references/leptos-frontend-testing.md
 
-    命名規則: CT-{コンポーネント番号}.{テストケース番号} (例: CT-11.1, CT-11.2)
+    Naming convention: CT-{component number}.{test case number} (e.g., CT-11.1, CT-11.2)
 
-    品質基準:
-    - design.md DES-N の Test Layers field が `CT` または `CT-N` を含む component に CT 仕様が存在すること（K-2 と整合）
-    - 各 CT に Mount Setup / Action（signal 操作 or event trigger）/ DOM Verification / Signal Verification の 4 フィールド必須
-    - **pure logic を CT で verify することを禁止**（UT に振る、Step B Check 17/18 で検出）
+    Quality criteria:
+    - A CT spec must exist for components whose `Test Layers:` field in design.md DES-N includes `CT` or `CT-N` (consistent with K-2)
+    - Each CT must include the 4 fields: Mount Setup / Action (signal manipulation or event trigger) / DOM Verification / Signal Verification
+    - **Verifying pure logic with CT is forbidden** (route to UT; detected by Step B Check 17/18)
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## Component Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各シナリオをサブセクション (####) とし、Mount Setup / Action / DOM Verification / Signal Verification をテーブルまたは構造化リストで記載。"
+    Output the ## Component Test Specifications markdown section as-is.
+    Each scenario is a subsection (####); record Mount Setup / Action / DOM Verification / Signal Verification in a table or structured list."
 })
 ```
 
-#### Subagent E: ST 仕様の導出（J-6 で新設）
+#### Subagent E: Derive ST Specs (newly added by J-6)
 
-> J-6 で新設: ST (System Test) は **単一機能の full-stack 動作**（UI 操作 → backend 応答 → UI 反映）を対象とする。E2E (user journey) と CT (component reactivity 単独) の中間層。
-> Subagent D は CT spec deriver として H-2 で予約済（H 実装後に有効化）。本 Subagent は E。
+> Newly added by J-6: ST (System Test) targets **full-stack behavior of a single feature** (UI operation → backend response → UI reflection). It is the middle layer between E2E (user journey) and CT (component reactivity in isolation).
+> Subagent D is reserved as the CT spec deriver under H-2 (enabled after H is implemented). This Subagent is E.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "ST 仕様を導出",
+  description: "Derive ST specs",
   prompt: "You are a test specification engineer. Generate System Test specifications.
 
     Read the following files:
@@ -362,71 +362,71 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/design.md
 
     Task:
-    requirements.md の各ユーザーストーリー / 個別機能から、**単一機能の full-stack** テストシナリオを導出せよ（UI でユーザー操作 → backend が応答 → UI に反映を 1 機能分検証）。
+    From the user stories / individual features in requirements.md, derive **single-feature full-stack** test scenarios (verify UI operation → backend response → UI reflection for one feature).
 
-    責務範囲（J-6 で確定）:
-    - **対象**: 単一機能の full-stack 動作（例: 「ログイン機能のみ」「検索機能のみ」「ズーム機能のみ」）
-    - **対象外**: 複数機能の連鎖（E2E 責務）/ pure logic（UT）/ component reactivity 単独（CT）/ backend HTTP API のみ（IT）
-    - 詳細は quality-checks.md の Test Taxonomy セクション参照
+    Scope (finalized by J-6):
+    - **In scope**: Full-stack behavior of a single feature (e.g., 'login feature only', 'search feature only', 'zoom feature only')
+    - **Out of scope**: Chains of multiple features (E2E's responsibility) / pure logic (UT) / component reactivity in isolation (CT) / backend HTTP API only (IT)
+    - See the Test Taxonomy section in quality-checks.md for details
 
-    導出ルール:
-    1. 各 REQ-N / Acceptance Criteria を「単一機能の full-stack 観点」で分解、独立した機能単位でテストシナリオ化
-    2. design.md の DES-N の Test Layers field で `ST` または `ST-N` を宣言した component が ST 対象（K-2 と整合）
-    3. 実 server を起動した上で UI を操作し、backend 応答が UI に反映されることを検証
-    4. **複数機能の連鎖を含むシナリオは ST ではなく E2E（Subagent C）に振る**
+    Derivation rules:
+    1. Decompose each REQ-N / Acceptance Criterion from a 'single-feature full-stack' viewpoint, turning each independent feature unit into a test scenario
+    2. Components whose `Test Layers:` field in design.md DES-N declares `ST` or `ST-N` are ST targets (consistent with K-2)
+    3. Verify by starting the real server, operating the UI, and confirming that the backend response is reflected in the UI
+    4. **Scenarios that chain multiple features go to E2E (Subagent C), not ST**
 
-    命名規則: ST-{シナリオ番号} (例: ST-1: ログイン機能、ST-2: 検索機能)
+    Naming convention: ST-{scenario number} (e.g., ST-1: login feature, ST-2: search feature)
 
-    品質基準:
-    - design.md DES-N の Test Layers field が `ST-N` または `ST` を含む機能に ST 仕様が存在すること
-    - 各 ST に Feature Scope（対象機能の範囲）, Test Path（UI → backend → UI の経路）, Verification Points, Expected Outcome を記載
-    - **複数機能の連鎖を含む ST は不可**（連鎖が必要なら E2E）
+    Quality criteria:
+    - An ST spec must exist for features whose `Test Layers:` field in design.md DES-N includes `ST-N` or `ST`
+    - Each ST must record Feature Scope (target feature scope), Test Path (UI → backend → UI route), Verification Points, and Expected Outcome
+    - **STs that chain multiple features are not allowed** (use E2E if a chain is needed)
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## System Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
+    Output the ## System Test Specifications markdown section as-is.
+    Each scenario is a subsection (###); record details in a table or structured list."
 })
 ```
 
 ---
 
-### 5. Integrate and Create Document (メインエージェント)
+### 5. Integrate and Create Document (Main Agent)
 
-3つのサブエージェントの出力を統合し、完全な `test-design.md` を作成する。
+Integrate the outputs of the three subagents into a complete `test-design.md`.
 
-1. **Test Strategy Overview** を冒頭に追加:
-   - テスト全体方針、Test Pyramid（UT > IT > E2E）、環境要件
-   - セクション 3 で決定したテスト技術選定の結果
-   - **Required Test Tools** テーブル: セクション 3.3 で列挙したツール一覧
+1. Add a **Test Strategy Overview** at the top:
+   - Overall test policy, Test Pyramid (UT > IT > E2E), environment requirements
+   - Results of the test technology selection from section 3
+   - **Required Test Tools** table: list of tools enumerated in section 3.3
 
-2. **サブエージェント結果を順序通り配置**:
-   - Unit Test Specifications（Subagent A の出力）
-   - Component Test Specifications（Subagent D の出力、component reactivity — H-2 で新設）
-   - Integration Test Specifications（Subagent B の出力、backend HTTP API only — J-1）
-   - System Test Specifications（Subagent E の出力、単一機能 full-stack — J-6 で新設）
-   - E2E Test Specifications（Subagent C の出力、user journey only — J-2）
+2. **Place subagent outputs in order**:
+   - Unit Test Specifications (Subagent A's output)
+   - Component Test Specifications (Subagent D's output, component reactivity — newly added by H-2)
+   - Integration Test Specifications (Subagent B's output, backend HTTP API only — J-1)
+   - System Test Specifications (Subagent E's output, single-feature full-stack — newly added by J-6)
+   - E2E Test Specifications (Subagent C's output, user journey only — J-2)
 
-3. **Requirements-Test Traceability Matrix** を構築:
-   - 全サブエージェント結果を横断し、全 Requirement ID に UT/IT/E2E が紐づくことを確認
-   - 漏れがある場合はメインエージェントが追加
+3. Build a **Requirements-Test Traceability Matrix**:
+   - Cross-reference all subagent outputs and confirm every Requirement ID is linked to UT/IT/E2E
+   - If anything is missing, the main agent adds it
 
-4. **Test Data Requirements** を追加:
-   - 共有フィクスチャ、テストデータ生成方針
+4. Add **Test Data Requirements**:
+   - Shared fixtures, test data generation policy
 
-5. **E2E Test Infrastructure** を追加:
-   - Project Type Detection、Container Test Setup、Test Runner Configuration
+5. Add **E2E Test Infrastructure**:
+   - Project Type Detection, Container Test Setup, Test Runner Configuration
 
-6. ファイルに書き出し:
+6. Write to file:
 ```
 .spec-workflow/specs/{spec-name}/test-design.md
 ```
 
 **Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
 
-以下の YAML frontmatter をファイル冒頭に追加する。`depends_on` は requirements.md の REQ-N と design.md の DES-N のうち、このテスト設計が対象とするものを列挙する:
+Add the following YAML frontmatter at the top of the file. `depends_on` enumerates the REQ-N from requirements.md and the DES-N from design.md that this test design targets:
 
 ```yaml
 ---
@@ -441,13 +441,13 @@ depends_on:
 ---
 ```
 
-UT-N.M / IT-N / E2E-N の識別子は従来通り `####` 見出しで明示する（SD1）。
+The UT-N.M / IT-N / E2E-N identifiers are still made explicit via `####` headings as before (SD1).
 
-**品質基準（統合時チェック）:**
-- 全 Requirement ID に最低1つの UT と、関連する IT または E2E が紐づいていること
-- design.md の全コンポーネントに対して UT 仕様が存在すること
-- テストケースの Input / Expected Output / Verification が具体的であること（プレースホルダー不可）
-- サブエージェント間で命名・フォーマットが一貫していること（不一致があれば統一する）
+**Quality criteria (integration-time checks):**
+- Every Requirement ID must be linked to at least one UT and a related IT or E2E
+- Every component in design.md must have a UT spec
+- Each test case's Input / Expected Output / Verification must be concrete (no placeholders)
+- Naming and formatting must be consistent across subagents (resolve any inconsistencies)
 
 ### 6. Self-Review via Subagent (before approval)
 
@@ -515,17 +515,17 @@ Agent({
     14. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: test-design, version, depends_on (file entries pointing to requirements.md and design.md with refs) must exist at the top of the file. Every REQ-/DES- ID in depends_on.refs must exist in the referenced upstream file (SD4)
     15. TEST_LAYER_BOUNDARY (J-4, dapper-hardening): Each test specification must respect its layer boundary as defined in quality-checks.md Test Taxonomy:
        - IT-N specs must NOT include UI operations or DOM verifications (move to ST or E2E)
-       - E2E-N specs must include 複数機能の連鎖 (single-feature tests must be moved to ST)
+       - E2E-N specs must include chains of multiple features (single-feature tests must be moved to ST)
        - ST-N specs must NOT span multiple features (move to E2E if multi-feature journey)
        - UT specs must NOT depend on external I/O (clock / RNG / env / fs / HTTP / DB) — must use Mock points declared in design.md Architecture for Testability (K-3)
     16. CT_COVERAGE (H-2, dapper-hardening): For every UI component DES-N in design.md whose Test Layers field (K-2) declares `CT` or `CT-N`, a corresponding Component Test specification must exist in test-design.md `## Component Test Specifications` section. CT specs must include Mount Setup / Action / DOM Verification / Signal Verification fields
     17. CT_INTEGRATION_VERIFY (H-2, dapper-hardening): Each CT-N spec must verify component reactivity (mount + signal + DOM observation), NOT pure logic. Pure logic verification belongs in UT. Specifically: each CT-N must specify (a) how the component is mounted (`mount_to(...)`), (b) what signal is updated or what event is triggered, (c) how DOM is observed (query_selector + text_content / inner_html / outer_html)
-    18. SIGNATURE_MATCH (C-2, dapper-hardening): For every test specification (UT / CT / IT / ST / E2E) that references a function or method from design.md DES-N, the function signature (return type + argument types) must **exactly match** the corresponding interface defined in design.md DES-N の `Interfaces:` field. Mismatch examples:
+    18. SIGNATURE_MATCH (C-2, dapper-hardening): For every test specification (UT / CT / IT / ST / E2E) that references a function or method from design.md DES-N, the function signature (return type + argument types) must **exactly match** the corresponding interface defined in the `Interfaces:` field of design.md DES-N. Mismatch examples:
         - design.md: `pub async fn list_roots(&self) -> Result<Vec<RootEntry>, AppError>` vs test-design.md UT: assumes `Vec<RootEntry>` (Result unwrapped) → error: `signature_mismatch`
         - design.md: `pub fn count(&self) -> usize` vs test-design.md UT: assumes `i32` return → error: `signature_mismatch`
     19. E2E_SNAPSHOT_PATH (F-1, dapper-hardening): If E2E specs reference snapshot comparison (toMatchSnapshot, toMatchAriaSnapshot, etc.), the test-design.md must explicitly mention `snapshotPathTemplate` configuration in `playwright.config.ts` (e.g., `tests/e2e/screenshots/{testFilePath}/{arg}.png`). Without explicit path template, baseline screenshots end up in default location and become non-portable.
     20. E2E_DOM_COMPARISON_METHOD (F-2, dapper-hardening): For E2E specs requiring **structural regression detection** (DOM tree comparison), use `toMatchAriaSnapshot` instead of `toContain` (substring match). `toContain` permits partial matches that hide structural breaking changes; `toMatchAriaSnapshot` enforces full structural equality.
-    21. E2E_COMPOSITE_STATE_SCENARIO (F-3, dapper-hardening): If E2E scenario steps require a **composite state** (e.g., 「中央 2 枚表示中、左開き」「ログイン済 + フィルター適用済 + ソート済」), the operations to reach that state must be **explicitly specified in test-design.md** (NAV_NEXT N 回 + 設定変更 X + ...). Implicit assumption of state without explicit setup steps → error: `e2e_setup_steps_missing`.
+    21. E2E_COMPOSITE_STATE_SCENARIO (F-3, dapper-hardening): If E2E scenario steps require a **composite state** (e.g., "showing 2 center images with left panel open"; "logged in + filter applied + sorted"), the operations to reach that state must be **explicitly specified in test-design.md** (e.g., NAV_NEXT N times + setting change X + ...). Implicit assumption of state without explicit setup steps → error: `e2e_setup_steps_missing`.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."

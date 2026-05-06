@@ -1,25 +1,25 @@
 ---
 name: diesel
 description: |
-  Diesel / diesel-async ORM (Rust) のベストプラクティス。`Queryable`/`Selectable`/`Insertable`/`AsChangeset` による model 定義、`diesel.toml` の schema 自動生成、`.select(Model::as_select())` での type-safe クエリ、deadpool + `AsyncDieselConnectionManager` による connection pool、`.transaction()` と `scope_boxed()` によるトランザクション、up.sql/down.sql ペアでのマイグレーション、N+1 回避と batch insert をカバー。Diesel 利用 Rust コードの新規追加、既存クエリ修正、migration 作成、repository レイヤ実装、PostgreSQL スキーマ設計時に参照。
+  Best practices for the Diesel / diesel-async ORM (Rust). Covers model definitions with `Queryable`/`Selectable`/`Insertable`/`AsChangeset`, schema auto-generation via `diesel.toml`, type-safe queries with `.select(Model::as_select())`, connection pools using deadpool + `AsyncDieselConnectionManager`, transactions with `.transaction()` and `scope_boxed()`, migrations as up.sql/down.sql pairs, N+1 avoidance, and batch inserts. Reference when adding new Rust code that uses Diesel, modifying existing queries, creating migrations, implementing the repository layer, or designing a PostgreSQL schema. Triggers on: 'Diesel ORM', 'diesel-async', 'diesel migration', 'AsyncDieselConnectionManager', 'Diesel利用', 'Dieselクエリ', 'マイグレーション作成', 'repositoryレイヤ実装'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Diesel / diesel-async Best Practices
 
-## 対象
+## Scope
 
-- Diesel model の新規定義・更新（`Queryable`, `Selectable`, `Insertable`, `AsChangeset`）
-- type-safe クエリの記述、repository レイヤの実装
-- migration の作成（up.sql / down.sql）と運用
-- diesel-async の connection pool 設計
-- トランザクション境界の設計
+- Defining and updating Diesel models (`Queryable`, `Selectable`, `Insertable`, `AsChangeset`)
+- Writing type-safe queries and implementing the repository layer
+- Creating and operating migrations (up.sql / down.sql)
+- Designing connection pools for diesel-async
+- Designing transaction boundaries
 
-## 対象外
+## Out of Scope
 
-- Axum handler の実装 → `axum` Skill
-- Valkey/Redis キャッシュ連携 → `valkv-cache` Skill
-- PostgreSQL 自体の運用（DB チューニング、バックアップ） → インフラ側
+- Implementing Axum handlers -> `axum` Skill
+- Valkey/Redis cache integration -> `valkv-cache` Skill
+- PostgreSQL operations themselves (DB tuning, backup) -> infrastructure side
 
 ## Project Structure
 
@@ -161,7 +161,7 @@ conn.transaction::<_, diesel::result::Error, _>(|conn| {
 - `down.sql` must precisely reverse the operations in `up.sql`
 - Migrations must be idempotent
 - Run `diesel migration run` in the CI/CD pipeline for production environments
-- Make table changes non-destructively (add column → migrate data → drop column)
+- Make table changes non-destructively (add column -> migrate data -> drop column)
 
 ```sql
 -- up.sql
@@ -187,7 +187,7 @@ DROP TABLE users;
 - Perform bulk inserts in a single call with `.values(&vec_of_insertables)`
 - Write queries that can make use of indexes
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `rust-style`, `design-principles`, `security` (A1-A10: SQL injection 等), `type-safety` (TS-R1-R5)
-- 関連 Skill: `axum` (AppState に DbPool 格納), `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test` (testcontainers での DB テスト), `spec-tasks`, `spec-test-design`
+- Universal constraints: `rust-style`, `design-principles`, `security` (A1-A10: SQL injection etc.), `type-safety` (TS-R1-R5)
+- Related Skills: `axum` (store DbPool in AppState), `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test` (DB tests with testcontainers), `spec-tasks`, `spec-test-design`

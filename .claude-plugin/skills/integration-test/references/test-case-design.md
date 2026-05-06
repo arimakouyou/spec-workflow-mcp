@@ -1,88 +1,88 @@
-# テストケース設計ガイド
+# Test Case Design Guide
 
-## 5 分類体系
+## 5-Category Taxonomy
 
-インテグレーションテストのケースは以下の 5 分類で網羅する。
+Cover integration test cases using the following 5 categories.
 
-| 分類 | 説明 | 例 |
-|------|------|-----|
-| **正常系** | 正しい入力で期待通りの結果 | ユーザー作成成功、一覧取得 |
-| **異常系** | 不正な入力やエラー条件 | バリデーションエラー、認証エラー |
-| **境界値** | 境界条件の動作確認 | 空リスト、最大長、ページ境界 |
-| **エッジケース** | 特殊な状況 | 重複データ、同時更新、空文字 |
-| **外部依存エラー** | 外部システムの障害 | DB 接続エラー、外部 API タイムアウト |
+| Category | Description | Examples |
+|----------|-------------|----------|
+| **Happy path** | Expected results for correct input | Successful user creation, list retrieval |
+| **Error path** | Invalid input or error conditions | Validation errors, authentication errors |
+| **Boundary** | Boundary condition behavior | Empty list, max length, page boundary |
+| **Edge cases** | Special situations | Duplicate data, concurrent updates, empty strings |
+| **External dependency errors** | External system failures | DB connection error, external API timeout |
 
-## HTTP メソッド別必須テストケース
+## Required Test Cases by HTTP Method
 
-### GET 一覧
+### GET list
 
-| 分類 | テストケース |
-|------|------------|
-| 正常系 | データが存在する場合に全件返す |
-| 境界値 | データが0件の場合に空配列を返す |
-| 正常系 | ページネーションが正しく動作する |
-| 境界値 | 最終ページの件数が正しい |
-| 異常系 | 認証なしで 401 |
+| Category | Test case |
+|----------|-----------|
+| Happy path | Returns all records when data exists |
+| Boundary | Returns an empty array when no data exists |
+| Happy path | Pagination works correctly |
+| Boundary | Item count on the last page is correct |
+| Error path | Returns 401 without authentication |
 
-### GET 詳細
+### GET detail
 
-| 分類 | テストケース |
-|------|------------|
-| 正常系 | 存在する ID で正しいデータを返す |
-| 異常系 | 存在しない ID で 404 |
-| 異常系 | 不正な ID 形式で 400 |
-| 異常系 | 認証なしで 401 |
+| Category | Test case |
+|----------|-----------|
+| Happy path | Returns the correct record for an existing ID |
+| Error path | Returns 404 for a non-existent ID |
+| Error path | Returns 400 for an invalid ID format |
+| Error path | Returns 401 without authentication |
 
-### POST 作成
+### POST create
 
-| 分類 | テストケース |
-|------|------------|
-| 正常系 | 有効な入力で 201 + DB に保存 |
-| 異常系 | 必須フィールド欠落で 400 |
-| 異常系 | バリデーション違反で 400 |
-| エッジケース | 重複データで 409 (Conflict) |
-| 外部依存 | 外部 API エラー時にロールバック |
-| 異常系 | 認証なしで 401 |
+| Category | Test case |
+|----------|-----------|
+| Happy path | Returns 201 + persists to DB for valid input |
+| Error path | Returns 400 when a required field is missing |
+| Error path | Returns 400 on validation failure |
+| Edge case | Returns 409 (Conflict) for duplicate data |
+| External dependency | Rolls back when the external API errors |
+| Error path | Returns 401 without authentication |
 
-### PUT/PATCH 更新
+### PUT/PATCH update
 
-| 分類 | テストケース |
-|------|------------|
-| 正常系 | 有効な入力で更新成功 + DB に反映 |
-| 異常系 | 存在しない ID で 404 |
-| 異常系 | バリデーション違反で 400 |
-| 境界値 | 変更なし (同じ値) で正常応答 |
-| 異常系 | 認証なしで 401 |
+| Category | Test case |
+|----------|-----------|
+| Happy path | Successful update for valid input + reflected in DB |
+| Error path | Returns 404 for a non-existent ID |
+| Error path | Returns 400 on validation failure |
+| Boundary | Returns successfully when there are no changes (same value) |
+| Error path | Returns 401 without authentication |
 
-### DELETE 削除
+### DELETE
 
-| 分類 | テストケース |
-|------|------------|
-| 正常系 | 存在する ID で 204 + DB から削除 |
-| 異常系 | 存在しない ID で 404 |
-| エッジケース | 関連データがある場合の挙動 |
-| 異常系 | 認証なしで 401 |
+| Category | Test case |
+|----------|-----------|
+| Happy path | Returns 204 + removes from DB for an existing ID |
+| Error path | Returns 404 for a non-existent ID |
+| Edge case | Behavior when related data exists |
+| Error path | Returns 401 without authentication |
 
-## テストケース導出手順
+## Test Case Derivation Procedure
 
-1. **handler を読む**: ルート定義からエンドポイント一覧を把握
-2. **リクエスト/レスポンス型を読む**: DTO の構造からバリデーション条件を特定
-3. **repository を読む**: クエリロジックからエッジケースを特定
-4. **5 分類マトリクスに当てはめる**: 上記のテーブルを参考にケースを列挙
+1. **Read the handler**: identify the endpoint list from route definitions
+2. **Read request/response types**: derive validation conditions from the DTO structure
+3. **Read the repository**: identify edge cases from query logic
+4. **Map to the 5-category matrix**: enumerate cases referencing the tables above
 
-## ケース数の目安
+## Case Count Targets
 
-| エンドポイント種別 | 最小ケース数 |
-|------------------|:----------:|
-| GET 一覧 | 4-5 |
-| GET 詳細 | 3-4 |
-| POST 作成 | 5-6 |
-| PUT/PATCH 更新 | 4-5 |
-| DELETE 削除 | 3-4 |
+| Endpoint type | Minimum case count |
+|---------------|:------------------:|
+| GET list | 4-5 |
+| GET detail | 3-4 |
+| POST create | 5-6 |
+| PUT/PATCH update | 4-5 |
+| DELETE | 3-4 |
 
-## UT との棲み分け
+## Separation From UT
 
-| テスト種別 | 対象 | DB | 外部 API |
-|-----------|------|:--:|:-------:|
-| UT | ビジネスロジック単体 | mock/fake | mock |
-| IT | HTTP → handler → repository → DB 全層 | 実 DB (testcontainers) | trait DI |
+| Test type | Scope | DB | External API |
+|-----------|-------|:--:|:------------:|
+| UT | Business logic in isolation | mock/fake | mock |
+| IT | All layers HTTP → handler → repository → DB | Real DB (testcontainers) | trait DI |

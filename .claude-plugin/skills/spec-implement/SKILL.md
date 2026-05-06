@@ -7,18 +7,18 @@ description: "Phase 5 of spec-driven development: implement tasks from an approv
 
 Execute tasks systematically from the approved tasks.md using a **TDD-driven workflow**. Each task follows the cycle: Start → Discover → Read Guidance → **TDD Implementation (parallel-worker)** → **UT Quality Verification** → **Code Review + Commit (review-worker)** → Log → Complete.
 
-## 🔑 MUST-READ: 実装時の UT が verify するもの (I-5, dapper-hardening)
+## MUST-READ: What Implementation-Time UT Verifies (I-5, dapper-hardening)
 
-**実装時の UT は `cargo test PASS`（コードが動く）の確認ではない。仕様の検証である。**
+**Implementation-time UT is NOT a check that `cargo test PASS` (code runs). It is verification of the spec.**
 
-- ✅ **仕様充足**: 仕様で定められた挙動が正しく行われること
-- ✅ **仕様外不在**: 仕様で定められていない挙動が起きないこと（mutation 禁止 / 副作用ゼロ / 想定外入力で panic しない / 未定義フィールド禁止）
-- ✅ **外部依存ゼロ**: clock / RNG / env / fs / HTTP / DB の直接呼出を test に書かない（Mock 経由のみ、design.md K-3 で宣言）
-- ✅ **順序非依存・決定性**: 何回・どんな順で実行しても結果が同じ
+- **Spec satisfaction**: The behavior defined in the spec is performed correctly
+- **No out-of-spec behavior**: Behavior not defined in the spec does not occur (no mutation / zero side effects / no panic on unexpected input / no undefined fields)
+- **Zero external dependencies**: Do not write direct calls to clock / RNG / env / fs / HTTP / DB in tests (only via Mock, declared in design.md K-3)
+- **Order-independent and deterministic**: The result is the same no matter how many times or in what order it is run
 
-`_Prompt` の `Success` フィールドに `cargo test PASS` だけを書くのは **誤った frame**。代わりに「仕様 X が UT-N の Negative Assertion 込みで verify される」「QC15 (UT Properties Gate) で clippy `disallowed-methods` がゼロ violation」のような **動作証跡 + 品質特性証跡** で書く。
+Writing only `cargo test PASS` in the `Success` field of `_Prompt` is the **wrong frame**. Instead, write in terms of **behavioral evidence + quality-property evidence** such as "Spec X is verified by UT-N including Negative Assertion" or "QC15 (UT Properties Gate) shows zero violations of clippy `disallowed-methods`".
 
-詳細: `quality-checks.md` の **Test Taxonomy** および **QC15** を参照。`spec-tasks/SKILL.md` の `_TestFocus` 6 カテゴリ (Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**) も参照。
+See `quality-checks.md` **Test Taxonomy** and **QC15** for details. Also see the 6 categories of `_TestFocus` in `spec-tasks/SKILL.md` (Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**).
 
 ## ⛔ Orchestrator Prohibited Actions (ABSOLUTE RULES)
 
@@ -30,7 +30,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 | **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is the test engineer's (`frontend-test-engineer` or `unit-test-engineer`) responsibility |
 | **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
 | **Do not skip agent calls** | Each step's agent call cannot be skipped |
-| **Do not invent concepts not in this spec** (A、dapper-hardening) | 「Auto Mode」「継続モード」「自動進行」など、**本 SKILL.md に存在しない概念を発明してユーザー確認をスキップしてはならない**。Phase 進行 / Wave 進行 / 大規模並列起動の前は user confirmation が必須。`auto-resume.sh` はレートリミット復旧専用であり、ユーザー意思確認の代替ではない。dojin-viewer での実事例: Claude が「Auto Mode のため Wave 2 へ進みます」と発言し、ユーザーから「指示を出したつもりはない」と指摘された |
+| **Do not invent concepts not in this spec** (A, dapper-hardening) | Concepts such as "Auto Mode", "continuous mode", or "auto-progression" **must not be invented to skip user confirmation if they do not exist in this SKILL.md**. User confirmation is required before Phase progression / Wave progression / large-scale parallel launches. `auto-resume.sh` is for rate-limit recovery only and is not a substitute for user-intent confirmation. Real example from dojin-viewer: Claude said "Proceeding to Wave 2 because of Auto Mode" and the user pointed out "I did not give that instruction" |
 
 **For any reason whatsoever (e.g., "it's a simple task", "I can do it myself"), do not skip agent calls.**
 
@@ -41,7 +41,7 @@ The orchestrator's sole responsibilities:
 3. Receive agent completion reports and hand off to the next agent
 4. Call `/log-implementation` skill
 5. Update task status in tasks.md
-6. Update session state via `${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh`（init / start-task / complete-task / end。詳細は「Session Initialization」節）
+6. Update session state via `${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh` (init / start-task / complete-task / end; see the "Session Initialization" section for details)
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -69,131 +69,125 @@ Tasks must be approved and cleaned up (Phases 1-4 complete). If not, use `/spec-
 
 ## Session Initialization (MANDATORY — DO NOT SKIP)
 
-Prerequisites Check を通過した直後、Step 0 に入る前に**実装セッションを初期化**する。
-これにより `.implement-session.json` と `.implement-session.lock` がプロジェクトルートに
-作成され、以下の Hook 群が活性化する:
+Immediately after the Prerequisites Check passes, before entering Step 0, **initialize the implementation session**.
+This creates `.implement-session.json` and `.implement-session.lock` in the project root and activates the following hooks:
 
-| Hook | 役割 |
+| Hook | Role |
 |------|------|
-| `inject-spec.sh` (UserPromptSubmit) | spec context を毎ターン注入（仕様読み忘れ防止） |
-| `resume-hint.sh` (SessionStart) | 再開状況と git 実状態を context 先頭に提示 |
-| `verify-tests-run.sh` (Stop) | 完了宣言前にテストランナー実行履歴を検査 |
-| `detect-new-files.sh` (PostToolUse Write) | spec 未言及の新規ファイルを警告 |
-| `log-implementation.sh` (Stop) | ログ呼び忘れの安全網（スケルトン自動生成） |
+| `inject-spec.sh` (UserPromptSubmit) | Inject spec context every turn (prevents forgetting to read the spec) |
+| `resume-hint.sh` (SessionStart) | Present resume status and the actual git state at the top of the context |
+| `verify-tests-run.sh` (Stop) | Inspect test runner execution history before declaring completion |
+| `detect-new-files.sh` (PostToolUse Write) | Warn about new files not mentioned in the spec |
+| `log-implementation.sh` (Stop) | Safety net for forgotten log calls (auto-generates a skeleton) |
 
-初期化コマンド:
+Initialization command:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" init {spec-name}
 ```
 
-後続の Task Cycle では:
+In the subsequent Task Cycle:
 
-- 各タスク開始時に `session-manage.sh start-task {task-id}` を呼ぶ
-- 各タスク完了時（`[x]` マーク後）に `session-manage.sh complete-task {task-id} {commit-hash}` を呼ぶ
-- 全 wave 完了 or 中断時に `session-manage.sh end` で lockfile を解放
+- Call `session-manage.sh start-task {task-id}` at the start of each task
+- Call `session-manage.sh complete-task {task-id} {commit-hash}` after marking each task complete (after the `[x]` mark)
+- Call `session-manage.sh end` to release the lockfile when all waves are done or on interruption
 
-> **注意**: session ファイルは「真のソース」ではない。レートリミット等で更新前に落ちる
-> 可能性があるため、hook 側でも git 実状態を優先する前提で設計されている。
-> best-effort で更新すればよい。
+> **Note**: The session file is not the "source of truth". It may be lost before update due to rate limits etc., so the hook side is designed with the premise that the actual git state takes precedence. Best-effort updates are sufficient.
 
-### レートリミット時の自動再開（オプション）
+### Auto-Resume on Rate Limit (optional)
 
-レートリミットや長時間ジョブによる中断から自動復帰したい場合は、以下の wrapper script を
-ユーザー側で起動する:
+If you want to auto-recover from interruptions caused by rate limits or long-running jobs, the user can launch the following wrapper script:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/auto-resume.sh" {spec-name}
 ```
 
-- `claude --print` で `/spec-implement --auto-resume` を非対話実行する
-- exit code 規約: `0` 完了 / `42` レートリミット (sleep + retry) / `43` ユーザー確認必要 / その他はエラー終了
-- `MAX_ATTEMPTS` (default 20) / `INITIAL_SLEEP` (60s) / `MAX_SLEEP` (300s) / `LOG_FILE` (`.auto-resume.log`)
-  を環境変数で調整可能
-- Orchestrator はレートリミットを検知したら**規約 exit code (42)** で終了し、wrapper が
-  exponential backoff で再起動する。完了まで `.implement-session.json` の状態を引き継ぎながらループする
+- Runs `/spec-implement --auto-resume` non-interactively via `claude --print`
+- Exit code convention: `0` complete / `42` rate-limited (sleep + retry) / `43` user confirmation needed / other values are errors
+- `MAX_ATTEMPTS` (default 20) / `INITIAL_SLEEP` (60s) / `MAX_SLEEP` (300s) / `LOG_FILE` (`.auto-resume.log`) can be tuned via environment variables
+- When the orchestrator detects a rate limit, it exits with the **convention exit code (42)** and the wrapper restarts it with exponential backoff. It loops while carrying over the state in `.implement-session.json` until completion
 
 ---
 
 ## Step 0: Tool Verification (MANDATORY — DO NOT SKIP)
 
-Prerequisites 通過後、実装開始前に全必須ツールの存在を検証する。Task Cycle 開始前に **1回だけ** 実行。
+After Prerequisites pass, verify the existence of all required tools before starting implementation. Run **only once** before the Task Cycle starts.
 
-### 0.1 ツール要件の読み取り
+### 0.1 Read Tool Requirements
 
-以下2ファイルからツール要件テーブルを解析:
+Parse the tool requirements table from these two files:
 
-1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` セクション
-2. `.spec-workflow/specs/{spec-name}/test-design.md` → `#### Required Test Tools` セクション
+1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` section
+2. `.spec-workflow/specs/{spec-name}/test-design.md` → `#### Required Test Tools` section
 
-いずれかのセクションが存在しない場合は警告ログ（`[tool-verify] WARNING: Required Tools section missing in {filename} — skipping tool verification for that file`）を出力し、存在するセクションのみ検証する。両方とも存在しない場合は `[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification` を出力して Task Cycle へ進む（後方互換性）。
+If either section is missing, emit a warning log (`[tool-verify] WARNING: Required Tools section missing in {filename} — skipping tool verification for that file`) and verify only the section that exists. If both are missing, emit `[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification` and proceed to the Task Cycle (backward compatibility).
 
-**重要:** 後続の quality-checks では `docker-compose` コマンド（または `docker compose` サブコマンド）が必須扱いとなる場合がある。Docker Compose を利用するプロジェクトでは、いずれかの Required Tools テーブルに **必ず `docker-compose`（もしくは `docker compose`）を必須ツールとして含めること**。含めないと Step 0 を通過しても Phase Review / スモークテストで FAIL（環境不備）になる可能性がある。
+**Important:** Subsequent quality-checks may treat the `docker-compose` command (or the `docker compose` subcommand) as required. For projects that use Docker Compose, **always include `docker-compose` (or `docker compose`) as a required tool** in one of the Required Tools tables. If it is not included, Phase Review / smoke tests may FAIL (environment issue) even after Step 0 passes.
 
-### 0.2 ツール存在確認
+### 0.2 Tool Existence Check
 
-各ツールエントリについて Check Command を実行する。**Check Command はセキュリティ上の制約に従うこと:**
+Run the Check Command for each tool entry. **The Check Command must follow security constraints:**
 
-**安全性チェック（実行前に必ず検証 — 対象はドキュメントに記載された Check Command 文字列自体）:**
+**Safety check (always validate before execution — the target is the Check Command string written in the doc itself):**
 
-- Check Command は `<tool> --version` や `<tool> -v` 等の読み取り専用バージョン確認パターンのみ許可
-- ドキュメント記載の Check Command 文字列にパイプ (`|`)、リダイレクト (`>`, `<`)、セミコロン (`;`)、`&&`、`$()` 等のシェル演算子が含まれる場合は**自動実行しない** — ユーザーに内容を提示して承認を得てから実行
-- 安全なパターンの場合のみ自動実行（`2>&1` はオーケストレータが付与するラッパーであり、Check Command 自体には含まれない）:
+- The Check Command is allowed only in read-only version-check patterns such as `<tool> --version` or `<tool> -v`
+- If the Check Command string in the doc contains shell operators such as pipes (`|`), redirects (`>`, `<`), semicolons (`;`), `&&`, or `$()`, **do not auto-execute** — present the content to the user and obtain approval first
+- Auto-execute only for safe patterns (`2>&1` is a wrapper added by the orchestrator and is not part of the Check Command itself):
 
 ```bash
-# 各ツールの Check Command を順次実行（安全パターンのみ自動実行）
-# 注: 2>&1 は stderr のバージョン出力を取得するためオーケストレータが付与
+# Run each tool's Check Command sequentially (only safe patterns are auto-executed)
+# Note: 2>&1 is added by the orchestrator to capture stderr version output
 {check_command} 2>&1
 echo "EXIT_CODE: $?"
 ```
 
-- exit 0 → バージョン解析。Min Version が指定されている場合はバージョン比較:
-  - バージョン要件を満たす → `[tool-verify] {tool}: OK ({detected_version})`
-  - バージョンが古い → VERSION_MISMATCH リストへ追加
-- exit ≠ 0 → Required 列に応じて分類:
-  - `Yes` → MISSING_REQUIRED リストへ
-  - `Recommended` → 警告ログ `[tool-verify] WARNING: {tool} not found (recommended, not required)` を出力、続行
+- exit 0 → parse the version. If a Min Version is specified, compare versions:
+  - Meets version requirement → `[tool-verify] {tool}: OK ({detected_version})`
+  - Version is too old → add to VERSION_MISMATCH list
+- exit ≠ 0 → classify based on the Required column:
+  - `Yes` → add to MISSING_REQUIRED list
+  - `Recommended` → emit warning log `[tool-verify] WARNING: {tool} not found (recommended, not required)`, continue
 
-### 0.3 インストール案内とユーザー承認
+### 0.3 Install Guidance and User Approval
 
-**Install Command のユーザー承認なしの自動実行は行わない。** spec ドキュメント由来のコマンドには `curl|sh` や権限昇格等のリスクがあるため、必ずユーザーの明示的な承認を得てから実行する。
+**Do not auto-execute Install Commands without user approval.** Commands sourced from spec documents may carry risks such as `curl|sh` or privilege escalation, so always obtain explicit user approval before running.
 
-MISSING_REQUIRED リストおよび VERSION_MISMATCH リストが空でない場合、以下の手順を実行:
+If the MISSING_REQUIRED list or the VERSION_MISMATCH list is non-empty, follow these steps:
 
-1. 不足ツール一覧をユーザーに提示:
+1. Present the list of missing tools to the user:
 
    ```text
-   以下のツールが不足／バージョン不足です:
+   The following tools are missing or have insufficient versions:
 
    | Tool | Purpose | Install Command | Status |
    |------|---------|-----------------|--------|
    | {tool} | {purpose} | `{install_command}` | Missing / Version mismatch |
 
-   上記 Install Command を確認し、実行してよろしいですか？ (yes/no)
+   Confirm and run the above Install Command? (yes/no)
    ```
 
-2. ユーザーが承認した場合のみ Install Command を実行し、再度 Check Command で検証:
-   - 成功 → リストから除外、ログ `[tool-verify] {tool}: installed successfully ({version})` を記録
-   - 失敗 → リストに残留
+2. Run the Install Command only if the user approves, then re-validate with the Check Command:
+   - Success → remove from list, log `[tool-verify] {tool}: installed successfully ({version})`
+   - Failure → keep in list
 
-3. ユーザーが拒否した場合 → リストに残留し、0.4 ゲート判定へ進む
+3. If the user declines → keep in list and proceed to the 0.4 gate decision.
 
-### 0.4 ゲート判定
+### 0.4 Gate Decision
 
 ```text
 if MISSING_REQUIRED is not empty OR VERSION_MISMATCH is not empty:
   Report to user:
-    "## ⛔ Tool Verification Failed
+    "## Tool Verification Failed
 
-    以下の必須ツールが不足または要件を満たしていないため、実装を開始できません:
+    The following required tools are missing or do not meet requirements, so implementation cannot start:
 
     | Tool | Purpose | Install Command | Status |
     |------|---------|-----------------|--------|
     | {tool} | {purpose} | {install_command} | Missing / Version too old ({detected} < {required}) |
 
-    上記ツールをインストール／アップグレードした後、再度 `/spec-implement` を実行してください。"
+    After installing/upgrading the above tools, run `/spec-implement` again."
 
-  STOP — Task Cycle に進まない。
+  STOP — do not proceed to the Task Cycle.
 
 else:
   log "[tool-verify] All required tools verified. Proceeding to implementation."
@@ -230,29 +224,27 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 - Prepare worktrees for all tasks (step 3.7)
 - Launch parallel-workers in resource-aware batches (step 4)
 
-**Session 更新（各タスク開始時）**: `[-]` にマークしたタスクごとに以下を実行して
-セッションの `current_task` を更新する（multi-task wave では wave 内の最後に start
-したタスクが current_task になる。best-effort、不正確でも構わない）:
+**Session update (at the start of each task)**: For each task marked `[-]`, run the following to update the session's `current_task` (in a multi-task wave, the last task started within the wave becomes current_task; this is best-effort and may be inaccurate):
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" start-task {task-id}
 ```
 
-**リソース適応型並列制御**: Multi-task wave を処理する前に、`resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合は、wave を `MAX_HEAVY_AGENTS` 個ずつの**サブバッチ**に分割し、各サブバッチを逐次処理する。`MAX_HEAVY_AGENTS=1` の場合は全タスクを逐次実行する。
+**Resource-aware parallel control**: Before processing a multi-task wave, run the resource detection snippet from the `resource-aware-parallelism` skill to obtain `MAX_HEAVY_AGENTS`. If the number of tasks in the wave exceeds `MAX_HEAVY_AGENTS`, split the wave into **sub-batches** of `MAX_HEAVY_AGENTS` tasks each, and process each sub-batch sequentially. If `MAX_HEAVY_AGENTS=1`, run all tasks serially.
 
-サブバッチ分割例:
+Sub-batch split examples:
 
-- wave 6タスク, MAX_HEAVY_AGENTS=3 → サブバッチ [3, 3]
-- wave 4タスク, MAX_HEAVY_AGENTS=2 → サブバッチ [2, 2]
-- wave 3タスク, MAX_HEAVY_AGENTS=1 → サブバッチ [1, 1, 1]（逐次実行）
+- wave with 6 tasks, MAX_HEAVY_AGENTS=3 → sub-batches [3, 3]
+- wave with 4 tasks, MAX_HEAVY_AGENTS=2 → sub-batches [2, 2]
+- wave with 3 tasks, MAX_HEAVY_AGENTS=1 → sub-batches [1, 1, 1] (serial execution)
 
-> Note: multi-task wave では、複数タスクが同時に `[-]`（進行中）になることは **意図された正常な動作** です。これは `implement-task` プロンプト等の「Only one task should be in-progress at a time」ガイダンスの明示的な例外です。
+> Note: In a multi-task wave, multiple tasks being `[-]` (in-progress) at the same time is **intended, normal behavior**. This is an explicit exception to guidance such as "Only one task should be in-progress at a time" in prompts like `implement-task`.
 
-**Wave 計算時の PhaseReview 除外**: `_PhaseReview: true` のタスクは wave 計算から常に除外する。PhaseReview はフェーズ内の全通常タスク完了後に単独で処理する。
+**PhaseReview exclusion during wave computation**: Tasks with `_PhaseReview: true` are always excluded from wave computation. PhaseReview is processed alone after all regular tasks in the phase complete.
 
 **No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed as a single multi-task wave in **parallel**. Mark them from `[ ]` to `[-]` together, following the same multi-task wave rules described above.
 
-**Multi-task wave の per-task 処理**: wave 内の各タスクは、steps 3-8（worktree 作成 → parallel-worker → UT検証 → review-worker → log → merge/cleanup → mark `[x]`）を**タスクごとに独立して**実行する。各タスクは専用の worktree/branch で作業し、完了時に個別にマージする。wave 内の全タスクが完了（または失敗）した後に次の wave に進む。
+**Per-task processing in a multi-task wave**: Each task in the wave runs steps 3-8 (worktree creation → parallel-worker → UT verification → review-worker → log → merge/cleanup → mark `[x]`) **independently per task**. Each task works in its dedicated worktree/branch and is merged individually on completion. Proceed to the next wave only after all tasks in the wave have completed (or failed).
 
 ### 2. Discover Existing Work
 
@@ -288,13 +280,13 @@ Look at the task's `_Prompt` field for structured guidance:
 
 If the task has `_PhaseReview: true_`, **skip the TDD cycle (steps 4-5)** and instead:
 
-#### 3.5.0 Bookkeeping Commit（B で新設、dapper-hardening）
+#### 3.5.0 Bookkeeping Commit (newly added in B, dapper-hardening)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 B（B-1）。
-> Phase Review worktree を切る前に、main 側に未 commit の bookkeeping ファイル（tasks.md `[x]` マーク更新、Implementation Logs/）を commit する。これがないと PhaseReview worktree (HEAD 派生) は bookkeeping を見ないため、PhaseReview commit 後にも main 側の差分が残ったままになる。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause B (B-1).
+> Before creating the Phase Review worktree, commit any uncommitted bookkeeping files (tasks.md `[x]` mark updates, Implementation Logs/) on the main side. Without this, the PhaseReview worktree (derived from HEAD) does not see the bookkeeping, so diffs remain on the main side even after the PhaseReview commit.
 
 ```bash
-# main 側で未 commit の bookkeeping をチェック
+# Check for uncommitted bookkeeping on the main side
 SPEC_DIR=".spec-workflow/specs/{spec-name}"
 BOOKKEEPING_FILES=$(git status --porcelain | grep -E "${SPEC_DIR}/(tasks\.md|Implementation Logs/)" || true)
 
@@ -302,21 +294,21 @@ if [ -n "$BOOKKEEPING_FILES" ]; then
   echo "Bookkeeping changes detected:"
   echo "$BOOKKEEPING_FILES"
 
-  # bookkeeping のみを stage
+  # Stage bookkeeping only
   git add ".spec-workflow/specs/{spec-name}/tasks.md" \
           ".spec-workflow/specs/{spec-name}/Implementation Logs/"
 
-  # commit（コミットメッセージは機械的）
+  # Commit (mechanical commit message)
   git commit -m "chore({spec-name}): bookkeeping for phase {phase-number}"
 
   echo "[bookkeeping] committed"
 fi
 ```
 
-これにより:
-- 次の PhaseReview worktree（HEAD 派生）は bookkeeping を含む状態から切り出される
-- review-worker は spec/ 配下の bookkeeping を **review 範囲から除外** してよい（機械的更新のため）
-- main 側に未 commit 差分が残らない（B 起点の問題が解消）
+As a result:
+- The next PhaseReview worktree (derived from HEAD) is cut from a state that includes the bookkeeping
+- review-worker may **exclude** bookkeeping under spec/ from the review scope (since it is a mechanical update)
+- No uncommitted diff remains on the main side (resolves the B root-cause issue)
 
 #### 3.5.1 Run Tests
 
@@ -337,115 +329,115 @@ dotnet test --no-build --verbosity quiet
   - **Root cause is a task within the current Phase** → revert the root cause task from `[x]` to `[-]`, and revert the PhaseReview task from `[-]` to `[ ]`. Re-run the root cause task from step 4.
   - **Root cause is a task from a prior Phase** → escalate to the user (prior Phase fix is needed, impact scope must be assessed)
 
-#### 3.5.1.5 Integration Verification (統合検証)
+#### 3.5.1.5 Integration Verification
 
-ユニットテスト通過後、Phase の成果物が統合レベルで動作することを検証する。
-コマンド定義は `quality-checks.md` の「Integration Verification」セクションを参照。
+After unit tests pass, verify that the Phase deliverables work at the integration level.
+See the "Integration Verification" section of `quality-checks.md` for command definitions.
 
-##### Step A: プロジェクトタイプ検出
+##### Step A: Project Type Detection
 
-| 検出条件 | タイプ |
+| Detection condition | Type |
 |----------|--------|
-| `Cargo.toml` に `[package.metadata.leptos]` | Leptos フルスタック |
-| `Cargo.toml` に `axum` / `actix-web` / `rocket` 依存 | Rust API |
-| `*.csproj` に `BlazorWebAssembly` / `Microsoft.AspNetCore.Components.WebAssembly` | .NET Blazor フルスタック |
-| `*.sln` or `*.csproj` 存在（Cargo.toml なし） | .NET API |
-| `package.json` 存在 | Node.js |
-| いずれにも該当しない | Generic（ビルドのみ検証） |
+| `[package.metadata.leptos]` in `Cargo.toml` | Leptos full-stack |
+| `axum` / `actix-web` / `rocket` dependency in `Cargo.toml` | Rust API |
+| `BlazorWebAssembly` / `Microsoft.AspNetCore.Components.WebAssembly` in `*.csproj` | .NET Blazor full-stack |
+| `*.sln` or `*.csproj` exists (no Cargo.toml) | .NET API |
+| `package.json` exists | Node.js |
+| None of the above | Generic (build only) |
 
-##### Step B: ビルド検証（必須）
+##### Step B: Build Verification (required)
 
-成果物のビルドが成功することを確認する。コマンドはプロジェクトタイプに応じて `quality-checks.md` を参照。
+Confirm the deliverables build successfully. Commands depend on project type — see `quality-checks.md`.
 
-##### Step C: 統合テスト実行
+##### Step C: Integration Test Execution
 
-統合テストファイルが存在する場合に実行。存在しない場合の判定（**このルールに厳密に従うこと**）:
+Run if integration test files exist. If they do not exist, decide as follows (**follow this rule strictly**):
 
-- design.md の Excluded Test Environments で当該環境が明示的に除外 → SKIP (設計時除外)
-- test-design.md に統合テスト仕様が存在する（仕様あり） → FAIL (実装漏れ)
-  - 「仕様あり」の判定: test-design.md に `## Integration Test Specifications` 見出しが存在し、かつそのセクション内に `### IT-` で始まる見出しが 1 件以上ある場合
-- 上記条件を満たす仕様が存在しない（仕様なし） → SKIP (設計上不要)
+- The environment is explicitly excluded under "Excluded Test Environments" in design.md → SKIP (excluded by design)
+- An integration test spec exists in test-design.md (spec exists) → FAIL (missing implementation)
+  - "Spec exists" criterion: test-design.md has a `## Integration Test Specifications` heading and that section contains at least one heading starting with `### IT-`
+- No spec satisfying the above (no spec) → SKIP (not required by design)
 
-##### Step D: スモークテスト（API プロジェクトのみ）
+##### Step D: Smoke Test (API projects only)
 
-サーバを一時起動し、ヘルスチェックエンドポイントへの疎通を確認する。外部依存（DB等）で起動不可の場合は FAIL (環境不備)（SKIP は許可しない）。
+Temporarily start the server and verify connectivity to the health-check endpoint. If the server cannot start due to external dependencies (DB etc.), treat it as FAIL (environment issue) (SKIP is not allowed).
 
-**結果判定:**
+**Result decision:**
 
-| 結果 | アクション |
+| Result | Action |
 |------|----------|
-| PASS | 3.5.2 Code Review + Commit (review-worker) に進む |
-| FAIL (ビルド) | ビルドエラーを分析、根本原因タスクを特定。Phase 内タスク → `[x]` を `[-]` に戻して差し戻し、PhaseReview を `[ ]` に戻す。根本原因タスクの step 4 から再実行 |
-| FAIL (統合テスト) | 失敗テストを分析、根本原因タスク特定。Phase 内タスク → 差し戻し、前 Phase → ユーザーエスカレート |
-| FAIL (スモーク) | 起動ログを分析し根本原因特定、差し戻し |
-| **FAIL (placeholder detected)（E-3 で追加、dapper-hardening）** | QC17 UI Smoke Render で testid 数が想定下限未満 / 特定 testid が欠ける場合。該当 component の実装 task を `[x]` から `[-]` に戻して rework |
-| FAIL (環境不備) | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、design.md / test-design.md の Required Tools テーブルの Install Command を提示。実装を停止（STOP） |
-| FAIL (実装漏れ) | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
-| **escalate (Phase deliverable 不在)（E-2 で追加、dapper-hardening）** | Phase に smoke 可能な deliverable が無い場合は SKIP ではなく escalate。design.md Phase Deliverables (K-4) を見直し、Phase 境界の再設計をユーザーに提案 |
-| SKIP (設計時除外) | design.md の「Excluded Test Environments」で明示的に除外されたテスト。除外理由をログに記録し、3.5.2 に進む |
-| SKIP (設計上不要) | （E-2 で **Phase Review smoke では非推奨** に変更）テスト仕様自体が設計書に存在せず、Phase Deliverables にも該当 deliverable が無い場合のみ。ログに SKIP 理由を **ファイル名 + 該当行** とともに記録（透明性の確保）。Final Gate 以外では escalate に置き換える方向 |
+| PASS | Proceed to 3.5.2 Code Review + Commit (review-worker) |
+| FAIL (build) | Analyze the build error, identify the root cause task. Task within the Phase → revert `[x]` to `[-]` and revert PhaseReview to `[ ]`. Re-run the root cause task from step 4 |
+| FAIL (integration tests) | Analyze the failed test, identify the root cause task. Task within the Phase → send back; prior Phase → escalate to user |
+| FAIL (smoke) | Analyze startup logs to identify root cause, send back |
+| **FAIL (placeholder detected) (added in E-3, dapper-hardening)** | When QC17 UI Smoke Render shows the testid count below the expected minimum / a specific testid is missing. Revert the implementation task for the relevant component from `[x]` to `[-]` and rework |
+| FAIL (environment issue) | Required tool / runtime not installed. Report missing tools to the user and present the Install Command from the Required Tools tables in design.md / test-design.md. Stop implementation (STOP) |
+| FAIL (missing implementation) | A test spec is defined in test-design.md but the test file does not exist. Report to the user as a missing test implementation |
+| **escalate (Phase deliverable absent) (added in E-2, dapper-hardening)** | When the Phase has no deliverable that can be smoke-tested, escalate instead of SKIP. Suggest the user reconsider design.md Phase Deliverables (K-4) and re-design the Phase boundary |
+| SKIP (excluded by design) | Test explicitly excluded under "Excluded Test Environments" in design.md. Log the exclusion reason and proceed to 3.5.2 |
+| SKIP (not required by design) | (Changed in E-2 to **deprecated for Phase Review smoke**) Only when the test spec itself does not exist in the design doc and there is no corresponding deliverable in Phase Deliverables. Log the SKIP reason with **filename + relevant line** (for transparency). Outside the Final Gate, this is being phased out in favor of escalate |
 
-**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由で「SKIP」を選択してはならない。test-design.md / design.md の Required Tools に Required=Yes で記載されたツールやランタイムが不足している場合は、常に上記の「FAIL (環境不備)」として扱い、実装を停止（STOP）すること（quality-checks.md の Step C/D に SKIP と記載がある場合も同様）。
+**Note**: You must not select "SKIP" for reasons such as "no environment", "server startup required", or "Chrome required". When tools or runtimes listed as Required=Yes in the Required Tools tables of test-design.md / design.md are missing, always treat it as "FAIL (environment issue)" above and stop implementation (STOP) (the same applies even if Step C/D in quality-checks.md mentions SKIP).
 
-統合検証の結果（各ステップの PASS/FAIL/SKIP）は、3.5.2 の review-worker に入力として渡すこと。
+The integration verification results (PASS/FAIL/SKIP for each step) must be passed as input to the review-worker in 3.5.2.
 
-> **アーキテクチャ不変条件テスト**: Rust: `tests/architecture.rs`（`/generate-arch-tests` で生成）が存在する場合、step 3.5.1 の `cargo test` で自動実行される。.NET: NetArchTest.Rules / ArchUnitNET によるアーキテクチャテストが存在する場合、`dotnet test` で自動実行される。依存方向違反が検出された場合はテスト失敗として扱い、根本原因タスクの特定と差し戻しを行う。テストが存在しない場合、かつ design.md に `## Module Boundaries` セクションが存在する場合は、アーキテクチャテストの追加をユーザーに提案する。
+> **Architectural invariant tests**: Rust: when `tests/architecture.rs` (generated by `/generate-arch-tests`) exists, it runs automatically during `cargo test` in step 3.5.1. .NET: when architecture tests using NetArchTest.Rules / ArchUnitNET exist, they run automatically during `dotnet test`. If a dependency-direction violation is detected, treat it as a test failure and identify and send back the root cause task. If the test does not exist and design.md has a `## Module Boundaries` section, suggest adding architecture tests to the user.
 
-#### 3.5.1.6 CVE Audit (依存脆弱性監査)
+#### 3.5.1.6 CVE Audit (Dependency Vulnerability Audit)
 
-Phase Review の review-worker 呼び出し前に、依存ライブラリの脆弱性を機械的に検査する。
+Before invoking review-worker for Phase Review, mechanically inspect dependency libraries for vulnerabilities.
 
-##### Step A: 監査ツール実行
+##### Step A: Run the Audit Tool
 
-| プロジェクトタイプ | 検出条件 | 監査コマンド |
+| Project type | Detection condition | Audit command |
 |----------------|----------|------------|
-| Rust | `Cargo.lock` 存在 | `cargo audit` |
-| .NET | `*.csproj` 存在 | `dotnet list package --vulnerable --include-transitive` |
-| Node.js (npm) | `package-lock.json` 存在 | `npm audit` |
-| Node.js (Yarn) | `yarn.lock` 存在 | `yarn audit`（Yarn v1）または `yarn npm audit`（Yarn v2+） |
-| 複合 | 複数のロックファイル/プロジェクトファイル存在 | 該当する監査コマンドをそれぞれ実行 |
+| Rust | `Cargo.lock` exists | `cargo audit` |
+| .NET | `*.csproj` exists | `dotnet list package --vulnerable --include-transitive` |
+| Node.js (npm) | `package-lock.json` exists | `npm audit` |
+| Node.js (Yarn) | `yarn.lock` exists | `yarn audit` (Yarn v1) or `yarn npm audit` (Yarn v2+) |
+| Mixed | Multiple lockfiles / project files exist | Run each applicable audit command |
 
-ロックファイルが存在しない場合は SKIP（新規プロジェクトで依存未解決）。
+If no lockfile exists, SKIP (new project with unresolved dependencies).
 
-`cargo audit` 未インストールの場合:
+If `cargo audit` is not installed:
 
 ```bash
 cargo audit --version 2>&1 || echo "NOT_INSTALLED"
 ```
 
-未インストールなら `cargo install cargo-audit` をユーザーに提案（Step 0.3 のユーザー承認ルールに従う）。インストールを拒否された場合は SKIP とし、review-worker のセキュリティ評価に委ねる。
+If not installed, suggest `cargo install cargo-audit` to the user (follow the user-approval rule in Step 0.3). If the user declines, SKIP and defer to the review-worker's security evaluation.
 
-##### Step B: 結果分類
+##### Step B: Classify Results
 
-| 重大度 | アクション |
+| Severity | Action |
 |-------|----------|
-| Critical / High | CVE_FOUND リストに追加 |
-| Medium/Moderate / Low | 警告ログに記録 |
+| Critical / High | Add to CVE_FOUND list |
+| Medium/Moderate / Low | Record in warning log |
 
-※ `cargo audit` の `medium` および `npm audit` の `moderate` は同一の重大度として扱う。
+* `cargo audit` `medium` and `npm audit` `moderate` are treated as the same severity.
 
-##### Step C: 結果の引き渡し
+##### Step C: Hand Off Results
 
-CVE 監査結果を review-worker の入力に追加する:
+Add the CVE audit results to the review-worker's input:
 
 ```text
 CVE Audit Results:
-- cargo audit: {PASS / N件の脆弱性検出 / SKIP}
-- npm audit: {PASS / N件の脆弱性検出 / SKIP / N/A}
-- Critical/High CVEs: {CVE_FOUND リスト or なし}
-  - 各エントリ形式: CVE-ID | パッケージ名 | 現バージョン | 修正済みバージョン | 推奨対応
+- cargo audit: {PASS / N vulnerabilities detected / SKIP}
+- npm audit: {PASS / N vulnerabilities detected / SKIP / N/A}
+- Critical/High CVEs: {CVE_FOUND list or none}
+  - Each entry format: CVE-ID | package name | current version | fixed version | recommended action
 ```
 
-Phase Review の review-worker がこの結果を踏まえてセキュリティ評価を行い、`review_action`（commit / rework / escalate）を判定する。CVE の深刻度と対応方針の最終判断は review-worker に委ねる。
+The Phase Review review-worker performs a security evaluation based on these results and decides the `review_action` (commit / rework / escalate). The final decision on CVE severity and response policy is delegated to the review-worker.
 
-CVE 監査結果は統合検証結果と共に 3.5.2 の review-worker に入力として渡すこと。
+The CVE audit results must be passed to the review-worker in 3.5.2 together with the integration verification results.
 
 #### 3.5.2 Code Review + Commit (delegate to review-worker)
 
-Phase 完了時は、Pre-Phase CVE Audit と統合検証結果をまとめて PhaseReview 専用の Worktree を作成し、review-worker にコミットを委譲する。Phase 全体の最終レビューと commit は review-worker の単発呼び出しで行う:
+On Phase completion, gather the Pre-Phase CVE Audit and integration verification results, create a dedicated PhaseReview worktree, and delegate the commit to review-worker. The Phase-wide final review and commit are done in a single review-worker invocation:
 
 ```bash
-# PhaseReview 専用 Worktree を作成
+# Create a dedicated worktree for PhaseReview
 WORKTREE_PATH=".worktrees/{spec-name}/phase-review-{phase-number}"
 BRANCH="review/{spec-name}/phase-{phase-number}"
 
@@ -485,17 +477,17 @@ Agent({
     - Critical/High CVEs: {pre-phase-cve.critical-high-list}
 
     Perform multi-perspective review covering:
-    - 仕様適合（_Prompt の Success 基準を逐一確認）
-    - 認証・認可・データ漏洩（C2-C4）
-    - OWASP TOP 10 と CVE 監査結果の評価（C1-C8 + 上記の Pre-Phase CVE 結果）
-    - パフォーマンス（ボトルネック、計算量、リソース効率）
-    - テストカバレッジ・命名・DRY などの品質観点
+    - Spec conformance (verify each Success criterion in _Prompt)
+    - Authentication / authorization / data leakage (C2-C4)
+    - OWASP TOP 10 and CVE audit assessment (C1-C8 + the Pre-Phase CVE results above)
+    - Performance (bottlenecks, complexity, resource efficiency)
+    - Quality concerns such as test coverage, naming, DRY
 
     Focus on final quality checks (rustfmt, clippy, tests) and commit.
     Review across all aspects (A–G) and report review_action as commit / rework / escalate.
     Include integration-verification results in your completion report.
-    G: API Documentation — docs/openapi.yaml が存在し、API関連ファイルに変更がある場合、
-    openapi.yaml が更新されているか確認。未更新の場合は /generate-api-docs の実行を推奨として報告。
+    G: API Documentation — When docs/openapi.yaml exists and API-related files have changed,
+    verify that openapi.yaml has been updated. If not updated, report a recommendation to run /generate-api-docs.
     The commit message should summarize the Phase's deliverables.`
 })
 ```
@@ -504,7 +496,7 @@ Agent({
 - **review_action: rework** → follow the normal rework flow (identify the root cause task and send it back to that task's parallel-worker)
 - **review_action: escalate** → follow the normal escalate flow
 
-> **CI フィードバック**: CI ワークフローが `/setup-ci` で構成されている場合、テスト結果サマリーが PR コメントに自動投稿される（sticky comment 方式で更新）。Phase Review 後に `/create-pr` で PR を作成した際、CI 実行結果を PR コメントから確認可能。`--no-pr-comments` で無効化されている場合はコメント投稿なし。
+> **CI feedback**: When the CI workflow is configured via `/setup-ci`, the test result summary is auto-posted to PR comments (updated via the sticky comment scheme). When you create a PR with `/create-pr` after Phase Review, you can check CI results from the PR comments. If `--no-pr-comments` is set, no comments are posted.
 
 #### 3.5.3 Complete
 
@@ -556,9 +548,9 @@ Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prom
 
 Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
 
-**Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control（`resource-aware-parallelism` Skill 参照）。並列起動前にリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合はサブバッチに分割し、各サブバッチ内のエージェントのみ同時起動する。各サブバッチの完了を待ってから次のサブバッチを起動し、全サブバッチ完了後に step 5 へ進む。wave 内タスク数が `MAX_HEAVY_AGENTS` 以下の場合は全エージェントを同時起動する。
+**Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control (see `resource-aware-parallelism` Skill). Before launching in parallel, run the resource detection snippet to obtain `MAX_HEAVY_AGENTS`. If the number of tasks in a wave exceeds `MAX_HEAVY_AGENTS`, split into sub-batches and launch only the agents within each sub-batch concurrently. Wait for each sub-batch to finish before launching the next, and proceed to step 5 only after all sub-batches finish. When the number of tasks in a wave is at or below `MAX_HEAVY_AGENTS`, launch all agents concurrently.
 
-リソース検出結果をログに記録する:
+Record the resource detection result in logs:
 
 ```text
 [resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
@@ -658,10 +650,10 @@ Branch based on parallel-worker's `status`:
 >
 > **Agent selection**:
 >
-> - Leptos フロントエンドコンポーネント（`#[component]`、`view!`、signal、memo、`#[server]`、`src/pages/`、`src/components/`）が対象なら `frontend-test-engineer`
-> - それ以外の Rust ユニットテスト補完なら `unit-test-engineer`
-> - C#/.NET プロジェクト（`.cs`、`.csproj` 存在）は `unit-test-engineer`（C#/xUnit セクション対応済み）。Blazor code-behind テストも同エージェントが対応
-> - 上記いずれにも該当しないプロジェクトは同じ4カテゴリ基準を満たす汎用サブエージェントを使う
+> - For Leptos frontend components (`#[component]`, `view!`, signal, memo, `#[server]`, `src/pages/`, `src/components/`): `frontend-test-engineer`
+> - For other Rust unit test supplementation: `unit-test-engineer`
+> - C#/.NET projects (presence of `.cs`, `.csproj`): `unit-test-engineer` (already supports the C#/xUnit section). Blazor code-behind tests are also handled by the same agent
+> - Projects matching none of the above use a general-purpose subagent that meets the same 4-category criteria
 
 Verify the quality of tests written during the TDD cycle and supplement any missing test perspectives. TDD is "a development method that writes tests first to drive implementation"; this step independently verifies the quality of the implemented code.
 
@@ -669,16 +661,16 @@ Pass the implementation files to the selected test engineer agent and have it co
 
 Leptos frontend task detection hints:
 
-- `_Prompt` に `#[component]`、`view!`、signal、memo、`#[server]` が含まれる
-- 対象ファイルが `src/pages/`、`src/components/`、`src/server_fns/` 配下にある
-- `Cargo.toml` に `[package.metadata.leptos]` があり、実装が UI ロジックを含む
+- `_Prompt` contains `#[component]`, `view!`, signal, memo, `#[server]`
+- Target files are under `src/pages/`, `src/components/`, `src/server_fns/`
+- `Cargo.toml` contains `[package.metadata.leptos]` and the implementation contains UI logic
 
 Select the test engineer agent based on the detection hints above, then call:
 
 ```javascript
-// Leptos frontend task の場合:
+// For Leptos frontend tasks:
 //   subagent_type: "spec-workflow-mcp:frontend-test-engineer"
-// それ以外の Rust task の場合:
+// For other Rust tasks:
 //   subagent_type: "spec-workflow-mcp:unit-test-engineer"
 Agent({
   subagent_type: "spec-workflow-mcp:frontend-test-engineer",  // or "spec-workflow-mcp:unit-test-engineer"
@@ -755,20 +747,20 @@ Agent({
     - excluded_as_e2e lists concerns intentionally deferred to E2E testing. Do not flag these as missing unit test coverage.
       However, style, naming, and sensitive data checks should be performed as usual.
 
-    ## Review Checklist (各カテゴリの具体的な確認項目)
-    以下の各質問に対して、具体的な回答を observations に記録すること:
+    ## Review Checklist (specific checks per category)
+    For each question below, record a concrete answer in observations:
 
-    **A: Style** — 命名は意図を正確に表現しているか? プロジェクト既存コードとスタイルは一貫しているか?
-    **B: Design** — unwrap() を不適切に使用していないか? 各関数は単一責任か? 依存方向は正しいか?
-    **C: Security** — 外部入力はバリデーションされているか? レスポンスに内部情報が漏洩していないか? SQL はクエリビルダー経由か?
-    **D: Spec** — _Prompt の Success 基準を1つずつ確認し、各基準の充足/不足を明示すること
-    **E: Tests** — テストは実装と同期しているか? 値の検証（is_ok() だけでなく具体値の確認）があるか?
-    **F: Design Conformance** — design.md に未定義のフィールド/エンドポイントが追加されていないか?
-    **G: API Documentation** — API変更（エンドポイント追加・変更・型変更）がある場合、\`docs/openapi.yaml\` の更新を確認。openapi.yaml が存在しない場合はスキップ
+    **A: Style** — Do the names accurately express intent? Is the style consistent with existing project code?
+    **B: Design** — Is unwrap() being used inappropriately? Does each function have a single responsibility? Is the dependency direction correct?
+    **C: Security** — Is external input validated? Are internal details leaking in responses? Is SQL going through a query builder?
+    **D: Spec** — Verify each Success criterion in _Prompt one by one and explicitly state whether each is satisfied or unmet
+    **E: Tests** — Are tests in sync with the implementation? Is there value verification (not just is_ok() but checking concrete values)?
+    **F: Design Conformance** — Have any fields / endpoints undefined in design.md been added?
+    **G: API Documentation** — On API changes (endpoint additions / changes / type changes), verify that \`docs/openapi.yaml\` is updated. Skip if openapi.yaml does not exist.
 
-    ⚠️ 各カテゴリの observations を完了レポートに必ず含めること。
-    「問題なし」の場合でも、何を確認して問題なしと判断したかを記載する。
-    review_action が commit であっても observations と auto_fixed は必須。
+    Important: Always include the observations for each category in the completion report.
+    Even when "no issues", record what was checked to reach that judgment.
+    Even when review_action is commit, observations and auto_fixed are required.
     report review_action as one of: commit / rework / escalate.`
 })
 ```
@@ -944,28 +936,28 @@ Required fields:
     }
     ```
 
-  - `observations` (optional — review-worker のレビュー観察ログ。tool schema には未定義の拡張フィールド。review-worker の完了レポートの `observations` キーに対応):
+  - `observations` (optional — review-worker's review observation log. An extension field not in the tool schema. Maps to the `observations` key in the review-worker completion report):
 
     ```json
     "observations": {
-      "style": "checked-ok: 命名規則準拠、create_user/UserDto 等",
-      "design": "checked-ok: AppError 変換あり、unwrap() なし",
-      "security": "checked-ok: クエリビルダー使用、入力バリデーションあり",
-      "spec_compliance": "checked-ok: Success 基準3項目すべて充足",
-      "test_quality": "checked-ok: 値の具体的検証あり、境界値テストあり",
-      "design_conformance": "checked-ok: design.md 定義外の追加なし"
+      "style": "checked-ok: naming conventions followed, create_user/UserDto etc.",
+      "design": "checked-ok: AppError conversion present, no unwrap()",
+      "security": "checked-ok: query builder used, input validation present",
+      "spec_compliance": "checked-ok: all 3 Success criteria satisfied",
+      "test_quality": "checked-ok: concrete value verification present, boundary value tests present",
+      "design_conformance": "checked-ok: no additions outside design.md definitions"
     }
     ```
 
-  - `auto_fixed` (optional — tool schema には未定義の拡張フィールド。review-worker の完了レポートの `auto_fixed` キーをそのまま記録する): 自動修正した Minor 問題のリスト（0件の場合は空配列 `[]`）:
+  - `auto_fixed` (optional — an extension field not in the tool schema. Record review-worker's completion report `auto_fixed` key verbatim): list of auto-fixed Minor issues (empty array `[]` when zero):
 
     ```json
     "auto_fixed": [
-      { "category": "A:style", "file": "src/handler.rs:45", "description": "unwrap() を map_err() に修正" }
+      { "category": "A:style", "file": "src/handler.rs:45", "description": "Changed unwrap() to map_err()" }
     ]
     ```
 
-  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted. `observations` and `auto_fixed` are optional extension fields (not in tool schema) but recommended for traceability. オーケストレーターは review-worker から受け取った完了レポートの `auto_fixed` 配列をそのまま記録すること:
+  - If reworkCount is 0 (passed on first attempt), `findings` may be omitted. `observations` and `auto_fixed` are optional extension fields (not in tool schema) but recommended for traceability. The orchestrator must record the `auto_fixed` array from the review-worker completion report verbatim:
 
     ```json
     "reviewProcess": {
@@ -1002,35 +994,35 @@ git worktree remove "$WORKTREE_PATH"
 git branch -d "$BRANCH"
 ```
 
-#### Session 更新（タスク完了時）
+#### Session update (on task completion)
 
-マージ完了後、セッションの `completed_tasks` に記録する。
-`{commit-hash}` は review-worker が作成したコミット hash（マージ前のタスクコミット）:
+After the merge, record this in the session's `completed_tasks`.
+`{commit-hash}` is the commit hash created by review-worker (the task commit before merge):
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" complete-task {task-id} {commit-hash}
 ```
 
-これにより `current_task` がクリアされ、次タスク選択時に再び start-task で設定される。
+This clears `current_task`, which is then re-set by start-task when the next task is selected.
 
 Then move to the next pending wave and repeat.
 
-### 9. Final E2E Gate (全Phase完了後)
+### 9. Final E2E Gate (after all Phases complete)
 
-全 Phase の実装が完了した後（最後の PhaseReview タスクが `[x]` になった後）、最終的な E2E ゲートを実行する。
-これは個別 Phase の統合検証（3.5.1.5）とは異なり、**全成果物を統合した最終確認**である。
+After all Phase implementations finish (after the last PhaseReview task is `[x]`), run the final E2E gate.
+Unlike per-Phase integration verification (3.5.1.5), this is the **final check that integrates all deliverables**.
 
-#### 9.1 トリガー条件
+#### 9.1 Trigger Condition
 
-tasks.md 内の全タスク（PhaseReview 含む）が `[x]` になった時点で自動的に開始する。
+Auto-starts when every task in tasks.md (including PhaseReview) is `[x]`.
 
-#### 9.2 検証ステップ
+#### 9.2 Verification Steps
 
-コマンド定義は `quality-checks.md` の「Integration Verification」セクションを参照。
+For command definitions, see the "Integration Verification" section in `quality-checks.md`.
 
-##### Step 1: フルビルド検証
+##### Step 1: Full Build Verification
 
-プロジェクト全体のクリーンビルドが成功することを確認する。
+Verify that a clean build of the whole project succeeds.
 
 ```bash
 # Rust
@@ -1043,9 +1035,9 @@ cargo leptos build
 npm run build
 ```
 
-##### Step 2: 全テスト実行
+##### Step 2: Run All Tests
 
-ユニットテスト + 統合テストの全件を実行する。
+Run all unit tests + integration tests.
 
 ```bash
 # Rust
@@ -1055,9 +1047,9 @@ cargo test --quiet
 npm test
 ```
 
-##### Step 3: 統合テスト実行
+##### Step 3: Run Integration Tests
 
-統合テストが存在する場合、明示的に統合テストのみを実行する。
+If integration tests exist, run integration tests explicitly.
 
 ```bash
 # Rust
@@ -1067,67 +1059,66 @@ cargo test --tests --quiet
 npm run test:integration
 ```
 
-##### Step 4: フルスモークテスト（API プロジェクトのみ）
+##### Step 4: Full Smoke Test (API projects only)
 
-Phase Review のスモークテスト（Step D）と同様の手順だが、ヘルスチェックに加えて、
-design.md に定義された主要エンドポイントのレスポンス確認も行う。
+Same procedure as the Phase Review smoke test (Step D), but in addition to the health check, also check responses for the major endpoints defined in design.md.
 
-- ヘルスチェック: `/health`, `/api/health`, `/healthz` への GET リクエスト
-- 主要エンドポイント: design.md の API 定義から GET エンドポイントを抽出し、ステータスコードを確認
-  - 認証が必要なエンドポイントは 401 が返ることを確認（認証なしで 200 が返る場合はセキュリティ問題）
-  - 認証不要なエンドポイントは 200 または 404（データなし）が返ることを確認
+- Health check: GET requests to `/health`, `/api/health`, `/healthz`
+- Major endpoints: extract GET endpoints from the API definitions in design.md and verify status codes
+  - Endpoints requiring authentication must return 401 (returning 200 without auth indicates a security issue)
+  - Endpoints not requiring authentication must return 200 or 404 (no data)
 
-##### Step 5: E2E テスト実行（コンテナベース — test-design.md 仕様準拠）
+##### Step 5: Run E2E Tests (container-based — per test-design.md spec)
 
-test-design.md の E2E 仕様に基づくテストが存在する場合に実行する（`/spec-e2e-implement` で作成されたテスト）。
+Run when tests based on the E2E specs in test-design.md exist (tests created by `/spec-e2e-implement`).
 
 ```bash
-# テスト用コンテナ起動
+# Start test container
 if [ -f docker-compose.test.yml ]; then
   docker-compose -f docker-compose.test.yml up -d
-  # ヘルスチェック待機（最大60秒）
+  # Wait for health check (up to 60 seconds)
 fi
 ```
 
-| ランナー | 検出条件 | コマンド |
-|---------|----------|---------|
-| Playwright | `playwright.config.ts` 存在 | `npx playwright test` |
-| Rust E2E | `tests/e2e/` ディレクトリ存在 | `cargo test --tests --quiet` |
-| Node.js E2E | `package.json` に `test:e2e` | `npm run test:e2e` |
+| Runner | Detection Condition | Command |
+|--------|---------------------|---------|
+| Playwright | `playwright.config.ts` exists | `npx playwright test` |
+| Rust E2E | `tests/e2e/` directory exists | `cargo test --tests --quiet` |
+| Node.js E2E | `package.json` has `test:e2e` | `npm run test:e2e` |
 
 ```bash
-# テスト用コンテナ停止・クリーンアップ
+# Stop and clean up test container
 if [ -f docker-compose.test.yml ]; then
   docker-compose -f docker-compose.test.yml down -v
 fi
 ```
 
-E2E テストファイルが存在しない場合（優先順位順に判定 — **このルールに厳密に従うこと**）:
+When no E2E test files exist (judged in priority order — **follow this rule strictly**):
 
-1. design.md の「Excluded Test Environments」で E2E テストが明示的に除外されている → **SKIP (設計時除外)**（除外理由をログに記録）
-2. test-design.md に E2E テスト仕様が定義されている → **FAIL (実装漏れ)**。E2E テストが未実装であることをユーザーに報告
-   - 「仕様あり」の判定: test-design.md に `## E2E Test Specifications` 見出しが存在し、かつそのセクション内に `### E2E-` で始まる見出しが 1 件以上ある場合
-3. 上記条件を満たす仕様が存在しない → **SKIP (設計上不要)**。ログに理由を記録し続行
+1. design.md's "Excluded Test Environments" explicitly excludes E2E tests → **SKIP (excluded at design time)** (record exclusion reason in log)
+2. test-design.md defines E2E test specs → **FAIL (missing implementation)**. Report to the user that E2E tests are not implemented
+   - "Spec exists" criterion: test-design.md contains a `## E2E Test Specifications` heading with at least one heading starting with `### E2E-` inside it
+3. No spec satisfying the above conditions → **SKIP (not needed by design)**. Record reason in log and continue
 
-**環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。** これらのツールは Required Tools として Required=Yes で記載され、Step 0 で検証済みであること。
+**SKIPs for reasons such as "no environment", "server needed", "Chrome needed" are not allowed at all.** Such tools must be listed as Required=Yes in Required Tools and verified in Step 0.
 
-#### 9.3 結果判定
+#### 9.3 Result Judgment
 
-| 結果 | アクション |
-|------|----------|
-| **PASS** | 全ステップが PASS のみ（SKIP なし） → Step 10 (PR 作成) に進む |
-| **PASS (SKIP含む)** | FAIL はなく、結果が PASS と SKIP のみ → Step 10 (PR 作成) に進む。各 SKIP の理由を PR ボディの Notes に記載 |
-| **FAIL** | 失敗箇所を分析し、該当 Phase・タスクを特定。タスクを `[x]` から `[-]` に戻し、該当タスクの step 4 から再実行。PhaseReview も `[ ]` に戻す |
-| **FAIL (環境不備)** | 必須ツール・ランタイム未インストール。不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止 |
-| **FAIL (実装漏れ)** | test-design.md にテスト仕様が定義されているのにテストファイルが存在しない。テスト実装の漏れとしてユーザーに報告 |
-| **SKIP (設計上不要)** | テスト仕様自体が設計書に存在しない場合のみ。ログに SKIP 理由を記録し続行 |
-| **SKIP (設計時除外)** | design.md の「Excluded Test Environments」で明示的に除外されたテストのみ。除外理由をログに記録 |
+| Result | Action |
+|--------|--------|
+| **PASS** | All steps are PASS only (no SKIP) → proceed to Step 10 (PR creation) |
+| **PASS (with SKIP)** | No FAIL; results are PASS and SKIP only → proceed to Step 10 (PR creation). Note each SKIP reason in the PR body Notes section |
+| **FAIL** | Analyze the failure location and identify the relevant Phase / task. Revert the task from `[x]` to `[-]` and re-run that task's step 4. Revert PhaseReview to `[ ]` as well |
+| **FAIL (environment issue)** | Required tool / runtime not installed. Report missing tools to the user and present the Install Command from the Required Tools table. Halt implementation |
+| **FAIL (missing implementation)** | test-design.md defines test specs but no test file exists. Report the missing implementation to the user |
+| **SKIP (not needed by design)** | Only when the test spec itself does not exist in design docs. Record SKIP reason in log and continue |
+| **SKIP (excluded at design time)** | Only for tests explicitly excluded under design.md's "Excluded Test Environments". Record exclusion reason in log |
 
-**注意**: 環境がない、サーバー起動が必要、Chrome が必要 等の理由による SKIP は一切許可しない。
+**Note**: SKIPs for reasons such as "no environment", "server needed", "Chrome needed" are not allowed at all.
 
-#### 9.4 最終レポート
+#### 9.4 Final Report
 
-Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-gate.md` に保存する。
+Save the Final E2E Gate result to `.spec-workflow/specs/{spec-name}/reviews/final-e2e-gate.md`.
 
 ```markdown
 # Final E2E Gate Report
@@ -1140,86 +1131,85 @@ Final E2E Gate の結果を `.spec-workflow/specs/{spec-name}/reviews/final-e2e-
 
 | Step | Result | Details |
 |------|--------|---------|
-| Build | PASS/FAIL/SKIP(ビルドコマンド未検出) | {details} |
-| All Tests | PASS/FAIL(テスト失敗)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {N} passed, {M} failed / 実行不能理由 等 |
-| Integration Tests | PASS/FAIL(統合テスト)/FAIL(実装漏れ)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
-| Smoke Test | PASS/FAIL(スモーク)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
-| E2E Tests | PASS/FAIL(実装漏れ)/FAIL(環境不備)/SKIP(設計上不要)/SKIP(設計時除外) | {details} |
+| Build | PASS/FAIL/SKIP(build command not detected) | {details} |
+| All Tests | PASS/FAIL(test failure)/FAIL(environment issue)/SKIP(not needed by design)/SKIP(excluded at design time) | {N} passed, {M} failed / reason for inability to run, etc. |
+| Integration Tests | PASS/FAIL(integration test)/FAIL(missing implementation)/FAIL(environment issue)/SKIP(not needed by design)/SKIP(excluded at design time) | {details} |
+| Smoke Test | PASS/FAIL(smoke)/FAIL(environment issue)/SKIP(not needed by design)/SKIP(excluded at design time) | {details} |
+| E2E Tests | PASS/FAIL(missing implementation)/FAIL(environment issue)/SKIP(not needed by design)/SKIP(excluded at design time) | {details} |
 
-## Verdict: PASS / PASS(SKIP含む) / FAIL(テスト失敗) / FAIL(環境不備) / FAIL(実装漏れ)
+## Verdict: PASS / PASS(with SKIP) / FAIL(test failure) / FAIL(environment issue) / FAIL(missing implementation)
 
-- **PASS**: 全ステップが PASS
-- **PASS(SKIP含む)**: SKIP(設計上不要)、SKIP(設計時除外)、SKIP(ビルドコマンド未検出) を含む全ステップが成功。SKIP の理由を Notes に記載
-- **FAIL(テスト失敗)**: テスト実行時の失敗
-- **FAIL(環境不備)**: 必須ツール・ランタイム未インストール → STOP
-- **FAIL(実装漏れ)**: test-design.md に仕様があるのにテストファイルなし
+- **PASS**: All steps are PASS
+- **PASS(with SKIP)**: All steps succeed including SKIP(not needed by design), SKIP(excluded at design time), SKIP(build command not detected). Note SKIP reasons in Notes
+- **FAIL(test failure)**: Failure during test execution
+- **FAIL(environment issue)**: Required tool / runtime not installed → STOP
+- **FAIL(missing implementation)**: test-design.md has a spec but no test file
 
 ## Notes
 
-{FAIL の詳細、SKIP(設計上不要)の理由、設計時除外の根拠等}
+{FAIL details, SKIP(not needed by design) reason, exclusion-at-design-time rationale, etc.}
 ```
 
-#### ウェーブ失敗時の処理
+#### Handling wave failure
 
-マルチタスクウェーブの処理中に、いずれかのタスクが `retry_exhausted` になった場合:
+When any task becomes `retry_exhausted` during a multi-task wave:
 
-1. ウェーブ内の残りのタスクは**実行を継続**する — ウェーブ全体を中止しない
-2. ウェーブ内の全タスクが完了/失敗した後、ユーザーにサマリーを報告する:
-   - 成功: [task-ids]
-   - 失敗: [task-ids と理由]
-3. 失敗したタスクに依存する後続ウェーブのタスク（`_DependsOn:` 経由）:
-   - タスク行に `<!-- BLOCKED: dependency {failed-task-id} failed -->` コメントを追加し、チェックボックスの状態を `- [ ]` にする（チェックボックストークン自体は変更しない）
-   - 後続ウェーブではこれらのタスクをスキップする
-4. 失敗したタスクに**依存しない**後続ウェーブのタスク:
-   - 次のウェーブで通常通り実行を継続する
+1. **Continue executing** the remaining tasks in the wave — do not abort the entire wave
+2. After all tasks in the wave have completed / failed, report a summary to the user:
+   - Succeeded: [task-ids]
+   - Failed: [task-ids with reasons]
+3. Subsequent-wave tasks that depend on a failed task (via `_DependsOn:`):
+   - Add a `<!-- BLOCKED: dependency {failed-task-id} failed -->` comment to the task line and set the checkbox state to `- [ ]` (do not change the checkbox token itself)
+   - Skip these tasks in subsequent waves
+4. Subsequent-wave tasks that **do not depend** on a failed task:
+   - Continue executing as usual in the next wave
 
-### 10. PR 作成（Final E2E Gate PASS 後）
+### 10. PR Creation (after Final E2E Gate PASS)
 
-Final E2E Gate が PASS（SKIP 含む場合も）となった場合、PR 作成フェーズに進む。
-FAIL の場合は PR 作成をスキップし、修正フローに進む（9.3 の結果判定に従う）。
+If the Final E2E Gate is PASS (including with SKIPs), proceed to the PR creation phase.
+On FAIL, skip PR creation and proceed to the fix flow (per the result judgment in 9.3).
 
-**重要:** オーケストレータ自身は `/create-pr` を直接実行してはならない（⛔ `git commit` 禁止ルール）。PR 作成は **review-worker に委譲**する。`/create-pr` 実行中の `git commit` / `git push`（スクリーンショット追加等）も review-worker の責務とする。
+**Important:** The orchestrator itself must NOT run `/create-pr` directly (⛔ `git commit` prohibition rule). PR creation is **delegated to review-worker**. `git commit` / `git push` during `/create-pr` (e.g., screenshot additions) is also review-worker's responsibility.
 
-review-worker へ以下の引数・情報を渡す:
+Pass the following arguments / information to review-worker:
 
 - `--spec {spec-name}`
-- `--skip-tests`（Final E2E Gate で全テスト実行済みのため）
-- `--title "{spec-name に基づく機能の要約}"`
-- Final E2E Gate レポート (`final-e2e-gate.md`) の Notes セクションの内容を `/create-pr` に引き継ぎ、PR ボディの Notes セクションに転記する
+- `--skip-tests` (since all tests already ran in the Final E2E Gate)
+- `--title "{feature summary based on spec-name}"`
+- Hand off the contents of the Notes section in the Final E2E Gate report (`final-e2e-gate.md`) to `/create-pr` and copy them into the PR body's Notes section
 
-> review-worker は上記の引数で `/create-pr` スキルを実行する。スキルは Final E2E Gate レポートからテスト結果と Notes を読み取り、UI 変更を検出し、該当する場合はスクリーンショットを取得して PR を作成する。必要なコミット/プッシュも review-worker が担当する。
+> review-worker runs the `/create-pr` skill with the arguments above. The skill reads test results and Notes from the Final E2E Gate report, detects UI changes, takes screenshots if applicable, and creates the PR. Any required commits / pushes are also handled by review-worker.
 
-PR 作成完了後、`/spec-status` スキルで最終ステータスを表示する。
+After PR creation, display the final status via the `/spec-status` skill.
 
-### Session 終了
+### Session Termination
 
-全 wave の完了（または Final E2E Gate FAIL によるユーザーエスカレーション）後、実装セッションを終了する:
+After all waves complete (or after a user escalation due to Final E2E Gate FAIL), terminate the implementation session:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" end
 ```
 
-lockfile が削除され、session 本体はそのまま `.implement-session.json` として残す（後から参照可能）。
+The lockfile is removed and the session body remains as `.implement-session.json` (for later reference).
 
-### Spec Archive（Orchestrator 完了時）
+### Spec Archive (when Orchestrator completes)
 
-全 wave 完了（Final E2E Gate PASS）かつ PR 作成完了後、実装 spec 本体を `/spec-archive` で
-`.spec-workflow/archive/specs/{spec-name}/` に退避する:
+After all waves complete (Final E2E Gate PASS) and PR creation succeeds, archive the implementation spec itself with `/spec-archive` to
+`.spec-workflow/archive/specs/{spec-name}/`:
 
 ```text
 /spec-archive {spec-name}
 ```
 
-これにより:
+This:
 
-- `.spec-workflow/specs/{spec-name}/` → `.spec-workflow/archive/specs/{spec-name}/` に rename
-  （archive-service と同じパス規約）
-- ダッシュボードの Active タブから消え、Archived タブに表示される
-- 必要なら unarchive ボタンで戻せる
-- `.implement-session.json` も `session-manage.sh archive` で
-  `.spec-workflow/archive/sessions/` に退避可能
+- Renames `.spec-workflow/specs/{spec-name}/` → `.spec-workflow/archive/specs/{spec-name}/`
+  (same path convention as archive-service)
+- Removes the spec from the dashboard's Active tab and shows it on the Archived tab
+- Can be reverted via the unarchive button if needed
+- `.implement-session.json` can also be archived to `.spec-workflow/archive/sessions/` via `session-manage.sh archive`
 
-FAIL / エスカレーション時は archive しない（実装継続のため active のまま残す）。
+On FAIL / escalation, do not archive (leave active so implementation can continue).
 
 ## Monitoring Progress
 

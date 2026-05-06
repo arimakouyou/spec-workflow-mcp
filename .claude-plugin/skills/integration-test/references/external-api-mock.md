@@ -1,30 +1,30 @@
-# 外部 API モックパターン
+# External API Mocking Patterns
 
-trait ベースの DI で外部 API クライアントをテストダブルに差し替えるパターン。
+A pattern for swapping out external API clients with test doubles using trait-based DI.
 
-## 推奨パターン: trait DI override
+## Recommended Pattern: trait DI override
 
 ```rust
-// 本番コード: trait 定義
+// Production code: trait definition
 #[async_trait]
 pub trait PaymentGateway: Send + Sync {
     async fn charge(&self, amount: u64) -> Result<PaymentResult, PaymentError>;
 }
 
-// 本番実装
+// Production implementation
 pub struct StripeGateway { /* ... */ }
 
 #[async_trait]
 impl PaymentGateway for StripeGateway {
     async fn charge(&self, amount: u64) -> Result<PaymentResult, PaymentError> {
-        // 実際の API 呼び出し
+        // Actual API call
     }
 }
 ```
 
-## テスト用テストダブル
+## Test Doubles
 
-### Stub（固定値を返す）
+### Stub (returns a fixed value)
 
 ```rust
 pub struct StubPaymentGateway {
@@ -39,7 +39,7 @@ impl PaymentGateway for StubPaymentGateway {
 }
 ```
 
-### Spy（呼び出し記録 + 固定値）
+### Spy (records calls + fixed value)
 
 ```rust
 pub struct SpyPaymentGateway {
@@ -56,7 +56,7 @@ impl PaymentGateway for SpyPaymentGateway {
 }
 ```
 
-### 失敗する外部 API
+### Failing External API
 
 ```rust
 pub struct FailingPaymentGateway;
@@ -69,7 +69,7 @@ impl PaymentGateway for FailingPaymentGateway {
 }
 ```
 
-## TestContext への組み込み
+## Wiring Into TestContext
 
 ```rust
 impl TestContext {
@@ -78,7 +78,7 @@ impl TestContext {
         run_migrations(&url).await;
         let db_pool = create_pool(&url);
 
-        // 失敗する外部 API を注入
+        // Inject the failing external API
         let state = AppState {
             db_pool: db_pool.clone(),
             payment: Arc::new(FailingPaymentGateway) as Arc<dyn PaymentGateway>,
@@ -91,8 +91,8 @@ impl TestContext {
 }
 ```
 
-## 禁止事項
+## Prohibited
 
-- `#[cfg(test)]` で本番コードの振る舞いを変えない
-- mockall で具象型を直接 mock しない → 必ず trait を経由する
-- テスト内で `std::env::set_var` で環境変数を書き換えない（テスト間で干渉する）
+- Do not change production behavior with `#[cfg(test)]`
+- Do not mock concrete types directly with mockall — always go through a trait
+- Do not rewrite environment variables with `std::env::set_var` inside tests (causes cross-test interference)

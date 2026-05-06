@@ -1,7 +1,7 @@
-# ホワイトボードテンプレート
+# Whiteboard Template
 
-Command が P1 で作成するホワイトボード。
-作成場所: `.claude/_docs/plans/integ-test-wb-{timestamp}.md`
+The whiteboard Command creates in P1.
+Location: `.claude/_docs/plans/integ-test-wb-{timestamp}.md`
 
 ---
 
@@ -9,29 +9,29 @@ Command が P1 で作成するホワイトボード。
 # Integration Test Whiteboard
 
 ## Goal
-{対象ドメインのインテグレーションテストを作成する}
+{Create integration tests for the target domain}
 
 ## Team Structure
 | Role | Name | Assignment |
 |------|------|-----------|
-| Command | main | 司令塔 |
+| Command | main | Orchestrator |
 | Worker alpha | agent-alpha | {domain_a} |
 | Worker bravo | agent-bravo | {domain_b} |
-| Pentagon | agent-pentagon | 品質レビュー |
+| Pentagon | agent-pentagon | Quality review |
 
 ## How Our Work Connects
-- alpha と bravo は独立したテストファイルを担当する
-- 共通ヘルパー（TestContext 等）は Command が事前に準備する
-- Pentagon は各 Worker の成果物を品質ゲートで審査する
+- alpha and bravo own independent test files
+- Common helpers (such as TestContext) are prepared by Command beforehand
+- Pentagon audits each Worker's deliverable against the quality gate
 
 ## Key Questions
-1. {Worker 間で共有すべき問い — 例: 認証エラーのレスポンス構造は共通か？}
-2. {例: テストデータの seed パターンに共通化できる部分は？}
+1. {A question Workers should share — e.g., is the authentication-error response shape shared?}
+2. {e.g., which parts of the test data seed pattern can be unified?}
 
 ## Shared Resources
-- tests/integration/helpers/mod.rs — 共通ヘルパー
-- tests/integration/helpers/app.rs — テスト用 Axum app 構築
-- tests/integration/helpers/db.rs — testcontainers セットアップ
+- tests/integration/helpers/mod.rs — common helpers
+- tests/integration/helpers/app.rs — test Axum app construction
+- tests/integration/helpers/db.rs — testcontainers setup
 
 ## File Assignment
 | Worker | File | Status |
@@ -49,17 +49,17 @@ Command が P1 で作成するホワイトボード。
 - External deps: {deps}
 
 ## Alpha Findings
-(Worker alpha が記入 — Command が転記)
+(Worker alpha fills in — Command transcribes)
 
 ## Bravo Findings
-(Worker bravo が記入 — Command が転記)
+(Worker bravo fills in — Command transcribes)
 
 ## Pentagon Reviews
 | File | Cycle | Result | Notes |
 |------|:-----:|:------:|-------|
 
 ## Cross-Cutting Observations
-(チーム全体で共有すべき発見)
+(Findings to be shared with the entire team)
 
 ## Quality Gate Results
 | File | Status | Reviewer |
@@ -68,14 +68,14 @@ Command が P1 で作成するホワイトボード。
 
 ---
 
-## 読み書きルール
+## Read/Write Rules
 
-| 操作 | 誰が | いつ |
-|------|------|------|
-| 作成 | Command | P1 |
-| Key Questions 設定 | Command | P1 |
-| Analysis Summary 記入 | Command | P0 完了時 |
-| Worker Findings 転記 | Command | Worker 完了時 |
-| Pentagon Reviews 記入 | Command | Pentagon レビュー完了時 |
-| Quality Gate Results 更新 | Command | Pentagon PASS 時 |
-| 削除（`.claude/_docs/deleted/` へ移動） | Command | P5 |
+| Operation | Who | When |
+|-----------|-----|------|
+| Create | Command | P1 |
+| Set Key Questions | Command | P1 |
+| Fill in Analysis Summary | Command | At P0 completion |
+| Transcribe Worker Findings | Command | When the Worker completes |
+| Fill in Pentagon Reviews | Command | When Pentagon review completes |
+| Update Quality Gate Results | Command | On Pentagon PASS |
+| Delete (move to `.claude/_docs/deleted/`) | Command | P5 |

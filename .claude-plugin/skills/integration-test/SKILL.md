@@ -114,7 +114,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
    - Identify repository: analyze query logic from `src/db/repository/{domain}.rs`
    - Identify model: check Diesel models from `src/models/{domain}.rs`
    - Identify external dependencies: find trait-based dependencies (e.g., external API clients)
-3. **Worker assignment**: assign to Workers per test file. 割当前に `resource-aware-parallelism` Skill のリソース検出スニペットを実行し `MAX_HEAVY_AGENTS` を取得する。Worker 数は `min(下表の Workers 列, MAX_HEAVY_AGENTS)` に制限する。
+3. **Worker assignment**: assign to Workers per test file. Before assigning, run the resource-detection snippet from the `resource-aware-parallelism` Skill to obtain `MAX_HEAVY_AGENTS`. Cap the number of Workers at `min(Workers column in the table below, MAX_HEAVY_AGENTS)`.
 
    | # of Targets | MAX_HEAVY_AGENTS | # of Workers | Assignment Method |
    |:------:|:------:|:---------:|---------|
@@ -145,7 +145,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
 
 Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.claude/agents/` via `subagent_type`.
 
-**リソース適応型並列制御**: P0 で取得した `MAX_HEAVY_AGENTS` に基づき Worker 数を制限する。リソース検出結果をログに記録する:
+**Resource-adaptive parallel control**: cap the number of Workers based on the `MAX_HEAVY_AGENTS` obtained in P0. Log the resource-detection result:
 ```
 [resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
 [worker-limit] Requested {N} workers, launching {M} (limited by MAX_HEAVY_AGENTS)

@@ -83,15 +83,15 @@ When performing a code review, review-worker reads `design.md` and checks the fo
 
 ## Early Detection via Hook (PostToolUse)
 
-`.claude-plugin/hooks/design-conformance-check.sh` がコード or migration 編集時に
-軽量チェックを実行し、design.md との乖離を早期検出する:
+When code or migration files are edited, `.claude-plugin/hooks/design-conformance-check.sh`
+runs a lightweight check to detect divergence from design.md early:
 
-- **DC1**: migration ファイルの `CREATE TABLE` / `ALTER TABLE` が design.md に未記載なら warning
-- **DC2**: axum / ASP.NET Core / Express のルート定義 (`/path`) が design.md に未記載なら warning
-- **DC3**: 簡易 grep ベースのため false positive あり、最終判断は review-worker (カテゴリ F) で
+- **DC1**: Warn if `CREATE TABLE` / `ALTER TABLE` in a migration file is not described in design.md
+- **DC2**: Warn if an axum / ASP.NET Core / Express route definition (`/path`) is not described in design.md
+- **DC3**: Because this is a simple grep-based check, false positives occur; the final judgment is made by review-worker (category F)
 
-本 hook は **warning のみ** で実装をブロックしない。乖離検知時は以下のいずれかで対応:
+This hook **only emits warnings** and does not block implementation. When divergence is detected, respond in one of the following ways:
 
-- design.md に既存定義から代替できないか確認 (上記 "Prohibited Actions During Implementation" 参照)
-- 代替不可なら **Phase Reset** または review-worker の `review_action: escalate`
-- table 別名 / route prefix 違いなど検出漏れの場合は無視可
+- Check whether an existing definition in design.md can serve as a substitute (see "Prohibited Actions During Implementation" above)
+- If substitution is not possible, perform a **Phase Reset** or use review-worker's `review_action: escalate`
+- Cases such as table aliases or route prefix mismatches that the check misses can be ignored

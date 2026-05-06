@@ -1,92 +1,92 @@
 ---
 name: dotnet-build-cache
 description: |
-  .NET プロジェクトで dotnet コマンドを実行する全エージェント向けのビルドキャッシュ設定。MSBuild インクリメンタルビルド (デフォルト有効・設定不要)、NuGet パッケージキャッシュ (`~/.nuget/packages` で自動共有・並行アクセス安全)、`bin/` / `obj/` 共有禁止 (worktree 間で絶対パス差分)、`dotnet restore → build --no-restore → test --no-build` 最適化チェーン、`dotnet watch` によるホットリロード、CI での `actions/cache` 対象、`dotnet clean` / `dotnet nuget locals all --clear` でのトラブルシュートをカバー。dotnet build / test / publish を走らせる直前、.NET 系 parallel-worker / integ-test-worker 起動前に参照。
+  Build cache configuration for every agent that runs the dotnet command in a .NET project. Covers MSBuild incremental builds (enabled by default, no configuration needed), the NuGet package cache (`~/.nuget/packages` is auto-shared and safe for concurrent access), the prohibition on sharing `bin/` / `obj/` (absolute-path differences across worktrees), the optimization chain `dotnet restore -> build --no-restore -> test --no-build`, hot reload via `dotnet watch`, what to target with `actions/cache` in CI, and troubleshooting via `dotnet clean` / `dotnet nuget locals all --clear`. Reference immediately before running dotnet build / test / publish, or before launching .NET parallel-worker / integ-test-worker. Triggers on: 'dotnet build cache', 'NuGet cache', 'MSBuild incremental build', 'dotnet restore --no-restore', '.NET ビルドキャッシュ', 'dotnet build / test / publish 実行前', 'NuGet キャッシュ設定'.
 allowed-tools: [Read, Bash, Grep]
 ---
 
-# .NET ビルドキャッシュ
+# .NET Build Cache
 
-.NET プロジェクトで `dotnet` コマンドを実行する全エージェント向けのビルドキャッシュ設定ガイド。
-Rust の sccache とは異なり、.NET はビルトインのキャッシュメカニズムに依存する。
+Build cache configuration guide for every agent that runs `dotnet` commands in a .NET project.
+Unlike Rust's sccache, .NET relies on built-in cache mechanisms.
 
-## 対象
+## In Scope
 
-- dotnet build / test / publish を走らせる直前
-- CI 環境での NuGet キャッシュ設定 (`actions/cache` の対象決定)
-- worktree 内での並列 dotnet コマンド実行前の前処理
-- .NET 系 `parallel-worker` / `integ-test-worker` / `wave-harness-worker` 起動前
+- Immediately before running dotnet build / test / publish
+- Configuring the NuGet cache in CI (deciding what to target with `actions/cache`)
+- Pre-processing before parallel `dotnet` command execution within a worktree
+- Before launching .NET-flavored `parallel-worker` / `integ-test-worker` / `wave-harness-worker`
 
-## 対象外
+## Out of Scope
 
-- Rust のビルドキャッシュ → `rust-build-cache` Skill
-- CI workflow の `actions/cache` セットアップ詳細 → `setup-ci` Skill
-- エージェント並列数制御 → `resource-aware-parallelism` Skill
+- Rust build cache -> `rust-build-cache` Skill
+- Detailed `actions/cache` setup in CI workflows -> `setup-ci` Skill
+- Agent parallelism control -> `resource-aware-parallelism` Skill
 
-## MSBuild インクリメンタルビルド
+## MSBuild Incremental Build
 
-MSBuild は入出力のタイムスタンプを自動的に追跡する。ローカル開発では特別な設定は不要。
+MSBuild automatically tracks input/output timestamps. No special configuration is required for local development.
 
-- `dotnet build` は変更されたファイルのみを再コンパイルする
-- インクリメンタルビルドはデフォルトで有効であり、設定不要
-- `bin/` や `obj/` ディレクトリを worktree 間で共有してはならない（worktree 固有の絶対パスが含まれるため）
+- `dotnet build` recompiles only changed files
+- Incremental build is enabled by default; no configuration needed
+- Do not share `bin/` or `obj/` directories across worktrees (they contain worktree-specific absolute paths)
 
-## NuGet パッケージキャッシュ
+## NuGet Package Cache
 
-NuGet パッケージキャッシュは `~/.nuget/packages` で自動的に共有される。
+The NuGet package cache is automatically shared at `~/.nuget/packages`.
 
-- worktree 間での並行アクセスに安全
-- CI: `actions/cache` で `~/.nuget/packages` をキャッシュする
-- CI 出力をクリーンにするための環境変数:
+- Safe for concurrent access across worktrees
+- CI: cache `~/.nuget/packages` with `actions/cache`
+- Environment variables to keep CI output clean:
   - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
   - `DOTNET_NOLOGO=true`
 
-## Worktree 環境でのキャッシュ戦略
+## Cache Strategy in Worktree Environments
 
-| メカニズム | 推奨 | 理由 |
-|-----------|------|------|
-| NuGet キャッシュ (`~/.nuget/packages`) | 推奨 | worktree 間で共有、並行アクセス安全 |
-| `bin/` / `obj/` 共有 | **禁止** | 絶対パスを含むため、worktree 間で共有するとビルド破損の原因になる |
-| MSBuild インクリメンタルビルド | デフォルト | 自動、設定不要 |
+| Mechanism | Recommendation | Reason |
+|-----------|----------------|--------|
+| NuGet cache (`~/.nuget/packages`) | Recommended | Shared across worktrees, safe for concurrent access |
+| Sharing `bin/` / `obj/` | **Forbidden** | Contains absolute paths; sharing across worktrees causes build corruption |
+| MSBuild incremental build | Default | Automatic, no configuration |
 
-## dotnet restore 最適化
+## dotnet restore Optimization
 
-`dotnet restore` を先に実行し、後続コマンドでは `--no-restore` フラグを使用することで不要なリストアを省略できる。
+Run `dotnet restore` first, then pass `--no-restore` to subsequent commands to skip redundant restores.
 
 ```bash
-# 推奨チェーン: restore → build → test
+# Recommended chain: restore -> build -> test
 dotnet restore
 dotnet build --no-restore
 dotnet test --no-build
 ```
 
-## dotnet watch（ローカル開発）
+## dotnet watch (Local Development)
 
-`dotnet watch run` でホットリロード付きの開発サーバーを起動できる。
+`dotnet watch run` starts a development server with hot reload.
 
-- ローカル開発専用 — CI では使用しない
-- Blazor、Razor Pages、MVC で Hot Reload をサポート
+- For local development only — do not use in CI
+- Hot Reload is supported for Blazor, Razor Pages, and MVC
 
-## トラブルシューティング
+## Troubleshooting
 
-### ビルドが古い状態に見える場合
+### When the build looks stale
 
 ```bash
 dotnet clean
 dotnet build
 ```
 
-### NuGet リストアが失敗する場合
+### When NuGet restore fails
 
-ローカルキャッシュをクリアして再試行:
+Clear the local cache and retry:
 
 ```bash
 dotnet nuget locals all --clear
 dotnet restore
 ```
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `quality-checks` (QC12)
-- 関連 Skill: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`, `resource-aware-parallelism`
-- 関連 Agent: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`
+- Universal constraints: `quality-checks` (QC12)
+- Related Skills: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`, `resource-aware-parallelism`
+- Related Agents: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`

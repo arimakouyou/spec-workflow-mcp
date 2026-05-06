@@ -1,53 +1,53 @@
 ---
 name: api-validation
 description: |
-  API リクエストバリデーションの規約 (Rust + C#)。Rust (serde) の AV-R1 `deny_unknown_fields`、AV-R2 型レベルバリデーション (Axum Extractor)、AV-R3 ビジネスバリデーション (サービス層)、AV-R4 Enum バリデーション (`rename_all`)、AV-R5 Optional 明示。C# (ASP.NET Core) の AV-C1 `[ApiController]` + Model Validation、AV-C2 Data Annotations + FluentValidation、AV-C3 `UnmappedMemberHandling.Disallow`、AV-C4 `JsonStringEnumConverter`、AV-C5 `required` + nullability。API エンドポイント実装時、DTO 設計時、バリデーション層の責務分担判断時、review-worker Security カテゴリの実施時に参照。
+  API request validation conventions (Rust + C#). Rust (serde): AV-R1 `deny_unknown_fields`, AV-R2 type-level validation (Axum Extractor), AV-R3 business validation (service layer), AV-R4 Enum validation (`rename_all`), AV-R5 explicit Optional. C# (ASP.NET Core): AV-C1 `[ApiController]` + Model Validation, AV-C2 Data Annotations + FluentValidation, AV-C3 `UnmappedMemberHandling.Disallow`, AV-C4 `JsonStringEnumConverter`, AV-C5 `required` + nullability. Use when implementing API endpoints, designing DTOs, deciding the responsibility split between validation layers, or running the review-worker Security category. Triggers on: 'API validation', 'request validation', 'DTO validation', 'APIバリデーション', 'リクエストバリデーション'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
-# API バリデーションスキーマ
+# API Validation Schema
 
-API リクエストのバリデーションを厳格に定義し、未知フィールドの拒否とスキーマの一貫性を確保する。
+Define API request validation strictly to ensure rejection of unknown fields and schema consistency.
 
-## 対象
+## Targets
 
-- API エンドポイント（Axum / ASP.NET Core）の実装
-- リクエスト DTO の設計
-- 型バリデーションとビジネスバリデーションの責務分担
-- Enum フィールドの許容値設計
-- 必須/任意フィールドの型レベル表現
-- review-worker の Security カテゴリ適用
+- API endpoint implementation (Axum / ASP.NET Core)
+- Request DTO design
+- Responsibility split between type validation and business validation
+- Allowed-value design for Enum fields
+- Type-level expression of required vs. optional fields
+- Application of the review-worker Security category
 
-## 対象外
+## Out of Scope
 
-- HTTP レスポンスの設計 → `axum` / `aspnet-core` Skill
-- DB レイヤのバリデーション → `diesel` / `entity-framework-core` Skill
-- フロントエンドバリデーション → `leptos` / `blazor` Skill
+- HTTP response design -> `axum` / `aspnet-core` Skill
+- DB layer validation -> `diesel` / `entity-framework-core` Skill
+- Frontend validation -> `leptos` / `blazor` Skill
 
-## 基本原則
+## Basic Principles
 
-1. **未知フィールド拒否**: リクエスト DTO は未定義フィールドを受け入れない
-2. **バリデーション層の明確化**: 型バリデーション → ビジネスバリデーション の2段階
-3. **エラーレスポンスの一貫性**: design.md の Error Handling テーブルに準拠
+1. **Reject unknown fields**: request DTOs must not accept undefined fields
+2. **Layered validation**: type validation -> business validation in two stages
+3. **Consistent error responses**: conform to the Error Handling table in design.md
 
-## Rust (Serde) バリデーションパターン
+## Rust (Serde) Validation Patterns
 
 ### AV-R1: deny_unknown_fields
 
-全リクエスト DTO に `#[serde(deny_unknown_fields)]` を付与する:
+Apply `#[serde(deny_unknown_fields)]` to every request DTO:
 
 ```rust
-// OK: 未知フィールドを拒否
+// OK: rejects unknown fields
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CreateUserRequest {
-    /// ユーザー名（2-50文字）
+    /// User name (2-50 characters)
     name: String,
-    /// メールアドレス
+    /// Email address
     email: String,
 }
 
-// NG: deny_unknown_fields なし — 任意のフィールドが黙殺される
+// NG: no deny_unknown_fields — arbitrary fields are silently dropped
 #[derive(Deserialize)]
 struct CreateUserRequest {
     name: String,
@@ -55,25 +55,25 @@ struct CreateUserRequest {
 }
 ```
 
-> **注意**: レスポンス DTO には `deny_unknown_fields` を付与しない（API バージョニングで新フィールドが追加される可能性があるため）。
+> **Note**: Do not apply `deny_unknown_fields` to response DTOs (new fields may be added during API versioning).
 
-### AV-R2: 型レベルバリデーション
+### AV-R2: Type-Level Validation
 
-Extractor レベルで型バリデーションを実行する（Axum パターン）:
+Run type validation at the extractor level (Axum pattern):
 
 ```rust
-// Axum: Json extractor がデシリアライズ時にバリデーション
+// Axum: the Json extractor validates during deserialization
 async fn create_user(
-    Json(payload): Json<CreateUserRequest>,  // 型不一致は自動的に 400
+    Json(payload): Json<CreateUserRequest>,  // type mismatch -> automatic 400
 ) -> Result<Json<UserResponse>, AppError> {
-    // ここに到達した時点で payload は型安全
+    // payload is type-safe by the time we reach here
     service.create_user(payload).await
 }
 ```
 
-### AV-R3: ビジネスバリデーション
+### AV-R3: Business Validation
 
-ビジネスルールのバリデーションはサービス層で実行する:
+Run business-rule validation in the service layer:
 
 ```rust
 impl UserService {
@@ -89,9 +89,9 @@ impl UserService {
 }
 ```
 
-### AV-R4: Enum バリデーション
+### AV-R4: Enum Validation
 
-文字列から Enum への変換には `#[serde(rename_all = "snake_case")]` を使用し、未定義値を拒否する:
+Use `#[serde(rename_all = "snake_case")]` for string-to-Enum conversion and reject undefined values:
 
 ```rust
 #[derive(Deserialize)]
@@ -101,34 +101,34 @@ enum UserRole {
     Editor,
     Viewer,
 }
-// "admin" → OK, "superadmin" → デシリアライズエラー (400)
+// "admin" -> OK, "superadmin" -> deserialization error (400)
 ```
 
-### AV-R5: Optional フィールドの明示
+### AV-R5: Explicit Optional Fields
 
-必須/任意フィールドを型で明示する:
+Express required vs. optional fields explicitly in the type:
 
 ```rust
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct UpdateUserRequest {
-    /// 更新する場合のみ指定
+    /// Specify only when updating
     name: Option<String>,
-    /// 更新する場合のみ指定
+    /// Specify only when updating
     email: Option<String>,
 }
 ```
 
-`Option<T>` のないフィールドは必須。リクエストに含まれなければ 400 エラー。
+Fields without `Option<T>` are required. Missing required fields in the request -> 400 error.
 
-## C# (ASP.NET Core) バリデーションパターン
+## C# (ASP.NET Core) Validation Patterns
 
 ### AV-C1: [ApiController] + Model Validation
 
-`[ApiController]` 属性で自動モデルバリデーションを有効化する:
+Enable automatic model validation with the `[ApiController]` attribute:
 
 ```csharp
-// OK: [ApiController] により ModelState 自動検証 + ProblemDetails レスポンス
+// OK: [ApiController] enables automatic ModelState validation + ProblemDetails responses
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
@@ -136,14 +136,14 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateUser(CreateUserRequest request)
     {
-        // ここに到達した時点で request は ModelState 検証済み
+        // request has already been validated against ModelState by the time we reach here
         var user = await _service.CreateUserAsync(request);
         return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
     }
 }
 ```
 
-Minimal API の場合は `[AsParameters]` または手動バリデーションを使用:
+For Minimal API, use `[AsParameters]` or manual validation:
 
 ```csharp
 app.MapPost("/users", async ([FromBody] CreateUserRequest request, IValidator<CreateUserRequest> validator) =>
@@ -157,10 +157,10 @@ app.MapPost("/users", async ([FromBody] CreateUserRequest request, IValidator<Cr
 
 ### AV-C2: Data Annotations + FluentValidation
 
-型レベルバリデーションは Data Annotations、ビジネスルールは FluentValidation で分離する:
+Separate type-level validation (Data Annotations) from business rules (FluentValidation):
 
 ```csharp
-// Data Annotations: 型レベル制約
+// Data Annotations: type-level constraints
 public class CreateUserRequest
 {
     [Required]
@@ -172,7 +172,7 @@ public class CreateUserRequest
     public required string Email { get; init; }
 }
 
-// FluentValidation: ビジネスルール
+// FluentValidation: business rules
 public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
     public CreateUserRequestValidator(IUserRepository repository)
@@ -184,9 +184,9 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 }
 ```
 
-### AV-C3: 未知フィールド拒否
+### AV-C3: Reject Unknown Fields
 
-ASP.NET Core ではデフォルトで未知 JSON プロパティを無視する。拒否するには `JsonSerializerOptions` を設定する:
+ASP.NET Core ignores unknown JSON properties by default. To reject them, configure `JsonSerializerOptions`:
 
 ```csharp
 // Program.cs
@@ -196,11 +196,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 ```
 
-> **注意**: レスポンス DTO には適用しない。リクエスト DTO のみ対象。
+> **Note**: Do not apply this to response DTOs. Request DTOs only.
 
-### AV-C4: Enum バリデーション
+### AV-C4: Enum Validation
 
-JSON 文字列と Enum の変換には `JsonStringEnumConverter` を使用し、未定義値を拒否する:
+Use `JsonStringEnumConverter` for JSON-string-to-Enum conversion and reject undefined values:
 
 ```csharp
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -210,38 +210,38 @@ public enum UserRole
     Editor,
     Viewer,
 }
-// "Admin" → OK, "SuperAdmin" → デシリアライズエラー (400)
+// "Admin" -> OK, "SuperAdmin" -> deserialization error (400)
 ```
 
-### AV-C5: Required / Optional の明示
+### AV-C5: Explicit Required / Optional
 
-`required` keyword と nullability で必須/任意を型レベルで明示する:
+Express required vs. optional explicitly using the `required` keyword and nullability:
 
 ```csharp
 public class UpdateUserRequest
 {
-    /// 更新する場合のみ指定
+    /// Specify only when updating
     public string? Name { get; init; }
 
-    /// 更新する場合のみ指定
+    /// Specify only when updating
     public string? Email { get; init; }
 }
 
 public class CreateUserRequest
 {
-    /// 必須（required + non-nullable）
+    /// Required (required + non-nullable)
     public required string Name { get; init; }
 
-    /// 必須
+    /// Required
     public required string Email { get; init; }
 }
 ```
 
-`required` + non-nullable = 必須。`nullable (?)` = 任意。
+`required` + non-nullable = required. `nullable (?)` = optional.
 
-## バリデーションエラーレスポンス
+## Validation Error Response
 
-エラーレスポンス形式は design.md の Error Handling セクションに準拠する:
+The error response format conforms to the Error Handling section in design.md:
 
 ```json
 {
@@ -252,57 +252,57 @@ public class CreateUserRequest
 }
 ```
 
-| エラー種別 | HTTP Status | 発生元 |
-|-----------|-------------|--------|
-| 型不一致（JSON パースエラー） | 400 | Extractor (自動) |
-| 未知フィールド | 400 | serde deny_unknown_fields (自動) |
-| ビジネスルール違反 | 400 | サービス層 (手動) |
-| 認証失敗 | 401 | 認証ミドルウェア |
-| 認可失敗 | 403 | 認可ミドルウェア |
+| Error type | HTTP Status | Origin |
+|------------|-------------|--------|
+| Type mismatch (JSON parse error) | 400 | Extractor (automatic) |
+| Unknown field | 400 | serde deny_unknown_fields (automatic) |
+| Business rule violation | 400 | Service layer (manual) |
+| Authentication failure | 401 | Authentication middleware |
+| Authorization failure | 403 | Authorization middleware |
 
-## spec-design との連携
+## Integration with spec-design
 
-design.md の Data Models セクションで DTO を定義する際に、以下を明記すること:
+When defining DTOs in the design.md Data Models section, document:
 
-- 各フィールドの必須/任意
-- 文字列フィールドの長さ制限
-- Enum フィールドの許容値
-- Rust: `deny_unknown_fields` の適用対象（リクエスト DTO）
-- C#: `UnmappedMemberHandling.Disallow` の適用対象（リクエスト DTO）
+- Required / optional for each field
+- Length limits for string fields
+- Allowed values for Enum fields
+- Rust: target of `deny_unknown_fields` (request DTOs)
+- C#: target of `UnmappedMemberHandling.Disallow` (request DTOs)
 
-## review-worker との連携
+## Integration with review-worker
 
-review-worker のカテゴリ C（Security）で以下を確認:
+In review-worker category C (Security), verify:
 
 ### Rust
 
-- AV-R1: リクエスト DTO に `deny_unknown_fields` が付与されているか
-- AV-R3: ビジネスバリデーションがサービス層で実行されているか
-- AV-R5: 必須/任意フィールドが型で明示されているか
+- AV-R1: request DTOs carry `deny_unknown_fields`
+- AV-R3: business validation runs in the service layer
+- AV-R5: required / optional fields are expressed in the type
 
 ### C#
 
-- AV-C1: `[ApiController]` またはバリデータが適用されているか
-- AV-C2: 型制約と業務ルールが分離されているか（Data Annotations + FluentValidation）
-- AV-C3: リクエスト DTO で未知フィールドが拒否されているか
-- AV-C5: `required` / nullable で必須/任意が明示されているか
+- AV-C1: `[ApiController]` or a validator is applied
+- AV-C2: type constraints and business rules are separated (Data Annotations + FluentValidation)
+- AV-C3: unknown fields are rejected on request DTOs
+- AV-C5: required / optional is explicit via `required` / nullable
 
-## 執行レベル
+## Enforcement Level
 
-| ルール | 現在の執行レベル | 目標 |
-|--------|---------------|------|
-| AV-R1 (deny_unknown_fields) | L1 ドキュメント | L4 構造テスト（アーキテクチャテストで検証可能） |
-| AV-R2 (型レベルバリデーション) | L5 型システム（Axum Extractor） | L5 維持 |
-| AV-R3 (ビジネスバリデーション) | L2 AI レビュー | L2 維持 |
-| AV-R4 (Enum バリデーション) | L5 型システム（serde） | L5 維持 |
-| AV-R5 (Optional 明示) | L5 型システム（Rust Option） | L5 維持 |
-| AV-C1 (ApiController 自動検証) | L5 フレームワーク（ASP.NET Core） | L5 維持 |
-| AV-C2 (FluentValidation) | L2 AI レビュー | L3 CI（バリデータ登録テスト） |
-| AV-C3 (未知フィールド拒否) | L1 ドキュメント | L4 構造テスト |
-| AV-C4 (Enum バリデーション) | L5 型システム（JsonStringEnumConverter） | L5 維持 |
-| AV-C5 (Required/Optional 明示) | L5 型システム（required + NRT） | L5 維持 |
+| Rule | Current enforcement | Target |
+|------|---------------------|--------|
+| AV-R1 (deny_unknown_fields) | L1 documentation | L4 structural test (verifiable via architecture tests) |
+| AV-R2 (type-level validation) | L5 type system (Axum Extractor) | maintain L5 |
+| AV-R3 (business validation) | L2 AI review | maintain L2 |
+| AV-R4 (Enum validation) | L5 type system (serde) | maintain L5 |
+| AV-R5 (explicit Optional) | L5 type system (Rust Option) | maintain L5 |
+| AV-C1 (ApiController auto-validation) | L5 framework (ASP.NET Core) | maintain L5 |
+| AV-C2 (FluentValidation) | L2 AI review | L3 CI (validator-registration test) |
+| AV-C3 (reject unknown fields) | L1 documentation | L4 structural test |
+| AV-C4 (Enum validation) | L5 type system (JsonStringEnumConverter) | maintain L5 |
+| AV-C5 (Required/Optional explicit) | L5 type system (required + NRT) | maintain L5 |
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `security` (A1-A10), `type-safety` (TS-R1-R5, TS-C1-C5), `design-principles`, `enforcement-levels` (L1-L5)
-- 関連 Skill: `axum` (Rust Extractor), `aspnet-core` (`[ApiController]` / Minimal API), `spec-design` (DTO スキーマ定義)
+- Universal constraints: `security` (A1-A10), `type-safety` (TS-R1-R5, TS-C1-C5), `design-principles`, `enforcement-levels` (L1-L5)
+- Related Skills: `axum` (Rust Extractor), `aspnet-core` (`[ApiController]` / Minimal API), `spec-design` (DTO schema definition)

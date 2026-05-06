@@ -10,8 +10,8 @@ paths:
 
 This rule defines the base architecture for REST API backend configurations.
 
-- **Rust**: Axum + Diesel + Valkey（Leptos フルスタックの場合は `leptos.md` が優先）
-- **C#/.NET**: ASP.NET Core + Entity Framework Core + Redis（Blazor フルスタックの場合は `blazor.md` が優先）
+- **Rust**: Axum + Diesel + Valkey (when using a Leptos full-stack configuration, `leptos.md` takes precedence)
+- **C#/.NET**: ASP.NET Core + Entity Framework Core + Redis (when using a Blazor full-stack configuration, `blazor.md` takes precedence)
 
 ---
 

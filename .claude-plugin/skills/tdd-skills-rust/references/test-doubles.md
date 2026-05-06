@@ -1,17 +1,17 @@
-# テストダブル（Test Double）
+# Test Doubles
 
-外部依存を切り離してテストを高速・安定化させる手法。
+A technique for isolating external dependencies to make tests fast and stable.
 
-## Rust におけるテストダブルの実現方法
+## Implementing Test Doubles in Rust
 
-Rust では trait を活用してテストダブルを実現する。
-主な方法: 手動の trait 実装、`mockall` クレート。
+In Rust, test doubles are implemented using traits.
+Main approaches: hand-written trait implementations, or the `mockall` crate.
 
-## テストダブルの5種類
+## The Five Kinds of Test Doubles
 
-### 1. Dummy（ダミー）
+### 1. Dummy
 
-引数を埋めるだけで実際には使われない。
+Only fills a parameter slot; never actually used.
 
 ```rust
 struct DummyLogger;
@@ -20,9 +20,9 @@ impl Logger for DummyLogger {
 }
 ```
 
-### 2. Stub（スタブ）
+### 2. Stub
 
-決まった値を返すだけ。
+Returns a fixed value.
 
 ```rust
 struct StubUserRepository;
@@ -43,13 +43,13 @@ fn get_user_name() {
 }
 ```
 
-使用場面:
-- DB からの取得結果を固定したい
-- 外部 API のレスポンスをコントロールしたい
+When to use:
+- You want to fix the result returned from the DB
+- You want to control external API responses
 
-### 3. Spy（スパイ）
+### 3. Spy
 
-呼び出しを記録する。
+Records calls.
 
 ```rust
 use std::sync::{Arc, Mutex};
@@ -84,9 +84,9 @@ fn send_welcome_email() {
 }
 ```
 
-### 4. Mock（モック）
+### 4. Mock
 
-期待する呼び出しを検証する。`mockall` クレートを使用。
+Verifies expected calls. Use the `mockall` crate.
 
 ```rust
 use mockall::automock;
@@ -109,17 +109,17 @@ fn delete_user_calls_repository() {
 
     let service = UserService::new(Box::new(mock_repo));
     service.delete_user(123).unwrap();
-    // mock のドロップ時に expect が満たされたか自動検証
+    // Expectations are verified automatically when the mock is dropped
 }
 ```
 
 Mock vs Spy:
-- Mock: 期待を事前に設定して検証（振る舞い検証）
-- Spy: 実際の呼び出しを記録して後で確認（状態検証）
+- Mock: set expectations up front and verify them (behavior verification)
+- Spy: record actual calls and check them later (state verification)
 
-### 5. Fake（フェイク）
+### 5. Fake
 
-簡易的な実装（インメモリ DB 等）。
+A simplified implementation (e.g. an in-memory DB).
 
 ```rust
 use std::collections::HashMap;
@@ -159,43 +159,43 @@ impl UserRepository for FakeUserRepository {
 }
 ```
 
-使用場面:
-- 複雑なビジネスロジックのテスト
-- 複数の操作を組み合わせたテスト
-- 本物に近い振る舞いが必要
+When to use:
+- Testing complex business logic
+- Tests that combine multiple operations
+- When realistic behavior is required
 
-## テストダブルの選択基準
+## How to Choose a Test Double
 
 ```
-何をテストしたい？
-  ├─ 戻り値だけ → Stub
-  ├─ 呼び出されたか → Mock (mockall)
-  ├─ 呼び出し履歴 → Spy
-  ├─ 複雑な状態遷移 → Fake
-  └─ 何も使わない → Dummy
+What do you want to test?
+  ├─ Just the return value -> Stub
+  ├─ Whether it was called -> Mock (mockall)
+  ├─ Call history -> Spy
+  ├─ Complex state transitions -> Fake
+  └─ Nothing -> Dummy
 ```
 
-| 状況 | 推奨 | 理由 |
-|------|------|------|
-| DB アクセス | Fake (InMemory) / Stub | 高速、状態管理 |
-| 外部 API 呼び出し | Stub / Mock | 固定レスポンス、呼び出し検証 |
-| メール送信等の副作用 | Spy / Mock | 送信履歴確認 |
-| 時刻・乱数 | Stub (trait 経由) | 固定値で再現性確保 |
+| Situation | Recommended | Reason |
+|-----------|-------------|--------|
+| DB access | Fake (InMemory) / Stub | Fast, manages state |
+| External API call | Stub / Mock | Fixed response, call verification |
+| Side effects like email | Spy / Mock | Verify send history |
+| Time / random values | Stub (via trait) | Fixed values for reproducibility |
 
-## アンチパターン
+## Antipatterns
 
-### 過度な Mock 使用
+### Excessive Use of Mocks
 
 ```rust
-// 悪い: すべてを mock にする
+// Bad: mock everything
 #[test]
 fn calculate_price() {
     let mut mock_item = MockItem::new();
     mock_item.expect_price().returning(|| 100);
-    // mock だらけで何をテストしているか不明確
+    // So many mocks that what is being tested becomes unclear
 }
 
-// 良い: 実際のオブジェクトと組み合わせ
+// Good: combine real objects
 #[test]
 fn calculate_price() {
     let item = Item { name: "Book".into(), price: 100 };
@@ -205,4 +205,4 @@ fn calculate_price() {
 }
 ```
 
-原則: 最もシンプルなテストダブルを使う。迷ったら Stub から始める。
+Principle: use the simplest test double that works. When in doubt, start from a Stub.

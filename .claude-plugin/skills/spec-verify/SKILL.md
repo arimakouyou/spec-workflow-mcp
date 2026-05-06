@@ -142,23 +142,23 @@ Every `DES-N` in `design.md` should be reachable:
 
 #### Check 9: Type Reference Resolution (per C-3, dapper-hardening)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 C（C-3）。
-> spec-design Step B Check 13 (TYPE_REFERENCE_RESOLUTION) と spec-test-design Step B Check 18 (SIGNATURE_MATCH) を spec-verify レベルで横断的に実行する。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause C (C-3).
+> Run spec-design Step B Check 13 (TYPE_REFERENCE_RESOLUTION) and spec-test-design Step B Check 18 (SIGNATURE_MATCH) cross-cuttingly at the spec-verify level.
 
 For each `### DES-N:` in design.md:
 
 1. Parse `Interfaces:` field for function signatures
-2. Extract custom type references (`Result<X, E>` の `X`/`E`、`Vec<T>` の `T`、`Signal<T>` の `T`、`Callback<T>` の `T` など)
+2. Extract custom type references (`X`/`E` in `Result<X, E>`, `T` in `Vec<T>`, `T` in `Signal<T>`, `T` in `Callback<T>`, etc.)
 3. Check each custom type:
    - Is it defined as `### MOD-N: <Type>` heading in the same design.md?
    - Or is it a standard library type (std::*, core::*, alloc::*)?
-   - Or is it a known framework type allowlist (Leptos の `Signal`, `Resource`, `Callback`、Axum の `Json`, `Path`、.NET の `IActionResult` 等)?
+   - Or is it on the known framework type allowlist (Leptos `Signal`, `Resource`, `Callback`; Axum `Json`, `Path`; .NET `IActionResult`; etc.)?
 4. Undefined types → **error** (`undefined_type_reference`) with the type name and location
 
 For each test specification in test-design.md (UT-N.M / CT-N.M / IT-N / ST-N / E2E-N):
 
 1. If the test references a function or method from design.md DES-N, extract the assumed signature
-2. Compare with the actual signature in design.md DES-N の `Interfaces:` field
+2. Compare with the actual signature in the `Interfaces:` field of design.md DES-N
 3. Mismatch → **error** (`signature_mismatch`) with both signatures shown
 
 Allowlist:
@@ -171,18 +171,18 @@ Allowlist:
 
 #### Check 8: Requirement Test Layers Declaration (per K-1)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 K（K-1）。
-> Test Taxonomy は `quality-checks.md` の Test Taxonomy セクション参照（J-3 で確定）。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause K (K-1).
+> For the Test Taxonomy, see the Test Taxonomy section of `quality-checks.md` (finalized in J-3).
 
 For each Acceptance Criterion in `requirements.md` (numbered list under `### REQ-N:`):
 
 - The line immediately below the AC must contain `- Test Layers: ...` declaring which test layers verify the criterion
 - Allowed layer values: `UT`, `CT`, `IT-N` (or `IT`), `ST-N` (or `ST`), `E2E-N` (or `E2E`)
-  - 具体 ID 形式（`IT-3` 等）は test-design.md で確定後に back-fill。requirements.md 段階では layer 名のみでも可
-  - 複数組合せ可（例: `Test Layers: UT, IT-1, ST-3`）
+  - Concrete ID forms (e.g., `IT-3`) are back-filled after test-design.md is finalized; at the requirements.md stage, layer names alone are acceptable
+  - Multiple values can be combined (e.g., `Test Layers: UT, IT-1, ST-3`)
 - Missing `Test Layers:` line for any AC → **error** (`req_test_layers_missing`)
 - Layer value not in allowed set → **error** (`req_test_layers_invalid_value`)
-- Specific ID (`IT-N`) referenced does not exist in test-design.md → **warn** (`req_test_layers_dangling_id`)（test-design.md 未確定段階では無視）
+- Specific ID (`IT-N`) referenced does not exist in test-design.md → **warn** (`req_test_layers_dangling_id`) (ignored before test-design.md is finalized)
 
 Legacy specs without `Test Layers:` lines: emit **warn** (`req_test_layers_legacy`) instead of error, allowing gradual migration.
 

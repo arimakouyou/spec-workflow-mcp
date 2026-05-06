@@ -1,97 +1,97 @@
 ---
 name: flaky-test-management
 description: |
-  Flaky Test (不安定テスト) 管理ポリシー。FT1 分類 (Timing / Order / Environment / Data-dependent)、FT2 CI ベースおよび手動検出 (`cargo test --test-threads=1` や 10 回リピート、`npx jest --runInBand`)、FT3 GitHub Issues での追跡 (`flaky-test` label + Issue テンプレ)、FT4 リトライ設定 (cargo-nextest / Vitest / Jest / GitHub Actions nick-fields/retry)、FT5 隔離 (`#[ignore]` / `.skip`、最大 30 日、全テストの 5% 以下)、FT6 予防 (sleep 禁止、固定ポート禁止、`DateTime::now()` 禁止、testcontainers / シード付き乱数を推奨) をカバー。flaky テスト発生時、CI で断続的に失敗するテストの対処、テスト環境分離の設計、`regression-test-policy` の健全性指標レビュー時に参照。
+  Flaky test management policy. Covers FT1 classification (Timing / Order / Environment / Data-dependent), FT2 CI-based and manual detection (`cargo test --test-threads=1`, 10x repeat, `npx jest --runInBand`), FT3 tracking via GitHub Issues (`flaky-test` label + Issue template), FT4 retry settings (cargo-nextest / Vitest / Jest / GitHub Actions nick-fields/retry), FT5 quarantine (`#[ignore]` / `.skip`, max 30 days, no more than 5% of all tests), and FT6 prevention (no sleep, no fixed ports, no `DateTime::now()`; recommend testcontainers / seeded RNG). Use when a flaky test is observed, when handling intermittently failing tests in CI, when designing test environment isolation, or when reviewing the health metrics in `regression-test-policy`. Triggers on: 'flaky test', 'intermittent test failure', 'quarantine flaky test', 'test retry', 'flakyテスト', '不安定テスト', 'テスト隔離'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
-# Flaky Test 管理ポリシー
+# Flaky Test Management Policy
 
-Flaky test（不安定テスト）の定義、検出、追跡、対処方針を定義する。
-P6-07, P6-08, P6-09 に対応する。
+Defines the definition, detection, tracking, and remediation policy for flaky tests.
+Addresses P6-07, P6-08, and P6-09.
 
-## 対象
+## Targets
 
-- CI で断続的に失敗するテストの検出と対処
-- テスト隔離判断（`#[ignore]` / `.skip`）
-- Issue テンプレートに沿った flaky テスト追跡
-- テストランナー設定（cargo-nextest / Vitest / Jest / GitHub Actions）でのリトライ
-- flaky を生みにくいテスト設計（testcontainers、シード付き乱数、トランザクションロールバック）
+- Detection and remediation of intermittently failing tests in CI
+- Quarantine decisions (`#[ignore]` / `.skip`)
+- Flaky test tracking using the Issue template
+- Retries in test runner configuration (cargo-nextest / Vitest / Jest / GitHub Actions)
+- Test design that resists flakiness (testcontainers, seeded RNG, transaction rollback)
 
-## 対象外
+## Out of Scope
 
-- テストコード全般の書き方 → `tdd-skills` / `tdd-skills-rust` / `tdd-skills-dotnet`
-- リグレッションテストの定着 → `regression-test-policy` Skill
-- 統合テストのフィクスチャ設計 → `integration-test` / `integration-test-dotnet` Skill
+- General test code style -> `tdd-skills` / `tdd-skills-rust` / `tdd-skills-dotnet`
+- Establishing regression tests -> `regression-test-policy` Skill
+- Integration test fixture design -> `integration-test` / `integration-test-dotnet` Skill
 
-## FT1: 定義と分類 (P6-07)
+## FT1: Definition and Classification (P6-07)
 
-**Flaky test** とは、コード変更なしに実行結果（成功/失敗）が変わるテストのこと。
+A **flaky test** is a test whose result (pass/fail) varies without code changes.
 
-### 分類
+### Classification
 
-| カテゴリ | 原因 | 典型例 |
-|---------|------|--------|
-| Timing-dependent | 競合状態、タイムアウト感度 | `sleep(100)` に依存、非同期処理の完了待ち不足 |
-| Order-dependent | 実行順序、共有可変状態 | テスト間でグローバル状態を共有、DB が未クリーンアップ |
-| Environment-dependent | ポート、ファイルハンドル、ネットワーク | 固定ポートの衝突、ディスク容量不足、DNS 解決失敗 |
-| Data-dependent | タイムスタンプ、乱数、外部 API | `DateTime::now()` に依存、外部 API のレート制限 |
+| Category | Cause | Typical example |
+|----------|-------|-----------------|
+| Timing-dependent | Race conditions, timeout sensitivity | Depends on `sleep(100)`; insufficient wait for async completion |
+| Order-dependent | Execution order, shared mutable state | Tests share global state; DB not cleaned up |
+| Environment-dependent | Ports, file handles, network | Fixed-port collision, low disk space, DNS resolution failure |
+| Data-dependent | Timestamps, random numbers, external APIs | Depends on `DateTime::now()`, external API rate limit |
 
-## FT2: 検出 (P6-08)
+## FT2: Detection (P6-08)
 
-### CI ベースの検出
+### CI-based Detection
 
-テストが CI で失敗し、コード変更なしの再実行で成功した場合、flaky 候補として記録する。
+If a test fails in CI and a re-run without code changes passes, record it as a flaky candidate.
 
-### 手動検出コマンド
+### Manual Detection Commands
 
 ```bash
-# Rust: 順序依存の分離（シングルスレッド実行）
+# Rust: isolate order dependence (single-threaded)
 cargo test -- --test-threads=1
 
-# Rust: 繰り返し実行で安定性を確認（10回）
+# Rust: confirm stability via repeated runs (10 times)
 for i in $(seq 1 10); do
   cargo test --quiet 2>&1 || echo "FAIL on iteration $i"
 done
 
-# Node.js: 順序依存の分離
+# Node.js: isolate order dependence
 npx jest --runInBand
-# または
+# or
 npx vitest --pool=forks --poolOptions.forks.singleFork
 ```
 
-### リトライベースの検出
+### Retry-based Detection
 
-リトライ設定（FT4）を有効にした状態で、リトライ 2回目以降に成功したテストは flaky として自動検出する。
+When retry settings (FT4) are enabled, tests that pass on the second or later retry attempt are automatically detected as flaky.
 
-## FT3: 追跡 (P6-08)
+## FT3: Tracking (P6-08)
 
-Flaky test は GitHub Issues で `flaky-test` ラベルを付けて管理する。
+Manage flaky tests with GitHub Issues using the `flaky-test` label.
 
-### Issue テンプレート
+### Issue Template
 
 ```markdown
 ## Flaky Test Report
 
-- **テスト名**: `{test_module}::{test_name}`
-- **分類**: {FT1 カテゴリ: Timing / Order / Environment / Data}
-- **初検出日**: {YYYY-MM-DD}
-- **頻度**: {N}回中{M}回失敗（直近 {period}）
-- **CI ログ**: {link to failed run}
-- **担当者**: @{assignee}
+- **Test name**: `{test_module}::{test_name}`
+- **Classification**: {FT1 category: Timing / Order / Environment / Data}
+- **First detected**: {YYYY-MM-DD}
+- **Frequency**: {M} of {N} runs failed (last {period})
+- **CI log**: {link to failed run}
+- **Owner**: @{assignee}
 
-### 再現手順
+### Reproduction Steps
 
-{再現コマンドと条件}
+{Reproduction command and conditions}
 
-### 仮説
+### Hypothesis
 
-{flaky の原因仮説}
+{Hypothesized cause of flakiness}
 ```
 
-## FT4: リトライ設定 (P6-09)
+## FT4: Retry Settings (P6-09)
 
-リトライは**緩和策**であり修正ではない。リトライされたテストは FT3 に従って追跡対象とする。
+Retries are **mitigation**, not a fix. Retried tests must still be tracked under FT3.
 
 ### Rust (cargo-nextest)
 
@@ -120,12 +120,12 @@ export default defineConfig({
 
 ```javascript
 module.exports = {
-  // グローバルリトライ
-  // jest.retryTimes(2) をテストファイル内で呼び出す
+  // Global retry
+  // Call jest.retryTimes(2) inside the test file
 };
 ```
 
-### GitHub Actions (ステップレベル)
+### GitHub Actions (Step Level)
 
 ```yaml
 - name: Tests (with retry)
@@ -135,25 +135,25 @@ module.exports = {
     command: cargo test --quiet
 ```
 
-## FT5: 隔離（Quarantine） (P6-09)
+## FT5: Quarantine (P6-09)
 
-持続的に不安定なテストは隔離し、PR マージをブロックしないようにする。
+Quarantine persistently unstable tests so they do not block PR merges.
 
-### 隔離方法
+### Quarantine Method
 
-| 言語 | 方法 | 例 |
-|------|------|-----|
-| Rust | `#[ignore]` + コメント | `#[ignore = "flaky: #123"]` |
-| Jest/Vitest | `.skip` + コメント | `it.skip('test name') // flaky: #123` |
+| Language | Method | Example |
+|----------|--------|---------|
+| Rust | `#[ignore]` + comment | `#[ignore = "flaky: #123"]` |
+| Jest/Vitest | `.skip` + comment | `it.skip('test name') // flaky: #123` |
 
-### 隔離ルール
+### Quarantine Rules
 
-- 隔離テストには必ず Issue 番号をコメントに記載すること
-- 隔離テストは別の CI ジョブ（`flaky-quarantine`）で非ブロッキング実行
-- **最大隔離期間: 30日** — 超過したら修正するかテスト自体を削除する
-- 隔離数の上限: プロジェクト全体のテスト数の 5% 以下
+- Always include the Issue number in the comment on a quarantined test
+- Run quarantined tests in a separate non-blocking CI job (`flaky-quarantine`)
+- **Maximum quarantine period: 30 days** — after that, fix it or delete the test
+- Upper bound on quarantined count: no more than 5% of all tests in the project
 
-### 隔離テスト用 CI ジョブ（参考）
+### Reference CI Job for Quarantined Tests
 
 ```yaml
   flaky-quarantine:
@@ -162,34 +162,34 @@ module.exports = {
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      # Rust: #[ignore] 付きテストのみ実行
+      # Rust: run only #[ignore] tests
       - run: cargo test -- --ignored --test-threads=1
 ```
 
-## FT6: 予防
+## FT6: Prevention
 
-Flaky test の発生を防ぐためのガイドライン。
+Guidelines for preventing flaky tests.
 
-### 禁止パターン
+### Forbidden Patterns
 
-| パターン | 代替 |
-|---------|------|
-| `sleep(N)` / 固定タイムアウト | ポーリング + 指数バックオフ + 最大待機時間 |
-| 固定ポート番号 | ランダムポート or OS 割当（port 0） |
-| `DateTime::now()` に依存 | Clock trait / テスト用固定時刻を DI |
-| 外部 API への直接呼び出し | モック / WireMock / testcontainers |
-| 共有 DB への直接書き込み | トランザクションロールバック / testcontainers |
-| テスト間の暗黙的順序依存 | 各テストで完全なセットアップ/ティアダウン |
+| Pattern | Alternative |
+|---------|-------------|
+| `sleep(N)` / fixed timeout | Polling + exponential backoff + max wait |
+| Fixed port number | Random port or OS-assigned (port 0) |
+| Depending on `DateTime::now()` | Clock trait / inject a fixed time for tests |
+| Direct calls to external APIs | Mock / WireMock / testcontainers |
+| Direct writes to a shared DB | Transaction rollback / testcontainers |
+| Implicit ordering between tests | Complete setup/teardown in each test |
 
-### 推奨パターン
+### Recommended Patterns
 
-- **testcontainers** で外部サービスを完全に隔離する
-- **シード付き乱数** (`StdRng::seed_from_u64(42)`) で決定論的なテストデータ
-- **ファクトリ/フィクスチャ** パターンでテストデータを構造化
-- **トランザクションロールバック** で DB テストの分離を保証
-- 疑わしいテストは `--test-threads=1` で分離実行して原因を特定
+- Fully isolate external services with **testcontainers**
+- Use **seeded RNG** (`StdRng::seed_from_u64(42)`) for deterministic test data
+- Structure test data via **factory / fixture** patterns
+- Use **transaction rollback** to guarantee DB-test isolation
+- Run suspected tests in isolation with `--test-threads=1` to identify the cause
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `quality-checks` (QC3, QC12), `diagnostic-reasoning` (DR1-DR6), `failure-taxonomy` (FC1-FC6)
-- 関連 Skill: `regression-test-policy`, `tdd-skills`, `tdd-skills-rust`, `tdd-skills-dotnet`, `integration-test`, `integration-test-dotnet`, `setup-ci`
+- Universal constraints: `quality-checks` (QC3, QC12), `diagnostic-reasoning` (DR1-DR6), `failure-taxonomy` (FC1-FC6)
+- Related Skills: `regression-test-policy`, `tdd-skills`, `tdd-skills-rust`, `tdd-skills-dotnet`, `integration-test`, `integration-test-dotnet`, `setup-ci`

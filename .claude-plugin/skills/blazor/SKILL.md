@@ -1,33 +1,33 @@
 ---
 name: blazor
 description: |
-  Blazor Web App / Blazor WebAssembly (.NET 10) のベストプラクティス。`InteractiveServer` / `InteractiveWebAssembly` / `InteractiveAuto` の render mode 選択、コードビハインド (`.razor.cs` + partial class) + `[Parameter]` / `[CascadingParameter]` / `EventCallback<T>` によるデータフロー、`@bind` 双方向バインディング、`<EditForm>` + `DataAnnotationsValidator` / `FluentValidation`、`@page` ディレクティブと `NavigationManager`、`dotnet publish -c Release -p:PublishTrimmed=true` による Trim/AOT 検証、bUnit コンポーネントテスト + ロジック抽出 xUnit テスト、`<Virtualize>` と `@key` でのリスト最適化をカバー。Blazor コンポーネント実装、状態管理、EditForm バリデーション、AOT 公開設定、bUnit テスト記述時に参照。`aspnet-core` Skill を補完する。
+  Best practices for Blazor Web App / Blazor WebAssembly (.NET 10). Covers render mode selection (`InteractiveServer` / `InteractiveWebAssembly` / `InteractiveAuto`), data flow via code-behind (`.razor.cs` + partial class) with `[Parameter]` / `[CascadingParameter]` / `EventCallback<T>`, two-way binding with `@bind`, `<EditForm>` + `DataAnnotationsValidator` / `FluentValidation`, the `@page` directive and `NavigationManager`, Trim/AOT verification via `dotnet publish -c Release -p:PublishTrimmed=true`, bUnit component tests + xUnit tests with logic extraction, and list rendering optimization with `<Virtualize>` and `@key`. Reference when implementing Blazor components, managing state, configuring EditForm validation, setting up AOT publish, or writing bUnit tests. Complements the `aspnet-core` Skill. Triggers on: 'Blazor component', 'render mode', 'EditForm validation', 'bUnit test', 'PublishTrimmed', 'Blazorコンポーネント', 'レンダーモード', 'EditFormバリデーション', 'bUnitテスト'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Blazor Best Practices
 
-Blazor Web App または Blazor WebAssembly を使用する場合、この Skill は `aspnet-core` Skill を補完する。
+When using Blazor Web App or Blazor WebAssembly, this Skill complements the `aspnet-core` Skill.
 
-## 対象
+## Scope
 
-- Blazor コンポーネント (`.razor` + `.razor.cs`) の新規作成と修正
-- Render mode の選択（`InteractiveServer` / `InteractiveWebAssembly` / `InteractiveAuto`）
-- `[Parameter]` / `[CascadingParameter]` / `EventCallback<T>` によるデータフロー設計
-- `<EditForm>` + バリデーション（`DataAnnotationsValidator` / `FluentValidation`）
-- `<Virtualize>` / `@key` によるリスト描画最適化
-- Trim/AOT ビルド検証 (`dotnet publish -c Release -p:PublishTrimmed=true`)
-- bUnit でのコンポーネントテスト、ロジック抽出による xUnit テスト
-- ルーティング設計 (`@page` + `NavigationManager`)
+- Creating and modifying Blazor components (`.razor` + `.razor.cs`)
+- Render mode selection (`InteractiveServer` / `InteractiveWebAssembly` / `InteractiveAuto`)
+- Data flow design with `[Parameter]` / `[CascadingParameter]` / `EventCallback<T>`
+- `<EditForm>` + validation (`DataAnnotationsValidator` / `FluentValidation`)
+- List rendering optimization with `<Virtualize>` / `@key`
+- Trim/AOT build verification (`dotnet publish -c Release -p:PublishTrimmed=true`)
+- Component tests with bUnit, xUnit tests via logic extraction
+- Routing design (`@page` + `NavigationManager`)
 
-## 対象外
+## Out of Scope
 
-- ASP.NET Core Minimal APIs 自体 → `aspnet-core` Skill
-- Entity Framework Core → `entity-framework-core` Skill
-- プロジェクト構成 (.csproj) → `csproj` Skill
-- C# コードスタイル → `csharp-style` Rule
+- ASP.NET Core Minimal APIs themselves -> `aspnet-core` Skill
+- Entity Framework Core -> `entity-framework-core` Skill
+- Project configuration (.csproj) -> `csproj` Skill
+- C# code style -> `csharp-style` Rule
 
-## プロジェクト構成 (Blazor Web App)
+## Project Structure (Blazor Web App)
 
 ```
 src/
@@ -41,28 +41,28 @@ src/
 │   └── _Imports.razor
 ├── Models/
 ├── Services/
-├── Data/                    # EF Core (サーバーサイド)
+├── Data/                    # EF Core (server-side)
 ├── Program.cs
 ├── App.razor
 └── wwwroot/
 ```
 
-## レンダーモード
+## Render Modes
 
-- `InteractiveServer` — SignalR ベースのサーバーサイドレンダリング
-- `InteractiveWebAssembly` — ブラウザ内 WASM
-- `InteractiveAuto` — 初回はサーバー、その後 WASM に切替
-- コンポーネントごとに `@rendermode` で指定、または `App.razor` でグローバルに設定
+- `InteractiveServer` — SignalR-based server-side rendering
+- `InteractiveWebAssembly` — in-browser WASM
+- `InteractiveAuto` — server first, then switches to WASM
+- Specify per-component with `@rendermode`, or globally in `App.razor`
 
-## コンポーネントパターン
+## Component Patterns
 
-- 1 ファイル 1 コンポーネント、ファイル名 = コンポーネント名
-- コードビハインドパターン: `MyComponent.razor` + `MyComponent.razor.cs`
-- Props には `[Parameter]`、コンテキストには `[CascadingParameter]` を使用
-- 子から親への通信には `EventCallback<T>` を使用
+- One component per file; file name = component name
+- Code-behind pattern: `MyComponent.razor` + `MyComponent.razor.cs`
+- Use `[Parameter]` for props, `[CascadingParameter]` for context
+- Use `EventCallback<T>` for child-to-parent communication
 
 ```csharp
-// MyComponent.razor.cs (コードビハインド)
+// MyComponent.razor.cs (code-behind)
 public partial class MyComponent : ComponentBase
 {
     [Parameter]
@@ -76,25 +76,25 @@ public partial class MyComponent : ComponentBase
 }
 ```
 
-## 状態管理
+## State Management
 
-- `@bind` で双方向バインディング
-- カスケーディングバリューで DI ライクな状態伝搬
-- 複雑な状態には State コンテナ（Scoped サービスとして登録）を使用
-- static フィールドに状態を保存しない
+- Two-way binding with `@bind`
+- DI-like state propagation via cascading values
+- For complex state, use a state container (registered as a Scoped service)
+- Do not store state in static fields
 
-## サーバー関数 (Leptos の `#[server]` に相当)
+## Server Functions (equivalent to Leptos `#[server]`)
 
-- 標準の ASP.NET Core API エンドポイントを使用
-- Blazor WASM からは DI で注入された `HttpClient` で呼び出す
-- Blazor Server: サービスを直接注入して使用
+- Use standard ASP.NET Core API endpoints
+- From Blazor WASM, call them via an `HttpClient` injected through DI
+- Blazor Server: inject and use services directly
 
-## フォームとバリデーション
+## Forms and Validation
 
-- `<EditForm>` と `Model` バインディング
-- バリデーションには `DataAnnotationsValidator`
-- 複雑なルールには `FluentValidation`
-- `<ValidationSummary>` と `<ValidationMessage>` でエラー表示
+- `<EditForm>` with `Model` binding
+- `DataAnnotationsValidator` for validation
+- `FluentValidation` for complex rules
+- Display errors with `<ValidationSummary>` and `<ValidationMessage>`
 
 ```razor
 <EditForm Model="@user" OnValidSubmit="@HandleSubmit">
@@ -104,27 +104,27 @@ public partial class MyComponent : ComponentBase
     <InputText @bind-Value="user.Name" />
     <ValidationMessage For="@(() => user.Name)" />
 
-    <button type="submit">送信</button>
+    <button type="submit">Submit</button>
 </EditForm>
 ```
 
-## ルーティング
+## Routing
 
-- `@page "/path"` ディレクティブでルート定義
-- ルートパラメータ: `@page "/user/{Id:int}"`
-- プログラマティックナビゲーションには `NavigationManager`
-- アクティブリンクスタイリングには `<NavLink>`
+- Define routes with the `@page "/path"` directive
+- Route parameters: `@page "/user/{Id:int}"`
+- Use `NavigationManager` for programmatic navigation
+- Use `<NavLink>` for active link styling
 
-## WASM ビルド検証 (`cargo leptos build` に相当)
+## WASM Build Verification (equivalent to `cargo leptos build`)
 
 ```bash
 dotnet publish -c Release -p:PublishTrimmed=true
 ```
 
-- `-p:PublishTrimmed=true` は **必須** — これなしではトリミング互換性の問題が検出されない
-- プロジェクトの .csproj に `<PublishTrimmed>true</PublishTrimmed>` を設定済みの場合でも、明示的に指定することで CI とローカルの挙動を一致させる
+- `-p:PublishTrimmed=true` is **mandatory** — without it, trimming compatibility issues are not detected
+- Even if `<PublishTrimmed>true</PublishTrimmed>` is set in the .csproj, specify it explicitly so CI and local behavior match
 
-追加の最適化設定（.csproj に記述）:
+Additional optimization settings (in .csproj):
 
 ```xml
 <PropertyGroup>
@@ -133,17 +133,17 @@ dotnet publish -c Release -p:PublishTrimmed=true
 </PropertyGroup>
 ```
 
-- Trim/AOT 警告 (IL2xxx, IL3xxx) を確認すること — リフレクション依存のコードが実行時に破損することを示す
-- GREEN phase でテストが通過した後、必ず `dotnet publish -c Release -p:PublishTrimmed=true` を実行して WASM コンパイルを検証する
+- Check Trim/AOT warnings (IL2xxx, IL3xxx) — they indicate reflection-dependent code that may break at runtime
+- After tests pass in the GREEN phase, always run `dotnet publish -c Release -p:PublishTrimmed=true` to verify the WASM compilation
 
-## テスト
+## Testing
 
-- **ロジックテスト**: ロジックをコードビハインド `.razor.cs` ファイルに抽出し、xUnit でテスト
-- **コンポーネントテスト**: bUnit でレンダリングとインタラクションをテスト
-- 生の HTML 出力をテストしない — コンポーネントの振る舞いと状態をテストする
-- シグナル/状態変化、イベントハンドラコールバック、バリデーションロジックをテストする
+- **Logic tests**: Extract logic into the code-behind `.razor.cs` file and test with xUnit
+- **Component tests**: Test rendering and interactions with bUnit
+- Do not test raw HTML output — test component behavior and state
+- Test signal/state changes, event handler callbacks, and validation logic
 
-### bUnit テスト例
+### bUnit Test Example
 
 ```csharp
 [Fact]
@@ -158,28 +158,28 @@ public void Counter_IncrementButton_UpdatesCount()
 }
 ```
 
-### ユニットテスト対象
+### Unit Test Targets
 
-| フロントエンド関心事 | テストアプローチ |
+| Frontend concern | Test approach |
 |---|---|
-| コンポーネント状態遷移 | ロジックをコードビハインドに抽出、xUnit でアサート |
-| バリデーションロジック | バリデーション関数を抽出、直接テスト |
-| サービスロジック | DI サービスを単体テスト、モック依存 |
-| EventCallback ハンドラ | bUnit でイベント発火、状態変化をアサート |
+| Component state transitions | Extract logic to code-behind, assert with xUnit |
+| Validation logic | Extract validation function, test directly |
+| Service logic | Unit-test DI services, mock dependencies |
+| EventCallback handlers | Fire events with bUnit, assert state changes |
 
-### ユニットテスト対象外（E2E に委譲）
+### Out of Unit Test Scope (delegate to E2E)
 
-- Razor テンプレートの HTML 出力
-- CSS クラスの動的適用
-- ルーティング遷移
-- SignalR 接続の振る舞い
+- HTML output of Razor templates
+- Dynamic application of CSS classes
+- Routing transitions
+- SignalR connection behavior
 
-## パフォーマンス
+## Performance
 
-- リスト描画の最適化には `@key` を使用
-- `<BlazorWebAssemblyLazyLoad>` でアセンブリを遅延ロード
-- 長いリストには `<Virtualize>` で仮想化
-- `ShouldRender()` でコンポーネントの不要な再レンダリングを最小化
+- Use `@key` to optimize list rendering
+- Lazy-load assemblies with `<BlazorWebAssemblyLazyLoad>`
+- Virtualize long lists with `<Virtualize>`
+- Minimize unnecessary component re-renders with `ShouldRender()`
 
 ```razor
 <Virtualize Items="@items" Context="item">
@@ -187,7 +187,7 @@ public void Counter_IncrementButton_UpdatesCount()
 </Virtualize>
 ```
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `csharp-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-C1-C5)
-- 関連 Skill: `aspnet-core` (Blazor Server 側 DI / middleware), `csproj` (PublishTrimmed 設定), `entity-framework-core` (サーバーサイドの DB アクセス), `dotnet-build-cache`, `setup-ci`, `tdd-skills-dotnet`
+- Universal constraints: `csharp-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-C1-C5)
+- Related Skills: `aspnet-core` (Blazor Server-side DI / middleware), `csproj` (PublishTrimmed configuration), `entity-framework-core` (server-side DB access), `dotnet-build-cache`, `setup-ci`, `tdd-skills-dotnet`

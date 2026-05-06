@@ -1,28 +1,28 @@
-# TDD と設計
+# TDD and Design
 
-## TDD は設計手法でもある
+## TDD Is Also a Design Method
 
-TDD を実践すると、自然に以下の設計原則が守られる:
+Practicing TDD naturally upholds the following design principles:
 
-1. **YAGNI（You Aren't Gonna Need It）**: 必要最小限の実装
-2. **単一責任の原則**: テストしやすい構造体は責任が明確
-3. **依存性逆転の原則**: テストダブルを使うと自然に trait 設計
-4. **疎結合**: テストしやすいコードは結合度が低い
+1. **YAGNI (You Aren't Gonna Need It)**: implement only what is required
+2. **Single Responsibility Principle**: testable structs have clear responsibilities
+3. **Dependency Inversion Principle**: using test doubles naturally leads to trait-based design
+4. **Loose Coupling**: testable code has low coupling
 
-## テストしやすい設計
+## Testable Design
 
-### テストしにくい設計
+### Hard-to-Test Design
 
 ```rust
 struct OrderService;
 
 impl OrderService {
     fn process_order(&self, order_id: i64) -> Result<(), AppError> {
-        // DB に直接アクセス
+        // Direct DB access
         let mut conn = PgConnection::establish("postgres://...")?;
         let order = orders::table.find(order_id).first(&mut conn)?;
 
-        // 外部 API を直接呼び出し
+        // Direct external API call
         let client = reqwest::blocking::Client::new();
         client.post("https://payment.api/charge").json(&order).send()?;
         Ok(())
@@ -30,15 +30,15 @@ impl OrderService {
 }
 ```
 
-問題点:
-- DB が必要（遅い）
-- 外部 API が必要（不安定）
-- テストが環境に依存
+Problems:
+- Requires a DB (slow)
+- Requires the external API (unstable)
+- Tests depend on the environment
 
-### テストしやすい設計
+### Testable Design
 
 ```rust
-// trait で依存を抽象化
+// Abstract dependencies via traits
 trait OrderRepository: Send + Sync {
     fn find_by_id(&self, id: i64) -> Result<Order, DbError>;
 }
@@ -47,7 +47,7 @@ trait PaymentGateway: Send + Sync {
     fn charge(&self, amount: u64) -> Result<PaymentResult, PaymentError>;
 }
 
-// 依存性注入
+// Dependency injection
 struct OrderService {
     order_repo: Box<dyn OrderRepository>,
     payment: Box<dyn PaymentGateway>,
@@ -69,7 +69,7 @@ impl OrderService {
 }
 ```
 
-テスト:
+Test:
 
 ```rust
 #[test]
@@ -92,14 +92,14 @@ fn process_order_charges_payment() {
 }
 ```
 
-## TDD がもたらす設計上の利点
+## Design Benefits TDD Brings
 
-### 1. インターフェース（trait）の明確化
+### 1. Clearer Interfaces (traits)
 
-テストを先に書くことで、使いやすい API が設計される。
+Writing tests first leads to APIs that are easy to use.
 
 ```rust
-// テストから始めるので、シンプルで直感的な API になる
+// Starting from the test produces a simple, intuitive API
 #[test]
 fn cart_add_item() {
     let mut cart = ShoppingCart::new();
@@ -108,15 +108,15 @@ fn cart_add_item() {
 }
 ```
 
-### 2. 責任の分離
+### 2. Separation of Responsibilities
 
-テストが複雑になる = 構造体が複雑すぎるサイン。
+Tests becoming complex is a sign that the struct is too complex.
 
 ```rust
-// 責任が多すぎる → テストが複雑
-struct OrderProcessor { /* 在庫確認 + 決済 + メール + 配送 */ }
+// Too many responsibilities -> complex tests
+struct OrderProcessor { /* inventory check + payment + email + shipping */ }
 
-// 責任を分離 → テストが簡単
+// Separate responsibilities -> simple tests
 struct OrderProcessor {
     inventory: Box<dyn InventoryService>,
     payment: Box<dyn PaymentService>,
@@ -125,39 +125,39 @@ struct OrderProcessor {
 }
 ```
 
-### 3. 疎結合
+### 3. Loose Coupling
 
-trait を使うことで、自然に疎結合になる。
+Using traits naturally produces loose coupling.
 
 ```rust
-// 密結合（テストしにくい）
+// Tight coupling (hard to test)
 impl UserService {
     fn create_user(&self, email: &str) -> Result<User, AppError> {
-        let mut conn = PgConnection::establish("...")?; // 直接生成
+        let mut conn = PgConnection::establish("...")?; // direct creation
         // ...
     }
 }
 
-// 疎結合（テストしやすい）
+// Loose coupling (easy to test)
 impl UserService {
     fn new(repository: Box<dyn UserRepository>) -> Self {
-        Self { repository } // 注入
+        Self { repository } // injected
     }
 }
 ```
 
-## テスタビリティの原則
+## Testability Principles
 
-### 1. 外部依存を注入する
+### 1. Inject External Dependencies
 
 ```rust
-// テストしにくい: 時刻を直接取得
+// Hard to test: get the time directly
 fn generate_report(&self) -> Report {
     let now = chrono::Utc::now();
     // ...
 }
 
-// テストしやすい: trait で抽象化
+// Easy to test: abstract via trait
 trait Clock: Send + Sync {
     fn now(&self) -> DateTime<Utc>;
 }
@@ -168,19 +168,19 @@ fn generate_report(&self, clock: &dyn Clock) -> Report {
 }
 ```
 
-### 2. 副作用を分離する
+### 2. Separate Side Effects
 
 ```rust
-// 副作用が混在
+// Side effects mixed in
 fn process_and_save(data: &Data, conn: &mut PgConnection) -> Result<Report, AppError> {
-    let result = expensive_calculation(data); // 純粋な計算
-    diesel::insert_into(reports::table).values(&result).execute(conn)?; // 副作用
+    let result = expensive_calculation(data); // pure computation
+    diesel::insert_into(reports::table).values(&result).execute(conn)?; // side effect
     Ok(result)
 }
 
-// 副作用を分離
+// Side effects separated
 fn process(data: &Data) -> Report {
-    expensive_calculation(data) // 純粋
+    expensive_calculation(data) // pure
 }
 
 fn save(report: &Report, conn: &mut PgConnection) -> Result<(), DbError> {
@@ -189,27 +189,27 @@ fn save(report: &Report, conn: &mut PgConnection) -> Result<(), DbError> {
 }
 ```
 
-### 3. 決定論的にする
+### 3. Make It Deterministic
 
 ```rust
-// ランダム（再現不可）
+// Random (not reproducible)
 fn generate_token() -> String {
     use rand::Rng;
     rand::thread_rng().gen::<[u8; 32]>().encode_hex()
 }
 
-// 決定論的（trait で抽象化）
+// Deterministic (abstracted via trait)
 trait TokenGenerator: Send + Sync {
     fn generate(&self) -> String;
 }
 ```
 
-## まとめ
+## Summary
 
-TDD を実践すると:
-- trait による抽象化が自然に使われる
-- 責任が適切に分離される
-- 疎結合なコードになる
-- 依存性注入が自然に使われる
+When you practice TDD:
+- Abstraction via traits is used naturally
+- Responsibilities are properly separated
+- Code becomes loosely coupled
+- Dependency injection is used naturally
 
-TDD = 設計駆動開発
+TDD = design-driven development

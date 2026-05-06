@@ -168,44 +168,44 @@ After all requested steering documents are approved:
 - Inform the user: "Steering documents are complete. These will be referenced automatically during spec creation phases."
 - If the user wants to start spec development, suggest: "Ready to create a spec? Use `/spec-request-spec` to begin Phase 0."
 
-### 4. CLAUDE.md 整備ガイダンス（P1-02 対応）
+### 4. CLAUDE.md Setup Guidance (P1-02)
 
-> **P1-02**: harness-maturity-check チェックリスト P1（コンテキストエンジニアリング）の項目 P1-02
-> 「エージェント向けの指示ファイルが整備されている」に対応するステップ。
+> **P1-02**: Item P1-02 of the harness-maturity-check checklist P1 (context engineering),
+> "Agent-facing instruction file is in place."
 
-steering doc 作成完了後、プロジェクトルートの `CLAUDE.md`（または `.cursorrules`, `.github/copilot-instructions.md` 等のエージェント向け指示ファイル）の状態を確認する。
+After steering doc creation is finished, check the state of `CLAUDE.md` at the project root (or other agent-facing instruction files such as `.cursorrules` or `.github/copilot-instructions.md`).
 
-**チェック項目:**
+**Checklist:**
 
-1. **存在確認**: プロジェクトルートにエージェント向け指示ファイルが存在するか
-2. **簡潔さ**: 100行以下を目安とし、詳細は別ファイルへのポインタにする
-3. **ポインタ設計**: 具体的なルールやパターンは `.claude-plugin/rules/` や steering doc への参照で構成する
+1. **Existence**: Does an agent-facing instruction file exist at the project root?
+2. **Conciseness**: Aim for under 100 lines; defer details via pointers to other files
+3. **Pointer design**: Compose concrete rules and patterns as references to `.claude-plugin/rules/` or steering docs
 
-**推奨構成例:**
+**Recommended structure:**
 
 ```markdown
 # CLAUDE.md
 
-## プロジェクト概要
-{1-2行の概要。詳細は .spec-workflow/steering/product.md を参照}
+## Project Overview
+{1-2 line overview. See .spec-workflow/steering/product.md for details}
 
-## アーキテクチャ
-{1-2行の構成概要。詳細は .spec-workflow/steering/structure.md を参照}
+## Architecture
+{1-2 line structural overview. See .spec-workflow/steering/structure.md for details}
 
-## 技術スタック
-{主要技術の列挙。詳細は .spec-workflow/steering/tech.md を参照}
+## Technology Stack
+{List of primary technologies. See .spec-workflow/steering/tech.md for details}
 
-## コーディングルール
-- ルール一覧: `.claude-plugin/rules/` ディレクトリ直下
-- スタイル: `.claude-plugin/rules/rust-style.md`
-- セキュリティ: `.claude-plugin/rules/security.md`
+## Coding Rules
+- Rule index: under the `.claude-plugin/rules/` directory
+- Style: `.claude-plugin/rules/rust-style.md`
+- Security: `.claude-plugin/rules/security.md`
 
-## ワークフロー
-- spec-workflow によるスペック駆動開発を採用
-- 実装前に必ず設計承認を取得すること
+## Workflow
+- Adopt spec-driven development via spec-workflow
+- Always obtain design approval before implementation
 ```
 
-CLAUDE.md が未作成の場合は上記の構成をユーザーに提案する。既存の場合は簡潔さとポインタ設計を確認し、改善を提案する。
+If CLAUDE.md does not exist, propose the structure above to the user. If it exists, check its conciseness and pointer design and propose improvements.
 
 ## Rules
 

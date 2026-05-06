@@ -85,17 +85,17 @@ Use `### REQ-N: [Requirement Name]` for each requirement heading. Acceptance Cri
 
 **Test Layers per Acceptance Criterion (per K-1, `dapper-hardening-orchestrator.md`):**
 
-Each Acceptance Criterion must declare which test layers verify it, by adding a `- Test Layers: ...` line immediately below the AC. Allowed layer values are defined in `quality-checks.md` の **Test Taxonomy** section:
+Each Acceptance Criterion must declare which test layers verify it, by adding a `- Test Layers: ...` line immediately below the AC. Allowed layer values are defined in the **Test Taxonomy** section of `quality-checks.md`:
 
 - `UT` — pure unit test
-- `CT` — component reactivity test (UI フレームワークの component が対象)
-- `IT-N` — backend HTTP integration test (specific spec ID; `N` は test-design.md で確定)
+- `CT` — component reactivity test (targets UI framework components)
+- `IT-N` — backend HTTP integration test (specific spec ID; `N` is finalized in test-design.md)
 - `ST-N` — system test (single feature full-stack)
 - `E2E-N` — end-to-end (user journey)
 
-複数の層を組み合わせて宣言してよい。具体的な test ID（IT-N / ST-N / E2E-N の `N`）は test-design.md で確定するため、requirements.md 段階では暫定 ID か layer 名のみでも可（例: `Test Layers: UT, IT, ST`）。test-design.md 完成後に back-fill する。
+Multiple layers may be combined in one declaration. Specific test IDs (the `N` in IT-N / ST-N / E2E-N) are finalized in test-design.md, so at the requirements.md stage either tentative IDs or layer names alone are acceptable (e.g., `Test Layers: UT, IT, ST`). They are back-filled once test-design.md is complete.
 
-書式例:
+Format example:
 ```markdown
 1. WHEN [event] THEN [system] SHALL [response]  <!-- REQ-1.1 -->
    - Test Layers: UT, IT-1, ST-3
@@ -152,7 +152,7 @@ Agent({
     Checks:
     1. TEMPLATE: Every section from the template must exist with real content (no [describe...] or TODO)
     2. Every requirement needs User Story ('As a [role]...') and EARS Acceptance Criteria (WHEN/IF...THEN...SHALL)
-    3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability, **Testability** (6 観点、Testability は K-5 で追加)
+    3. Non-Functional Requirements must cover: Code Architecture, Performance, Security, Reliability, Usability, **Testability** (6 categories; Testability added in K-5)
     4. Requirements must be uniquely identified as '### REQ-N:' headings (per spec-dependency-graph.md SD1)
     5. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: requirements, version, depends_on: [] must exist at the top of the file
     6. TEST LAYERS (per K-1): Every Acceptance Criterion must have a `- Test Layers: ...` line declaring which test layers verify it. Layer values must be drawn from quality-checks.md Test Taxonomy (UT / CT / IT / ST / E2E)

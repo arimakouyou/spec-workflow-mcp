@@ -1,76 +1,76 @@
-# {Rule タイトル}
+# {Rule Title}
 
-**ID Prefix**: `XX` (2-3 文字の識別子)
-**適用範囲**: 全タスク / 特定言語のみ / 特定フェーズのみ
-**強制レベル**: L1 (docs) / L2 (AI review) / L3 (CI) / L4 (arch test) / L5 (compiler)
-**関連**: `other-rule.md`, `some-skill`
-
----
-
-## 目的
-
-なぜこの Rule が必要かを 1-3 文で記述。どういう失敗経験から生まれたかを書くと維持判断に役立つ。
+**ID Prefix**: `XX` (2-3 character identifier)
+**Scope**: All tasks / Specific language only / Specific phase only
+**Enforcement Level**: L1 (docs) / L2 (AI review) / L3 (CI) / L4 (arch test) / L5 (compiler)
+**Related**: `other-rule.md`, `some-skill`
 
 ---
 
-## 規則
+## Purpose
 
-### XX-1: {規則のタイトル}
+Describe in 1-3 sentences why this Rule is needed. Noting the kind of failure experience that prompted it helps with later maintenance decisions.
 
-**規則**: (具体的で、違反/遵守が判定可能な形で記述)
+---
 
-**理由**: (なぜこの規則が必要か)
+## Rules
 
-**違反例**:
+### XX-1: {Rule Title}
+
+**Rule**: (Stated concretely so that violation/compliance is decidable)
+
+**Rationale**: (Why this rule is necessary)
+
+**Violation example**:
 ```rust
-// やってはいけない例
+// What not to do
 fn process(data: Vec<u8>) -> Vec<u8> {
-    serde_json::from_slice(&data).unwrap()  // L5 で clippy が deny する
+    serde_json::from_slice(&data).unwrap()  // clippy denies this at L5
 }
 ```
 
-**遵守例**:
+**Compliance example**:
 ```rust
 fn process(data: Vec<u8>) -> Result<Value, AppError> {
     serde_json::from_slice(&data).map_err(AppError::Parse)
 }
 ```
 
-**検出方法** (どの層で強制するか):
-- L5: `clippy.toml` で `unwrap_used = "deny"`
-- L4: `tests/architecture.rs` で unwrap 出現回数 assert
+**Detection method** (which layer enforces it):
+- L5: `unwrap_used = "deny"` in `clippy.toml`
+- L4: Assert the count of `unwrap` occurrences in `tests/architecture.rs`
 
 ---
 
-### XX-2: {次の規則}
+### XX-2: {Next Rule}
 
 ...
 
 ---
 
-## 昇格・降格の目安
+## Promotion / Demotion Guidelines
 
-このルールが効かないと感じたら、以下を検討:
+If this rule does not seem to be working, consider:
 
-- **より低い層で強制できないか?** (L1 → L3-L5 へ昇格)
-- **特定タスクでのみ必要になっていないか?** (Rule → Skill 降格)
-- **もう必要ないのではないか?** (四半期レビューで降格判断)
+- **Can it be enforced at a lower layer?** (Promote L1 → L3-L5)
+- **Is it only needed for specific tasks?** (Demote Rule → Skill)
+- **Is it no longer needed?** (Demotion decision at quarterly review)
 
 ---
 
-## 変更履歴
+## Change History
 
-| 日付 | 版 | 変更内容 |
+| Date | Version | Change |
 |---|---|---|
-| 2026-01-15 | 1 | 初版作成(`feature-X` 実装中の失敗から) |
-| 2026-03-20 | 2 | XX-3 を追加 |
+| 2026-01-15 | 1 | Initial version (from a failure during `feature-X` implementation) |
+| 2026-03-20 | 2 | Added XX-3 |
 
 ---
 
-## Rule 作成時のチェックリスト
+## Checklist When Creating a Rule
 
-- [ ] 全タスクで必要か? → No なら Skill に降ろす
-- [ ] L5 (compiler/lint) で強制できないか? → できるなら rule 記述を最小にして L5 に寄せる
-- [ ] 違反/遵守が判定可能な形で書いてあるか?(曖昧な規則は L2 で false negative になる)
-- [ ] 関連する既存 Rule と責務が重複していないか?
-- [ ] ID Prefix は INDEX.md と重複していないか?
+- [ ] Is it required for all tasks? → If No, demote it to a Skill
+- [ ] Can it be enforced at L5 (compiler/lint)? → If yes, keep the rule description minimal and rely on L5
+- [ ] Is it written so that violation/compliance is decidable? (Vague rules cause false negatives at L2)
+- [ ] Does it overlap in responsibility with an existing Rule?
+- [ ] Is the ID Prefix unique within INDEX.md?

@@ -1,27 +1,27 @@
 ---
 name: entity-framework-core
 description: |
-  Entity Framework Core (.NET 10) のベストプラクティス。`IEntityTypeConfiguration<T>` (Fluent API) によるエンティティ構成、`required` キーワード、`DbContext.OnModelCreating` + `ApplyConfigurationsFromAssembly`、`AddDbContext` / `AddDbContextPool` での登録、`AsNoTracking` / `AsSplitQuery` / `SingleOrDefaultAsync` / projection (`Select`) による読み取りクエリ最適化、`BeginTransactionAsync` と `CreateExecutionStrategy` によるトランザクション、`dotnet ef migrations` + idempotent script、`ExecuteUpdateAsync` / `ExecuteDeleteAsync` による一括操作、Testcontainers (PostgreSql) での統合テスト (InMemory provider は統合テストでは使わない) をカバー。EF Core エンティティ定義、クエリ最適化、マイグレーション作成、DbContext 設計、統合テスト記述時に参照。
+  Entity Framework Core (.NET 10) best practices. Covers entity configuration via `IEntityTypeConfiguration<T>` (Fluent API), the `required` keyword, `DbContext.OnModelCreating` + `ApplyConfigurationsFromAssembly`, registration with `AddDbContext` / `AddDbContextPool`, read-query optimization with `AsNoTracking` / `AsSplitQuery` / `SingleOrDefaultAsync` / projection (`Select`), transactions with `BeginTransactionAsync` and `CreateExecutionStrategy`, `dotnet ef migrations` + idempotent scripts, bulk operations via `ExecuteUpdateAsync` / `ExecuteDeleteAsync`, and integration testing with Testcontainers (PostgreSql) — do not use the InMemory provider for integration tests. Reference when defining EF Core entities, optimizing queries, creating migrations, designing a DbContext, or writing integration tests. Triggers on: 'Entity Framework Core', 'EF Core', 'DbContext', 'IEntityTypeConfiguration', 'AsNoTracking', 'dotnet ef migrations', 'Testcontainers', 'EF Core エンティティ定義', 'クエリ最適化', 'マイグレーション作成', 'DbContext 設計', '統合テスト'.
 allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
 ---
 
 # Entity Framework Core Best Practices (.NET 10)
 
-## 対象
+## In Scope
 
-- エンティティ定義（Fluent API、`IEntityTypeConfiguration<T>`）
-- DbContext 構築・登録（`AddDbContext` / `AddDbContextPool`）
-- 読み取りクエリ最適化（`AsNoTracking` / `AsSplitQuery` / projection）
-- トランザクション境界設計（implicit / explicit / `CreateExecutionStrategy`）
-- マイグレーション作成・適用（`dotnet ef migrations`）
-- 一括操作（`ExecuteUpdateAsync` / `ExecuteDeleteAsync`）
-- Testcontainers による統合テスト
+- Entity definitions (Fluent API, `IEntityTypeConfiguration<T>`)
+- DbContext setup and registration (`AddDbContext` / `AddDbContextPool`)
+- Read-query optimization (`AsNoTracking` / `AsSplitQuery` / projection)
+- Transaction boundary design (implicit / explicit / `CreateExecutionStrategy`)
+- Migration creation and application (`dotnet ef migrations`)
+- Bulk operations (`ExecuteUpdateAsync` / `ExecuteDeleteAsync`)
+- Integration testing with Testcontainers
 
-## 対象外
+## Out of Scope
 
-- ASP.NET Core の DI / middleware → `aspnet-core` Skill
-- プロジェクト構成 → `csproj` Skill
-- C# コードスタイル → `csharp-style` Rule
+- ASP.NET Core DI / middleware -> `aspnet-core` Skill
+- Project layout -> `csproj` Skill
+- C# code style -> `csharp-style` Rule
 
 ## Project Structure
 
@@ -61,7 +61,7 @@ src/
 - Define navigation properties for relationships; keep foreign key properties explicit
 
 ```csharp
-// Models/User.cs — エンティティ定義
+// Models/User.cs — entity definition
 public class User
 {
     public int Id { get; set; }
@@ -70,19 +70,19 @@ public class User
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // ナビゲーションプロパティ
+    // Navigation properties
     public ICollection<Order> Orders { get; set; } = [];
 }
 
-// DTOs/UserDto.cs — API レスポンス用
+// DTOs/UserDto.cs — for API responses
 public record UserDto(int Id, string Name, string Email, DateTime CreatedAt);
 
-// DTOs/CreateUserRequest.cs — API リクエスト用
+// DTOs/CreateUserRequest.cs — for API requests
 public record CreateUserRequest(string Name, string Email);
 ```
 
 ```csharp
-// Data/Configurations/UserConfiguration.cs — Fluent API 設定
+// Data/Configurations/UserConfiguration.cs — Fluent API configuration
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
@@ -108,7 +108,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.UpdatedAt)
             .HasDefaultValueSql("NOW()");
 
-        // リレーションシップ設定
+        // Relationship configuration
         builder.HasMany(u => u.Orders)
             .WithOne(o => o.User)
             .HasForeignKey(o => o.UserId)
@@ -135,21 +135,21 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // 同一アセンブリ内の IEntityTypeConfiguration をすべて自動適用
+        // Auto-apply all IEntityTypeConfiguration classes in the same assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }
 ```
 
 ```csharp
-// Program.cs — サービス登録
+// Program.cs — service registration
 var builder = WebApplication.CreateBuilder(args);
 
-// PostgreSQL の場合
+// For PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// SQL Server の場合
+// For SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 ```
@@ -163,7 +163,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 - Use projection with `Select()` to fetch only the columns you need, avoiding over-fetching
 
 ```csharp
-// 読み取り専用クエリ — AsNoTracking でパフォーマンス向上
+// Read-only query — AsNoTracking improves performance
 var users = await context.Users
     .AsNoTracking()
     .Where(u => u.Name.Contains(searchTerm))
@@ -173,12 +173,12 @@ var users = await context.Users
     .Take(limit)
     .ToListAsync();
 
-// 一意のレコードを取得 — SingleOrDefaultAsync を使用
+// Fetch a unique record — use SingleOrDefaultAsync
 var user = await context.Users
     .AsNoTracking()
     .SingleOrDefaultAsync(u => u.Email == email);
 
-// 複数の Include がある場合 — AsSplitQuery でカーテシアン爆発を回避
+// With multiple Includes — use AsSplitQuery to avoid cartesian explosion
 var usersWithOrders = await context.Users
     .AsNoTracking()
     .Include(u => u.Orders)
@@ -187,11 +187,11 @@ var usersWithOrders = await context.Users
     .Where(u => u.CreatedAt >= startDate)
     .ToListAsync();
 
-// NG: ToListAsync() してからフィルタリング（全件取得してしまう）
+// BAD: filtering after ToListAsync() (loads everything into memory)
 // var allUsers = await context.Users.ToListAsync();
 // var filtered = allUsers.Where(u => u.Name.Contains(searchTerm));
 
-// OK: フィルタ→プロジェクション→マテリアライズの順
+// GOOD: filter -> project -> materialize, in that order
 var result = await context.Users
     .Where(u => u.Name.Contains(searchTerm))
     .Select(u => new { u.Id, u.Name })
@@ -206,13 +206,13 @@ var result = await context.Users
 - Default pool size for `AddDbContextPool` is 1024; tune based on load
 
 ```csharp
-// 高スループットシナリオ — DbContext インスタンスプーリング
+// High-throughput scenario — pool DbContext instances themselves
 builder.Services.AddDbContextPool<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")),
     poolSize: 128);
 
-// 接続文字列でコネクションプールサイズを指定
+// Configure connection pool size in the connection string
 // "Host=localhost;Database=mydb;Username=user;Password=pass;Max Pool Size=100;Min Pool Size=10"
 ```
 
@@ -225,12 +225,12 @@ builder.Services.AddDbContextPool<AppDbContext>(options =>
 - Use `CreateExecutionStrategy()` to wrap transactions for retry-safe execution with connection resiliency
 
 ```csharp
-// 暗黙的トランザクション — 単一の SaveChangesAsync で十分な場合
+// Implicit transaction — sufficient for a single SaveChangesAsync
 context.Users.Add(new User { Name = "Alice", Email = "alice@example.com" });
 context.Users.Add(new User { Name = "Bob", Email = "bob@example.com" });
-await context.SaveChangesAsync(); // 両方のInsertが単一トランザクションで実行
+await context.SaveChangesAsync(); // Both inserts run in a single transaction
 
-// 明示的トランザクション — 複数の SaveChangesAsync にまたがる場合
+// Explicit transaction — spans multiple SaveChangesAsync calls
 await using var transaction = await context.Database.BeginTransactionAsync();
 try
 {
@@ -250,7 +250,7 @@ catch
     throw;
 }
 
-// リトライ安全なトランザクション — 接続回復性を考慮
+// Retry-safe transaction — accounts for connection resiliency
 var strategy = context.Database.CreateExecutionStrategy();
 await strategy.ExecuteAsync(async () =>
 {
@@ -276,19 +276,19 @@ await strategy.ExecuteAsync(async () =>
 - Make schema changes non-destructively (add column -> migrate data -> drop old column)
 
 ```bash
-# マイグレーション作成
+# Create a migration
 dotnet ef migrations add CreateUsersTable
 
-# データベースに適用
+# Apply to the database
 dotnet ef database update
 
-# 生成される SQL を確認（本番適用前に必ずレビュー）
+# Inspect generated SQL (always review before applying to production)
 dotnet ef migrations script
 
-# 冪等スクリプト生成（CI/CD パイプライン向け）
+# Generate an idempotent script (for CI/CD pipelines)
 dotnet ef migrations script --idempotent -o migrate.sql
 
-# 特定のマイグレーション範囲の SQL を生成
+# Generate SQL for a specific migration range
 dotnet ef migrations script AddOrdersTable AddPaymentsTable
 ```
 
@@ -303,32 +303,32 @@ dotnet ef migrations script AddOrdersTable AddPaymentsTable
 - Use global query filters (`HasQueryFilter`) for soft-delete and multi-tenant patterns
 
 ```csharp
-// N+1 回避 — Include / ThenInclude で関連データを一括取得
+// Avoid N+1 — eager-load related data with Include / ThenInclude
 var users = await context.Users
     .Include(u => u.Orders)
         .ThenInclude(o => o.OrderItems)
     .ToListAsync();
 
-// コンパイル済みクエリ — ホットパス向けのパフォーマンス最適化
+// Compiled query — performance optimization for hot paths
 private static readonly Func<AppDbContext, string, Task<User?>> GetUserByEmailAsync =
     EF.CompileAsyncQuery(
         (AppDbContext context, string email) =>
             context.Users.SingleOrDefault(u => u.Email == email));
 
-// 使用方法
+// Usage
 var user = await GetUserByEmailAsync(context, "alice@example.com");
 
-// 一括更新 — ExecuteUpdateAsync（変更トラッキングをバイパス）
+// Bulk update — ExecuteUpdateAsync (bypasses change tracking)
 await context.Users
     .Where(u => u.CreatedAt < cutoffDate)
     .ExecuteUpdateAsync(s => s.SetProperty(u => u.IsArchived, true));
 
-// 一括削除 — ExecuteDeleteAsync（変更トラッキングをバイパス）
+// Bulk delete — ExecuteDeleteAsync (bypasses change tracking)
 await context.Users
     .Where(u => u.IsDeleted && u.DeletedAt < retentionDate)
     .ExecuteDeleteAsync();
 
-// 開発環境のみ — 機密データロギング有効化
+// Development only — enable sensitive data logging
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDbContext<AppDbContext>(options =>
@@ -345,7 +345,7 @@ if (builder.Environment.IsDevelopment())
 - Use transaction rollback pattern for test isolation: begin a transaction before each test and roll back after
 
 ```csharp
-// Testcontainers で実際のデータベースを使用した統合テスト
+// Integration test against a real database via Testcontainers
 public class UserRepositoryTests : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
@@ -392,7 +392,7 @@ public class UserRepositoryTests : IAsyncLifetime
 ```
 
 ```csharp
-// トランザクションロールバックパターン — テスト分離用
+// Transaction-rollback pattern — for test isolation
 public class TransactionalTestBase : IAsyncLifetime
 {
     protected AppDbContext Context { get; private set; } = null!;
@@ -400,7 +400,7 @@ public class TransactionalTestBase : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        // 共有テストデータベースの DbContext を取得（テストフィクスチャ経由）
+        // Obtain a DbContext from the shared test database (via test fixture)
         Context = CreateTestContext();
         _transaction = await Context.Database.BeginTransactionAsync();
     }
@@ -416,7 +416,7 @@ public class TransactionalTestBase : IAsyncLifetime
 
 > **Warning:** `UseInMemoryDatabase` is acceptable for unit-testing simple business logic that wraps `DbContext`, but never rely on it for integration tests. Constraints (unique indexes, foreign keys, check constraints) and SQL-specific behaviors are not enforced by the InMemory provider.
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10: SQL injection 等), `type-safety` (TS-C1-C5)
-- 関連 Skill: `csproj`, `aspnet-core` (AppState / DI 設定), `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet` (Testcontainers PostgreSql)
+- Universal constraints: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10: SQL injection, etc.), `type-safety` (TS-C1-C5)
+- Related Skills: `csproj`, `aspnet-core` (AppState / DI setup), `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet` (Testcontainers PostgreSql)

@@ -78,47 +78,47 @@ When retry limits approach (per advisor-usage.md), include your diagnosis AND th
 
 ### Leptos Frontend Task Detection
 
-タスクの `_Prompt` が Leptos フロントエンド関心事（`#[component]`、`view!`、signal、Callback、`pages/`・`components/` ディレクトリ）を含む場合:
+When the task's `_Prompt` contains Leptos frontend concerns (`#[component]`, `view!`, signal, Callback, `pages/` / `components/` directories):
 
-- **RED phase**: `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` のパターンに従い、コンポーネントからロジックを抽出しテストを記述する。`view!` マクロ出力のテストは書かない
-- **GREEN phase**: テスト対象の抽出ロジック関数を先に実装し、次に `#[component]` と `view!` マクロに配線する
-- **Quality checks**: `cargo test` 通過後、`cargo leptos build` で WASM コンパイルを検証する（既存の Leptos Full-Stack Projects セクションに従う）
-- **Component Test (CT)（H で追加、dapper-hardening）**: `view!` 出力 / DOM 配線 / Suspense / Resource の検証は **CT 責務**。`tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 + `quality-checks.md` QC14 に従って `wasm-bindgen-test` で記述。CT 実行は `cargo test --target wasm32-unknown-unknown` で
+- **RED phase**: Follow the patterns in `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md`, extract logic from the component, and write tests. Do not write tests for `view!` macro output
+- **GREEN phase**: First implement the extracted logic function under test, then wire it into the `#[component]` and `view!` macro
+- **Quality checks**: After `cargo test` passes, verify WASM compilation with `cargo leptos build` (follow the existing Leptos Full-Stack Projects section)
+- **Component Test (CT) (added in H, dapper-hardening)**: Verification of `view!` output / DOM wiring / Suspense / Resource is **CT responsibility**. Write with `wasm-bindgen-test` per `tdd-skills-rust/references/leptos-frontend-testing.md` section 6 + `quality-checks.md` QC14. Run CT with `cargo test --target wasm32-unknown-unknown`
 
-### Bug Fix Mode (RT1 フロー、J-10 で追加、dapper-hardening)
+### Bug Fix Mode (RT1 flow, added in J-10, dapper-hardening)
 
-タスクが `_BugFix: true_` を持つ場合、または `_Prompt` の Role が `Bug Fixer` の場合、**RT1 フロー** に従う（`regression-test-policy/SKILL.md` 参照）:
+When the task has `_BugFix: true_`, or when the `_Prompt` Role is `Bug Fixer`, follow the **RT1 flow** (see `regression-test-policy/SKILL.md`):
 
-1. **再現テストを先に作成（RED phase）**:
-   - `_RegressionBugId: BUG-NNN` (または `GH#NNN`) から バグ番号を抽出
-   - 命名規則 `regression_issue_NNN_<description>` (Rust) / `it('regression #NNN: ...')` (TS) で **失敗するテストを先に書く**
-   - バグの影響範囲に応じて適切な層を選ぶ:
-     - 単一関数のロジックバグ → UT (`#[cfg(test)] mod tests`)
-     - component reactivity バグ → CT (`tests/component/` または `*_ct.rs`)
-     - backend HTTP バグ → IT (`crates/server/tests/it_regression_*.rs`)
-     - 単一機能の full-stack バグ → ST (`tests/system/st_regression_*.spec.ts`)
-     - 複数機能連鎖バグ → E2E (`tests/e2e/e2e-regression-NNN.spec.ts`)
-   - テストが **fail することを確認**（RED）
+1. **Write the reproduction test first (RED phase)**:
+   - Extract the bug number from `_RegressionBugId: BUG-NNN` (or `GH#NNN`)
+   - Using the naming convention `regression_issue_NNN_<description>` (Rust) / `it('regression #NNN: ...')` (TS), **write a failing test first**
+   - Pick the appropriate layer based on the impact scope of the bug:
+     - Logic bug in a single function → UT (`#[cfg(test)] mod tests`)
+     - Component reactivity bug → CT (`tests/component/` or `*_ct.rs`)
+     - Backend HTTP bug → IT (`crates/server/tests/it_regression_*.rs`)
+     - Single-feature full-stack bug → ST (`tests/system/st_regression_*.spec.ts`)
+     - Multi-feature chain bug → E2E (`tests/e2e/e2e-regression-NNN.spec.ts`)
+   - **Confirm the test fails** (RED)
 
-2. **バグ修正実装（GREEN phase）**:
-   - 通常の TDD GREEN フローに従い、テストが pass する最小実装を行う
-   - **既存テストを破壊しないこと**（regression test として永続化されるため、後の test design 変更で削除しないよう review-worker に申し送り）
+2. **Implement the bug fix (GREEN phase)**:
+   - Follow the normal TDD GREEN flow; perform the minimal implementation that makes the test pass
+   - **Do not break existing tests** (since this regression test is persisted, hand off to review-worker so that later test design changes do not delete it)
 
 3. **REFACTOR phase**:
-   - 通常通り refactor + test 全件 PASS 確認
+   - Refactor as usual and confirm all tests PASS
 
-4. **完了レポート**:
-   - 通常の completion report に加えて以下を記録:
+4. **Completion report**:
+   - In addition to the normal completion report, record the following:
      - `bug_id`: BUG-NNN / GH#NNN
-     - `regression_test_path`: 作成した regression test のファイルパス + 関数名
+     - `regression_test_path`: File path + function name of the created regression test
      - `regression_test_layer`: UT / CT / IT / ST / E2E
-     - `verification_steps`: 修正前に test が fail することを確認した手順
+     - `verification_steps`: The procedure used to confirm the test fails before the fix
 
-5. **review-worker への引き継ぎ**:
-   - review-worker は spec-tasks Step 7 Check 21 (REGRESSION_BUG_ID) と整合する形で、`_RegressionBugId` と命名規則の一致を確認する
-   - QC16 (Regression Gate, J-9) で本 regression test が PR / merge gate に組み込まれることを確認
+5. **Hand-off to review-worker**:
+   - review-worker confirms that `_RegressionBugId` matches the naming convention, consistent with spec-tasks Step 7 Check 21 (REGRESSION_BUG_ID)
+   - Confirm that this regression test is incorporated into the PR / merge gate via QC16 (Regression Gate, J-9)
 
-詳細フロー: `regression-test-policy/SKILL.md` の RT1 セクション参照。
+For the detailed flow, see the RT1 section of `regression-test-policy/SKILL.md`.
 
 ## Working Directory
 
@@ -142,43 +142,43 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 ## Quality Checks (all must pass)
 
-**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (権威ソース)**。
-プロジェクトタイプを検出し、該当する QC 項目を実行する:
+**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (authoritative source)**.
+Detect the project type and run the relevant QC items:
 
-| プロジェクトタイプ | 検出条件 | 適用する QC 項目 |
+| Project type | Detection condition | Applicable QC items |
 |----------------|--------|----------------|
 | Rust | `Cargo.toml` | QC1 (rustfmt) / QC2 (clippy) / QC3 (cargo test) / QC4 (cargo-audit, cargo-udeps) / **QC15 (UT Properties Gate, I-2)** |
-| Leptos フルスタック | `Cargo.toml` に `[package.metadata.leptos]` | 上記 + QC5 (cargo leptos build or WASM-specific clippy) + **QC14 (Component Test, H-1)** |
+| Leptos full-stack | `[package.metadata.leptos]` in `Cargo.toml` | The above + QC5 (cargo leptos build or WASM-specific clippy) + **QC14 (Component Test, H-1)** |
 | .NET | `*.csproj` / `*.sln` | QC12 (dotnet format / build -warnaserror / test / dependency analysis) |
-| .NET Blazor | `Microsoft.AspNetCore.Components.WebAssembly` 参照 | 上記 + QC12.6 (dotnet publish -p:PublishTrimmed=true) + **QC14 (Component Test, bUnit)** |
+| .NET Blazor | References `Microsoft.AspNetCore.Components.WebAssembly` | The above + QC12.6 (dotnet publish -p:PublishTrimmed=true) + **QC14 (Component Test, bUnit)** |
 | Node.js | `package.json` | QC6 (npm test / lint / format / audit) |
 
-**QC15 (UT Properties Gate, I-2 で新設)**:
-- clippy `disallowed-methods` を `-D clippy::disallowed_methods` で deny-level 実行
-- clock / RNG / env / fs / HTTP の直接呼出を test 内で禁止（design.md K-3 で宣言された Mock 経由のみ許可）
-- 詳細: `quality-checks.md` QC15 セクション参照
+**QC15 (UT Properties Gate, newly added in I-2)**:
+- Run clippy `disallowed-methods` at deny level with `-D clippy::disallowed_methods`
+- Forbid direct calls to clock / RNG / env / fs / HTTP inside tests (only via Mocks declared in design.md K-3)
+- For details, see the QC15 section in `quality-checks.md`
 
-具体的なコマンド・タイムアウト・エラー処理は `quality-checks.md` を必ず参照すること。
-本 agent 内にコマンドを再記述しない（Single source of truth）。
+Always refer to `quality-checks.md` for specific commands, timeouts, and error handling.
+Do not restate the commands inside this agent (single source of truth).
 
-> **Build Cache**: Rust は `rust-build-cache` Skill の sccache 設定、
-> .NET は `dotnet-build-cache` Skill の MSBuild/NuGet キャッシュを適用する。
+> **Build Cache**: For Rust, apply the sccache configuration from the `rust-build-cache` Skill;
+> for .NET, apply the MSBuild/NuGet cache from the `dotnet-build-cache` Skill.
 
 ### .NET Task Detection
 
-タスクの `_Prompt` が .NET 関心事（`.cs`、`.csproj`、`DbContext`、`Controller`、`Endpoint`、ASP.NET Core パターン）を含む場合:
+When the task's `_Prompt` contains .NET concerns (`.cs`, `.csproj`, `DbContext`, `Controller`, `Endpoint`, ASP.NET Core patterns):
 
-- **RED phase**: `.claude-plugin/skills/tdd-skills-dotnet/` のパターンに従い、xUnit テストを記述する
-- **GREEN phase**: テスト対象の実装を記述する
-- **Quality checks**: `dotnet test` 通過後、Blazor プロジェクトでは `dotnet publish -p:PublishTrimmed=true` で WASM コンパイルを検証する
+- **RED phase**: Write xUnit tests following the patterns in `.claude-plugin/skills/tdd-skills-dotnet/`
+- **GREEN phase**: Write the implementation under test
+- **Quality checks**: After `dotnet test` passes, for Blazor projects verify WASM compilation with `dotnet publish -p:PublishTrimmed=true`
 
 ### Blazor Frontend Task Detection
 
-タスクの `_Prompt` が Blazor フロントエンド関心事（`.razor`、`@bind`、`RenderMode`、`pages/`・`components/` ディレクトリ）を含む場合:
+When the task's `_Prompt` contains Blazor frontend concerns (`.razor`, `@bind`, `RenderMode`, `pages/` / `components/` directories):
 
-- **RED phase**: `.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md` のパターンに従い、code-behind からロジックを抽出しテストを記述する。`.razor` レンダリング出力のテストは書かない
-- **GREEN phase**: テスト対象の抽出ロジック関数を先に実装し、次に `.razor` コンポーネントに配線する
-- **Quality checks**: `dotnet test` 通過後、`dotnet publish -c Release -p:PublishTrimmed=true` で WASM コンパイルを検証する
+- **RED phase**: Follow the patterns in `.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md`, extract logic from code-behind, and write tests. Do not write tests for `.razor` rendering output
+- **GREEN phase**: First implement the extracted logic function under test, then wire it into the `.razor` component
+- **Quality checks**: After `dotnet test` passes, verify WASM compilation with `dotnet publish -c Release -p:PublishTrimmed=true`
 
 ### Mutation Testing (post-quality check)
 

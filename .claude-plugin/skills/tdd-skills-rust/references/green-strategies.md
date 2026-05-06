@@ -1,10 +1,10 @@
-# Green の3つの戦略
+# Three Green Strategies
 
-テストを最速で通すための3つの戦略と使い分け。
+Three strategies for making a test pass as quickly as possible, and when to use each.
 
-## 1. 仮実装（Fake It）
+## 1. Fake It
 
-最も安全な方法。まず定数を返してテストを通す。
+The safest approach. Return a constant first to make the test pass.
 
 ```rust
 #[test]
@@ -13,38 +13,38 @@ fn empty_cart_total_should_be_zero() {
     assert_eq!(cart.total(), 0);
 }
 
-// 仮実装
+// Fake It
 impl ShoppingCart {
     fn total(&self) -> u64 {
-        0 // まずは定数で仮実装
+        0 // Start with a constant fake
     }
 }
 ```
 
-### 使うべき場面
-- 実装方法がまだ明確でない時
-- 複雑な処理が必要な時
-- TDD に慣れていない時
+### When to use
+- When the implementation approach is not yet clear
+- When the logic required is complex
+- When you are not yet comfortable with TDD
 
-### メリット
-- 最も安全で失敗しにくい
-- 小さいステップで確実に進められる
-- 思考を整理する時間ができる
+### Benefits
+- Safest, least likely to fail
+- Lets you advance reliably in small steps
+- Gives you time to organize your thinking
 
-## 2. 三角測量（Triangulation）
+## 2. Triangulation
 
-複数のテストケースから一般化を導く。
+Derive a generalization from multiple test cases.
 
 ```rust
-// Test 1: 空のカート
+// Test 1: empty cart
 #[test]
 fn empty_cart_total_should_be_zero() {
     let cart = ShoppingCart::new();
     assert_eq!(cart.total(), 0);
-    // 実装: return 0
+    // Implementation: return 0
 }
 
-// Test 2: 商品1つ追加（ここで仮実装から一般化）
+// Test 2: one item added (generalize from the fake here)
 #[test]
 fn one_item_cart_total() {
     let mut cart = ShoppingCart::new();
@@ -52,7 +52,7 @@ fn one_item_cart_total() {
     assert_eq!(cart.total(), 100);
 }
 
-// 一般化した実装
+// Generalized implementation
 impl ShoppingCart {
     fn total(&self) -> u64 {
         self.items.iter().map(|item| item.price).sum()
@@ -60,19 +60,19 @@ impl ShoppingCart {
 }
 ```
 
-### 使うべき場面
-- どう一般化すべきか不明確な時
-- 複数のテストケースから共通パターンを見つけたい時
+### When to use
+- When it is unclear how to generalize
+- When you want to find a common pattern across multiple test cases
 
-### プロセス
-1. 最初のテストで仮実装（定数を返す）
-2. 2つ目のテストを追加
-3. 両方のテストが通るように一般化
-4. 必要に応じて3つ目、4つ目...
+### Process
+1. Fake It with the first test (return a constant)
+2. Add a second test
+3. Generalize so both tests pass
+4. Add a third, fourth test as needed
 
-## 3. 明白な実装（Obvious Implementation）
+## 3. Obvious Implementation
 
-最も高速だが、慣れが必要。いきなり正解を実装。
+The fastest approach, but takes practice. Implement the correct solution directly.
 
 ```rust
 #[test]
@@ -83,7 +83,7 @@ fn total_calculates_sum_of_item_prices() {
     assert_eq!(cart.total(), 300);
 }
 
-// 明白な実装（仮実装を経ずに直接実装）
+// Obvious Implementation (skip Fake It and implement directly)
 impl ShoppingCart {
     fn total(&self) -> u64 {
         self.items.iter().map(|item| item.price).sum()
@@ -91,30 +91,30 @@ impl ShoppingCart {
 }
 ```
 
-### 使うべき場面
-- 実装方法が明白な時
-- シンプルな処理の時
-- TDD に慣れている時
+### When to use
+- When the implementation is obvious
+- When the logic is simple
+- When you are comfortable with TDD
 
-### 重要な注意
-明白だと思って実装したがテストが通らない場合は、躊躇なく仮実装に戻る。
+### Important caveat
+If you assumed it was obvious but the test does not pass, fall back to Fake It without hesitation.
 
-## 戦略の使い分けフローチャート
+## Strategy Selection Flowchart
 
 ```
-実装は明白か？
-  ├─ Yes → 明白な実装を試す
-  │         ├─ 成功 → 完了
-  │         └─ 失敗 → 仮実装に戻る
-  │
-  └─ No → 仮実装から開始
-            ├─ テストが1つ → 仮実装のまま
-            └─ テストが複数 → 三角測量で一般化
+Is the implementation obvious?
+  |- Yes -> Try Obvious Implementation
+  |          |- Success -> Done
+  |          \- Fail    -> Fall back to Fake It
+  |
+  \- No  -> Start with Fake It
+             |- Single test    -> Stay on Fake It
+             \- Multiple tests -> Generalize via Triangulation
 ```
 
-## 実践例: フィボナッチ数列
+## Worked Example: Fibonacci
 
-### ステップ1: 仮実装
+### Step 1: Fake It
 
 ```rust
 #[test]
@@ -123,11 +123,11 @@ fn fib_0() {
 }
 
 fn fib(_n: u64) -> u64 {
-    0 // 仮実装
+    0 // Fake It
 }
 ```
 
-### ステップ2: 三角測量
+### Step 2: Triangulation
 
 ```rust
 #[test]
@@ -137,11 +137,11 @@ fn fib_1() {
 
 fn fib(n: u64) -> u64 {
     if n == 0 { return 0; }
-    1 // まだ仮実装
+    1 // Still faked
 }
 ```
 
-### ステップ3: さらに三角測量
+### Step 3: Triangulate further
 
 ```rust
 #[test]
@@ -151,16 +151,16 @@ fn fib_2() {
 
 fn fib(n: u64) -> u64 {
     if n <= 1 { return n; }
-    fib(n - 1) + fib(n - 2) // ここで一般化
+    fib(n - 1) + fib(n - 2) // Generalize here
 }
 ```
 
-## まとめ
+## Summary
 
-| 戦略 | 速度 | 安全性 | 推奨レベル |
-|------|------|--------|-----------|
-| 仮実装 | 遅い | 高い | 初心者〜上級者 |
-| 三角測量 | 中間 | 高い | 中級者〜上級者 |
-| 明白な実装 | 速い | 低い | 上級者 |
+| Strategy | Speed | Safety | Recommended for |
+|----------|-------|--------|-----------------|
+| Fake It | Slow | High | Beginner to advanced |
+| Triangulation | Medium | High | Intermediate to advanced |
+| Obvious Implementation | Fast | Low | Advanced |
 
-原則: 迷ったら仮実装。慣れたら明白な実装。複雑なら三角測量。
+Principle: when in doubt, Fake It. Once comfortable, use Obvious Implementation. When complex, use Triangulation.

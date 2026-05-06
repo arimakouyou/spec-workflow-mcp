@@ -1,32 +1,32 @@
 ---
 name: resource-aware-parallelism
 description: |
-  並列エージェント起動前にシステムリソース (CPU コア数 / 空きメモリ) を動的検出し、最大並列数を自動調整するスキル。重量エージェント (parallel-worker, integ-test-worker など compile-heavy) には MAX_HEAVY_AGENTS を段階的閾値で算出し、SWM_MAX_PARALLEL_AGENTS 環境変数による上書きにも対応。spec-implement の wave 実行前、integration-test の Worker 割当前、任意の並列サブエージェント起動前に参照。
+  Skill that dynamically detects system resources (CPU core count / available memory) before launching parallel agents and automatically adjusts the maximum parallelism. For heavy agents (compile-heavy ones such as parallel-worker, integ-test-worker), it computes MAX_HEAVY_AGENTS via tiered thresholds and supports overrides through the SWM_MAX_PARALLEL_AGENTS environment variable. Reference this before wave execution in spec-implement, before Worker assignment in integration-test, and before any parallel subagent launch. Triggers on: 'resource-aware parallelism', 'detect CPU and memory', 'limit parallel agents', 'wave subbatch split', '並列エージェント', 'リソース検出', 'wave 実行', 'Worker 割当'.
 allowed-tools: [Read, Bash, Grep]
 ---
 
 # Resource-Aware Parallelism Skill
 
-## 対象
+## Scope
 
-- 複数の並列サブエージェントを起動する前の max concurrency 決定
-- `spec-implement` の wave 実行時のサブバッチ分割
-- `integration-test` / `integration-test-dotnet` の Worker 割当
-- `wave-harness-worker` / `parallel-worker` などの並列フレームワーク利用時
+- Determining max concurrency before launching multiple parallel subagents
+- Subbatch splitting during wave execution in `spec-implement`
+- Worker assignment in `integration-test` / `integration-test-dotnet`
+- Use of parallel frameworks such as `wave-harness-worker` / `parallel-worker`
 
-## 対象外
+## Out of Scope
 
-- 実際の並列起動の実装 → 各 Skill / Agent の該当セクション
-- CPU / メモリを要求する個別ジョブのチューニング → プロジェクト側の設定
+- Implementation of the actual parallel launch — see the relevant section of each Skill / Agent
+- Tuning of individual jobs that demand CPU / memory — handled in project-side configuration
 
-## 主要観点
+## Key Points
 
-### 1. リソース検出スニペット
+### 1. Resource Detection Snippet
 
-並列エージェントを起動する**直前**に、以下を**単一の Bash 呼び出し**内で実行する（Claude Code の Bash はコマンド間でシェル状態を保持しないため）:
+**Immediately before** launching parallel agents, run the following inside a **single Bash invocation** (Claude Code's Bash does not preserve shell state across commands):
 
 ```bash
-# === リソース検出 + 最大並列数計算 ===
+# === Resource detection + max-parallelism computation ===
 CPU_CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
 if [ -f /proc/meminfo ]; then
   FREE_MEM_MB=$(awk '/MemAvailable/{printf "%d", $2/1024}' /proc/meminfo)
@@ -37,17 +37,17 @@ else
   FREE_MEM_MB=4096
 fi
 
-# 数値ガード: パース失敗時はフォールバック値
+# Numeric guard: fall back if parsing fails
 case "$CPU_CORES" in ''|*[!0-9]*) CPU_CORES=2 ;; esac
 case "$FREE_MEM_MB" in ''|*[!0-9]*) FREE_MEM_MB=4096 ;; esac
 
-# ユーザー上書き値のバリデーション（正の整数のみ受付）
+# Validate user override (accept positive integers only)
 MAX_OVERRIDE=${SWM_MAX_PARALLEL_AGENTS:-""}
 if [ -n "$MAX_OVERRIDE" ]; then
   case "$MAX_OVERRIDE" in ''|*[!0-9]*|0) MAX_OVERRIDE="" ;; esac
 fi
 
-# 重量エージェント（コンパイル系: parallel-worker, integ-test-worker）
+# Heavy agents (compile-heavy: parallel-worker, integ-test-worker)
 if [ -n "$MAX_OVERRIDE" ]; then
   MAX_HEAVY_AGENTS=$MAX_OVERRIDE
 elif [ "$CPU_CORES" -ge 8 ] && [ "$FREE_MEM_MB" -ge 16384 ]; then
@@ -67,58 +67,58 @@ fi
 echo "[resource-check] CPU_CORES=$CPU_CORES FREE_MEM_MB=$FREE_MEM_MB MAX_HEAVY_AGENTS=$MAX_HEAVY_AGENTS"
 ```
 
-### 2. エージェント種別分類
+### 2. Agent Classification
 
-| 種別 | 変数 | 対象エージェント | 特徴 |
+| Class | Variable | Target Agents | Characteristics |
 |---|---|---|---|
-| 重量 | `MAX_HEAVY_AGENTS` | `parallel-worker`, `integ-test-worker` | cargo build/test/clippy、高メモリ |
+| Heavy | `MAX_HEAVY_AGENTS` | `parallel-worker`, `integ-test-worker` | cargo build/test/clippy, high memory |
 
-### 3. 閾値テーブル（重量エージェント）
+### 3. Threshold Table (Heavy Agents)
 
-| CPU コア | 空きメモリ | 最大並列 | 根拠 |
+| CPU cores | Free memory | Max parallelism | Rationale |
 |:---:|:---:|:---:|---|
-| >= 8 | >= 16GB | `min(cores/2, mem/4GB, 4)` | 潤沢リソース。上限 4 で安全マージン |
-| >= 4 | >= 8GB | `min(cores/2, mem/4GB, 3)` | 中規模。上限 3 |
-| >= 2 | >= 4GB | 2 | 最低限の並列化 |
-| < 2 or < 4GB | — | 1 | 逐次実行（安全策） |
+| >= 8 | >= 16GB | `min(cores/2, mem/4GB, 4)` | Plentiful resources. Cap at 4 for safety margin |
+| >= 4 | >= 8GB | `min(cores/2, mem/4GB, 3)` | Mid-tier. Cap at 3 |
+| >= 2 | >= 4GB | 2 | Minimal parallelism |
+| < 2 or < 4GB | — | 1 | Serial execution (safe fallback) |
 
-### 4. ユーザー上書き
+### 4. User Override
 
-環境変数 `SWM_MAX_PARALLEL_AGENTS` で自動検出値を上書きできる:
+The environment variable `SWM_MAX_PARALLEL_AGENTS` overrides the auto-detected value:
 
 ```bash
-# 例: 最大 2 エージェントに制限
+# Example: limit to at most 2 agents
 export SWM_MAX_PARALLEL_AGENTS=2
 ```
 
-### 5. 適用ルール
+### 5. Application Rules
 
-1. **並列エージェント起動前に必ずリソース検出を実行**
-2. wave 内のタスク数が `MAX_HEAVY_AGENTS` を超える場合、wave を**サブバッチ**に分割する
-   - 例: wave に 6 タスクあり `MAX_HEAVY_AGENTS=3` → `[3, 3]` のサブバッチで逐次実行
-3. `MAX_HEAVY_AGENTS=1` の場合は逐次実行（並列化しない）
-4. リソース検出結果はログ出力しユーザーに可視化
-5. 検出コマンド失敗時のフォールバック: `CPU=2`, `メモリ=4096MB`
+1. **Always run resource detection before launching parallel agents**
+2. When the number of tasks in a wave exceeds `MAX_HEAVY_AGENTS`, split the wave into **subbatches**
+   - Example: a wave with 6 tasks and `MAX_HEAVY_AGENTS=3` runs sequentially as `[3, 3]` subbatches
+3. When `MAX_HEAVY_AGENTS=1`, run serially (no parallelism)
+4. Log resource detection results so they are visible to the user
+5. Fallbacks if detection commands fail: `CPU=2`, `memory=4096MB`
 
-## よくある落とし穴
+## Common Pitfalls
 
-1. **リソース検出をスキップして固定並列数で起動**: メモリ不足で SIGKILL、builder host がダウンするリスク
-2. **複数 Bash 呼び出しに分ける**: Claude Code の Bash はシェル状態を保持しないので変数が消える。必ず単一呼び出し
-3. **`MAX_HEAVY_AGENTS=1` で wave 分割をしない**: ログが見づらくなるだけなので、常にサブバッチ分割経路を通す
-4. **overflow 時の上限 clamp を忘れる**: `min(X, 4)` / `min(X, 3)` の clamp を必ず適用
+1. **Skipping resource detection and launching with a fixed parallelism**: risks SIGKILL from out-of-memory and may bring down the builder host
+2. **Splitting across multiple Bash invocations**: Claude Code's Bash does not preserve shell state, so variables are lost. Always use a single invocation
+3. **Skipping wave splitting when `MAX_HEAVY_AGENTS=1`**: the only downside is harder-to-read logs, so always go through the subbatch-splitting path
+4. **Forgetting the upper-bound clamp on overflow**: always apply the `min(X, 4)` / `min(X, 3)` clamp
 
-## プロジェクト固有の規約
+## Project-Specific Conventions
 
-- `spec-implement` の wave 実行は常にリソース検出を経由する（直接の並列起動は禁止）
-- `integration-test` の Worker 割当も同様
-- CI 環境では `SWM_MAX_PARALLEL_AGENTS` を runner の vCPU 数に基づいて設定する
+- Wave execution in `spec-implement` always goes through resource detection (direct parallel launches are prohibited)
+- Worker assignment in `integration-test` follows the same rule
+- In CI environments, set `SWM_MAX_PARALLEL_AGENTS` based on the runner's vCPU count
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 関連 Skill: `spec-implement`, `integration-test`, `integration-test-dotnet`
-- 関連 Rule: `failure-taxonomy`（リソース枯渇で SIGKILL 発生時の分類）
+- Related Skills: `spec-implement`, `integration-test`, `integration-test-dotnet`
+- Related Rule: `failure-taxonomy` (classification when SIGKILL occurs due to resource exhaustion)
 
-## 参考リンク
+## References
 
 - GNU coreutils `nproc`: <https://www.gnu.org/software/coreutils/manual/html_node/nproc-invocation.html>
-- macOS `sysctl` / `vm_stat`: man ページ参照
+- macOS `sysctl` / `vm_stat`: see man pages

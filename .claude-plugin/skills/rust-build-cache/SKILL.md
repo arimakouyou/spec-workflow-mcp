@@ -1,37 +1,37 @@
 ---
 name: rust-build-cache
 description: |
-  Rust プロジェクトで cargo コマンドを実行する全エージェント向けのビルドキャッシュ設定。sccache を `RUSTC_WRAPPER` として前置する方式で worktree 間のコンパイル結果を共有し、ビルド・テスト・lint を高速化する。`CARGO_TARGET_DIR` 共有は禁止（ファイルロック競合）、Cargo レジストリキャッシュとインクリメンタルコンパイルは対応不要。cargo-nextest 利用時の扱い、sccache キャッシュ破損時のリカバリ、未インストール環境でのフォールバックをカバー。cargo fmt/clippy/test/build を実行する直前、parallel-worker や integ-test-worker などコンパイル重量エージェントの起動前に参照。
+  Build cache configuration for all agents that run cargo commands in Rust projects. Uses sccache as the `RUSTC_WRAPPER` to share compilation results across worktrees and accelerate build, test, and lint. Sharing `CARGO_TARGET_DIR` is forbidden (file-lock contention); the Cargo registry cache and incremental compilation require no setup. Covers handling when cargo-nextest is in use, recovery from corrupted sccache caches, and fallback in environments without sccache installed. Reference this immediately before running cargo fmt/clippy/test/build, and before launching compile-heavy agents such as parallel-worker or integ-test-worker. Triggers on: 'rust build cache', 'sccache setup', 'cargo build cache', 'worktree cache strategy', 'Rust ビルドキャッシュ', 'sccache 設定', 'cargo キャッシュ'.
 allowed-tools: [Read, Bash, Grep]
 ---
 
-# Rust ビルドキャッシュ
+# Rust Build Cache
 
-Rust プロジェクトで cargo コマンドを実行する全エージェント向けのビルドキャッシュ設定ガイド。
-worktree 間でのコンパイル結果共有により、ビルド・テスト・lint の大幅な高速化を実現する。
+Build cache configuration guide for all agents that run cargo commands in Rust projects.
+Sharing compilation results across worktrees significantly accelerates build, test, and lint.
 
-## 対象
+## Scope
 
-- cargo fmt / clippy / test / build を走らせる直前
-- `parallel-worker` / `integ-test-worker` / `wave-harness-worker` / `review-worker` 起動前の前処理
-- CI 環境での Rust ジョブ高速化
-- worktree を活用した並列実装時のコンパイル結果共有
+- Immediately before running cargo fmt / clippy / test / build
+- Pre-processing before launching `parallel-worker` / `integ-test-worker` / `wave-harness-worker` / `review-worker`
+- Accelerating Rust jobs in CI environments
+- Sharing compilation results during parallel implementation that uses worktrees
 
-## 対象外
+## Out of Scope
 
-- .NET / dotnet のビルドキャッシュ → `dotnet-build-cache` Skill
-- CI ワークフローの actions/cache セットアップ → `setup-ci` Skill
+- .NET / dotnet build cache → `dotnet-build-cache` Skill
+- CI workflow `actions/cache` setup → `setup-ci` Skill
 
-## sccache の検出と利用
+## Detecting and Using sccache
 
-sccache はコンパイル結果をキャッシュし、同一ソースの再コンパイルを回避する。worktree が異なっても同一のキャッシュを透過的に共有でき、並列ビルドにも安全（内部でロック制御）。
+sccache caches compilation results and avoids recompiling unchanged sources. The cache is shared transparently across worktrees and is safe under parallel builds (it uses internal lock control).
 
-### 推奨パターン: 環境変数前置方式
+### Recommended Pattern: Environment Variable Prefix
 
-Claude Code の Bash ツールはコマンド間でシェル状態を保持しない。`export` は同一 Bash 呼び出し内でのみ有効なため、各 cargo コマンドに `RUSTC_WRAPPER=sccache` を前置する方式を推奨する。
+Claude Code's Bash tool does not preserve shell state across commands. Because `export` is effective only within the same Bash invocation, prefer prefixing each cargo command with `RUSTC_WRAPPER=sccache`.
 
 ```bash
-# sccache 検出
+# Detect sccache
 if command -v sccache >/dev/null 2>&1; then
   RUSTC_WRAPPER=sccache cargo fmt --all -- --check
   RUSTC_WRAPPER=sccache cargo clippy --quiet --all-targets -- -D warnings
@@ -43,10 +43,10 @@ else
 fi
 ```
 
-単一コマンドの場合:
+For a single command:
 
 ```bash
-# sccache があれば使う、なければ通常実行
+# Use sccache if available, otherwise run normally
 if command -v sccache >/dev/null 2>&1; then
   RUSTC_WRAPPER=sccache cargo test --quiet
 else
@@ -54,7 +54,7 @@ else
 fi
 ```
 
-### export 方式（単一 Bash 呼び出し内でコマンドを連続実行する場合）
+### Export Form (when running consecutive commands within a single Bash invocation)
 
 ```bash
 if command -v sccache >/dev/null 2>&1; then
@@ -63,39 +63,39 @@ fi
 cargo fmt --all -- --check && cargo clippy --quiet --all-targets -- -D warnings && cargo test --quiet
 ```
 
-## Worktree 環境でのキャッシュ戦略
+## Cache Strategy in Worktree Environments
 
-| メカニズム | 推奨 | 理由 |
+| Mechanism | Recommended | Reason |
 |-----------|------|------|
-| sccache (`RUSTC_WRAPPER`) | 推奨 | worktree 間でコンパイル結果を透過的に共有。並列安全 |
-| `CARGO_TARGET_DIR` 共有 | **禁止** | 並列 worker がロック競合を起こす。Cargo は `target/` 内でファイルロックを使用しており、複数プロセスが同一 target dir を使うとビルド失敗やデッドロックの原因になる |
-| Cargo レジストリキャッシュ | 対応不要 | `~/.cargo/registry` と `~/.cargo/git` は全プロセスで自動共有 |
-| インクリメンタルコンパイル | 対応不要 | デバッグビルドではデフォルト有効 |
+| sccache (`RUSTC_WRAPPER`) | Recommended | Transparently shares compilation results across worktrees. Parallel-safe |
+| `CARGO_TARGET_DIR` sharing | **Forbidden** | Parallel workers cause lock contention. Cargo uses file locks within `target/`, and multiple processes using the same target dir cause build failures or deadlocks |
+| Cargo registry cache | No setup needed | `~/.cargo/registry` and `~/.cargo/git` are automatically shared across all processes |
+| Incremental compilation | No setup needed | Enabled by default for debug builds |
 
-## cargo-nextest（オプション）
+## cargo-nextest (Optional)
 
-cargo-nextest はテストバイナリの並列実行が高速。利用可能な場合はオプションとして活用できる。ただし `quality-checks` Rule の `cargo test` コマンドが正式仕様であり、nextest への切替はそちらで一括管理する。
+cargo-nextest runs test binaries in parallel and is faster. It can be used as an option when available. However, the `cargo test` command in the `quality-checks` Rule is the canonical specification, so any switch to nextest is managed centrally there.
 
 ```bash
-# nextest が利用可能か確認（利用は任意）
+# Check whether nextest is available (use is optional)
 command -v cargo-nextest >/dev/null 2>&1 && echo "cargo-nextest available"
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### sccache キャッシュ破損でビルドが失敗する場合
+### When the build fails due to a corrupted sccache cache
 
 ```bash
 sccache --stop-server
 sccache --start-server
 ```
 
-サーバー再起動で解消しない場合はキャッシュをクリア:
+If restarting the server does not resolve it, clear the cache:
 
 ```bash
 sccache --stop-server
 cache_dir="${SCCACHE_DIR:-"$HOME/.cache/sccache"}"
-# 念のため危険なパスを防ぐ
+# Guard against dangerous paths just in case
 if [ -n "$cache_dir" ] && [ "$cache_dir" != "/" ]; then
   rm -rf -- "$cache_dir"
 else
@@ -104,12 +104,12 @@ fi
 sccache --start-server
 ```
 
-### sccache が未インストールの場合
+### When sccache is not installed
 
-sccache がインストールされていない環境では、フォールバックとして通常の cargo コマンドがそのまま動作し、ビルドは問題なく実行できる想定である（`RUSTC_WRAPPER` も設定されない）。一方で、sccache がインストールされているが設定ミスや破損などで動作しない場合は、`RUSTC_WRAPPER` を一時的に解除して `cargo` を直接実行することで切り分けを行うこと。
+In environments where sccache is not installed, the fallback path runs ordinary cargo commands as-is and the build is expected to succeed (with `RUSTC_WRAPPER` left unset). On the other hand, if sccache is installed but does not work due to misconfiguration or corruption, isolate the issue by temporarily clearing `RUSTC_WRAPPER` and running `cargo` directly.
 
-## 関連 Rule / Skill
+## Related Rules / Skills
 
-- 普遍制約: `quality-checks` (QC1-QC3: cargo fmt/clippy/test の正式コマンド)
-- 関連 Skill: `cargo-toml`, `axum`, `diesel`, `leptos`, `resource-aware-parallelism` (並列起動時の台数制御)
-- 関連 Agent: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`
+- Universal constraint: `quality-checks` (QC1-QC3: canonical commands for cargo fmt/clippy/test)
+- Related Skills: `cargo-toml`, `axum`, `diesel`, `leptos`, `resource-aware-parallelism` (parallelism control at launch)
+- Related Agents: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`

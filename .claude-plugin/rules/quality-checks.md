@@ -26,106 +26,106 @@ Unified command specification for quality checks run by parallel-worker, review-
 
 ## Test Taxonomy
 
-> spec-test-design / spec-tasks / parallel-worker / review-worker / spec-verify が参照する **テスト分類の正規定義**。
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 J（J-3）。
+> The **canonical definition of test taxonomy** referenced by spec-test-design / spec-tasks / parallel-worker / review-worker / spec-verify.
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause J (J-3).
 
-各テスト層は **明確な責務範囲** を持ち、責務外のテストは別の層に振る。E2E に個別機能テストを書く / IT に UI 検証を含める / smoke に full integration を入れる、のような責務逸脱は禁止。
+Each test layer has a **clearly defined scope of responsibility**, and tests outside that scope must be assigned to a different layer. Scope violations such as writing per-feature tests in E2E, including UI verification in IT, or putting full integration into smoke are prohibited.
 
-### 7 層テスト分類
+### 7-Layer Test Taxonomy
 
-| 層 | 責務 | 範囲 | 実行時間目安 | fixture | 実行時期 |
+| Layer | Responsibility | Scope | Typical runtime | fixture | When to run |
 |---|------|------|:--------:|:------:|:------:|
-| **UT** (Unit Test) | pure logic（仕様充足 + 仕様外不在） | 単関数 | ms | 不要 | TDD サイクル毎 / Phase Review / PR / merge |
-| **CT** (Component Test) | component reactivity（mount → signal → DOM 観測） | 単 component | 数秒 | mock signal | Phase Review / PR / merge |
-| **IT** (Integration Test) | **backend HTTP API only** | server crate | 秒〜十秒 | 実 DB / TempDir | backend Phase 完了後 / PR / merge |
-| **ST** (System Test) | **単一機能の full-stack**（UI 操作 → backend → UI 反映） | UI + server (機能 1 個分) | 数秒〜十秒 | 実 server + fixture | 対象機能 Phase 末尾 / PR / merge |
-| **smoke** | boot + wiring（全 method）+ 型境界 | system 全体 | 30s〜2m | 不要 | 各 Phase Review |
-| **E2E** (End-to-End) | **user journey only** | 全機能横断 | 分〜十数分 | 実 server + 完全 fixture | Final Gate のみ |
-| **Regression** (cross-cutting type) | 既知バグ再発防止 | UT/CT/IT/ST/E2E すべての層に **横断的に** mark | 各層と同じ | 各層と同じ | PR / merge（必須） |
+| **UT** (Unit Test) | pure logic (spec satisfaction + absence of out-of-spec behavior) | single function | ms | none | every TDD cycle / Phase Review / PR / merge |
+| **CT** (Component Test) | component reactivity (mount -> signal -> DOM observation) | single component | seconds | mock signal | Phase Review / PR / merge |
+| **IT** (Integration Test) | **backend HTTP API only** | server crate | seconds to tens of seconds | real DB / TempDir | after backend Phase completion / PR / merge |
+| **ST** (System Test) | **full-stack of a single feature** (UI action -> backend -> UI update) | UI + server (one feature) | seconds to tens of seconds | real server + fixture | end of target feature Phase / PR / merge |
+| **smoke** | boot + wiring (all methods) + type boundaries | entire system | 30s to 2m | none | each Phase Review |
+| **E2E** (End-to-End) | **user journey only** | cross-feature | minutes to tens of minutes | real server + complete fixture | Final Gate only |
+| **Regression** (cross-cutting type) | prevent recurrence of known bugs | marked **across** all UT/CT/IT/ST/E2E layers | same as each layer | same as each layer | PR / merge (required) |
 
-### 各層の詳細
+### Details per Layer
 
 #### UT (Unit Test)
-- **検証内容**: 仕様充足（happy path / boundary）+ **仕様外不在**（mutation 禁止 / 副作用ゼロ / 想定外入力で panic しない）
-- **FIRST 原則必須**: Fast / Isolated / Repeatable / Self-Validating / Timely
-- **外部依存禁止**: clock / RNG / env / fs / HTTP / DB の直接呼出は禁止（Mock 経由のみ許容）
-- **実装**: Rust は inline `#[cfg(test)] mod tests`、.NET は xUnit、Node は vitest など
-- **`_TestFocus` 6 カテゴリ**: Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**
+- **What is verified**: spec satisfaction (happy path / boundary) + **absence of out-of-spec behavior** (no mutation / zero side effects / no panic on unexpected input)
+- **FIRST principle required**: Fast / Isolated / Repeatable / Self-Validating / Timely
+- **External dependencies prohibited**: direct calls to clock / RNG / env / fs / HTTP / DB are prohibited (only allowed via Mocks)
+- **Implementation**: Rust uses inline `#[cfg(test)] mod tests`, .NET uses xUnit, Node uses vitest, etc.
+- **`_TestFocus` 6 categories**: Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**
 
 #### CT (Component Test)
-- **検証内容**: component を mount し、signal 操作・event dispatch で reactivity が機能するか
-- **対象**: UI フレームワーク (Leptos / Blazor / React など) の component 内部の Resource / Suspense / on:click / on:submit / Effect の挙動
-- **実装手段**:
-  - Leptos: `wasm-bindgen-test` + `wasm-pack test --headless --chrome`（実用性 POC: `wasm-bindgen-test-leptos-poc.md`）
+- **What is verified**: mount the component and confirm reactivity works via signal updates and event dispatch
+- **Target**: behavior of Resource / Suspense / on:click / on:submit / Effect inside components in UI frameworks (Leptos / Blazor / React etc.)
+- **Implementation options**:
+  - Leptos: `wasm-bindgen-test` + `wasm-pack test --headless --chrome` (feasibility POC: `wasm-bindgen-test-leptos-poc.md`)
   - .NET Blazor: bUnit
   - React/Vue: @testing-library
-- **責務外**: pure logic（UT で十分）/ 実 server 通信（IT or ST）
+- **Out of scope**: pure logic (UT is sufficient) / real server communication (IT or ST)
 
 #### IT (Integration Test)
-- **検証内容**: backend の HTTP API endpoint の動作（status code / response body / DB 状態変化 / 認証認可）
-- **責務範囲**: server crate のみ。**フロントの Resource → server fn 境界を含めない**（含めるなら CT or ST）
-- **実装**: `tower::ServiceExt::oneshot` で Axum Router 直接呼び出し / TestClient で end-point 試験 など
-- **fixture**: 実 DB（TempDir / docker-compose.test.yml）
-- **責務外**: UI 操作 / DOM 検証 / pure logic
+- **What is verified**: behavior of backend HTTP API endpoints (status code / response body / DB state changes / authn/authz)
+- **Scope**: server crate only. **Do not include the frontend Resource -> server fn boundary** (include via CT or ST)
+- **Implementation**: direct Axum Router invocation via `tower::ServiceExt::oneshot` / endpoint tests via TestClient, etc.
+- **fixture**: real DB (TempDir / docker-compose.test.yml)
+- **Out of scope**: UI actions / DOM verification / pure logic
 
 #### ST (System Test)
-- **検証内容**: 単一機能の full-stack 動作（UI でユーザー操作 → backend が応答 → UI に反映）
-- **対象機能の例**: 「ログイン機能のみ」「検索機能のみ」「ズーム機能のみ」
-- **責務外**: 複数機能の連鎖（E2E 責務）/ pure logic（UT）/ component reactivity 単独（CT）
-- **実装**: Playwright / Selenium で実 server 起動 + UI 操作
+- **What is verified**: full-stack behavior of a single feature (user action in UI -> backend response -> UI update)
+- **Example targets**: "login feature only", "search feature only", "zoom feature only"
+- **Out of scope**: cross-feature flows (E2E responsibility) / pure logic (UT) / component reactivity alone (CT)
+- **Implementation**: Playwright / Selenium with a real server started + UI operations
 
 #### smoke
-- **検証内容**: 4 層構造
-  - L1 Health: `/health`, `/api/health`, `/healthz` への GET
-  - L2 Wiring: design.md の各 `### API-N:` から path / method を抽出。全 method × 全 endpoint で **5xx を出さないこと**（POST/PUT/PATCH は空ボディ `{}`、DELETE はプレースホルダ ID で送信）
-  - L3 Auth: design.md で「Auth: required」の endpoint に Authorization なしで送信して 401
-  - L4 入力境界: 各 path/query/body field の **型境界値**（String 空文字 / maxLength+1 / int overflow / enum 未定義値 / Optional 省略 / 不正 UUID）で 400/422
-- **責務外**: 業務ロジック（IT / UT で検証）/ 複合境界（UT/IT）/ ビジネス境界（IT/UT）/ user journey（E2E）
+- **What is verified**: 4-layer structure
+  - L1 Health: GET to `/health`, `/api/health`, `/healthz`
+  - L2 Wiring: extract path / method from each `### API-N:` in design.md. For all method x all endpoint combinations, **must not return 5xx** (POST/PUT/PATCH with empty body `{}`, DELETE with placeholder ID)
+  - L3 Auth: send to endpoints marked "Auth: required" in design.md without an Authorization header and expect 401
+  - L4 Input boundaries: send **type-boundary values** for each path/query/body field (empty String / maxLength+1 / int overflow / undefined enum value / omitted Optional / invalid UUID) and expect 400/422
+- **Out of scope**: business logic (verified in IT / UT) / composite boundaries (UT/IT) / business boundaries (IT/UT) / user journey (E2E)
 
 #### E2E (End-to-End)
-- **検証内容**: 複数機能の連鎖を含む user journey（例: ログイン → 検索 → 結果クリック → 詳細 → ログアウト）
-- **責務外**: 個別機能のテスト（ST 責務）/ 単一 endpoint の応答確認（IT or smoke 責務）
-- **実行時期**: Final Gate のみ。Phase 内では走らない
+- **What is verified**: user journeys spanning multiple features (e.g., login -> search -> click result -> detail -> logout)
+- **Out of scope**: per-feature tests (ST responsibility) / single-endpoint response checks (IT or smoke responsibility)
+- **When to run**: Final Gate only. Not run inside Phases
 
-#### Regression（cross-cutting type）
-- **位置**: 層ではなく **type**。UT/CT/IT/ST/E2E のすべての層に横断的に mark が付く
-- **命名規則** (`regression-test-policy/SKILL.md` 参照):
+#### Regression (cross-cutting type)
+- **Position**: not a layer but a **type**. Markers are applied across all UT/CT/IT/ST/E2E layers
+- **Naming convention** (see `regression-test-policy/SKILL.md`):
   - Rust: `fn regression_issue_NNN_<description>()` / TypeScript: `it('regression #NNN: ...')`
-- **CI gate**: PR / merge 時に regression marked テストの全件 PASS が必須（QC16 で gate 化予定）
+- **CI gate**: at PR / merge, all regression-marked tests must PASS (planned to be gated by QC16)
 
-### 境界違反パターン（よくある誤り）
+### Boundary Violation Patterns (common mistakes)
 
-#### IT に UI 検証が混入
-- **誤り**: IT-N で `assert dom.querySelector('[data-testid=...]')` を含める
-- **正しい**: UI 検証は CT (component 単独) か ST (full-stack 単一機能) か E2E (user journey)
-- **検出**: `spec-test-design/SKILL.md` Step B Check 19 (TEST_LAYER_BOUNDARY)
+#### UI verification leaks into IT
+- **Wrong**: including `assert dom.querySelector('[data-testid=...]')` in IT-N
+- **Correct**: UI verification belongs to CT (component alone), ST (full-stack single feature), or E2E (user journey)
+- **Detection**: `spec-test-design/SKILL.md` Step B Check 19 (TEST_LAYER_BOUNDARY)
 
-#### E2E に個別機能テストが混入
-- **誤り**: `e2e-zoom-rotate.spec.ts` のような単一機能テストを E2E と称する
-- **正しい**: ST に振る (`st-zoom-rotate.spec.ts` または同等)
-- **検出**: `spec-test-design/SKILL.md` Step B Check 19
+#### Per-feature tests leak into E2E
+- **Wrong**: calling a single-feature test like `e2e-zoom-rotate.spec.ts` an E2E test
+- **Correct**: assign to ST (`st-zoom-rotate.spec.ts` or equivalent)
+- **Detection**: `spec-test-design/SKILL.md` Step B Check 19
 
-#### smoke に full integration が混入
-- **誤り**: smoke で実データを作成して business logic を検証
-- **正しい**: smoke は wiring + 型境界のみ。business logic は IT / UT
-- **検出**: smoke 実行時間が 5 分超え（`spec-implement/SKILL.md` Step 3.5.1.5 で警告）
+#### Full integration leaks into smoke
+- **Wrong**: creating real data in smoke to verify business logic
+- **Correct**: smoke is wiring + type boundaries only. Business logic belongs in IT / UT
+- **Detection**: smoke runtime exceeds 5 minutes (warned in `spec-implement/SKILL.md` Step 3.5.1.5)
 
-#### ST が CT で代替できる
-- **疑問**: 「単一機能の full-stack」と称するが実 server を使わなくても CT で機能テストできる場合
-- **判断**: server fn コアロジック単独なら UT、UI + signal 統合なら CT、UI → server → UI の動作観察が必要なら ST
-- **検出**: spec-test-design 自己レビューで「server 起動が本当に必要か」をチェック
+#### ST that could be replaced by CT
+- **Question**: claimed "full-stack of a single feature" but the feature can be tested with CT without a real server
+- **Decision**: server fn core logic alone -> UT; UI + signal integration -> CT; UI -> server -> UI behavior observation required -> ST
+- **Detection**: in spec-test-design self-review, check "is starting the server really necessary?"
 
-### 参照
+### References
 
-- `regression-test-policy/SKILL.md`: Regression 命名規則 / CI gate / Traceability Matrix
-- `spec-test-design/SKILL.md`: 各層の Subagent (A: UT / B: IT / C: E2E / D: CT / E: ST) と Step B Check
-- `.claude/_docs/plans/dapper-hardening-orchestrator.md`: J-3 の起点と関連項目（K / I / H / E）
+- `regression-test-policy/SKILL.md`: Regression naming convention / CI gate / Traceability Matrix
+- `spec-test-design/SKILL.md`: per-layer Subagents (A: UT / B: IT / C: E2E / D: CT / E: ST) and Step B Checks
+- `.claude/_docs/plans/dapper-hardening-orchestrator.md`: starting point of J-3 and related items (K / I / H / E)
 
 ---
 
-## タスクレベルチェック（QC1〜QC6, QC8〜QC9）
+## Task-Level Checks (QC1-QC6, QC8-QC9)
 
-コミット前・PR 単位で実行するチェック。`/setup-ci` が生成する `ci.yml` および `scheduled-quality.yml` に組み込まれる。
+Checks run pre-commit and per PR. Embedded into `ci.yml` and `scheduled-quality.yml` generated by `/setup-ci`.
 
 ## QC1: rustfmt
 
@@ -163,10 +163,10 @@ cargo test --quiet
 RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --quiet 2>&1 | head -20 || true
 ```
 
-- `pub` なアイテム（関数、構造体、フィールド等）に doc comment (`///`) が欠けている場合に警告を出す
-- **Advisory**: 警告は報告するがコミットをブロックしない（`|| true`）
-- review-worker のカテゴリ A（Style）で doc comment の有無を確認する際の補助情報として使用
-- `/generate-api-docs` の doc comment ギャップ分析と併用することで、API スキーマの自然言語説明カバレッジを向上させる
+- Warns when `pub` items (functions, structs, fields, etc.) lack a doc comment (`///`)
+- **Advisory**: Warnings are reported but do not block commits (`|| true`)
+- Used as supplementary information when review-worker Category A (Style) checks for the presence of doc comments
+- Combined with the doc comment gap analysis of `/generate-api-docs`, this improves natural-language description coverage for API schemas
 
 ## QC4: Dependency Analysis (Optional Tools)
 
@@ -251,7 +251,7 @@ cargo clippy --target wasm32-unknown-unknown --no-default-features --features hy
 Before running quality checks, agents must check for a Leptos full-stack configuration and tool availability:
 
 ```bash
-# Step 1: Detect Leptos project（ブラケット付きヘッダでマッチ）
+# Step 1: Detect Leptos project (match the bracketed header)
 grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/null
 
 # Step 2: If Leptos detected, check cargo-leptos availability
@@ -338,9 +338,9 @@ The full check order for Node.js projects:
 npm audit --audit-level=high
 ```
 
-- `package-lock.json` が存在する場合のみ実行
-- **Blocking**: high / critical の脆弱性が検出された場合は失敗
-- `yarn.lock` の場合は `yarn audit --level high`（Yarn v1）または `yarn npm audit`（Yarn v2+）
+- Run only if `package-lock.json` exists
+- **Blocking**: Fails if high / critical vulnerabilities are detected
+- For `yarn.lock`, use `yarn audit --level high` (Yarn v1) or `yarn npm audit` (Yarn v2+)
 
 ### unused code detection (Node.js — advisory)
 
@@ -348,9 +348,9 @@ npm audit --audit-level=high
 npx knip --no-progress 2>&1 | head -50
 ```
 
-- `knip` がプロジェクトに設定されている場合のみ実行
-- **Advisory**: 未使用ファイル・エクスポートを報告するがブロックしない
-- 未導入の場合はスキップ（`npx knip` が失敗したら無視）
+- Run only if `knip` is configured in the project
+- **Advisory**: Reports unused files/exports but does not block
+- Skipped if not installed (ignore failures from `npx knip`)
 
 ## QC12: .NET Task-Level Quality Checks
 
@@ -369,7 +369,7 @@ dotnet format --verify-no-changes --no-restore
 ```
 
 - Uses `.editorconfig` rules (must be present at solution root)
-- `--no-restore`: `dotnet restore` が別途実行済みの前提（チェーン内での冗長 restore を回避）
+- `--no-restore`: Assumes `dotnet restore` has already been run separately (avoids redundant restore within the chain)
 - To auto-fix: `dotnet format` (without `--verify-no-changes`)
 - Covers both formatting and code style analyzers
 
@@ -410,7 +410,7 @@ dotnet build --no-restore -p:DocumentationFile=docs.xml 2>&1 | grep -c "CS1591" 
 #### Security audit (blocking)
 
 ```bash
-# dotnet list package --vulnerable は常に exit code 0 を返すため、出力をパースする
+# dotnet list package --vulnerable always returns exit code 0, so parse the output
 OUTPUT=$(dotnet list package --vulnerable --include-transitive 2>&1)
 echo "$OUTPUT"
 if echo "$OUTPUT" | grep -qE "(Critical|High)"; then
@@ -421,7 +421,7 @@ fi
 
 - **Blocking**: If high/critical vulnerabilities are found, the check **fails**
 - `--include-transitive`: Checks both direct and transitive dependencies
-- `cargo audit` と異なり exit code で判定できないため、出力の grep が必須
+- Unlike `cargo audit`, this cannot be judged by exit code, so grepping the output is required
 
 #### Redundant dependency detection (advisory)
 
@@ -521,7 +521,7 @@ The full check order for .NET projects:
 
 ## QC8: Code Duplication Detection (Advisory)
 
-コード重複を検出する。全プロジェクトタイプに適用可能。
+Detect code duplication. Applicable to all project types.
 
 ```bash
 npx jscpd --min-lines 10 --min-tokens 50 \
@@ -529,25 +529,25 @@ npx jscpd --min-lines 10 --min-tokens 50 \
   --reporters consoleFull .
 ```
 
-- **Advisory**: 重複は報告するがコミットをブロックしない
-- 検出ツール未インストール時はスキップ
-- 週次定期チェック（`--with-scheduled`）で Issue 作成と組み合わせて使用
-- Rust プロジェクトでも `jscpd` は有効（テキストベースの重複検出）
+- **Advisory**: Duplications are reported but do not block commits
+- Skipped if the detection tool is not installed
+- Used in combination with Issue creation in the weekly scheduled check (`--with-scheduled`)
+- `jscpd` is effective for Rust projects too (text-based duplication detection)
 
-代替ツール:
-- Rust: `cargo install cargo-clone-detection`（利用可能な場合）
+Alternative tools:
+- Rust: `cargo install cargo-clone-detection` (when available)
 - Python: `pylint --disable=all --enable=duplicate-code`
 
 ## QC9: Lockfile Verification (P4-03)
 
 > 🔗 **Hook**: `lockfile-guard.sh` (PreToolUse — commit gate)
 
-パッケージマネージャの lockfile がリポジトリにコミットされていることを検証する。
-lockfile の欠如は再現不可能なビルドにつながるため、**Blocking** チェックとする。
+Verifies that the package manager's lockfile is committed to the repository.
+The absence of a lockfile leads to non-reproducible builds, so this is a **Blocking** check.
 
-### 検出対象
+### Detection Targets
 
-| パッケージマネージャ | マニフェスト | lockfile |
+| Package Manager | Manifest | lockfile |
 |-------------------|------------|---------|
 | npm | `package.json` | `package-lock.json` |
 | yarn | `package.json` | `yarn.lock` |
@@ -558,13 +558,13 @@ lockfile の欠如は再現不可能なビルドにつながるため、**Blocki
 | Poetry (Python) | `pyproject.toml` | `poetry.lock` |
 | Bundler (Ruby) | `Gemfile` | `Gemfile.lock` |
 
-### チェックコマンド
+### Check Command
 
 ```bash
-# マニフェストファイルと対応する lockfile の存在を確認
+# Verify the existence of manifest files and their corresponding lockfiles
 FAIL=false
 
-# Node.js (いずれか 1 つで OK)
+# Node.js (any one is OK)
 if [ -f package.json ]; then
   if [ ! -f package-lock.json ] && [ ! -f yarn.lock ] && [ ! -f pnpm-lock.yaml ]; then
     echo "FAIL: package.json exists but no lockfile found (package-lock.json, yarn.lock, pnpm-lock.yaml)"
@@ -584,8 +584,8 @@ if [ -f go.mod ] && [ ! -f go.sum ]; then
   FAIL=true
 fi
 
-# .NET (packages.lock.json は RestorePackagesWithLockFile 有効時のみ生成される)
-# Central Package Management 使用時は Directory.Packages.props の存在を確認
+# .NET (packages.lock.json is only generated when RestorePackagesWithLockFile is enabled)
+# When Central Package Management is used, verify the existence of Directory.Packages.props
 if find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
   if find . -maxdepth 3 \( -name '*.csproj' -o -name 'Directory.Build.props' -o -name 'Directory.*.props' \) -exec grep -lq 'RestorePackagesWithLockFile' {} + 2>/dev/null; then
     if [ ! -f packages.lock.json ] && ! find . -maxdepth 3 -name 'packages.lock.json' -print -quit 2>/dev/null | grep -q .; then
@@ -595,7 +595,7 @@ if find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; the
   fi
 fi
 
-# .gitignore で除外されていないことを確認
+# Verify that the file is not excluded by .gitignore
 for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poetry.lock Gemfile.lock packages.lock.json; do
   if [ -f "$lockfile" ] && git check-ignore -q "$lockfile" 2>/dev/null; then
     echo "FAIL: $lockfile is gitignored — lockfile must be committed for reproducible builds"
@@ -604,65 +604,65 @@ for lockfile in package-lock.json yarn.lock pnpm-lock.yaml Cargo.lock go.sum poe
 done
 ```
 
-| 条件 | 判定 | アクション |
+| Condition | Verdict | Action |
 |------|------|-----------|
-| lockfile が存在し git 管理下にある | PASS | — |
-| lockfile が `.gitignore` で除外されている | FAIL | `.gitignore` から除外を解除し commit |
-| lockfile が存在しない（マニフェストあり） | FAIL | install コマンドを実行し lockfile を生成・commit |
-| マニフェスト自体が存在しない | SKIP | 対象外 |
+| lockfile exists and is tracked by git | PASS | — |
+| lockfile is excluded by `.gitignore` | FAIL | Remove the exclusion from `.gitignore` and commit |
+| lockfile is missing (manifest exists) | FAIL | Run the install command to generate the lockfile and commit it |
+| manifest itself is missing | SKIP | Out of scope |
 
-> **CI 連携**: `scheduled-quality-standalone.yml` にこのチェックが組み込まれている。
-> lockfile 未コミットの場合は週次スキャンで Issue が自動作成される。
+> **CI integration**: This check is built into `scheduled-quality-standalone.yml`.
+> If a lockfile is not committed, an Issue is automatically created by the weekly scan.
 
-> **執行レベル**:
-> - **エージェント/ローカル**: Blocking — lockfile 未コミットの場合はコミットをブロックする
-> - **PR CI (`ci.yml`)**: Blocking — lockfile 未コミットの場合は CI を失敗させる
-> - **週次スキャン (`scheduled-quality.yml`)**: Advisory (`continue-on-error: true`) — 検出時に Issue を自動作成するが、ワークフロー全体は停止しない
+> **Enforcement level**:
+> - **Agent/local**: Blocking — blocks commits when the lockfile is not committed
+> - **PR CI (`ci.yml`)**: Blocking — fails CI when the lockfile is not committed
+> - **Weekly scan (`scheduled-quality.yml`)**: Advisory (`continue-on-error: true`) — automatically creates an Issue on detection but does not stop the entire workflow
 
 ## QC10: Documentation Lint (P5-03)
 
 > 🔗 **Hook**: `post-edit.sh` (PostToolUse — markdownlint auto-fix)
 
-Markdown ファイルのフォーマット整合性とリンク健全性を検証する。全プロジェクトタイプ共通。
+Verifies the formatting consistency and link integrity of Markdown files. Common to all project types.
 
-### markdownlint（フォーマットチェック）
+### markdownlint (format check)
 
 ```bash
 npx markdownlint-cli2 "**/*.md" "#node_modules" "#target" "#dist"
 ```
 
-- `.markdownlint.yaml` が存在すればそのルールに従う
-- 未設定時はデフォルトルール適用（推奨: MD013 line-length を無効化）
-- 自動修正: `npx markdownlint-cli2 --fix "**/*.md" "#node_modules" "#target" "#dist"`
+- If `.markdownlint.yaml` exists, follow its rules
+- If not configured, default rules apply (recommended: disable MD013 line-length)
+- Auto-fix: `npx markdownlint-cli2 --fix "**/*.md" "#node_modules" "#target" "#dist"`
 
-### markdown-link-check（リンク検証）
+### markdown-link-check (link verification)
 
 ```bash
 find . -name '*.md' -not -path '*/node_modules/*' -not -path '*/target/*' -not -path '*/.spec-workflow/*' | \
   xargs -I {} npx markdown-link-check {} --config .markdown-link-check.json 2>&1 | tee /tmp/link-check-output.txt
 ```
 
-- `.markdown-link-check.json` が存在すればその config に従う
-- 未設定時はデフォルト（外部リンクの 429 Too Many Requests は無視推奨）
+- If `.markdown-link-check.json` exists, follow its config
+- If not configured, defaults apply (recommended: ignore 429 Too Many Requests on external links)
 
-| 条件 | 判定 | アクション |
+| Condition | Verdict | Action |
 |------|------|-----------|
-| フォーマット違反なし & リンク切れなし | PASS | — |
-| フォーマット違反あり | WARN | `markdownlint-cli2 --fix` で自動修正可 |
-| リンク切れあり | WARN | リンク先を更新 or 削除 |
+| no format violations & no broken links | PASS | — |
+| format violations present | WARN | Can be auto-fixed with `markdownlint-cli2 --fix` |
+| broken links present | WARN | Update or remove the link target |
 
-> **執行レベル**:
-> - **エージェント/ローカル**: Advisory — 報告するがコミットはブロックしない
-> - **PR CI (`ci.yml`)**: Advisory (`continue-on-error: true`) — PR コメントで報告
-> - **週次スキャン (`scheduled-quality.yml`)**: Advisory — 検出時に Issue 作成
+> **Enforcement level**:
+> - **Agent/local**: Advisory — reports but does not block commits
+> - **PR CI (`ci.yml`)**: Advisory (`continue-on-error: true`) — reports via PR comment
+> - **Weekly scan (`scheduled-quality.yml`)**: Advisory — creates an Issue on detection
 >
-> **doc-crossref.md との関係**: QC10 は機械的なフォーマット検証とリンク切れ検出を担当。
-> `doc-crossref.md` は spec-workflow 固有のセマンティック参照整合性（Requirements Traceability 等）を対象とする。
+> **Relationship to doc-crossref.md**: QC10 covers mechanical format verification and broken-link detection.
+> `doc-crossref.md` covers semantic reference integrity specific to spec-workflow (Requirements Traceability, etc.).
 
 ## QC11: SAST / Security-Focused Static Analysis (P6-04)
 
-セキュリティに特化した静的コード解析を実行する。QC2 (clippy) の一般 lint に加えて、
-セキュリティ関連の lint グループを明示的に有効化する。
+Run security-focused static code analysis. In addition to the general lints in QC2 (clippy),
+explicitly enable security-related lint groups.
 
 ### Rust / Leptos
 
@@ -670,9 +670,9 @@ find . -name '*.md' -not -path '*/node_modules/*' -not -path '*/target/*' -not -
 cargo clippy --all-targets -- -W clippy::suspicious -W clippy::correctness -W clippy::complexity
 ```
 
-- `clippy::suspicious`: 疑わしいコードパターン（意図しない動作の兆候）
-- `clippy::correctness`: 正確性に関する問題（バグの可能性が高い）
-- `clippy::complexity`: 不必要な複雑性（攻撃面の拡大につながる）
+- `clippy::suspicious`: Suspicious code patterns (signs of unintended behavior)
+- `clippy::correctness`: Correctness issues (high probability of bugs)
+- `clippy::complexity`: Unnecessary complexity (which expands the attack surface)
 
 ### Node.js
 
@@ -680,187 +680,187 @@ cargo clippy --all-targets -- -W clippy::suspicious -W clippy::correctness -W cl
 # ESLint + security plugin
 npx eslint --plugin security --rule 'security/detect-object-injection: warn' .
 
-# または CodeQL（GitHub Actions 経由）
-# codeql.yml ワークフローで自動実行
+# Or CodeQL (via GitHub Actions)
+# Automatically run by the codeql.yml workflow
 ```
 
 ### .NET
 
 ```bash
-# .NET Analyzers (CAxxxx) + Roslynator + StyleCop — QC12.2 の dotnet build -warnaserror で実行済み
-# 追加のセキュリティ重点チェック:
+# .NET Analyzers (CAxxxx) + Roslynator + StyleCop — already run in QC12.2 via dotnet build -warnaserror
+# Additional security-focused checks:
 dotnet build --no-restore -p:AnalysisLevel=latest-all 2>&1 | grep -E "(CA2[0-9]{3}|CA3[0-9]{3})" || true
 ```
 
 - `CA2xxx`: Security-related analyzers (SQL injection, XSS, etc.)
 - `CA3xxx`: Security design guidelines
-- `AnalysisLevel=latest-all`: 全カテゴリの最新ルールを有効化
-- CodeQL は GitHub Actions 経由で自動実行（C# 対応）
+- `AnalysisLevel=latest-all`: Enables the latest rules from all categories
+- CodeQL is automatically run via GitHub Actions (C# supported)
 
-### 他の SAST ツール（代替）
+### Other SAST Tools (alternatives)
 
-| ツール | 対応言語 | 特徴 |
+| Tool | Supported Languages | Features |
 |--------|---------|------|
-| CodeQL | JS/TS, Python, Go, Java | GitHub 組込み、公開リポジトリ無料 |
-| Semgrep | 多言語 | ルールベース、OSS |
-| SonarQube | 多言語 | エンタープライズ向け |
+| CodeQL | JS/TS, Python, Go, Java | Built into GitHub, free for public repositories |
+| Semgrep | multi-language | Rule-based, OSS |
+| SonarQube | multi-language | Enterprise-oriented |
 
-> **執行レベル**:
-> - **エージェント/ローカル**: Advisory — 報告するがコミットはブロックしない
+> **Enforcement level**:
+> - **Agent/local**: Advisory — reports but does not block commits
 > - **PR CI (`ci.yml`)**: Advisory (`continue-on-error: true`)
-> - **週次スキャン**: CodeQL の schedule トリガーで自動実行
+> - **Weekly scan**: Automatically run by the CodeQL schedule trigger
 
 ---
 
-## 統合レベル検証（QC7）
+## Integration-level Verification (QC7)
 
-Phase Review および Final E2E Gate で実行する統合レベルの検証。タスクレベルチェック（QC1〜QC6, QC8〜QC9）とは独立したステップとして、Phase 完了時にのみ実行する。
+Integration-level verification run during Phase Review and the Final E2E Gate. Run it as a step independent of task-level checks (QC1-QC6, QC8-QC9), only at Phase completion.
 
 ## QC7: Integration Verification (Phase Review / Final E2E Gate)
 
-Phase Review (3.5.1.5) および全Phase完了後の Final E2E Gate (セクション9) で実行する統合レベルの検証。
-タスク単位の品質チェック（rustfmt, clippy, cargo test）とは独立したステップとして実行する。
+Integration-level verification run during Phase Review (3.5.1.5) and the Final E2E Gate (section 9) after all Phases complete.
+Run it as a step independent of task-level quality checks (rustfmt, clippy, cargo test).
 
-### プロジェクトタイプ検出
+### Project-type detection
 
-以下の順で検出し、最初にマッチしたタイプを採用する:
+Detect in the following order, adopting the first matching type:
 
 ```bash
-# 1. Leptos フルスタック検出（ブラケット付きヘッダで誤検出を防止）
+# 1. Leptos full-stack detection (bracketed header avoids false positives)
 if grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/null; then
   echo "leptos"
-# 2. Rust API 検出（axum, actix-web, rocket 等）
+# 2. Rust API detection (axum, actix-web, rocket, etc.)
 elif grep -qE '(axum|actix-web|rocket)' Cargo.toml 2>/dev/null; then
   echo "rust-api"
-# 3. .NET Blazor フルスタック検出（Leptos 相当）
+# 3. .NET Blazor full-stack detection (Leptos equivalent)
 elif find . -maxdepth 2 -name '*.csproj' -exec grep -l 'BlazorWebAssembly\|Microsoft.AspNetCore.Components.WebAssembly' {} + 2>/dev/null | head -1 | grep -q .; then
   echo "dotnet-blazor"
-# 4. .NET API 検出
+# 4. .NET API detection
 elif ls *.sln 2>/dev/null | head -1 | grep -q . || find . -maxdepth 2 -name '*.csproj' -print -quit 2>/dev/null | grep -q .; then
   echo "dotnet"
-# 5. Node.js 検出
+# 5. Node.js detection
 elif test -f package.json; then
   echo "nodejs"
-# 6. いずれにも該当しない
+# 6. None of the above
 else
   echo "generic"
 fi
 ```
 
-### Step B: ビルド検証（全プロジェクト共通・必須）
+### Step B: Build verification (common to all projects, required)
 
-成果物のビルドが成功することを確認する。ビルド失敗は即座に FAIL とする。
+Confirm the build of artifacts succeeds. A build failure is FAIL immediately.
 
-| タイプ | コマンド | 備考 |
+| Type | Command | Notes |
 |--------|---------|------|
-| Leptos | `cargo leptos build` | SSR + WASM 両方をビルド |
-| Rust API | `cargo build` | リリースビルドは不要（デバッグビルドで十分） |
-| .NET Blazor | `dotnet publish -c Release -p:PublishTrimmed=true` | WASM + Trim 検証を含む |
-| .NET API | `dotnet build --no-restore -warnaserror` | Analyzer 警告をエラー化 |
-| Node.js | `npm run build` | `build` スクリプトが package.json に存在する場合のみ。存在しない場合は SKIP（FAIL ではない）とし、ログに「build スクリプトなし」と記録 |
-| Generic | `cargo build` or `dotnet build` or `npm run build` | 検出可能なビルドコマンドを実行。該当コマンドがない場合は SKIP とする |
+| Leptos | `cargo leptos build` | Builds both SSR and WASM |
+| Rust API | `cargo build` | A release build is not required (debug build suffices) |
+| .NET Blazor | `dotnet publish -c Release -p:PublishTrimmed=true` | Includes WASM + Trim verification |
+| .NET API | `dotnet build --no-restore -warnaserror` | Treat analyzer warnings as errors |
+| Node.js | `npm run build` | Only when a `build` script exists in package.json. If not, SKIP (not FAIL) and log "no build script" |
+| Generic | `cargo build` or `dotnet build` or `npm run build` | Run any detectable build command. SKIP if none applies |
 
-### Step C: 統合テスト実行
+### Step C: Run integration tests
 
-統合テストファイルが存在する場合に実行する。存在しない場合の判定（優先順）:
-- design.md の Excluded Test Environments に当該統合テスト環境の除外宣言がある → **SKIP（設計時除外）**
-- 上記の除外宣言はなく、test-design.md に当該統合テスト仕様が定義されている → **FAIL（実装漏れ）** — テストファイルの作成が必要
-- 上記いずれにも該当せず、test-design.md に当該統合テスト仕様が未定義 → **SKIP（設計上不要）** — ログに理由を記録し Expert Team Review で補完
+Run when integration test files exist. Decision when they do not (in priority order):
+- design.md's Excluded Test Environments declares this integration test environment as excluded -> **SKIP (excluded by design)**
+- No such exclusion, and test-design.md defines the integration test specification -> **FAIL (missing implementation)** -- the test file must be created
+- Neither of the above, and test-design.md does not define the integration test specification -> **SKIP (not required by design)** -- log the reason and supplement via Expert Team Review
 
-**「test-design.md に統合テスト仕様が定義されている」の客観的判定基準**（オーケストレータはこのルールに厳密に従うこと）:
-- test-design.md 内に `## Integration Test Specifications` セクション見出しが存在する
-- かつ、そのセクション内に `### IT-` で始まる見出しが 1 件以上存在する（例: `### IT-1: APIエンドポイント統合テスト`）
-- 上記 2 条件を共に満たす場合のみ「仕様あり」とみなす。条件を満たさない場合は「仕様なし」
+**Objective criteria for "test-design.md defines an integration test specification"** (the orchestrator must follow this rule strictly):
+- A `## Integration Test Specifications` section heading exists in test-design.md
+- AND at least one heading starting with `### IT-` exists within that section (e.g., `### IT-1: API endpoint integration test`)
+- The "spec exists" judgment holds only when both conditions are met. Otherwise "spec absent"
 
 ```bash
-# Rust: 統合テストの存在確認（tests/ ディレクトリ内の .rs ファイル。e2e/ と unit/ は再帰的に除外）
-# 検出対象: tests/integration*/ 配下の .rs ファイル、または tests/ 直下の .rs ファイル
+# Rust: existence check for integration tests (.rs files under tests/. Recursively excludes e2e/ and unit/)
+# Targets: .rs files under tests/integration*/, or .rs files directly under tests/
 find tests -type f -name '*.rs' ! -regex '.*/tests/\(e2e\|unit\)/.*' -print -quit 2>/dev/null
 
-# .NET: 統合テストプロジェクトの存在確認
+# .NET: existence check for integration test projects
 find . -maxdepth 3 \( -name '*Integration*Tests*.csproj' -o -name '*IntegrationTests*.csproj' \) -print -quit 2>/dev/null
 
-# Node.js: 統合テストスクリプトまたはファイルの存在確認
+# Node.js: existence check for integration test scripts or files
 grep -q '"test:integration"' package.json 2>/dev/null || \
   find tests test __tests__ -type f -name 'integration*' -print -quit 2>/dev/null
 ```
 
-| タイプ | コマンド |
+| Type | Command |
 |--------|---------|
 | Rust | `cargo test --tests --quiet` |
-| .NET | `dotnet test --filter "Category=Integration" --no-build --verbosity quiet`（テストに `[Trait("Category","Integration")]` 必須） |
-| Node.js（スクリプトあり） | `npm run test:integration` |
-| Node.js（ファイルのみ） | `npm test -- --testPathPattern=integration` |
+| .NET | `dotnet test --filter "Category=Integration" --no-build --verbosity quiet` (tests must have `[Trait("Category","Integration")]`) |
+| Node.js (script present) | `npm run test:integration` |
+| Node.js (file only) | `npm test -- --testPathPattern=integration` |
 
-### Step D: スモークテスト（**全プロジェクトタイプ対応**、E-1 で改訂）
+### Step D: Smoke tests (**applies to all project types**, revised in E-1)
 
-> E-1 で改訂（dapper-hardening）: 旧仕様「API プロジェクトのみ」を撤廃し、project-type 別 smoke 定義 + 4 層構造（L1〜L4）を採用。
-> Smoke は **wiring + 型境界の検証** であり、ping だけ・/health だけではない（`Test Taxonomy` セクション #smoke 参照）。
+> Revised in E-1 (dapper-hardening): the old "API projects only" spec was abolished; project-type-specific smoke definitions and a 4-layer structure (L1-L4) were adopted.
+> Smoke is **verification of wiring + type boundaries**, not just ping or just /health (see `Test Taxonomy` section #smoke).
 
-#### Smoke Test Definition（E-1 で確定）
+#### Smoke Test Definition (finalized in E-1)
 
-| project-type | 検出条件 | Smoke 内容 |
+| project-type | Detection | Smoke content |
 |------|------|------|
-| **API (HTTP server)** | `Cargo.toml` に `axum` / `actix-web` / `rocket` / `*.csproj` に Web 依存 / Express 等 | L1〜L4（下記）。全 method × 全 endpoint で 5xx を出さないこと |
-| **Library (crate / npm package)** | `[lib]` のみ / `package.json` で `main` のみ | `cargo build --lib --release` + crate root の doctest / 公開 API に対する「import + 1 メソッド呼び出し」smoke |
-| **CLI** | `[[bin]]` あり / `package.json` に `bin` | `<binary> --help` / `<binary> --version` + 主要サブコマンドの `--help` + 必須引数欠落で exit code 非ゼロ |
-| **UI / Frontend (CSR / WASM のみ)** | Trunk / `[package.metadata.leptos]` で SSR なし | WASM bundle build + headless browser で初期 render + 全 `data-testid` 要素が DOM 出現 (QC17 UI Smoke Render 参照) |
-| **Full-stack (Leptos SSR / Next.js)** | `[package.metadata.leptos]` あり / `next.config.js` 等 | API smoke (L1〜L4) + UI smoke (QC17) の組合せ |
-| **Worker / Daemon** | バイナリで HTTP server を持たない常駐プロセス | バイナリ起動 + 30 秒の crash-loop 監視 + 終了 |
+| **API (HTTP server)** | `axum` / `actix-web` / `rocket` in `Cargo.toml` / Web dependency in `*.csproj` / Express, etc. | L1-L4 (below). No 5xx for any method x endpoint |
+| **Library (crate / npm package)** | `[lib]` only / `package.json` with `main` only | `cargo build --lib --release` + crate-root doctests / "import + one method call" smoke for the public API |
+| **CLI** | Has `[[bin]]` / `bin` in `package.json` | `<binary> --help` / `<binary> --version` + `--help` for major subcommands + non-zero exit code on missing required args |
+| **UI / Frontend (CSR / WASM only)** | Trunk / `[package.metadata.leptos]` without SSR | WASM bundle build + initial render in headless browser + all `data-testid` elements appear in the DOM (see QC17 UI Smoke Render) |
+| **Full-stack (Leptos SSR / Next.js)** | Has `[package.metadata.leptos]` / `next.config.js`, etc. | Combination of API smoke (L1-L4) + UI smoke (QC17) |
+| **Worker / Daemon** | A binary that has no HTTP server but is a long-running process | Start the binary + 30-second crash-loop watch + shutdown |
 
-#### API Smoke 4 層構造（L1〜L4、E-1）
+#### API Smoke 4-layer Structure (L1-L4, E-1)
 
-| 層 | 内容 | 期待結果 | 失敗の意味 |
+| Layer | Content | Expected | Meaning of failure |
 |---|------|---------|----------|
-| **L1: Health** | `/health`, `/api/health`, `/healthz` への GET | 200 | サーバ起動失敗 |
-| **L2: Wiring smoke** | design.md の各 `### API-N:` から path / method を抽出。method 別に最小リクエスト送信:<br>・**GET**: クエリなし<br>・**POST/PUT/PATCH**: 空ボディ `{}`<br>・**DELETE**: パス末尾にプレースホルダID（`/users/00000000-0000-0000-0000-000000000000`） | **2xx / 3xx / 4xx いずれか（5xx 禁止）** | wiring バグ: ハンドラ未配線 / DI 不整合 / panic 不処理 |
-| **L3: Auth smoke** | design.md の各 endpoint で「Auth: required」のもの → Authorization ヘッダなしで送信 | 401 | 認可漏洩（200 が返ったらセキュリティ事故） |
-| **L4: 入力境界 smoke** | design.md API 定義から各引数（path/query/body field）の **型境界値** を 1 件ずつ生成して送信:<br>・String 必須: 空文字 `""`<br>・String maxLength: 制限+1 文字<br>・int min/max: ±1 オーバーフロー<br>・enum: 未定義値<br>・Optional 省略 | **400/422（5xx 禁止）** | validation 不足: deny_unknown_fields 漏れ / 型変換 panic / null 処理漏れ |
+| **L1: Health** | GET to `/health`, `/api/health`, `/healthz` | 200 | Server failed to start |
+| **L2: Wiring smoke** | Extract path / method from each `### API-N:` in design.md. Send a minimal request per method:<br>- **GET**: no query<br>- **POST/PUT/PATCH**: empty body `{}`<br>- **DELETE**: placeholder ID at the end of the path (`/users/00000000-0000-0000-0000-000000000000`) | **Any of 2xx / 3xx / 4xx (no 5xx)** | Wiring bug: handler not wired / DI mismatch / unhandled panic |
+| **L3: Auth smoke** | For each endpoint in design.md marked "Auth: required", send without the Authorization header | 401 | Authorization leak (a 200 indicates a security incident) |
+| **L4: Input boundary smoke** | From the design.md API definition, generate one **type-boundary value** per argument (path/query/body field):<br>- Required String: empty `""`<br>- String maxLength: limit+1 char<br>- int min/max: +/-1 overflow<br>- enum: undefined value<br>- Optional omitted | **400/422 (no 5xx)** | Insufficient validation: missing deny_unknown_fields / type-conversion panic / missing null handling |
 
-**境界線**:
-- 正常系の business logic（POST で作成した entity が GET で取得できる）→ smoke の責務外（IT で検証）
-- 複合境界 / ビジネス境界（`user.age` 18〜120 等）→ smoke の責務外（UT/IT で検証）
+**Boundaries**:
+- Happy-path business logic (an entity created via POST is retrievable via GET) -> outside smoke responsibility (verify via IT)
+- Composite / business boundaries (e.g., `user.age` 18-120) -> outside smoke responsibility (verify via UT/IT)
 
-#### 旧 Step D との差分（E-1）
+#### Differences from the old Step D (E-1)
 
-旧仕様（「API プロジェクトのみ」「`/health` のみ」）から拡張:
-- ✅ project-type 別に smoke を定義（Library / CLI / UI / Full-stack / Worker も対応）
-- ✅ API smoke は GET だけでなく **全 method** を対象（L2 Wiring smoke）
-- ✅ 認証 smoke (L3) と 型境界 smoke (L4) を追加
-- ✅ 「Phase に smoke 可能な deliverable が無い」場合は SKIP ではなく **escalate** （E-2、Phase Deliverables 設計問題として）
+Extension over the old spec ("API projects only", "`/health` only"):
+- Defined smoke per project-type (now also covers Library / CLI / UI / Full-stack / Worker)
+- API smoke covers **all methods**, not just GET (L2 Wiring smoke)
+- Added auth smoke (L3) and type-boundary smoke (L4)
+- When "the Phase has no smoke-able deliverable", **escalate** rather than SKIP (E-2, treated as a Phase Deliverables design problem)
 
-#### 既存 Step D 実装（API project の場合）の継続
+#### Continuing the existing Step D implementation (for API projects)
 
-**コンテナベース（docker-compose.yml が存在する場合 — 優先）:**
+**Container-based (when docker-compose.yml exists -- preferred):**
 
 ```bash
-# docker-compose でサービスを起動
+# Start services with docker-compose
 docker-compose up -d
 sleep 10
 ```
 
-ヘルスチェック実行後:
+After running the health check:
 ```bash
 docker-compose down
 ```
 
-**直接起動（docker-compose.yml が存在しない場合 — フォールバック）:**
+**Direct startup (when docker-compose.yml does not exist -- fallback):**
 
 ```bash
-# プロジェクトタイプに応じてサーバ起動コマンドを切り替え
+# Switch the server start command based on project type
 if [ -f Cargo.toml ]; then
   START_CMD="cargo run"
 elif SLN=$(ls *.sln 2>/dev/null | head -1) && [ -n "$SLN" ]; then
-  # .sln がルートに存在する前提（単一 .sln）
-  # Web SDK プロジェクトを優先（クラスライブラリは dotnet run 不可）
+  # Assumes a single .sln at the repo root
+  # Prefer the Web SDK project (class libraries cannot be `dotnet run`)
   ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | while read -r proj; do
     [ -f "$proj" ] && grep -q 'Microsoft.NET.Sdk.Web' "$proj" && echo "$proj" && break
   done)
-  # Web SDK が見つからなければ先頭プロジェクトにフォールバック
+  # Fall back to the first project if no Web SDK is found
   [ -z "$ENTRY_PROJECT" ] && ENTRY_PROJECT=$(dotnet sln "$SLN" list 2>/dev/null | tail -n +3 | head -1)
   START_CMD="dotnet run --project ${ENTRY_PROJECT:-.}"
 elif [ -f package.json ]; then
-  # package.json に dev スクリプトがあれば優先的に使用し、なければ start スクリプトを確認
+  # Prefer the dev script in package.json if present; otherwise check the start script
   if command -v node >/dev/null 2>&1 && \
      node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.dev ? 0 : 1)" >/dev/null 2>&1; then
     START_CMD="npm run dev"
@@ -868,21 +868,21 @@ elif [ -f package.json ]; then
        node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.start ? 0 : 1)" >/dev/null 2>&1; then
     START_CMD="npm start"
   else
-    echo "Step D: Node.js プロジェクトで start / dev スクリプトが存在しないため、スモークテストをスキップします。" >&2
+    echo "Step D: skipping smoke test because the Node.js project has no start / dev script." >&2
     exit 0
   fi
 else
-  echo "Step D: 対応するプロジェクトタイプ（Rust/.NET/Node.js）が見つからないため、スモークテストをスキップします。" >&2
+  echo "Step D: skipping smoke test because no supported project type (Rust/.NET/Node.js) was found." >&2
   exit 0
 fi
 
-# バックグラウンドでサーバ起動（新しいセッションで確実に停止可能にする）
+# Start the server in the background (new session so we can reliably stop it)
 setsid sh -c "$START_CMD" &
 SERVER_PID=$!
 trap "kill -- -$SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null" EXIT
 sleep 5
 
-# ヘルスチェック（/health と /api/health を順に試行）
+# Health check (try /health then /api/health)
 HEALTH_STATUS="000"
 for ENDPOINT in "/health" "/api/health" "/healthz"; do
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT:-3000}${ENDPOINT}" 2>/dev/null)
@@ -892,137 +892,136 @@ for ENDPOINT in "/health" "/api/health" "/healthz"; do
   fi
 done
 
-# クリーンアップ
+# Cleanup
 kill -- -$SERVER_PID 2>/dev/null
 wait $SERVER_PID 2>/dev/null
 
-# PASS/FAIL 判定
+# PASS/FAIL judgment
 if [ "$HEALTH_STATUS" != "200" ]; then
-  echo "Step D: ヘルスチェック失敗 — いずれのエンドポイントからも 200 が返りませんでした。" >&2
+  echo "Step D: health check failed -- no endpoint returned 200." >&2
   exit 1
 fi
 ```
 
-**スモークテストの SKIP 条件**（設計上テストが不要・不可能な場合のみ）:
-- ヘルスチェックエンドポイントが設計書に未定義
-- サーバ起動コマンドが不明（Cargo.toml に `[[bin]]` セクションがない等）
-- Node.js プロジェクトで `start` / `dev` スクリプトが存在しない
-- 対応するプロジェクトタイプ（Rust/.NET/Node.js）が検出されない
+**Smoke test SKIP conditions** (only when the test is unnecessary or impossible by design):
+- The health-check endpoint is undefined in the design doc
+- The server start command is unknown (e.g., no `[[bin]]` section in Cargo.toml)
+- A Node.js project has no `start` / `dev` script
+- No supported project type (Rust/.NET/Node.js) is detected
 
-**環境不備の FAIL 条件**（ツール・ランタイム不足の場合 — 環境依存のスキップは一切許可しない）:
-- Docker/コンテナランタイムが未インストール、または `docker` / `docker-compose` コマンドが存在しない・権限不足で実行できない（`docker-compose up` の起動失敗を含む）
-- Chrome/ブラウザが未インストール
-- DB/キャッシュ起動に必要なツールが未インストール
-- サーバ起動に必要なランタイム（cargo, dotnet, node 等）が未インストール
-- 外部依存（DB、キャッシュ等）が必要でローカル起動できない（Docker/testcontainers で起動できるようにするのが設計の責務）
+**Environment-deficiency FAIL conditions** (when tools/runtimes are missing -- environment-dependent skips are never allowed):
+- Docker / container runtime not installed, or `docker` / `docker-compose` commands absent / unable to run due to insufficient permissions (including failure of `docker-compose up`)
+- Chrome / browser not installed
+- Tools required to start DB / cache not installed
+- Runtimes required to start the server (cargo, dotnet, node, etc.) not installed
+- External dependencies (DB, cache, etc.) cannot be started locally (it is the design's responsibility to make them startable via Docker / testcontainers)
 
-環境不備 FAIL 時は、不足ツールを明示してユーザーにエスカレートする。design.md / test-design.md の Required Tools テーブルの Install Command を提示すること。特に `docker-compose.yml` が存在しスモークテストで `docker-compose up` を実行する場合、コマンド未存在・実行権限不足・起動失敗はいずれも FAIL（環境不備）として直ちに STOP し、SKIP/PASS として扱わないこと。
+On environment-deficiency FAIL, escalate to the user with the missing tools clearly listed. Present the Install Command from the Required Tools table in design.md / test-design.md. In particular, when `docker-compose.yml` exists and the smoke test runs `docker-compose up`, command absence / insufficient permissions / startup failure are all FAIL (environment deficiency) -- STOP immediately and do not treat as SKIP/PASS.
 
-**テスト実装漏れの FAIL 条件**:
-- test-design.md に E2E テスト仕様が定義されているのにテストファイルが存在しない → FAIL（実装漏れ）
-- test-design.md に IT 仕様が定義されているのに統合テストファイルが存在しない → FAIL（実装漏れ）
+**Test-implementation-omission FAIL conditions**:
+- test-design.md defines an E2E test specification but the test file does not exist -> FAIL (missing implementation)
+- test-design.md defines an IT specification but the integration test file does not exist -> FAIL (missing implementation)
 
-SKIP 時は必ずログに理由を記録し、Expert Team Review で補完する。
+On SKIP, always log the reason and supplement via Expert Team Review.
 
-### 統合検証の結果判定
+### Result judgment for integration verification
 
-| 結果 | 条件 | アクション |
+| Result | Condition | Action |
 |------|------|----------|
-| **PASS** | ビルド成功 + 全テストパス + スモーク OK（SKIP(設計上不要)/SKIP(設計時除外)/SKIP(ビルドコマンド未検出) を含む） | 次ステップに進む |
-| **FAIL (ビルド)** | ビルド失敗 | ビルドエラーを分析し、根本原因タスクを特定して差し戻し |
-| **FAIL (統合テスト)** | 統合テスト失敗 | 失敗テストのエラーを分析。Phase内タスク → 差し戻し、前Phase → ユーザーエスカレート |
-| **FAIL (スモーク)** | ヘルスチェック失敗（SKIP条件に該当しない場合） | 起動ログを分析し根本原因を特定して差し戻し |
-| **FAIL (環境不備)** | 必須ツール・ランタイム未インストール | 不足ツールをユーザーに報告し、Required Tools テーブルの Install Command を提示。実装を停止（STOP） |
-| **FAIL (実装漏れ)** | test-design.md にテスト仕様ありだがテストファイルなし | テスト実装の漏れとしてユーザーに報告 |
-| **SKIP (設計上不要)** | テスト仕様自体が存在しない（設計書に未定義） | ログに SKIP 理由を記録し、次ステップに進む。Expert Team Review で補完 |
-| **SKIP (設計時除外)** | design.md の「Excluded Test Environments」で明示的に除外 | 除外理由をログに記録し、次ステップに進む |
+| **PASS** | Build succeeded + all tests passed + smoke OK (including SKIP(not required by design)/SKIP(excluded by design)/SKIP(no build command detected)) | Proceed to next step |
+| **FAIL (build)** | Build failed | Analyze the build error, identify the root-cause task, and send back |
+| **FAIL (integration tests)** | Integration tests failed | Analyze the failing test errors. In-Phase task -> send back; previous Phase -> escalate to the user |
+| **FAIL (smoke)** | Health check failed (no SKIP condition) | Analyze startup logs, identify the root cause, and send back |
+| **FAIL (environment deficiency)** | Required tool / runtime not installed | Report the missing tools to the user and present the Install Command from the Required Tools table. Stop the implementation (STOP) |
+| **FAIL (missing implementation)** | test-design.md has the test specification but no test file exists | Report to the user as missing test implementation |
+| **SKIP (not required by design)** | The test specification itself does not exist (undefined in the design doc) | Log the SKIP reason and proceed; supplement via Expert Team Review |
+| **SKIP (excluded by design)** | Explicitly excluded under design.md "Excluded Test Environments" | Log the exclusion reason and proceed |
 
-## QC13: Branch Coverage (Advisory → 段階的 Gate 化)
+## QC13: Branch Coverage (Advisory -> Phased Gating)
 
-例外パス・分岐網羅の不足を露呈するため、line coverage と branch coverage を**別々に**計測する。
-plan-redesign #3「分岐カバレッジ別ゲート化」に対応。
+To expose insufficient testing of exception paths and branch coverage, measure line coverage and branch coverage **separately**.
+Addresses plan-redesign #3 "Separate gating for branch coverage".
 
-### 計測コマンド
+### Measurement commands
 
 #### Rust / Leptos
 
 ```bash
-# cargo-llvm-cov (推奨、line + branch を同時取得)
+# cargo-llvm-cov (recommended; collects line + branch together)
 cargo install cargo-llvm-cov --locked
 cargo llvm-cov --branch --summary-only
-# JSON 出力で threshold check 可能:
+# JSON output enables threshold checks:
 # cargo llvm-cov --branch --json --output-path coverage.json
 ```
 
 #### .NET
 
 ```bash
-# coverlet (XPlat) で line + branch
+# coverlet (XPlat) for line + branch
 dotnet test --collect:"XPlat Code Coverage" \
   -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
-# Cobertura XML から line-rate / branch-rate を抽出して threshold 比較
+# Extract line-rate / branch-rate from Cobertura XML and compare against thresholds
 ```
 
 #### Node.js
 
 ```bash
-# vitest --coverage (V8 provider) で line + branch
+# vitest --coverage (V8 provider) for line + branch
 npx vitest run --coverage --coverage.reporter=json-summary
-# coverage/coverage-summary.json から total.lines.pct / total.branches.pct を抽出
+# Extract total.lines.pct / total.branches.pct from coverage/coverage-summary.json
 ```
 
-### 推奨 Threshold (初期、段階的に引き上げ)
+### Recommended thresholds (initial; raise progressively)
 
-| 段階 | line | branch | 適用先 | gate 化 |
+| Stage | line | branch | Where applied | Gating |
 |------|:---:|:---:|--------|:------:|
-| 初期 (advisory) | 70% | 50% | scheduled-quality (週次) | report-only |
-| 中期 | 80% | 65% | scheduled-quality + ci.yml | warning |
-| 成熟 | 85% | 75% | ci.yml (PR 時) | blocking |
+| Initial (advisory) | 70% | 50% | scheduled-quality (weekly) | report-only |
+| Mid | 80% | 65% | scheduled-quality + ci.yml | warning |
+| Mature | 85% | 75% | ci.yml (on PR) | blocking |
 
-### 段階的 gate 化の方針
+### Phased gating policy
 
-- **初期段階**: `scheduled-quality.yml` でのみ計測。閾値未達は週次 Issue で報告（advisory）
-- **中期**: `ci.yml` に追加するが `continue-on-error: true` で warning 扱い
-- **成熟**: `ci.yml` でブロッキング。`continue-on-error: false` +
-  `--fail-under=<line>` / branch threshold 失敗で CI Fail
+- **Initial stage**: measure only in `scheduled-quality.yml`. Report under-threshold via a weekly Issue (advisory)
+- **Mid**: add to `ci.yml` but treat as a warning via `continue-on-error: true`
+- **Mature**: blocking in `ci.yml`. `continue-on-error: false` +
+  `--fail-under=<line>` / failing the branch threshold causes CI Fail
 
-### Branch coverage が line coverage より低い場合の解釈
+### Interpretation when branch coverage is lower than line coverage
 
-例外パス・エラーハンドリングのテストが不足している強い signal。
-review-worker の E (Tests) / E2-4 (Edge cases and error paths are tested) で
-finding を起票する根拠として使う。
+A strong signal that tests for exception paths / error handling are missing.
+Use as grounds for filing a finding in review-worker E (Tests) / E2-4 (Edge cases and error paths are tested).
 
-**典型例**:
+**Typical examples**:
 
-- line: 85%, branch: 40% → happy path のみテスト、`Result::Err` / `match` の各分岐がテストされていない
-- line: 60%, branch: 55% → 単純にテスト総量が不足
+- line: 85%, branch: 40% -> only the happy path is tested; the branches of `Result::Err` / `match` are untested
+- line: 60%, branch: 55% -> simply not enough tests overall
 
-両指標を分離して見ることで「コード行は通したが分岐は通していない」状態を捕捉できる。
+Separating the two metrics catches the state of "lines were exercised but branches were not".
 
 ---
 
-## QC14: Component Test (CT) Gate (H-1 で新設)
+## QC14: Component Test (CT) Gate (added in H-1)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 H（H-1）。
-> POC `wasm-bindgen-test-leptos-poc.md` で実用性確認済（Leptos 0.7 + wasm-bindgen-test、5 秒で 3 tests PASS）。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause H (H-1).
+> Practicality confirmed in POC `wasm-bindgen-test-leptos-poc.md` (Leptos 0.7 + wasm-bindgen-test, 3 tests PASS in 5 seconds).
 
-### 目的
+### Purpose
 
-UT (pure logic) と E2E (user journey) の中間層として **CT (Component Test)** を定義し、component reactivity（mount → signal → DOM）を Phase 内で継続検証する。Phase 4 placeholder commit パターン（pure helper UT のみで `[x]` 完了する反パターン）を構造的に防ぐ。
+Define **CT (Component Test)** as the middle layer between UT (pure logic) and E2E (user journey), and continuously verify component reactivity (mount -> signal -> DOM) within a Phase. Structurally prevents the Phase 4 placeholder-commit anti-pattern (the anti-pattern of marking `[x]` complete with only pure-helper UTs).
 
-### 責務範囲
+### Scope of responsibility
 
-`Test Taxonomy` セクション参照。CT は:
+See the `Test Taxonomy` section. CT:
 
-- **対象**: 単 component の reactivity（mount → signal 操作 → DOM 観測）
-- **範囲**: UI 1 component
-- **実行時間**: 数秒/test
-- **fixture**: mock signal（design.md K-3 Architecture for Testability の宣言を経由）
-- **責務外**: pure logic（UT）/ 実 server 通信（IT or ST）/ user journey（E2E）
+- **Target**: reactivity of a single component (mount -> signal manipulation -> DOM observation)
+- **Scope**: 1 UI component
+- **Runtime**: seconds/test
+- **Fixture**: mock signal (via the declarations in design.md K-3 Architecture for Testability)
+- **Out of scope**: pure logic (UT) / real server communication (IT or ST) / user journey (E2E)
 
-### Rust / Leptos の場合
+### Rust / Leptos
 
-**Setup**（POC で確立した最小構成）:
+**Setup** (the minimal configuration established in the POC):
 
 ```toml
 # Cargo.toml
@@ -1038,7 +1037,7 @@ web-sys = { version = "0.3", features = ["Document", "Element", "HtmlElement", "
 runner = "wasm-bindgen-test-runner"
 ```
 
-**実行コマンド**:
+**Run command**:
 
 ```bash
 cargo test --target wasm32-unknown-unknown --lib
@@ -1076,7 +1075,7 @@ mod tests {
             || view! { <MyComponent /> },
         );
 
-        // signal を更新 / event を trigger
+        // update a signal / trigger an event
         let button = wrapper
             .query_selector("[data-testid='action-btn']")
             .unwrap().unwrap()
@@ -1084,7 +1083,7 @@ mod tests {
         button.click();
         tick().await;
 
-        // DOM 観測
+        // DOM observation
         let target = wrapper
             .query_selector("[data-testid='target-value']")
             .unwrap().unwrap();
@@ -1093,11 +1092,11 @@ mod tests {
 }
 ```
 
-詳細: `tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 参照。
+Details: see `tdd-skills-rust/references/leptos-frontend-testing.md` section 6.
 
-### .NET / Blazor の場合
+### .NET / Blazor
 
-**bUnit** を使用（標準ツール、堅牢）:
+Use **bUnit** (standard tooling, robust):
 
 ```csharp
 [Fact]
@@ -1113,174 +1112,174 @@ public void Counter_ClickIncrementsValue()
 }
 ```
 
-詳細: `tdd-skills-dotnet/references/blazor-component-testing.md`（後続で整備、現時点では bUnit 公式ドキュメント参照）
+Details: `tdd-skills-dotnet/references/blazor-component-testing.md` (to be developed later; for now refer to the official bUnit documentation).
 
-### CI 統合
+### CI integration
 
 ```yaml
 - name: Component Test (QC14)
   run: |
-    # Leptos: Firefox / geckodriver を install
+    # Leptos: install Firefox / geckodriver
     sudo apt-get install -y firefox-esr
     cargo test --target wasm32-unknown-unknown --lib
     # .NET / Blazor:
     dotnet test --filter "Category=ComponentTest"
 ```
 
-### 段階的 gate 化
+### Phased gating
 
-| 段階 | 適用 |
+| Stage | Application |
 |------|------|
-| 初期（advisory） | CT が無い component には warning（spec-tasks Step 7 Check 17/18 で検出） |
-| 中期 | UI component task の `_Success` に「CT-N PASS」を必須化（H-4 / Check 18） |
-| 成熟 | review-worker Category E で CT 不在を Moderate finding として起票（H-5） |
+| Initial (advisory) | Warning for components without a CT (detected by spec-tasks Step 7 Check 17/18) |
+| Mid | Require "CT-N PASS" in `_Success` for UI component tasks (H-4 / Check 18) |
+| Mature | review-worker Category E files Moderate findings for missing CTs (H-5) |
 
-### POC で確認した制約
+### Constraints confirmed in the POC
 
-- **wasm-pack は不要**（cargo test --target wasm32-unknown-unknown で直接動作）
-- **Firefox + geckodriver / Chromium + chromedriver のいずれかが CI に必要**
-- production code の Resource / server fn 呼び出しは mock を介してテスト（design.md K-3 で宣言）
+- **wasm-pack is not required** (`cargo test --target wasm32-unknown-unknown` works directly)
+- **Firefox + geckodriver or Chromium + chromedriver is required in CI**
+- Production-code calls to Resource / server fn must be tested through mocks (declared in design.md K-3)
 
 ---
 
-## QC15: UT Properties Gate (I-2 で新設)
+## QC15: UT Properties Gate (added in I-2)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 I（I-2）。
-> POC 結果反映: `.claude/_docs/plans/nextest-shuffle-isolation-lints-poc.md` 参照。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause I (I-2).
+> POC results reflected: see `.claude/_docs/plans/nextest-shuffle-isolation-lints-poc.md`.
 
-### 目的
+### Purpose
 
-UT が **仕様の検証**（仕様充足 + 仕様外不在）を満たし、**外部依存ゼロ + 順序非依存 + 決定性**（FIRST 原則）を保証していることを CI で機械的に enforce する。
+Mechanically enforce in CI that UTs satisfy **spec verification** (spec satisfaction + absence of out-of-spec behavior) and guarantee **zero external dependencies + order independence + determinism** (FIRST principles).
 
-「実装時の UT は cargo test PASS（コードが動く）の確認ではなく、仕様の検証である」という frame を構造的に成立させる。
+Structurally establish the frame that "UT during implementation is verification of the spec, not confirmation that the code runs (cargo test PASS)".
 
-### 構成
+### Composition
 
-#### A. External Dependency Lint（必須、blocking）
+#### A. External Dependency Lint (required, blocking)
 
-**clippy `disallowed-methods` を主柱**として採用（POC で動作確認済）。
+Adopt **clippy `disallowed-methods` as the main pillar** (operation confirmed in the POC).
 
-`clippy.toml`（または `Cargo.toml` の `[workspace.lints.clippy]`）に以下を設定:
+Configure the following in `clippy.toml` (or `[workspace.lints.clippy]` in `Cargo.toml`):
 
 ```toml
 # clippy.toml
 disallowed-methods = [
-    # Clock 直接呼出（design.md K-3 Architecture for Testability で宣言された MockClock 経由のみ許可）
+    # Direct Clock calls (only allowed via the MockClock declared in design.md K-3 Architecture for Testability)
     { path = "std::time::SystemTime::now", reason = "use MockClock from design.md Architecture for Testability instead (K-3)" },
     { path = "std::time::Instant::now", reason = "use MockClock instead (K-3)" },
     { path = "chrono::Utc::now", reason = "use MockClock instead (K-3)" },
     { path = "chrono::Local::now", reason = "use MockClock instead (K-3)" },
 
-    # RNG 直接使用
+    # Direct RNG use
     { path = "rand::thread_rng", reason = "use injected MockRng (K-3)" },
     { path = "rand::random", reason = "use injected MockRng (K-3)" },
 
-    # env 直接読取
+    # Direct env reads
     { path = "std::env::var", reason = "use injected config (K-3)" },
     { path = "std::env::var_os", reason = "use injected config (K-3)" },
 
-    # fs 直接呼出（tempfile / TestFs 経由が望ましい）
+    # Direct fs calls (prefer via tempfile / TestFs)
     { path = "std::fs::read", reason = "use tempfile or injected fs adapter (K-3)" },
     { path = "std::fs::write", reason = "use tempfile or injected fs adapter (K-3)" },
     { path = "std::fs::read_to_string", reason = "use tempfile or injected fs adapter (K-3)" },
 
-    # HTTP 直接呼出（mockito / wiremock 経由）
+    # Direct HTTP calls (via mockito / wiremock)
     { path = "reqwest::get", reason = "use mockito / wiremock (K-3)" },
     { path = "reqwest::blocking::get", reason = "use mockito / wiremock (K-3)" },
 ]
 ```
 
-CI 実行コマンド（blocking）:
+CI run command (blocking):
 
 ```bash
 cargo clippy --all-targets --workspace -- -D clippy::disallowed_methods
 ```
 
-**動作確認** (POC):
-- `std::time::SystemTime::now` / `std::env::var` を直接呼出 → custom reason 付きで warning 検出
-- `-D clippy::disallowed_methods` で deny-level 化 → CI fail
-- 詳細: `nextest-shuffle-isolation-lints-poc.md` 参照
+**Operation confirmation** (POC):
+- Direct calls to `std::time::SystemTime::now` / `std::env::var` -> warnings detected with custom reasons
+- Promoted to deny-level via `-D clippy::disallowed_methods` -> CI fails
+- Details: see `nextest-shuffle-isolation-lints-poc.md`
 
-**例外（production code の legitimate 使用）**:
+**Exceptions (legitimate use in production code)**:
 
-production code で正当に必要な場合（例: 実 Clock 実装内）は `#[allow(clippy::disallowed_methods)]` で個別許可。原則として全コードで Mock 経由（K-3 設計に従う）。
+When legitimately needed in production code (e.g., inside the real Clock implementation), allow individually with `#[allow(clippy::disallowed_methods)]`. As a rule, all code should go via Mocks (per the K-3 design).
 
-#### B. Order Independence（advisory、nightly のみ）
+#### B. Order Independence (advisory, nightly only)
 
-POC で判明: **stable Rust では `--shuffle` を CI で必須化できない**（`-Z unstable-options` 必須）。
+Found in the POC: **on stable Rust, `--shuffle` cannot be required in CI** (`-Z unstable-options` is required).
 
-**stable**: skip。代替として code review + test design discipline で order 依存を防ぐ。
+**stable**: skip. As an alternative, prevent order dependence via code review + test design discipline.
 
-**nightly profile（オプション）**:
+**nightly profile (optional)**:
 
 ```bash
 cargo +nightly test --tests -- -Z unstable-options --shuffle --test-threads=1
 ```
 
-CI workflow に nightly profile を持つプロジェクトでは advisory として実行（fail しても CI は止めない）。順序依存が判明したら `Negative Assertions` / `Isolation Properties` カテゴリで明示的に修正。
+In projects whose CI workflow has a nightly profile, run as advisory (failure does not stop CI). When order dependence is uncovered, fix it explicitly under the `Negative Assertions` / `Isolation Properties` categories.
 
-#### C. Determinism Check（advisory）
+#### C. Determinism Check (advisory)
 
-clock / RNG モックの強制は clippy.toml の disallowed-methods で間接的に enforce される（直接呼出を deny → mock 経由を強制）。
+Forcing clock / RNG mocks is indirectly enforced by disallowed-methods in clippy.toml (deny direct calls -> force going through mocks).
 
-review-worker の Category E (Final Check of Test Code) で「test が clock / RNG / env に依存していないか」を補強的に確認（I-4 で改訂）。
+Confirm supplementally in review-worker Category E (Final Check of Test Code) that "tests do not depend on clock / RNG / env" (revised in I-4).
 
-### 既存テストの retrofit
+### Retrofit of existing tests
 
-clippy.toml を新設 → 既存 test で violation 多数発生する可能性あり。段階的 gate 化:
+Adding clippy.toml may produce many violations in existing tests. Phased gating:
 
-| 段階 | 適用 |
+| Stage | Application |
 |------|------|
-| 初期 (advisory) | `-W clippy::disallowed_methods`（warning のみ）。violation を report |
-| 中期 | 新規・改修部分に `-D` 適用、既存は `#[allow]` で grandfathered |
-| 成熟 | 全コードで `-D` blocking。`#[allow]` は個別 review で justify |
+| Initial (advisory) | `-W clippy::disallowed_methods` (warning only). Report violations |
+| Mid | Apply `-D` to new and modified parts; grandfather existing code with `#[allow]` |
+| Mature | `-D` blocking in all code. `#[allow]` justified through individual review |
 
-### .NET / Node.js 系（未確定）
+### .NET / Node.js (TBD)
 
-- .NET: `dotnet test --blame-hang` + `xunit.runner.json` の parallel 設定で order independence 検証の余地。`Stryker.NET` のテスト独立性チェック
-- Node.js: `vitest --shuffle` (v1.6+) は標準で動作 / `jest --testSequencer` でカスタム順序
+- .NET: `dotnet test --blame-hang` + parallel configuration in `xunit.runner.json` leaves room for order-independence verification. `Stryker.NET` test-isolation check
+- Node.js: `vitest --shuffle` (v1.6+) works by default / custom ordering with `jest --testSequencer`
 
-将来別 POC または I 実装拡張時に確定する。Rust 側は本 QC15 で確立。
+To be finalized in a future POC or I implementation extension. The Rust side is established by this QC15.
 
-### 連携
+### Linkage
 
-- **K-3 (Architecture for Testability)**: design.md で Mock points / Clock injection / RNG injection / External I/O isolation / Test fixtures が宣言される。QC15 の lint で禁止される call は **K-3 で宣言された Mock 経由のみ許可** されるという design ↔ enforcement の往復ループが成立
-- **I-1 (_TestFocus 6 カテゴリ)**: `Negative Assertions` / `Isolation Properties` の 2 カテゴリが QC15 と直接呼応。test 設計時から品質特性を担保
-- **review-worker Category E (I-4)**: 「テストが clock / RNG / env に依存していないか」を確認
+- **K-3 (Architecture for Testability)**: design.md declares Mock points / Clock injection / RNG injection / External I/O isolation / Test fixtures. The calls forbidden by the QC15 lint are **only allowed via the Mocks declared in K-3**, establishing the design <-> enforcement round-trip loop
+- **I-1 (_TestFocus 6 categories)**: the two categories `Negative Assertions` / `Isolation Properties` directly correspond to QC15. Quality properties are guaranteed from the test design stage
+- **review-worker Category E (I-4)**: confirms "tests do not depend on clock / RNG / env"
 
-### 注意
+### Notes
 
-- QC14 (UI Smoke Render, E-3) は未実装
-- QC15 は **本実装で確立**
-- QC16 (Regression Gate, J-9) は f7a03f6 で実装済
+- QC14 (UI Smoke Render, E-3) is not yet implemented
+- QC15 is **established by this implementation**
+- QC16 (Regression Gate, J-9) is implemented in f7a03f6
 
 ---
 
-## QC16: Regression Gate (J-9 で新設)
+## QC16: Regression Gate (added in J-9)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 J（J-9）。
-> Regression は cross-cutting type（`regression-test-policy/SKILL.md` 参照）。すべての層（UT / CT / IT / ST / E2E）に regression marker を付けた tests が含まれ得る。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause J (J-9).
+> Regression is a cross-cutting type (see `regression-test-policy/SKILL.md`). Tests with regression markers may exist at every layer (UT / CT / IT / ST / E2E).
 
-### 目的
+### Purpose
 
-PR / merge 時に **全層 + regression marked テスト** の全件 PASS を必須化することで、修正による新規バグの流入を機械的に防ぐ。
+Mechanically prevent new bugs from being introduced by fixes by requiring all **all-layer + regression-marked tests** to PASS at PR / merge time.
 
-### Regression marked テストの命名規則
+### Naming convention for regression-marked tests
 
-`regression-test-policy/SKILL.md` の規約に従う:
+Follow the conventions in `regression-test-policy/SKILL.md`:
 
-| 言語 / フレームワーク | パターン |
+| Language / framework | Pattern |
 |---|---|
 | Rust | `fn regression_issue_NNN_<description>()` |
 | TypeScript / JavaScript | `it('regression #NNN: <description>', ...)` |
 | C# / .NET | `[Fact] public void Regression_Issue_NNN_<Description>()` |
 
-### 自動収集と CI 統合
+### Auto-collection and CI integration
 
-PR / merge workflow で以下を実行:
+Run the following in the PR / merge workflow:
 
 ```bash
-# Rust: regression test を grep して run
+# Rust: grep and run regression tests
 cargo test --workspace -- regression_issue_
 
 # TypeScript / Playwright
@@ -1290,58 +1289,58 @@ npx playwright test --grep "regression #"
 dotnet test --filter "FullyQualifiedName~Regression_Issue_"
 ```
 
-CI workflow テンプレ（`/setup-ci` で生成、J-9 で改訂対応必要）:
+CI workflow template (generated by `/setup-ci`; revision required for J-9):
 
 ```yaml
 - name: Regression Gate (QC16)
   run: |
-    # 全層 regression テスト実行
+    # Run regression tests across all layers
     cargo test --workspace -- regression_issue_ 2>&1 | tee regression-rust.log
     npx playwright test --grep "regression #" 2>&1 | tee regression-ts.log
-    # 失敗したら CI fail
+    # Fail CI on failure
 ```
 
-### Phase Review 時の確認
+### Confirmation during Phase Review
 
-`spec-implement/SKILL.md` Step 3.5.2 (review-worker delegation) で、当該 Phase で修正したバグ系 task に対応する regression test が実装済みか確認:
+In `spec-implement/SKILL.md` Step 3.5.2 (review-worker delegation), confirm that regression tests have been implemented for the bug-related tasks fixed in this Phase:
 
-- task に `_BugFix: true` + `_RegressionBugId: BUG-NNN` がある（spec-tasks Step 7 Check 21）
-- 対応する regression test が存在する（ファイル grep で確認）
-- regression test が PASS している
+- The task has `_BugFix: true` + `_RegressionBugId: BUG-NNN` (spec-tasks Step 7 Check 21)
+- A corresponding regression test exists (confirm by file grep)
+- The regression test is PASSING
 
-### 既存テストとの併用
+### Combined use with existing tests
 
-QC16 は既存の QC3 (test) / QC7 (Integration Verification) / QC13 (Branch Coverage) と **併用**する:
+QC16 is **used together** with existing QC3 (test) / QC7 (Integration Verification) / QC13 (Branch Coverage):
 
-- QC3 / QC7 は **すべてのテスト**を実行
-- QC16 は **regression marker を持つテスト**だけを抽出して別 step として実行（fail 時に「regression が壊れた」と明示）
-- QC16 は **必ず blocking**（advisory ではない。修正による新バグの流入を即検出するため）
+- QC3 / QC7 run **all tests**
+- QC16 extracts only **tests with the regression marker** and runs them as a separate step (on failure, signals "regression broke")
+- QC16 is **always blocking** (not advisory; to immediately detect new bugs introduced by fixes)
 
-### 既存 spec の retrofit
+### Retrofit of existing specs
 
-既存の bug fix commit で `regression_issue_*` 命名規則が適用されていない場合は warning。次バージョンから新規バグ修正は必須化。
+Warning when existing bug-fix commits do not follow the `regression_issue_*` naming convention. Required from the next version on for new bug fixes.
 
-### 注意
+### Notes
 
-- QC14 は **Component Test (CT) Gate** (H-1, dapper-hardening) として実装済。当初 E-3 用と計画していたが H-1 に振り直した
-- QC15 (UT Properties Gate, I-2) は実装済
-- QC16 は **CI gate**（PR / merge 時の blocking）。Phase Review 内のローカル実行は QC3 / QC7 で間接的にカバー
-- E-3 UI Smoke Render は **QC17** に振り直し（下記）
+- QC14 has been implemented as the **Component Test (CT) Gate** (H-1, dapper-hardening). Originally planned for E-3, then re-assigned to H-1
+- QC15 (UT Properties Gate, I-2) is implemented
+- QC16 is a **CI gate** (blocking on PR / merge). Local execution within Phase Review is indirectly covered by QC3 / QC7
+- E-3 UI Smoke Render has been re-assigned to **QC17** (below)
 
 ---
 
-## QC17: UI Smoke Render (E-3 で新設、dapper-hardening)
+## QC17: UI Smoke Render (added in E-3, dapper-hardening)
 
-> 出典: `.claude/_docs/plans/dapper-hardening-orchestrator.md` 根本原因 E（E-3）。
-> CT (QC14) は単 component の reactivity 検証、本 QC17 は **system 全体の UI smoke**（playwright で headless browser 起動、AppRoot 全体 render → 全 testid 要素が DOM に出現）。
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause E (E-3).
+> CT (QC14) verifies the reactivity of a single component; this QC17 is the **system-wide UI smoke** (start a headless browser via playwright, render the entire AppRoot -> all testid elements appear in the DOM).
 
-### 目的
+### Purpose
 
-CT (QC14) で各 component 単独の reactivity を検証する一方、全 component を組み合わせた **AppRoot レベルの smoke** が必要。「placeholder commit が存在しないこと」「全 testid が compiled HTML に出現すること」を Phase 単位で検証する。
+While CT (QC14) verifies the reactivity of each component in isolation, an **AppRoot-level smoke** combining all components is needed. Per Phase, verify "no placeholder commit exists" and "all testids appear in the compiled HTML".
 
-dapper-hardening Phase 4 で発生した「pure helper UT + data-testid 骨格 + placeholder view!」反パターンの **Phase Review 段階での検出**を担う。
+Responsible for **detecting at the Phase Review stage** the "pure-helper UT + data-testid skeleton + placeholder view!" anti-pattern that occurred in dapper-hardening Phase 4.
 
-### 検証内容
+### Verification content
 
 ```bash
 # Leptos / Trunk / WASM
@@ -1349,21 +1348,21 @@ cargo leptos serve &
 SERVER_PID=$!
 sleep 5
 
-# headless browser で / にアクセス
+# Visit / in a headless browser
 npx playwright test tests/smoke/ui-smoke.spec.ts
 
 kill $SERVER_PID
 ```
 
 ```typescript
-// tests/smoke/ui-smoke.spec.ts (auto-generated 例)
+// tests/smoke/ui-smoke.spec.ts (auto-generated example)
 import { test, expect } from '@playwright/test';
 
 test('UI smoke: AppRoot renders with required testids', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
-  // design.md Phase Deliverables (K-4) で当該 Phase に追加された testid を抽出
+  // Extract testids added in this Phase from design.md Phase Deliverables (K-4)
   const requiredTestids = ['folder-tree', 'thumbnail-grid', 'detail-viewer'];
 
   for (const testid of requiredTestids) {
@@ -1372,40 +1371,40 @@ test('UI smoke: AppRoot renders with required testids', async ({ page }) => {
     });
   }
 
-  // testid 数が想定下限以上か確認
+  // Confirm the count of testids is at or above the expected minimum
   const allTestids = await page.locator('[data-testid]').count();
   expect(allTestids).toBeGreaterThanOrEqual(requiredTestids.length);
 });
 ```
 
-### Phase 別段階成長
+### Per-Phase phased growth
 
-design.md Phase Deliverables (K-4) と連動して、Phase 進行に応じて要求 testid 数が増える:
+In sync with design.md Phase Deliverables (K-4), the required testid count increases as Phases progress:
 
-| Phase | 必須 testid（例） | 増分 |
+| Phase | Required testids (example) | Delta |
 |---|---|---|
-| Phase 1 (Core domain) | （UI なし、QC17 SKIP） | - |
-| Phase 2 (HTTP server) | （UI なし、QC17 SKIP） | - |
-| Phase 3 (UI 骨格) | `app-root` | +1 |
-| Phase 4 (component 実装) | `folder-tree`, `thumbnail-grid`, `detail-viewer` | +3 |
-| Phase 5 (機能完成) | `info-panel`, `toolbar` | +2 |
+| Phase 1 (Core domain) | (no UI, QC17 SKIP) | - |
+| Phase 2 (HTTP server) | (no UI, QC17 SKIP) | - |
+| Phase 3 (UI skeleton) | `app-root` | +1 |
+| Phase 4 (component implementation) | `folder-tree`, `thumbnail-grid`, `detail-viewer` | +3 |
+| Phase 5 (feature complete) | `info-panel`, `toolbar` | +2 |
 
-### 失敗時のアクション
+### Action on failure
 
-| 結果 | アクション |
+| Result | Action |
 |------|----------|
-| 全 testid 出現 | PASS、Phase Review 続行 |
-| testid が想定数より少ない / 特定 testid が欠ける | **FAIL (placeholder detected)**: 該当 component の実装 task を `[-]` に戻して rework（spec-implement Step 3.5.1.5 失敗時差し戻しルールに新規分類追加） |
-| サーバ起動失敗 | FAIL（環境不備の可能性、Required Build Tools 確認） |
+| All testids appear | PASS; continue Phase Review |
+| Fewer testids than expected / specific testids missing | **FAIL (placeholder detected)**: revert the implementation task of the affected component to `[-]` and rework (add a new category to the spec-implement Step 3.5.1.5 failure send-back rules) |
+| Server failed to start | FAIL (possible environment deficiency; check Required Build Tools) |
 
-### CT (QC14) との責務分離
+### Separation of responsibilities from CT (QC14)
 
-- **QC14 (Component Test)**: 単一 component の reactivity（mount + signal + DOM）— Phase 4 の各 component task で実行
-- **QC17 (UI Smoke Render)**: AppRoot レベルの smoke — Phase Review で実行（Phase 単位の品質ゲート）
-- 両方が必要: CT で個別 component が動くこと、Smoke で全体組合せが動くこと
+- **QC14 (Component Test)**: reactivity of a single component (mount + signal + DOM) -- runs on each component task in Phase 4
+- **QC17 (UI Smoke Render)**: AppRoot-level smoke -- runs in Phase Review (Phase-level quality gate)
+- Both are required: CT to confirm each component works, Smoke to confirm the whole composition works
 
-### 実装段階
+### Implementation stages
 
-- **初期 (advisory)**: warning のみ。既存 spec の retrofit を待つ
-- **中期**: Phase Review で blocking。FAIL (placeholder detected) 分類で差し戻し
-- **成熟**: Phase Deliverables (K-4) と完全連動。Phase 別段階成長を CI で機械検証
+- **Initial (advisory)**: warning only. Wait for existing specs to retrofit
+- **Mid**: blocking in Phase Review. Send back under the FAIL (placeholder detected) classification
+- **Mature**: fully linked to Phase Deliverables (K-4). Phase-level phased growth is mechanically verified in CI

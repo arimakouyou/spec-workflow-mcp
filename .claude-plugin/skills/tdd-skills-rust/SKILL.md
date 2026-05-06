@@ -13,15 +13,15 @@ description: >
 
 Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with Rust language features.
 
-## 🔑 MUST-READ: UT が verify するもの (I-5, dapper-hardening)
+## MUST-READ: What UT verifies (I-5, dapper-hardening)
 
-**UT は `cargo test PASS`（コードが動く）の確認ではない。仕様の検証である。**
+**A UT is not a check that `cargo test` PASSes (the code works); it is verification of the specification.**
 
-- 仕様充足 + **仕様外不在**（Negative Assertions）の両方を verify する
-- 外部依存ゼロ（clock / RNG / env / fs / HTTP / DB の直接呼出は禁止、Mock 経由のみ）
-- 順序非依存・決定性（FIRST 原則）
+- Verify both spec satisfaction and **absence of out-of-spec behavior** (Negative Assertions)
+- Zero external dependencies (direct calls to clock / RNG / env / fs / HTTP / DB are forbidden; only via Mock)
+- Order-independent and deterministic (FIRST principles)
 
-詳細は `_TestFocus` 6 カテゴリ（`spec-tasks/SKILL.md`）+ `quality-checks.md` の Test Taxonomy / QC15 を参照。
+For details, see the 6 `_TestFocus` categories (`spec-tasks/SKILL.md`) and the Test Taxonomy / QC15 sections of `quality-checks.md`.
 
 ## Pre-check: Know-how Reference
 
@@ -128,14 +128,14 @@ Details: [references/test-doubles.md](references/test-doubles.md)
 
 ## Leptos Frontend Testing
 
-Leptos フロントエンドコンポーネント（シグナル、view!、サーバー関数）のテスト戦略:
+Test strategy for Leptos frontend components (signals, `view!`, server functions):
 
-- **ロジックをテストし、レンダリングはテストしない**: `#[component]` からビジネスロジックを独立関数に抽出しテスト
-- **シグナルは直接テスト可能**: `signal(initial_value)` で作成、変更、派生値をアサート
-- **サーバー関数**: コアロジックをテスト可能な async 関数に抽出。依存は trait 経由でモック
-- **`cargo test` = SSR のみ**: GREEN 後に `cargo leptos build` で WASM コンパイルを検証
+- **Test the logic, not the rendering**: extract business logic from `#[component]` into standalone functions and test those
+- **Signals are directly testable**: create with `signal(initial_value)`, then assert on mutations and derived values
+- **Server functions**: extract the core logic into testable async functions; mock dependencies via traits
+- **`cargo test` = SSR only**: after GREEN, validate WASM compilation with `cargo leptos build`
 
-詳細: [references/leptos-frontend-testing.md](references/leptos-frontend-testing.md)
+Details: [references/leptos-frontend-testing.md](references/leptos-frontend-testing.md)
 
 ## Detailed References
 

@@ -1,13 +1,13 @@
-# テスト設計
+# Test Design
 
-## 境界値分析（Boundary Value Analysis）
+## Boundary Value Analysis
 
-境界付近の値は特にバグが発生しやすい。
+Values near boundaries are especially prone to bugs.
 
-### 例: 年齢区分
+### Example: Age Categories
 
 ```rust
-// 0-17: 未成年, 18-64: 成人, 65以上: 高齢者
+// 0-17: minor, 18-64: adult, 65+: senior
 
 #[test]
 fn age_17_is_minor() {
@@ -30,20 +30,20 @@ fn age_65_is_senior() {
 }
 ```
 
-## 同値分割（Equivalence Partitioning）
+## Equivalence Partitioning
 
-同じ振る舞いをするグループに分割してテストケースを削減。
+Reduce test cases by grouping inputs that exhibit the same behavior.
 
-### 例: 割引計算
+### Example: Discount Calculation
 
 ```rust
-// 0-999: 割引なし
-// 1000-4999: 5%割引
-// 5000以上: 10%割引
+// 0-999: no discount
+// 1000-4999: 5% discount
+// 5000+: 10% discount
 
 use rstest::rstest;
 
-// 各クラスから代表値を選んでテスト
+// Pick a representative value from each class to test
 #[rstest]
 #[case(500, 0)]
 #[case(3000, 150)]
@@ -52,7 +52,7 @@ fn discount_representative_values(#[case] amount: u64, #[case] expected: u64) {
     assert_eq!(calculate_discount(amount), expected);
 }
 
-// 境界値も必ずテスト
+// Always test boundary values too
 #[rstest]
 #[case(999, 0)]
 #[case(1000, 50)]
@@ -63,9 +63,9 @@ fn discount_boundary_values(#[case] amount: u64, #[case] expected: u64) {
 }
 ```
 
-## テスト命名規則
+## Test Naming Conventions
 
-### パターン1: 英語構造的命名（推奨）
+### Pattern 1: Structural English Naming (recommended)
 
 ```rust
 #[test]
@@ -78,7 +78,7 @@ fn total_should_increase_when_item_added() { /* ... */ }
 fn should_return_error_when_negative_price() { /* ... */ }
 ```
 
-### パターン2: 日本語（可読性重視の場合）
+### Pattern 2: Japanese (when readability is prioritized)
 
 ```rust
 #[test]
@@ -91,15 +91,15 @@ fn 商品追加でカートの合計金額が増える() { /* ... */ }
 fn 負の価格の商品追加で例外発生() { /* ... */ }
 ```
 
-### 命名のポイント
-- テスト名から何をテストしているか分かる
-- 失敗時に原因が推測できる
-- 「対象_条件_期待結果」パターン
+### Naming Tips
+- The test name conveys what is being tested
+- The cause of a failure can be inferred from the name
+- Use a "subject_condition_expected-result" pattern
 
-## エラーケースのテスト
+## Testing Error Cases
 
 ```rust
-// #[should_panic] を使う方法
+// Using #[should_panic]
 #[test]
 #[should_panic(expected = "division by zero")]
 fn divide_by_zero_panics() {
@@ -107,7 +107,7 @@ fn divide_by_zero_panics() {
     calc.divide(10, 0);
 }
 
-// Result を返す方法（推奨）
+// Returning Result (recommended)
 #[test]
 fn invalid_email_returns_validation_error() {
     let result = User::create("invalid-email");
@@ -118,11 +118,11 @@ fn invalid_email_returns_validation_error() {
 }
 ```
 
-Result を返すパターンの方が Rust では一般的。`#[should_panic]` は panic が意図された場合のみ使用する。
+Returning Result is the more common pattern in Rust. Use `#[should_panic]` only when a panic is the intended behavior.
 
-## まとめ
+## Summary
 
-- 境界値は必ずテスト
-- 同値分割で効率化
-- 明確な命名
-- エラーケースは Result ベースで検証
+- Always test boundary values
+- Use equivalence partitioning to keep cases efficient
+- Use clear naming
+- Verify error cases via Result

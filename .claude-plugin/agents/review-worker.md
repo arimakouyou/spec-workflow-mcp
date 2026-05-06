@@ -36,34 +36,34 @@ Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the
 
 ## Quality Checks (all must pass)
 
-**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (権威ソース)**。
-review-worker はコミット前に該当する QC 項目を再実行し、全て pass することを確認する:
+**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (authoritative source)**.
+Before committing, review-worker re-runs the applicable QC items and confirms all pass:
 
-| プロジェクトタイプ | 検出条件 | 適用する QC 項目 |
+| Project type | Detection condition | Applicable QC items |
 |----------------|--------|----------------|
 | Rust | `Cargo.toml` | QC1 (rustfmt) / QC2 (clippy) / QC3 (cargo test) / QC4 (cargo-audit blocking, cargo-udeps advisory) |
-| Leptos フルスタック | `Cargo.toml` に `[package.metadata.leptos]` | 上記 + QC5 (cargo leptos build or WASM-specific clippy) |
+| Leptos full-stack | `[package.metadata.leptos]` in `Cargo.toml` | The above + QC5 (cargo leptos build or WASM-specific clippy) |
 | .NET | `*.csproj` / `*.sln` | QC12 (dotnet format / build -warnaserror / test / dependency analysis blocking) |
-| .NET Blazor | `Microsoft.AspNetCore.Components.WebAssembly` 参照 | 上記 + QC12.6 (dotnet publish -p:PublishTrimmed=true) |
+| .NET Blazor | References `Microsoft.AspNetCore.Components.WebAssembly` | The above + QC12.6 (dotnet publish -p:PublishTrimmed=true) |
 | Node.js | `package.json` | QC6 (npm test / lint / format / audit) |
 
-具体的なコマンド・タイムアウト・エラー処理は `quality-checks.md` を必ず参照すること。
-本 agent 内にコマンドを再記述しない（Single source of truth）。
+Always refer to `quality-checks.md` for specific commands, timeouts, and error handling.
+Do not restate the commands inside this agent (single source of truth).
 
-失敗時は最小限の修正を加え、全ての QC を再実行する。blocking な脆弱性がある場合はコミットしない。
+On failure, apply the minimum fix and re-run all QC checks. Do not commit when there is a blocking vulnerability.
 
 ## Code Review
 
 Inspect the diff with `git diff` and check all of the following aspects in order.
 
-### ⚠️ Anti-Bias Protocol (確証バイアス防止)
+### Anti-Bias Protocol (preventing confirmation bias)
 
-このコードは parallel-worker (TDD) と test engineer (frontend-test-engineer or unit-test-engineer) の2段階を通過している。しかし、「既に良いはず」という前提でレビューしてはならない。
+This code has passed two stages: parallel-worker (TDD) and test engineer (frontend-test-engineer or unit-test-engineer). However, do not review under the assumption that "it must already be good."
 
-- **前提**: コードには問題がある。あなたの仕事はそれを見つけること
-- **禁止**: 「3段階通過しているから大丈夫」「TDD で書かれているから品質は高い」という推論
-- **義務**: 各カテゴリ (A-G) で最低1つの具体的な確認ポイントを observations に記録すること。問題がなくても「何を確認して問題なしと判断したか」を明示する
-- **再確認**: レビュー結果が「全パス、問題なし」になった場合、もう一度 diff を読み直し見落としがないか確認する
+- **Premise**: There are problems in the code. Your job is to find them
+- **Forbidden**: Reasoning such as "it has passed three stages so it's fine" or "it was written with TDD so quality is high"
+- **Required**: For each category (A-G), record at least one concrete check point in observations. Even when there is no issue, make explicit "what was checked and concluded as no issue"
+- **Recheck**: When the review result becomes "all pass, no issues," re-read the diff once more and confirm there are no oversights
 
 ### A. Style and Conventions
 
@@ -104,11 +104,11 @@ Refer to `.claude-plugin/rules/security.md`. Check the following against the dif
 - Confirm each item in the `_Prompt` **Success** criteria one by one, and verify all are satisfied
 - Verify that the requirements referenced in `_Requirements` are reflected in the implementation
 - Verify that the constraints in `_Restrictions` are not violated
-- **(H-5 拡張) Success 基準の動作証跡確認**: `_Success` フィールドが **動作証跡を持たない**（grep / 文字列存在 / "実装されていることを確認" のような static check のみ）の場合、`review_action: escalate` で起票:
-  - 動作証跡の例: UT-N PASS / CT-N PASS / IT-N PASS / smoke PASS / DOM 観測
-  - grep + 動作証跡の合成は OK（grep だけが NG）
-  - 「ファイルが存在する」「文字列が存在する」では Phase 4 placeholder commit 反パターンを再発させる
-  - 詳細: `spec-tasks/SKILL.md` Step 7 Check 18 (SUCCESS_BEHAVIORAL_VERIFICATION) と整合
+- **(H-5 extension) Behavioral evidence verification of Success criteria**: When the `_Success` field has **no behavioral evidence** (only static checks such as grep / string presence / "confirmed that it is implemented"), file `review_action: escalate`:
+  - Examples of behavioral evidence: UT-N PASS / CT-N PASS / IT-N PASS / smoke PASS / DOM observation
+  - The composition "grep + behavioral evidence" is OK (grep alone is not OK)
+  - "A file exists" or "a string exists" causes the Phase 4 placeholder commit anti-pattern to recur
+  - For details, see `spec-tasks/SKILL.md` Step 7 Check 18 (SUCCESS_BEHAVIORAL_VERIFICATION) and stay consistent with it
 
 ### E. Final Check of Test Code
 
@@ -119,9 +119,9 @@ Although the test engineer (frontend-test-engineer or unit-test-engineer) has al
 - Is there any hardcoded sensitive information in the test data (e.g., production DB connection strings)?
 - Are there any tests skipped with `#[ignore]`?
 - **test-design.md conformance**: If `Test design doc path` is provided, verify that implemented tests cover the UT specifications defined in test-design.md for the target component. Report any missing test cases as findings
-- **6 categories coverage (I-3, dapper-hardening)**: 確認するカテゴリは Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties** の 6 種。後 2 つを欠く場合は **Moderate finding** として起票:
-  - **Negative Assertions**: 仕様外の挙動が起きないことの test （mutation 禁止 / 副作用ゼロ / panic 禁止 / 未定義フィールド禁止）が含まれるか
-  - **Isolation Properties**: clock / RNG / env / fs / HTTP / DB の直接呼出が test 内に無いか（design.md K-3 で宣言された Mock 経由のみ）。`quality-checks.md` QC15 の clippy `disallowed-methods` で機械的検出されるが、review でも目視確認
+- **6 categories coverage (I-3, dapper-hardening)**: The categories to check are 6 in total: Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**. When the latter two are missing, file as a **Moderate finding**:
+  - **Negative Assertions**: Whether tests that out-of-spec behavior does not occur are included (no mutation / zero side effects / no panics / no undefined fields)
+  - **Isolation Properties**: Whether tests do not contain direct calls to clock / RNG / env / fs / HTTP / DB (only via Mocks declared in design.md K-3). Mechanically detected by clippy `disallowed-methods` in `quality-checks.md` QC15, but also visually confirmed during review
 
 ### E2. TDD Process Verification
 
@@ -138,15 +138,15 @@ Verify that the implementation followed the Red-Green-Refactor cycle, not just "
 
 **Action on violation**: Severity is **Moderate** (same as B/C). Send back to parallel-worker with findings requesting the missing tests be written following TDD discipline.
 
-#### E3. Component Test (CT) Coverage（H-5 で追加、UI component task のみ）
+#### E3. Component Test (CT) Coverage (added in H-5, UI component tasks only)
 
-UI component task の場合、追加で以下を確認:
+For UI component tasks, additionally check the following:
 
-- **CT が存在するか**: `tests/component/` 内 / `*_ct.rs` ファイル / `#[cfg(target_arch = "wasm32")] mod tests` 内に wasm-bindgen-test based の CT が 1 件以上あるか
-- **mount + signal 操作 + DOM 観測の chain が含まれるか**: `mount_to(...)` + `signal.set(...)` または `HtmlElement::click()` + `tick().await` + `query_selector(...)` の組合せで verify されているか
-- **pure helper UT のみで終わっていないか**: UI component task が 4.4 ThumbnailGrid のような view! ベースなのに、テストが `extracted_helper_function` だけの状態は **Moderate finding として reject**（CT が無いことが理由）
+- **Whether CTs exist**: At least one wasm-bindgen-test-based CT exists in `tests/component/` / `*_ct.rs` files / `#[cfg(target_arch = "wasm32")] mod tests`
+- **Whether mount + signal manipulation + DOM observation chain is included**: Verified through the combination `mount_to(...)` + `signal.set(...)` or `HtmlElement::click()` + `tick().await` + `query_selector(...)`
+- **Whether it stops at pure helper UT only**: When a UI component task is `view!`-based (like 4.4 ThumbnailGrid) but tests cover only `extracted_helper_function`, **reject as a Moderate finding** (reason: CTs are missing)
 
-**Action on violation**: Severity is **Moderate**。dapper-hardening Phase 4 placeholder commit パターンの再発防止のため明示的に reject する。
+**Action on violation**: Severity is **Moderate**. Explicitly reject to prevent recurrence of the dapper-hardening Phase 4 placeholder commit pattern.
 
 ### F. Design Conformance
 
@@ -156,22 +156,22 @@ Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design
 - **API**: Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
 - **Data Model**: Do the fields of Model/DTO match the definitions in design.md?
 - **Detection of additions**: Are there any tables, endpoints, or fields added that are not defined in design.md?
-- **(H-5 拡張) Code path 到達可能性**: 「placeholder ヒューリスティック」（`<p>"...placeholder"</p>` のような露骨な文字列）に頼らず、**code path の到達可能性で判断**する:
-  - design.md DES-N の `Dependencies:` 列に列挙された各 server fn / external API が、対応 component の view! 内で **実際に呼び出している箇所**を 1 件以上検出できるか（grep + 文脈確認）
-  - data-testid が DOM 出力位置に付与されており、test_ids.rs 等で定数化されているか
-  - 「extracted helper だけで終わっており、view! 内が `<p>placeholder</p>` だけ」という状態を **Critical として escalate**（dapper-hardening #4.3 FolderTree 事例の再発防止）
+- **(H-5 extension) Code path reachability**: Do not rely on the "placeholder heuristic" (overt strings like `<p>"...placeholder"</p>`); **judge by code path reachability**:
+  - For each server fn / external API listed in the `Dependencies:` column of design.md DES-N, can at least one **actual call site** be detected inside the corresponding component's view! (grep + context check)?
+  - Are `data-testid` attributes attached at DOM output positions and made constants in `test_ids.rs` or similar?
+  - **Escalate as Critical** the state "ends at extracted helpers only, with view! containing only `<p>placeholder</p>`" (to prevent recurrence of the dapper-hardening #4.3 FolderTree case)
 
 If a deviation from the design is detected, escalate to the user with `review_action: escalate`. Implementers are not permitted to change the design on their own.
 
 ### G. API Documentation Conformance (conditional)
 
-`docs/openapi.yaml` が存在するプロジェクトの場合のみ確認する。存在しない場合はスキップ。
+Only check this for projects where `docs/openapi.yaml` exists. Skip if it does not exist.
 
-- API 関連ファイル（ハンドラ、ルーター、リクエスト/レスポンス型）に変更がある場合、`docs/openapi.yaml` が更新されているか
-- 新規エンドポイントが `docs/openapi.yaml` の paths に追加されているか
-- 変更されたリクエスト/レスポンス型が components/schemas に反映されているか
+- When there are changes to API-related files (handlers, routers, request/response types), is `docs/openapi.yaml` updated?
+- Are new endpoints added to the paths section of `docs/openapi.yaml`?
+- Are changed request/response types reflected in components/schemas?
 
-**Severity**: Minor（`/generate-api-docs` の実行を推奨する報告とし、auto-fix は行わない）
+**Severity**: Minor (report a recommendation to run `/generate-api-docs`; do not auto-fix)
 
 ## Processing Flow for Findings
 
@@ -181,33 +181,33 @@ Branch processing based on the severity of findings. review-worker is a **review
 
 | Severity | Relevant aspects | Action | failure_category mapping (FC3) |
 |----------|----------------|--------|--------------------------------|
-| **Minor** | A (Style and conventions), G (API Docs) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues. G は `/generate-api-docs` の実行を推奨として報告 | `quality_check_failure/format_violation`, `quality_check_failure/lint_violation`（警告相当）, `spec_mismatch/api_contract_mismatch` |
-| **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction | `test_failure/*`, `quality_check_failure/lint_violation`（-D warnings 相当）, `quality_check_failure/mutation_survived`, `quality_check_failure/wasm_build_failure`, `quality_check_failure/trim_aot_incompatibility`, `spec_mismatch/test_design_missing` |
+| **Minor** | A (Style and conventions), G (API Docs) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues. For G, report running `/generate-api-docs` as a recommendation | `quality_check_failure/format_violation`, `quality_check_failure/lint_violation` (warning equivalent), `spec_mismatch/api_contract_mismatch` |
+| **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction | `test_failure/*`, `quality_check_failure/lint_violation` (equivalent to -D warnings), `quality_check_failure/mutation_survived`, `quality_check_failure/wasm_build_failure`, `quality_check_failure/trim_aot_incompatibility`, `spec_mismatch/test_design_missing` |
 | **Critical** | D (Spec non-conformance), F (Design conformance violation), C (blocking vulnerabilities) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer | `quality_check_failure/dependency_vulnerability`, `spec_mismatch/design_conformance_violation`, `spec_mismatch/requirement_missing`, `spec_mismatch/restriction_violated` |
 
 **Note**: `failure-taxonomy.md` (FC1-FC6) defines the cross-worker shared vocabulary. When authoring `findings`, pick a `severity` that matches FC3. The `failure_category` / `failure_subcategory` fields in each finding must be consistent with the `severity`.
 
-### Review Observation Log (レビュー観察ログ)
+### Review Observation Log
 
-レビュー中に確認したすべての事項を記録する。自動修正した Minor 含め、レビューの透明性を確保するために **必須**。
+Record everything checked during the review. **Required** to ensure review transparency, including auto-fixed Minor items.
 
-各カテゴリ (A-G) について、以下のいずれかを記録する:
-- **finding**: 問題を発見した（severity + 詳細）
-- **auto-fixed**: Minor 問題を自動修正した（何を修正したか記録）
-- **checked-ok**: 確認したが問題なし（**何を確認したか具体的に記載**）
+For each category (A-G), record one of the following:
+- **finding**: a problem was discovered (severity + details)
+- **auto-fixed**: a Minor problem was auto-fixed (record what was fixed)
+- **checked-ok**: checked, no problem (**describe specifically what was checked**)
 
-⛔ 「問題なし」だけの記録は不十分。具体的に何を確認したかを記載すること。
+Stop: a record of "no problem" alone is insufficient. State specifically what was checked.
 
-例:
+Example:
 ```
 observations:
-  - A: checked-ok — 命名規則を確認、`create_user` / `UserDto` 等の命名はプロジェクト規約に準拠
-  - B: auto-fixed — `unwrap()` を `map_err()` に修正 (src/handler.rs:45)
-  - C: checked-ok — SQL はクエリビルダー経由、外部入力のバリデーションあり、レスポンスに内部IDなし
-  - D: checked-ok — Success 基準3項目: (1) ユーザー作成API ✓ (2) バリデーション ✓ (3) 重複チェック ✓
-  - E: checked-ok — テストが実装と同期、具体値の検証あり（is_ok()だけでない）
-  - F: checked-ok — design.md 定義外のフィールド/エンドポイント追加なし
-  - G: checked-ok — openapi.yaml 未存在のためスキップ
+  - A: checked-ok — naming conventions verified; names like `create_user` / `UserDto` follow project rules
+  - B: auto-fixed — replaced `unwrap()` with `map_err()` (src/handler.rs:45)
+  - C: checked-ok — SQL via query builder, external input validated, response has no internal IDs
+  - D: checked-ok — 3 Success criteria items: (1) user creation API ✓ (2) validation ✓ (3) duplicate check ✓
+  - E: checked-ok — tests are in sync with implementation; concrete values are asserted (not just is_ok())
+  - F: checked-ok — no fields/endpoints added beyond design.md
+  - G: checked-ok — skipped because openapi.yaml does not exist
 ```
 
 ### Report Format for Sending Back
@@ -230,7 +230,7 @@ findings:
 
 `failure_category` / `failure_subcategory` are **required** per `failure-taxonomy.md` FC2. The `severity` must be consistent with `failure_category` per FC3 — e.g., do not set `failure_category: quality_check_failure/format_violation` with `severity: Critical`.
 
-> **Severity vocabulary note**: this document uses **Minor / Moderate / Critical** throughout. The **authoritative mapping** between this vocabulary and external severity scales lives in `failure-taxonomy.md` FC3 (section "外部 severity スケールとの対応"). The table below is a local restatement for convenience — if the two diverge, FC3 wins.
+> **Severity vocabulary note**: this document uses **Minor / Moderate / Critical** throughout. The **authoritative mapping** between this vocabulary and external severity scales lives in `failure-taxonomy.md` FC3 (section "Mapping to external severity scales"). The table below is a local restatement for convenience — if the two diverge, FC3 wins.
 >
 > | This doc | Common external scale | CVSS-like |
 > |----------|----------------------|-----------|
@@ -261,54 +261,54 @@ findings:
 
 ## Phase Review Context (PhaseReview tasks only)
 
-Phase Review（PhaseReview タスク）のコンテキストで呼び出された場合、
-Phase 全体の **唯一のレビューパス** を担う（タスクごとのレビューとは別の責務）。
-通常の品質チェック・コードレビュー (A-G) に加えて、以下を必ず実施する:
+When invoked in the context of a Phase Review (PhaseReview task),
+this agent is responsible for the **sole review pass** for the entire Phase (a different responsibility from per-task review).
+In addition to the normal quality checks and code review (A-G), always perform the following:
 
-1. **統合検証結果の確認**（ビルド / 統合テスト / スモークテスト）
-2. **Pre-Phase CVE 監査結果の評価**（cargo audit / npm audit / Critical/High CVE リスト）
-3. **多角観点でのレビュー**（仕様適合 / 認証認可 / OWASP TOP 10 / パフォーマンス / 品質保守性）
+1. **Confirm integration verification results** (build / integration tests / smoke tests)
+2. **Evaluate Pre-Phase CVE audit results** (cargo audit / npm audit / Critical/High CVE list)
+3. **Multi-perspective review** (spec conformance / authn-authz / OWASP TOP 10 / performance / quality-maintainability)
 
-> **(B 拡張、dapper-hardening) Bookkeeping commit の扱い**: spec-implement Step 3.5.0 で `chore({spec-name}): bookkeeping for phase N` という機械的 commit が PhaseReview worktree 作成前に main 側で実施される。本 commit に含まれる `.spec-workflow/specs/{spec-name}/tasks.md` の `[x]` マーク更新 / `Implementation Logs/` の追記は **review 範囲から除外** してよい（実装変更ではなく進捗 bookkeeping のため）。本来のコードレビューは worktree 内の実装ファイルに集中する。
+> **(B extension, dapper-hardening) Handling of bookkeeping commits**: in spec-implement Step 3.5.0, a mechanical commit `chore({spec-name}): bookkeeping for phase N` is made on the main side before the PhaseReview worktree is created. The `[x]` mark updates in `.spec-workflow/specs/{spec-name}/tasks.md` and additions to `Implementation Logs/` contained in this commit may be **excluded from the review scope** (they are progress bookkeeping, not implementation changes). Focus the actual code review on the implementation files inside the worktree.
 
-### 統合検証結果の確認
+### Confirming integration verification results
 
-オーケストレーターのプロンプトに含まれる統合検証結果（ビルド / 統合テスト / スモークテスト）を確認する:
+Confirm the integration verification results (build / integration tests / smoke tests) included in the orchestrator's prompt:
 
-| 統合検証結果 | アクション |
+| Integration verification result | Action |
 |-------------|----------|
-| 全ステップ `pass` | 通常のレビューフローを続行 |
-| いずれかが `fail` | `review_action: rework` を返す。findings に統合検証の失敗内容を含める |
-| 一部 `skip`（`fail` なし） | 通常のレビューフローを続行。`skip` された検証項目をレポートの Notes に記載 |
+| All steps `pass` | Continue with the normal review flow |
+| Any `fail` | Return `review_action: rework`. Include the integration verification failure in findings |
+| Some `skip` (no `fail`) | Continue with the normal review flow. Record the `skip`ped verification items in the report Notes |
 
-### Pre-Phase CVE 監査結果の評価
+### Evaluating Pre-Phase CVE audit results
 
-オーケストレーターのプロンプトに含まれる CVE 監査結果（`cargo audit` / `npm audit` / Critical/High CVE リスト）を、カテゴリ C (Security) の C7 / C8 評価に組み込む:
+Incorporate the CVE audit results (`cargo audit` / `npm audit` / Critical/High CVE list) included in the orchestrator's prompt into the C7 / C8 evaluation of category C (Security):
 
-| CVE 監査結果 | アクション |
+| CVE audit result | Action |
 |-------------|----------|
-| `cargo audit` / `npm audit` 共に `pass` | C カテゴリ問題なしとしてレビュー継続 |
-| Critical/High CVE 検出 | `severity: Critical` の finding を起票し `review_action: escalate`。CVE-ID / 影響パッケージ / 修正版 / 推奨対応を `findings` に記載 |
-| Medium / Low CVE 検出 | `severity: Moderate` または `Minor` で記録（FC3 マッピング: `quality_check_failure/dependency_vulnerability`）。修正可能なら自分で更新後 commit、深刻なら parallel-worker に rework 差し戻し |
-| `skip` (ツール未インストール) | Notes に skip 理由を記載し、継続。Critical 影響の判断は不可なので review_action は仕様/コード根拠のみで決定 |
+| Both `cargo audit` and `npm audit` `pass` | Continue review treating category C as no problem |
+| Critical/High CVE detected | File a `severity: Critical` finding and return `review_action: escalate`. Record CVE-ID / affected package / fixed version / recommended action in `findings` |
+| Medium / Low CVE detected | Record as `severity: Moderate` or `Minor` (FC3 mapping: `quality_check_failure/dependency_vulnerability`). If fixable, update yourself and commit; if serious, send back to parallel-worker for rework |
+| `skip` (tool not installed) | Record the skip reason in Notes and continue. Critical impact cannot be judged, so determine review_action only from spec/code grounds |
 
-### 多角観点レビュー
+### Multi-perspective review
 
-Phase Review では従来の per-task レビューでは拾いきれない Phase 全体の関心事を網羅する:
+Phase Review covers Phase-wide concerns that conventional per-task review cannot catch:
 
-| 観点 | 評価軸 | 既存カテゴリとの対応 |
+| Perspective | Evaluation axis | Mapping to existing categories |
 |------|-------|---------------------|
-| 仕様適合 | `_Prompt` の Success 基準を Phase 内全タスクで充足したか / 仕様逸脱がないか | D (Spec) |
-| 認証・認可 | 認証必須エンドポイントへの middleware 適用 / 権限チェック / IDOR | C2-C3 |
-| OWASP TOP 10 + CVE | C1-C8 全般 + 上記 Pre-Phase CVE 結果 | C |
-| パフォーマンス | Phase で追加された処理のボトルネック / 計算量 / リソース効率 | (新規観点) |
-| 品質・保守性 | テストカバレッジ / 命名 / DRY / 読みやすさ | E + B |
+| Spec conformance | Whether all tasks in the Phase satisfy the `_Prompt` Success criteria / no deviation from the spec | D (Spec) |
+| Authn-Authz | Middleware applied to auth-required endpoints / permission checks / IDOR | C2-C3 |
+| OWASP TOP 10 + CVE | All of C1-C8 + the Pre-Phase CVE results above | C |
+| Performance | Bottlenecks in processing added by the Phase / complexity / resource efficiency | (new perspective) |
+| Quality & maintainability | Test coverage / naming / DRY / readability | E + B |
 
-各観点について `observations` に確認結果を必ず記録する（"checked-ok" の場合は具体的に何を確認したか）。
+For each perspective, always record the verification result in `observations` (when "checked-ok", state specifically what was checked).
 
-### 完了レポートへの追加
+### Additions to the completion report
 
-Phase Review の場合、完了レポートに以下のキーを追加する:
+For Phase Review, add the following keys to the completion report:
 
 ```
 - integration-verification:
@@ -318,7 +318,7 @@ Phase Review の場合、完了レポートに以下のキーを追加する:
 - cve-audit:
     - cargo-audit: pass|fail|skip
     - npm-audit: pass|fail|skip
-    - critical-high-count: <数値>
+    - critical-high-count: <number>
 ```
 
 ## Commit
@@ -353,14 +353,14 @@ git commit -m "<scope>: <summary of changes>"
     - tdd_compliance: pass|fail
     - design_conformance: pass|fail
     - api_docs: pass|skip|advisory
-- observations: <レビュー観察ログ — 全カテゴリ (A-G) の確認結果を review_action に関係なく常に記録>
-- auto_fixed: <自動修正した Minor 問題のリスト (0件でも空リスト [] として記載)>
-- integration-verification: <PhaseReview のみ必須。通常タスクレビューでは省略>
+- observations: <Review Observation Log — always record the verification result for all categories (A-G), regardless of review_action>
+- auto_fixed: <list of auto-fixed Minor problems (record an empty list [] even when zero)>
+- integration-verification: <required for PhaseReview only; omit for normal task reviews>
     - build: pass|fail|skip
     - integration-tests: pass|fail|skip
     - smoke-test: pass|fail|skip
-- observations_summary: "<N> 項目確認、<M> 件 auto-fixed、<K> 件 finding"
-- findings: <list of findings (rework/escalate の場合のみ)>
+- observations_summary: "<N> items checked, <M> auto-fixed, <K> findings"
+- findings: <list of findings (only for rework/escalate)>
 - commit: <hash (only for commit)>
 - changed_files: <list>
 ```
@@ -387,14 +387,14 @@ git commit -m "<scope>: <summary of changes>"
     - tdd_compliance: pass|fail
     - design_conformance: pass|fail
     - api_docs: pass|skip|advisory
-- observations: <レビュー観察ログ — 全カテゴリ (A-G) の確認結果を review_action に関係なく常に記録>
-- auto_fixed: <自動修正した Minor 問題のリスト (0件でも空リスト [] として記載)>
-- integration-verification: <PhaseReview のみ必須。通常タスクレビューでは省略>
+- observations: <Review Observation Log — always record the verification result for all categories (A-G), regardless of review_action>
+- auto_fixed: <list of auto-fixed Minor problems (record an empty list [] even when zero)>
+- integration-verification: <required for PhaseReview only; omit for normal task reviews>
     - build: pass|fail|skip
     - integration-tests: pass|fail|skip
     - smoke-test: pass|fail|skip
-- observations_summary: "<N> 項目確認、<M> 件 auto-fixed、<K> 件 finding"
-- findings: <list of findings (rework/escalate の場合のみ)>
+- observations_summary: "<N> items checked, <M> auto-fixed, <K> findings"
+- findings: <list of findings (only for rework/escalate)>
 - commit: <hash (only for commit)>
 - changed_files: <list>
 ```

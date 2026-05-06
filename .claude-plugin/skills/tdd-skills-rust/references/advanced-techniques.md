@@ -1,21 +1,21 @@
-# TDD 実践テクニックとアンチパターン
+# TDD Practical Techniques and Antipatterns
 
-## 実践テクニック
+## Practical Techniques
 
-### 仕様の不確実性への対処
+### Coping with Specification Uncertainty
 
-問題: 仕様が曖昧で、どうテストを書けばいいか分からない。
+Problem: the specification is vague and you cannot tell how to write a test.
 
-対策: 具体例から始める。
+Approach: start from a concrete example.
 
 ```rust
-// 悪い: 抽象的すぎる
+// Bad: too abstract
 #[test]
 fn calculate_price() {
-    // 何をテストする？
+    // What is being tested?
 }
 
-// 良い: 具体的なユースケース
+// Good: a concrete use case
 #[test]
 fn calculate_price_for_single_item_without_discount() {
     let calculator = PriceCalculator::new();
@@ -27,30 +27,30 @@ fn calculate_price_for_single_item_without_discount() {
 }
 ```
 
-### レガシーコードへの TDD 適用
+### Applying TDD to Legacy Code
 
-1. 既存の振る舞いを保護するテストを書く（特性テスト）
-2. 小さくリファクタリング
-3. 徐々にテストカバレッジを上げる
+1. Write tests that protect existing behavior (characterization tests)
+2. Refactor in small steps
+3. Gradually raise test coverage
 
 ```rust
-// Step 1: 既存の振る舞いを記録
+// Step 1: capture existing behavior
 #[test]
 fn existing_behavior() {
     let result = legacy_function(&input_data);
     assert_eq!(result, expected_output);
 }
 
-// Step 2: trait で依存を抽象化してテスト可能にする
-// Step 3: 新機能は TDD で
+// Step 2: abstract dependencies via trait so it becomes testable
+// Step 3: do new functionality with TDD
 ```
 
-### テストが複雑になってきたら
+### When Tests Get Complex
 
-対策:
-1. テストヘルパー関数を作る
-2. Builder パターンを使う
-3. テストを分割する
+Approach:
+1. Create test helper functions
+2. Use the Builder pattern
+3. Split tests
 
 ```rust
 #[cfg(test)]
@@ -80,33 +80,33 @@ mod tests {
 }
 ```
 
-## TDD のアンチパターン
+## TDD Antipatterns
 
-### 1. テストを書かずに実装
+### 1. Implementing Without Writing Tests
 
 ```rust
-// 悪い: いきなり実装
+// Bad: jumping to implementation
 fn calculate_total(items: &[Item]) -> u64 {
     items.iter().map(|i| i.price).sum()
 }
 
-// 良い: まずテスト
+// Good: test first
 #[test]
 fn calculate_total_for_empty_list() {
     assert_eq!(calculate_total(&[]), 0);
 }
 ```
 
-### 2. 大きすぎるステップ
+### 2. Steps That Are Too Big
 
 ```rust
-// 悪い: いきなり完璧を目指す
+// Bad: aiming for perfection in one step
 #[test]
 fn complete_order_system() {
-    // カート、決済、在庫管理、メール送信...全部
+    // Cart, payment, inventory management, email sending... all of it
 }
 
-// 良い: 小さく分割
+// Good: split into small steps
 #[test]
 fn create_empty_cart() {
     let cart = ShoppingCart::new();
@@ -114,17 +114,17 @@ fn create_empty_cart() {
 }
 ```
 
-### 3. テストのためのテスト
+### 3. Tests for the Sake of Tests
 
 ```rust
-// 悪い: 自明すぎる（getter のテスト）
+// Bad: too trivial (testing a getter)
 #[test]
 fn getter() {
     let user = User { name: "Alice".into() };
     assert_eq!(user.name, "Alice");
 }
 
-// 良い: 振る舞いをテスト
+// Good: testing behavior
 #[test]
 fn user_full_name() {
     let user = User { first_name: "Alice".into(), last_name: "Smith".into() };
@@ -132,16 +132,16 @@ fn user_full_name() {
 }
 ```
 
-### 4. プライベート関数のテスト
+### 4. Testing Private Functions
 
 ```rust
-// 悪い: 内部関数を直接テスト
+// Bad: testing internal functions directly
 #[test]
 fn internal_calculation() {
-    assert_eq!(internal_helper(5), 10); // pub(crate) にして無理やりテスト
+    assert_eq!(internal_helper(5), 10); // forced test by promoting to pub(crate)
 }
 
-// 良い: 公開 API を通してテスト
+// Good: test through the public API
 #[test]
 fn public_method_that_uses_internal() {
     let obj = MyStruct::new();
@@ -149,14 +149,14 @@ fn public_method_that_uses_internal() {
 }
 ```
 
-Rust ではモジュール内テスト (`#[cfg(test)] mod tests`) からプライベート関数にアクセスできるが、
-公開 API を通してテストする方が設計上望ましい。
+In Rust, in-module tests (`#[cfg(test)] mod tests`) can access private functions, but
+testing through the public API is preferable from a design standpoint.
 
-### 5. テストの相互依存
+### 5. Inter-test Dependencies
 
 ```rust
-// 悪い: テストが順序に依存（static mut 等）
-// 良い: 各テストが独立
+// Bad: tests depend on order (e.g. via static mut)
+// Good: each test is independent
 #[test]
 fn create_cart() {
     let cart = ShoppingCart::new();
@@ -165,41 +165,41 @@ fn create_cart() {
 
 #[test]
 fn add_item() {
-    let mut cart = ShoppingCart::new(); // 毎回新規作成
+    let mut cart = ShoppingCart::new(); // freshly created each time
     cart.add_item(Item { price: 100 });
     assert_eq!(cart.item_count(), 1);
 }
 ```
 
-## TODO リストの活用
+## Using a TODO List
 
-実装中に思いついたアイデアを記録:
+Record ideas you have during implementation:
 
 ```markdown
 ## TODO
-- [x] 空のカートの合計は0
-- [x] 1つの商品を追加した場合の合計
-- [ ] 複数の商品を追加した場合の合計
-- [ ] 割引適用時の合計
-- [ ] 負の価格の商品は追加できない（エラー）
-- [ ] 在庫がない商品は追加できない
+- [x] Total of an empty cart is 0
+- [x] Total when one item is added
+- [ ] Total when multiple items are added
+- [ ] Total when discount is applied
+- [ ] Items with negative price cannot be added (error)
+- [ ] Out-of-stock items cannot be added
 ```
 
-メリット:
-- 今やるべきことに集中できる
-- 進捗が可視化される
-- 実装漏れを防げる
+Benefits:
+- Lets you focus on what to do now
+- Visualizes progress
+- Prevents missed implementations
 
-## まとめ
+## Summary
 
-やるべきこと:
-- 小さいステップで進める
-- 具体例から始める
-- TODO リストを活用
-- テストヘルパーで整理
+What you should do:
+- Advance in small steps
+- Start from concrete examples
+- Use a TODO list
+- Organize with test helpers
 
-避けるべきこと:
-- テストを飛ばす
-- 大きすぎるステップ
-- プライベート関数のテスト
-- テストの相互依存
+What you should avoid:
+- Skipping tests
+- Steps that are too big
+- Testing private functions
+- Inter-test dependencies

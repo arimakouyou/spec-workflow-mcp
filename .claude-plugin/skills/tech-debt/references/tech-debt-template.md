@@ -5,24 +5,24 @@ priority: {{PRIORITY}} # Critical | High | Medium | Low
 effort: {{EFFORT}}     # S(1-2h) | M(half-day) | L(1-3d) | XL(1w+)
 created: {{DATE}}
 resolved: null
-related-adr: null     # 例: ADR-0003
+related-adr: null     # e.g., ADR-0003
 ---
 
 # TD-{{NUMBER}}: {{TITLE}}
 
-## 概要
+## Overview
 
-[負債の内容と所在を記述する]
+[Describe the nature and location of the debt]
 
-## 影響
+## Impact
 
-[この負債が引き起こす問題。誰が影響を受けるか]
+[Problems this debt causes; who is affected]
 
-## 改善計画
+## Remediation Plan
 
-[修正方法。推定スコープ]
+[How to fix it; estimated scope]
 
-## 完了条件
+## Done Criteria
 
-- [ ] [Resolved にできる条件 1]
-- [ ] [Resolved にできる条件 2]
+- [ ] [Condition that allows marking Resolved 1]
+- [ ] [Condition that allows marking Resolved 2]
