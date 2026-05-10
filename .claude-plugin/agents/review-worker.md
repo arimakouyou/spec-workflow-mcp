@@ -152,16 +152,24 @@ For UI component tasks, additionally check the following:
 
 Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
 
-- **DB Schema**: Does the migration's table definition (column names, types, constraints, indexes) match design.md?
-- **API**: Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
-- **Data Model**: Do the fields of Model/DTO match the definitions in design.md?
-- **Detection of additions**: Are there any tables, endpoints, or fields added that are not defined in design.md?
+- **DB Schema** (DC1): Does the migration's table definition (column names, types, constraints, indexes) match design.md?
+- **API** (DC2): Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
+- **Data Model** (DC3): Do the fields of Model/DTO match the definitions in design.md?
+- **Module Boundaries** (DC4): Does the implementation conform to the `## Module Boundaries` Layer/Directory contract and the dependency direction rules in design.md?
+  - **Adherence judgment is by Layer Directory prefix, NOT by exact path match against individual cells**: a file located under any `Directory` listed in the Layer Definitions table is conforming, even if its exact path differs from a cell elsewhere in design.md
+  - **Recognize facade pair annotations**: cells containing `Re-exports X from Y` / `re-exported from` / `facade` (typically in the Cross-cutting concerns sub-table) describe a facade + impl pair. **Both files are expected**; flagging one of them as a "deviation" is a false positive
+  - **True violations**: (a) implementation files placed in a Directory that maps to no Layer, or (b) violations of the Dependency direction rules table (e.g., `infra` importing from `service`)
+  - **Mechanical primary source**: when `tests/architecture.rs` (or equivalent arch-test artifact from `/generate-arch-tests`) exists and PASSES, treat it as the authoritative signal for Module Boundaries adherence; downgrade grep-based path comparison to a secondary check
+  - **PostToolUse hook**: `module-boundary-check.sh` emits adherence/facade hints in `<module_boundary_hints>` blocks — read them as a first-pass signal before performing your own comparison
+- **Detection of additions**: Are there any tables, endpoints, fields, or files added that are not defined in design.md?
 - **(H-5 extension) Code path reachability**: Do not rely on the "placeholder heuristic" (overt strings like `<p>"...placeholder"</p>`); **judge by code path reachability**:
   - For each server fn / external API listed in the `Dependencies:` column of design.md DES-N, can at least one **actual call site** be detected inside the corresponding component's view! (grep + context check)?
   - Are `data-testid` attributes attached at DOM output positions and made constants in `test_ids.rs` or similar?
   - **Escalate as Critical** the state "ends at extracted helpers only, with view! containing only `<p>placeholder</p>`" (to prevent recurrence of the dapper-hardening #4.3 FolderTree case)
 
 If a deviation from the design is detected, escalate to the user with `review_action: escalate`. Implementers are not permitted to change the design on their own.
+
+**Do not silently accept design violations on practical grounds.** If you find that the implementation deviates from the design (e.g., a struct placed in a different Layer than DES-N specifies) and you reason that the deviation is "infeasible to fix" or "acceptable given trait dependencies", **you MUST still escalate** with `review_action: escalate`. Recording such reasoning in the review summary while letting the deviation pass is itself a violation of the Design Conformance principle (only the user can authorize design changes; the reviewer is not permitted to ratify deviations unilaterally).
 
 ### G. API Documentation Conformance (conditional)
 

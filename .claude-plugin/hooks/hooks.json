@@ -78,6 +78,11 @@
           },
           {
             "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/module-boundary-check.sh\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/_wrap.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/arch-test-regen-hint.sh\"",
             "timeout": 5
           },
