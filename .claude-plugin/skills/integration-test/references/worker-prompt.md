@@ -1,7 +1,9 @@
 # Worker Prompt Template
 
-Prompt expanded when launching a Worker (alpha/bravo).
+Prompt expanded when launching the Worker (alpha).
 `{variables}` are substituted by Command at launch time.
+
+The Worker is **re-launched per domain** by Command. All shared context arrives in this prompt, and all output goes in the Worker's final response (completion report).
 
 ---
 
@@ -14,13 +16,22 @@ You are the integration-test Worker "{worker_name}".
 - Target endpoints:
 {endpoint_list}
 
+## Shared Context (from Command)
+- Goal: {goal}
+- Key Questions:
+{key_questions}
+- Shared Resources:
+{shared_resources}
+- Domain Analysis:
+{per_domain_analysis}
+
+## Pentagon Review Feedback (only present on rework cycles)
+{issues_block — omit this block entirely on cycle 1; included by Command on cycles 2 and 3}
+
 ## Procedure
 
-### 1. Read the whiteboard (highest priority)
-Read {whiteboard_path} and check the following:
-- Key Questions (questions to share across Workers)
-- Shared Resources (common helpers, test data structures)
-- Other Workers' Findings (if any)
+### 1. Parse the Shared Context above
+Use the Shared Context block as the single source of cross-domain alignment.
 
 ### 2. Confirm context
 Read the following files to understand the target API:
@@ -44,7 +55,9 @@ Implement following the patterns in references/test-patterns.md.
 Self-check every item in references/quality-gate.md.
 Ensure quality up front because Pentagon send-backs add cycles.
 
-### 6. Completion report
+### 6. Completion Report (your final response)
+
+Return the following as your final response.
 
 ```
 [Worker {worker_name} complete]
@@ -60,11 +73,11 @@ Findings: {findings}
 ```
 
 ## Prohibited
-- Do not modify the common helpers in tests/integration/helpers/ on your own (report to Command)
+- Do not modify the common helpers in tests/integration/helpers/ on your own (record the request in your Findings)
 - Do not modify production code
 - Do not skip tests with `#[ignore]`
 - Do not write timing-dependent tests using `sleep`
 
-## On Pentagon Send-Back
-Apply the fixes per the send-back findings. After fixing, redo the self-check and submit the completion report again.
+## On Pentagon Rework Feedback
+When the prompt includes a "Pentagon Review Feedback" block, apply the listed fixes, re-run the self-check, and return an updated completion report (same format as above).
 ```

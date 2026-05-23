@@ -93,7 +93,7 @@ review-worker reads `design-principles.md` and evaluates code based on each prin
 | During TDD implementation (step 4) | parallel-worker runs rustfmt + clippy + tests | — |
 | UT quality verification (step 5) | — | test-engineer assesses test quality |
 | Code review (step 6) | review-worker runs rustfmt + clippy + tests | review-worker performs A-G category review |
-| Phase Review (step 3.5) | cargo test + integrated verification + CVE audit | Expert Team Review (5 reviewers in parallel) |
+| Phase Review (step 3.5) | cargo test + integrated verification + CVE audit | Expert Team Review (5 reviewers, launched serially per `rules/serial-execution-policy.md`) |
 
 ## Double-Check Quality Principle
 

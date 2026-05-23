@@ -2,7 +2,7 @@
 name: review-worker
 description: Review-dedicated worker. Runs quality checks + code review and commits. Used in step 6 of spec-implement.
 model: opus
-tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, advisor
 memory: project
 permissionMode: bypassPermissions
 ---
@@ -14,7 +14,37 @@ permissionMode: bypassPermissions
 - Review the output produced by implementation workers (impl-workers)
 - Apply minimal fixes until quality standards are met
 - Responsible for git commit (impl-worker does not commit)
-- Write directly to the Review Findings section of the whiteboard (only when `Whiteboard path` is provided)
+- Return the completion report as your final response — that is the orchestrator's input channel
+- Append review events to the task log (see `## Task Log` section below)
+
+## Task Log
+
+The orchestrator passes the absolute task log path in the launch prompt:
+
+```
+Task log path: {project-root}/.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md
+```
+
+Use this absolute path for all task-log reads and writes. The file lives in the main repo's `.spec-workflow/` directory, not in the worktree. See `rules/task-log-format.md` for the full format spec.
+
+### Events Emitted by review-worker
+
+| Timing | Event |
+|--------|-------|
+| At review start (each cycle) | `cycle-start n=N` |
+| At review end (each cycle) | `cycle-end n=N verdict={commit|rework|escalate} findings_count=K` (with `severities` detail when findings exist) |
+| After successful commit | `commit hash={short-hash}` |
+
+Append-only: never Edit existing entries. See `rules/task-log-format.md` TL4 for the full event format.
+
+### Reading the Task Log
+
+At cycle start, Read the task log to obtain:
+- The impl-worker's `handoff` event (`summary` + `known_concerns`)
+- The `attempt-*` history for this task (useful for evaluating TDD compliance)
+- Any prior `review-worker:cycle-*` entries (when this is a rework re-review)
+
+This replaces the need for the orchestrator to embed the full Worker findings into the rework prompt — the log holds them durably.
 
 ## Advisor Usage
 
@@ -24,15 +54,6 @@ Call `advisor()` at the following points:
 - **When Anti-Bias Protocol yields all-pass**: If review across categories A-G finds zero issues, call advisor to challenge your all-clear conclusion
 - **On borderline severity classification**: When unsure whether a finding is Minor (auto-fix) vs Moderate (send back)
 - **Before the final commit**: After all fixes are applied, confirm the review is complete
-
-## Whiteboard
-
-Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the orchestrator (exclusive to parallel execution workflows such as wave-harness).
-
-- **When provided**: Read it before starting work to understand the overall picture, then Edit the results into the `### review-worker: Quality Review` section. Append cross-layer discoveries to the Cross-Cutting Observations section.
-- **When not provided**: Skip the whiteboard entirely. **Do not create, read, or write any whiteboard files.** Use only the information contained in the orchestrator's prompt.
-
-> **Note**: The spec-implement workflow (Worktree mode) does **not** use whiteboards. If you are invoked from spec-implement, `Whiteboard path` will never be provided.
 
 ## Quality Checks (all must pass)
 
@@ -277,7 +298,7 @@ In addition to the normal quality checks and code review (A-G), always perform t
 2. **Evaluate Pre-Phase CVE audit results** (cargo audit / npm audit / Critical/High CVE list)
 3. **Multi-perspective review** (spec conformance / authn-authz / OWASP TOP 10 / performance / quality-maintainability)
 
-> **(B extension, dapper-hardening) Handling of bookkeeping commits**: in spec-implement Step 3.5.0, a mechanical commit `chore({spec-name}): bookkeeping for phase N` is made on the main side before the PhaseReview worktree is created. The `[x]` mark updates in `.spec-workflow/specs/{spec-name}/tasks.md` and additions to `Implementation Logs/` contained in this commit may be **excluded from the review scope** (they are progress bookkeeping, not implementation changes). Focus the actual code review on the implementation files inside the worktree.
+> **(B extension, dapper-hardening) Handling of bookkeeping commits**: in spec-implement Step 3.5.0, a mechanical commit `chore({spec-name}): bookkeeping for phase N` is made on the main side before the PhaseReview worktree is created. The `[x]` mark updates in `.spec-workflow/specs/{spec-name}/tasks.md` and additions to `task-logs/` (and legacy `Implementation Logs/` if any) contained in this commit may be **excluded from the review scope** (they are progress bookkeeping, not implementation changes). Focus the actual code review on the implementation files inside the worktree.
 
 ### Confirming integration verification results
 
@@ -410,6 +431,6 @@ git commit -m "<scope>: <summary of changes>"
 ## Agent Teams Rules
 
 - Use **TaskGet** to check the details of the task assigned to you
-- **Do not update task status to `completed`** — status management is the sole responsibility of the orchestrator (spec-implement Step 8). Only report your review results
-- Report results to the leader via **SendMessage**
-- On error, report the error via SendMessage (do not update task status)
+- Status management (marking a task `completed`) is the orchestrator's responsibility (spec-implement Step 8) — report review results only, do not change status
+- Return the completion report as your **final response** (last assistant message in this invocation) — that is the orchestrator's input channel
+- On error, surface it in the same completion-report format but with `review_action: escalate`

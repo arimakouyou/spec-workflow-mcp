@@ -30,7 +30,7 @@ You executing this skill are the **orchestrator**, not the **implementer**. Stri
 | **Do not write tests yourself** | The initial TDD tests (RED phase) are `parallel-worker`'s responsibility. Adding supplemental tests is the test engineer's (`frontend-test-engineer` or `unit-test-engineer`) responsibility |
 | **Do not run git commit yourself** | Commits must always be delegated to `review-worker` |
 | **Do not skip agent calls** | Each step's agent call cannot be skipped |
-| **Do not invent concepts not in this spec** (A, dapper-hardening) | Concepts such as "Auto Mode", "continuous mode", or "auto-progression" **must not be invented to skip user confirmation if they do not exist in this SKILL.md**. User confirmation is required before Phase progression / Wave progression / large-scale parallel launches. `auto-resume.sh` is for rate-limit recovery only and is not a substitute for user-intent confirmation. Real example from dojin-viewer: Claude said "Proceeding to Wave 2 because of Auto Mode" and the user pointed out "I did not give that instruction" |
+| **Do not invent concepts not in this spec** (A, dapper-hardening) | Concepts such as "Auto Mode", "continuous mode", or "auto-progression" **must not be invented to skip user confirmation if they do not exist in this SKILL.md**. User confirmation is required before Phase progression / Wave progression. `auto-resume.sh` is for rate-limit recovery only and is not a substitute for user-intent confirmation. Real example from dojin-viewer: Claude said "Proceeding to Wave 2 because of Auto Mode" and the user pointed out "I did not give that instruction" |
 
 **For any reason whatsoever (e.g., "it's a simple task", "I can do it myself"), do not skip agent calls.**
 
@@ -216,49 +216,47 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
    - Do not attempt to auto-resolve, ignore, or partially execute around cyclic dependencies; always escalate to the user for manual correction.
 3. The **next pending wave** is the first wave (in Phase order) containing at least one `[ ]` task
 
-**Single-task wave**: If the wave contains only one task, process it as before (sequential flow).
+**Wave processing is serial** (per `rules/serial-execution-policy.md`). Regardless of how many tasks a wave contains, process them one at a time. Concurrent `Agent` launches are prohibited even when the DAG admits parallelism.
 
-**Multi-task wave**: If the wave contains multiple tasks, process them in parallel:
+- Pick one task in the wave and mark it `[ ]` → `[-]`
+- Prepare the worktree for that task (step 3.7)
+- In step 4, launch a single `parallel-worker` and wait for completion
+- After steps 5-8 finish, pick the next task in the wave, mark it `[ ]` → `[-]`, and repeat
+- Once all tasks in the wave are completed (or failed), advance to the next wave
 
-- Mark ALL tasks in the wave from `[ ]` to `[-]` in tasks.md
-- Prepare worktrees for all tasks (step 3.7)
-- Launch parallel-workers in resource-aware batches (step 4)
-
-**Session update (at the start of each task)**: For each task marked `[-]`, run the following to update the session's `current_task` (in a multi-task wave, the last task started within the wave becomes current_task; this is best-effort and may be inaccurate):
+**Session update (at the start of each task)**: Update the session's `current_task` whenever a new task begins:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" start-task {task-id}
 ```
 
-**Resource-aware parallel control**: Before processing a multi-task wave, run the resource detection snippet from the `resource-aware-parallelism` skill to obtain `MAX_HEAVY_AGENTS`. If the number of tasks in the wave exceeds `MAX_HEAVY_AGENTS`, split the wave into **sub-batches** of `MAX_HEAVY_AGENTS` tasks each, and process each sub-batch sequentially. If `MAX_HEAVY_AGENTS=1`, run all tasks serially.
-
-Sub-batch split examples:
-
-- wave with 6 tasks, MAX_HEAVY_AGENTS=3 → sub-batches [3, 3]
-- wave with 4 tasks, MAX_HEAVY_AGENTS=2 → sub-batches [2, 2]
-- wave with 3 tasks, MAX_HEAVY_AGENTS=1 → sub-batches [1, 1, 1] (serial execution)
-
-> Note: In a multi-task wave, multiple tasks being `[-]` (in-progress) at the same time is **intended, normal behavior**. This is an explicit exception to guidance such as "Only one task should be in-progress at a time" in prompts like `implement-task`.
-
 **PhaseReview exclusion during wave computation**: Tasks with `_PhaseReview: true` are always excluded from wave computation. PhaseReview is processed alone after all regular tasks in the phase complete.
 
-**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0 and are processed as a single multi-task wave in **parallel**. Mark them from `[ ]` to `[-]` together, following the same multi-task wave rules described above.
+**No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0. Process them serially per the rule above (one at a time).
 
-**Per-task processing in a multi-task wave**: Each task in the wave runs steps 3-8 (worktree creation → parallel-worker → UT verification → review-worker → log → merge/cleanup → mark `[x]`) **independently per task**. Each task works in its dedicated worktree/branch and is merged individually on completion. Proceed to the next wave only after all tasks in the wave have completed (or failed).
+**Per-task processing**: Each task runs steps 3-8 (worktree creation → parallel-worker → UT verification → review-worker → log → merge/cleanup → mark `[x]`) **independently and sequentially**. Within a single wave, multiple tasks MUST NOT be in the `[-]` (in-progress) state simultaneously.
+
+> The prior multi-task-wave parallel rules (resource-aware sub-batch splitting and related logic) are archived under `_disabled/parallel-execution/spec-implement-parallel-sections.md`. Consult that file when re-enabling.
 
 ### 2. Discover Existing Work
 
 Before writing any code, search implementation logs to understand what's already been built. This prevents duplicate endpoints, reimplemented components, and broken integrations.
 
-Implementation logs live in: `.spec-workflow/specs/{spec-name}/Implementation Logs/`
+Task logs live in: `.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md` (new tasks).
+
+Legacy implementation logs from before the task-log consolidation live in: `.spec-workflow/specs/{spec-name}/Implementation Logs/`. Both directories are valuable for the discovery step.
 
 **Search with grep** (fast, recommended):
 
 ```bash
-grep -r "GET\|POST\|PUT\|DELETE" ".spec-workflow/specs/{spec-name}/Implementation Logs/"
-grep -r "component\|Component" ".spec-workflow/specs/{spec-name}/Implementation Logs/"
-grep -r "function\|class" ".spec-workflow/specs/{spec-name}/Implementation Logs/"
-grep -r "integration\|dataFlow" ".spec-workflow/specs/{spec-name}/Implementation Logs/"
+# New consolidated task logs
+grep -r "GET\|POST\|PUT\|DELETE" ".spec-workflow/specs/{spec-name}/task-logs/"
+grep -r "component\|Component" ".spec-workflow/specs/{spec-name}/task-logs/"
+grep -r "function\|class" ".spec-workflow/specs/{spec-name}/task-logs/"
+grep -r "integration\|dataFlow" ".spec-workflow/specs/{spec-name}/task-logs/"
+
+# Legacy implementation logs (still informative for pre-consolidation work)
+grep -r "GET\|POST\|PUT\|DELETE" ".spec-workflow/specs/{spec-name}/Implementation Logs/" 2>/dev/null
 ```
 
 **Or read markdown files directly** to examine specific log entries.
@@ -283,12 +281,12 @@ If the task has `_PhaseReview: true_`, **skip the TDD cycle (steps 4-5)** and in
 #### 3.5.0 Bookkeeping Commit (newly added in B, dapper-hardening)
 
 > Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause B (B-1).
-> Before creating the Phase Review worktree, commit any uncommitted bookkeeping files (tasks.md `[x]` mark updates, Implementation Logs/) on the main side. Without this, the PhaseReview worktree (derived from HEAD) does not see the bookkeeping, so diffs remain on the main side even after the PhaseReview commit.
+> Before creating the Phase Review worktree, commit any uncommitted bookkeeping files (tasks.md `[x]` mark updates, task-logs/, and legacy Implementation Logs/ if present) on the main side. Without this, the PhaseReview worktree (derived from HEAD) does not see the bookkeeping, so diffs remain on the main side even after the PhaseReview commit.
 
 ```bash
 # Check for uncommitted bookkeeping on the main side
 SPEC_DIR=".spec-workflow/specs/{spec-name}"
-BOOKKEEPING_FILES=$(git status --porcelain | grep -E "${SPEC_DIR}/(tasks\.md|Implementation Logs/)" || true)
+BOOKKEEPING_FILES=$(git status --porcelain | grep -E "${SPEC_DIR}/(tasks\.md|task-logs/|Implementation Logs/)" || true)
 
 if [ -n "$BOOKKEEPING_FILES" ]; then
   echo "Bookkeeping changes detected:"
@@ -296,7 +294,9 @@ if [ -n "$BOOKKEEPING_FILES" ]; then
 
   # Stage bookkeeping only
   git add ".spec-workflow/specs/{spec-name}/tasks.md" \
-          ".spec-workflow/specs/{spec-name}/Implementation Logs/"
+          ".spec-workflow/specs/{spec-name}/task-logs/" 2>/dev/null
+  # Legacy directory (only if it still has uncommitted entries)
+  git add ".spec-workflow/specs/{spec-name}/Implementation Logs/" 2>/dev/null || true
 
   # Commit (mechanical commit message)
   git commit -m "chore({spec-name}): bookkeeping for phase {phase-number}"
@@ -525,7 +525,7 @@ If the task has `_TDDSkip: true_` (tasks that cannot be tested such as project i
 
 Prepare a git worktree for each task in the wave. This allows parallel-worker and review-worker to work safely in independent working directories without affecting the orchestrator's main branch.
 
-**For multi-task waves**: Create worktrees for ALL tasks in the wave before launching any parallel-workers.
+**For multi-task waves**: Per `rules/serial-execution-policy.md`, tasks in a wave are launched one at a time. Create the worktree for the current task, run steps 4-8 to completion, then create the worktree for the next task. Do NOT pre-create worktrees for all tasks in the wave up front.
 
 ```bash
 WORKTREE_PATH=".worktrees/{spec-name}/{task-id}"
@@ -548,14 +548,7 @@ Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prom
 
 Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
 
-**Wave parallel execution**: For multi-task waves, apply resource-aware parallelism control (see `resource-aware-parallelism` Skill). Before launching in parallel, run the resource detection snippet to obtain `MAX_HEAVY_AGENTS`. If the number of tasks in a wave exceeds `MAX_HEAVY_AGENTS`, split into sub-batches and launch only the agents within each sub-batch concurrently. Wait for each sub-batch to finish before launching the next, and proceed to step 5 only after all sub-batches finish. When the number of tasks in a wave is at or below `MAX_HEAVY_AGENTS`, launch all agents concurrently.
-
-Record the resource detection result in logs:
-
-```text
-[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
-[wave-split] Wave has {N} tasks, processing in {M} sub-batch(es) of {sizes}
-```
+**Tasks within a wave are launched serially** (`rules/serial-execution-policy.md`). A single message MAY contain at most one `Agent` tool invocation. Wait until the prior `parallel-worker` returns `completed` or `retry_exhausted` before launching the next task. Concurrent launches are prohibited even when the wave contains multiple tasks.
 
 Each agent works in its own isolated worktree.
 
@@ -570,6 +563,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
+    Task log path: {project-path}/.spec-workflow/specs/{spec-name}/task-logs/{task-id}.log.md
     Task prompt:
     {paste the full _Prompt content here}
 
@@ -594,7 +588,7 @@ Agent({
        - .NET: dotnet format, dotnet build -warnaserror, dotnet test, dotnet list package --vulnerable
     8. Run mutation testing on the diff (Rust: cargo-mutants, .NET: Stryker.NET — if installed)
 
-    Apply diagnostic-reasoning.md DR1-DR6 and failure-taxonomy.md FC1-FC6 throughout retries. Create and maintain \`{WORKTREE_PATH}/diagnosis.md\` per DR2 + FC4 (each attempt entry carries a \`Failure category\` line). Apply DR6 DIVERGENT if the most recent 2 failed attempts in the current phase share the same main failure_category (FC5).
+    Apply diagnostic-reasoning.md DR1-DR6 and failure-taxonomy.md FC1-FC6 throughout retries. Persist all diagnostic state as \`## Events\` entries in the task log at \`{Task log path}\` per \`rules/task-log-format.md\` (each attempt-result event carries a \`category\` inline key). Apply DR6 DIVERGENT if the most recent 2 failed attempts in the current phase share the same main failure_category (FC5).
 
     Include the following in the completion report:
     For Rust projects:
@@ -610,7 +604,7 @@ Agent({
     - stryker: pass|warn|skip
     - test_file_paths: list of test files
     - implementation_file_paths: list of implementation files
-    - changed_files: list of all changed files (MUST NOT include diagnosis.md or state.md)
+    - changed_files: list of all changed files (the task log lives outside the worktree, so it will not appear in worktree diffs anyway)
     - divergent_applied: true|false (optional — include only when any retry occurred)
     - diagnosis: include when any retry occurred — summary of the final successful approach per DR2 + FC4 with fields:
       - root_cause: string
@@ -788,6 +782,7 @@ Agent({
     Task ID: {task-id}
     Worktree path: {WORKTREE_PATH}
     Branch: {BRANCH}
+    Task log path: {project-path}/.spec-workflow/specs/{spec-name}/task-logs/{task-id}.log.md
 
     **Important**: Always run \`cd {WORKTREE_PATH}\` before making fixes.
 
@@ -800,10 +795,11 @@ Agent({
     {diagnostic_history — use "(First rework — no prior attempts)" on first rework, accumulated on subsequent reworks}
 
     Apply diagnostic-reasoning.md DR1-DR6 and failure-taxonomy.md FC1-FC6:
-    - Before writing any fix, read diagnosis.md and append a DR2 + FC4-formatted attempt entry (\`### Attempt {N}/3\`) under the \`## Rework Cycle\` heading — do not create a separate \`## Diagnosis\` section. Include the \`Failure category\` line
+    - Append a \`rework-start cycle={N}\` event to the task log's \`## Events\` section, then \`attempt-start\` / \`attempt-result\` events per DR2 (each \`attempt-result\` carries the \`category\` inline key per FC4)
     - Your diagnosis MUST identify a different root cause or approach from the diagnostic history above (DR4)
-    - **DR6 DIVERGENT check**: If the most recent 2 entries in diagnostic_history share the same main \`failure_category\` (per FC5), insert a \`### Divergent Analysis (before Attempt {N}/3)\` block above the Attempt heading, articulating the shared implicit assumption and how this attempt invalidates it. The Approach must fundamentally differ, not be a parameter tweak
-    - On the final attempt (3/3), call advisor() with your diagnosis before implementing (DR5). Include the Divergent Analysis block if applicable
+    - **DR6 DIVERGENT check**: If the most recent 2 \`attempt-result\` FAIL entries (combining task log events + diagnostic_history) share the same main \`failure_category\` (per FC5), append a \`divergent-analysis\` event before the next \`attempt-start\`, articulating the shared implicit assumption and how this attempt invalidates it. The Approach must fundamentally differ, not be a parameter tweak
+    - On the final attempt (3/3), call advisor() with your diagnosis before implementing (DR5). Include the \`divergent-analysis\` event details if applicable
+    - On rework completion, append a \`rework-complete cycle={N} changed_files=...\` event
 
     Note: This is rework attempt {N}. The maximum is 3; if unresolved after 3 attempts, the issue will be escalated to the user.
     Fix all findings at once. On the final attempt (3/3), choose the minimum fix that will pass review.
@@ -819,7 +815,7 @@ The orchestrator maintains a text block called `diagnostic_history` for each tas
 
 1. **Before the first rework**: Initialize `diagnostic_history` with the marker string `"(First rework — no prior attempts)"` (this marker makes the prompt clearer than an empty field, which an LLM may misread as "forgot to fill in")
 2. **After each rework attempt**: Extract from parallel-worker's completion report:
-   - The diagnosis summary fields: `root_cause`, `responsible_files` (list), `approach`, `failure_category`, `failure_subcategory` (optional) — these names are unified across parallel-worker and wave-harness-worker outputs per `failure-taxonomy.md` FC2
+   - The diagnosis summary fields: `root_cause`, `responsible_files` (list), `approach`, `failure_category`, `failure_subcategory` (optional) — these names follow `failure-taxonomy.md` FC2
    - The `divergent_applied` flag (if present)
    - The quality check results (pass/fail)
 3. **Append to diagnostic_history in DR2 + FC4 format** (fields come from the worker's completion report; if a field is absent, note it as `(not reported)`):
@@ -972,7 +968,7 @@ Required fields:
 
 - Do not mark the task as `[x]` (completion without a log is incomplete)
 - Report the error to the user and confirm whether to record the log manually or retry
-- If the `/log-implementation` skill is unavailable: Creating a markdown file manually in the `.spec-workflow/specs/{spec-name}/Implementation Logs/` directory is an acceptable alternative
+- If the `/log-implementation` skill is unavailable: Manually append the `## Summary` / `## Statistics` / `## Files Modified` / `## Files Created` / `## Artifacts` / `## Review Process` sections to the task log at `.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md` per `rules/task-log-format.md` TL5
 
 ### 8. Complete the Task
 
@@ -1227,9 +1223,8 @@ Use the `/spec-status` skill at any time to check overall progress and task coun
 
 ### General Rules
 
-- **Do not use a whiteboard** — the whiteboard is exclusively for workflows that run multiple workers in parallel (e.g., wave-harness). Wave-based parallel execution in spec-implement uses independent worktrees instead. Do not pass `Whiteboard path` to parallel-worker / review-worker.
 - Feature names use kebab-case
-- One **wave** in-progress at a time (multiple tasks within a wave may be in-progress simultaneously)
+- One **wave** in-progress at a time, and within a wave **only one task** is in-progress at a time (per `rules/serial-execution-policy.md`)
 - Always search implementation logs before coding (step 2)
 - Follow TDD: tests first (RED), then implementation (GREEN), then refactor (REFACTOR)
 - **Implementation (parallel-worker) and review (review-worker) are separate agents** — parallel-worker does not commit, review-worker does not implement

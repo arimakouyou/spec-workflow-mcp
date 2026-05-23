@@ -115,6 +115,20 @@ export interface TaskInfo {
   promptStructured?: PromptSection[];
 }
 
+/**
+ * A single event entry from the `## Events` section of a task log
+ * (see `.claude-plugin/rules/task-log-format.md` TL4).
+ * Emitted by parallel-worker / review-worker (per-task logs) or the
+ * integration-test Command (per-job logs).
+ */
+export interface TaskLogEvent {
+  timestamp: string;          // ISO 8601 UTC (e.g., "2026-05-20T12:00:01Z")
+  agent: string;              // "parallel-worker" | "review-worker" | "integ-test-command" | ...
+  eventType: string;          // kebab-case: "phase-start", "attempt-result", "cycle-end", ...
+  inlineKeys: Record<string, string>;   // The `key=value` pairs on the event line
+  details: Record<string, string>;      // The indented `key: value` sub-lines under the event
+}
+
 export interface ImplementationLogEntry {
   id: string;
   taskId: string;
@@ -127,6 +141,7 @@ export interface ImplementationLogEntry {
     linesRemoved: number;
     filesChanged: number;
   };
+  events?: TaskLogEvent[];     // From `## Events` section (consolidated task-log format only; absent for legacy Implementation Logs)
   artifacts: {
     apiEndpoints?: Array<{
       method: string;           // GET, POST, PUT, DELETE, PATCH

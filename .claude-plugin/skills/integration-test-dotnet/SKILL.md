@@ -12,8 +12,10 @@ user-invokable: true
 
 # integration-test-dotnet
 
-A skill that uses Agent Teams to create integration tests under `tests/<ProjectName>.IntegrationTests/` in parallel.
-Workers (alpha/bravo) implement the tests, and Pentagon reviews them at the quality gate.
+A skill that uses Agent Teams to create integration tests under `tests/<ProjectName>.IntegrationTests/`.
+A single Worker (alpha) implements the tests sequentially, and Pentagon reviews them at the quality gate. Concurrent Worker launches are prohibited per `rules/serial-execution-policy.md`.
+
+> Note: The `parallel test execution with xUnit collection fixtures` mentioned in this Skill's description refers to xUnit's runtime-level test parallelism inside the .NET test runner — that is unrelated to the prohibited subagent parallelism above and remains in effect.
 
 Tech stack: ASP.NET Core (.NET 10) + Entity Framework Core + Testcontainers for .NET + StackExchange.Redis + WireMock.NET
 
@@ -271,9 +273,11 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
 
 | Role | Agent | Responsibility |
 |------|------------|------|
-| **Command** (Leader) | Main agent | Commander and strategy planner |
-| **Workers** (alpha/bravo) | Sub-agent x 1-2 | Test implementation |
-| **Pentagon** (Reviewer) | Sub-agent | Quality review and judgment |
+| **Command** (Leader) | Main agent | Commander, strategy planner, and shared-context holder (in-session) |
+| **Worker** (alpha) | Sub-agent x 1 | Test implementation (handles all targets sequentially) |
+| **Pentagon** (Reviewer) | Sub-agent (re-launched per review request) | Quality review and judgment |
+
+**Communication model**: Workers and Pentagon communicate with Command via (i) launch-time prompt and (ii) final completion report (the agent's last response). Command holds the shared context in its own session and re-injects relevant parts into each sub-agent prompt.
 
 ## Arguments
 
@@ -285,17 +289,18 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
 | `--dry-run` | - | Print the assignment plan and exit |
 | `--base-branch <branch>` | - | Branch to derive the worktree from |
 | `--api <method>` | - | Only target a specific HTTP method |
+| `--spec <name>` | - | Spec name to scope the job log under `.spec-workflow/specs/{name}/integ-test-runs/`. Omit to log at `.spec-workflow/integ-test-runs/` |
 
 ### Usage Examples
 
 ```bash
-# Parallel execution (2 targets)
+# Multiple targets (handled sequentially by alpha)
 /integration-test-dotnet users,orders
 
 # dry-run (show plan only)
 /integration-test-dotnet users,orders --dry-run
 
-# Single target (alpha 1 + Pentagon 1)
+# Single target
 /integration-test-dotnet sessions
 
 # Specific method only
@@ -312,30 +317,28 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
     +-- [P0] Parse & Analyze
     |     +-- Parse arguments (comma-separated)
     |     +-- For each target: trace controller -> service -> repository -> entity
-    |     +-- Worker assignment plan
     |     +-- --dry-run: show plan only and exit
     |
-    +-- [P1] Setup Team
-    |     +-- Pre-check test helpers and shared fixtures
-    |     +-- Create whiteboard
+    +-- [P1] Setup
+    |     +-- Pre-check shared test fixtures (Fixtures/ directory)
+    |     +-- Build shared context in Command's session
+    |       (Goal, Key Questions, Shared Resources, per-domain analysis)
     |
-    +-- [P2] Launch Agents
-    |     +-- Launch Workers (alpha/bravo) x 1-2
-    |     +-- Launch Pentagon x 1
-    |     +-- Assign initial tasks
+    +-- [P2] Per-Domain Loop (Implement + Review)
+    |     For each domain (one at a time):
+    |     +-- Launch alpha (Worker) with full per-domain prompt
+    |     +-- Worker returns Findings + self-checked tests in completion report
+    |     +-- Launch Pentagon fresh with the Worker's Findings in prompt
+    |     +-- PASS  -> next domain
+    |     +-- FAIL (cycle < 3) -> re-launch alpha with rework instructions
+    |     +-- FAIL (cycle = 3) -> record as complete-with-issues, next domain
     |
-    +-- [P3] Monitor & Facilitate
-    |     +-- Worker completes -> Request Pentagon review
-    |     +-- PASS -> Update whiteboard, assign next task
-    |     +-- FAIL -> Send back to Worker (max 3 times)
+    +-- [P3] Final Verification
+    |     +-- Run dotnet test across all generated test files
+    |     +-- dotnet format + build -warnaserror
     |
-    +-- [P4] Final Verification
-    |     +-- Run dotnet test across all test files
-    |     +-- dotnet format + build warnings
-    |
-    +-- [P5] Cleanup & Report
-          +-- Aggregate results
-          +-- Clean up whiteboard
+    +-- [P4] Report
+          +-- Aggregate results from Command's session state
           +-- Output final report
 ```
 
@@ -343,7 +346,7 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
 
 ## Executor Instructions
 
-**You (Command) manage the team following the steps below.**
+**You (Command) manage the team following the steps below.** All shared state lives in your own session context.
 
 ### P0: Parse & Analyze
 
@@ -355,79 +358,122 @@ public class ExternalApiTests : IClassFixture<IntegrationTestFixture>, IAsyncLif
    - Identify entity: check EF Core entity models from `Models/{Domain}.cs` or `Entities/{Domain}.cs`
    - Identify DTOs: check request/response models from `Dtos/{Domain}Dto.cs`
    - Identify external dependencies: find interface-based dependencies (e.g., external API clients via `HttpClient`)
-3. **Worker assignment**: assign to Workers per test class. Before assignment, run the resource detection snippet from `resource-aware-parallelism` Skill and obtain `MAX_HEAVY_AGENTS`. Limit Worker count to `min(Workers column below, MAX_HEAVY_AGENTS)`.
-
-   | # of Targets | MAX_HEAVY_AGENTS | # of Workers | Assignment Method |
-   |:------:|:------:|:---------:|---------|
-   | 1 | any | 1 | All to alpha |
-   | 2 | >= 2 | 2 | One each to alpha / bravo |
-   | 2 | 1 | 1 | Both to alpha (sequential) |
-   | 3+ | >= 2 | 2 | Round-robin |
-   | 3+ | 1 | 1 | All to alpha (sequential) |
+3. **Worker assignment**: launch only alpha (a single Worker) and have it handle all targets sequentially. Concurrent Worker launches are prohibited (`rules/serial-execution-policy.md`).
 
 4. **On `--dry-run`**: output the following and exit
 
 ```
 [dry-run] Assignment plan:
-  alpha: {domain_a} -> {Domain}EndpointTests.cs
-    - {method} {path}
-  bravo: {domain_b} -> {Domain}EndpointTests.cs
-    - {method} {path}
-  pentagon: quality review
+  alpha: handles all targets sequentially
+    - {domain_a} -> {Domain_a}EndpointTests.cs
+        - {method} {path}
+    - {domain_b} -> {Domain_b}EndpointTests.cs
+        - {method} {path}
+  pentagon: re-launched per review request
 ```
 
-### P1: Setup Team
+### P1: Setup
 
 1. Check and update shared test fixtures (`Fixtures/` directory in the test project)
-2. Create whiteboard: Write following [whiteboard-template.md](references/whiteboard-template.md)
-   - **Always set Key Questions** (1-3 items)
+2. Build the **shared context** in your own session memory. The shared context contains:
+   - **Goal**: one-line description of what the team is producing
+   - **Key Questions** (1-3 items): questions whose answers must be consistent across domains (e.g., "Is the problem+json error shape shared?")
+   - **Shared Resources**: file paths for common fixtures (IntegrationTestFixture, WireMock builders, seed helpers)
+   - **Per-domain Analysis Summary**: endpoint list, service/repository methods, external dependencies, derived from P0
 
-### P2: Launch Agents
+   Keep this in session memory so that each sub-agent launch can include the relevant slice in its prompt.
 
-Launch Workers and Pentagon as sub-agents. Specify the agent definition under `.claude-plugin/agents/` via `subagent_type`.
+3. **Create the job log** per `rules/task-log-format.md`:
+   - If a spec context is available (`--spec <name>` or detected from cwd): path is `.spec-workflow/specs/{spec-name}/integ-test-runs/{timestamp}.log.md`
+   - If no spec context: path is `.spec-workflow/integ-test-runs/{timestamp}.log.md`
+   - `{timestamp}` is ISO 8601 UTC with separators stripped (e.g., `20260520T143200`)
+   - Create the parent directory and write the header + `## Metadata` (spec, targets, args, created, log-id) + empty `## Events` section
+   - Append a `job-start` event with `targets={comma-separated domains}`, `goal`, `key_questions` details
 
-**Resource-adaptive parallel control**: Limit Worker count based on `MAX_HEAVY_AGENTS` obtained in P0. Log the resource detection result:
-```
-[resource-check] CPU: {CPU_CORES} cores, Free memory: {FREE_MEM_MB}MB, MAX_HEAVY_AGENTS: {MAX_HEAVY_AGENTS}
-[worker-limit] Requested {N} workers, launching {M} (limited by MAX_HEAVY_AGENTS)
-```
+### P2: Per-Domain Loop (Implement + Review)
 
-**Launch Pentagon** (launch first to put it in a review-request waiting state):
-```
-Agent(
-  subagent_type: "spec-workflow-mcp:integ-test-auditor",
-  prompt: "Language: dotnet\nWhiteboard: {whiteboard_path}\nPlease wait for a review request from Command."
-)
-```
+Process the target list one domain at a time. For each domain, Command also appends events to the job log at each transition (`rules/task-log-format.md` TL4 integration-test events). The Worker and Pentagon do not touch the log themselves — Command extracts info from their final responses and writes the entries.
 
-**Launch Workers** (fill in variables from [worker-prompt.md](references/worker-prompt.md)):
+#### P2.1: Launch alpha (Worker)
+
+Before launch, append a `domain-analysis` event with `domain={domain}` and the endpoint / external_deps details. Then append a `worker-launch` event with `domain={domain}` cycle={N}.
+
+Launch alpha with a single, self-contained prompt. Substitute the variables from your shared context. See [worker-prompt.md](references/worker-prompt.md) for the prompt template.
+
 ```
 Agent(
   subagent_type: "spec-workflow-mcp:integ-test-worker",
-  prompt: "Language: dotnet\nWorker name: {worker_name}\nDomain: {domain}\nTest class: {Domain}EndpointTests.cs\nTarget endpoints:\n{endpoint_list}\nWhiteboard: {whiteboard_path}"
+  prompt: "Language: dotnet
+Worker name: alpha
+Domain: {domain}
+Test class: {Domain}EndpointTests.cs
+Target endpoints:
+{endpoint_list}
+
+## Shared Context (from Command)
+- Goal: {goal}
+- Key Questions:
+{key_questions}
+- Shared Resources:
+{shared_resources}
+- Domain Analysis:
+{per_domain_analysis}
+
+## Instructions
+Implement the integration tests per the procedure in your agent definition.
+Return your Findings and quality self-check results in your completion report."
 )
 ```
 
-If there are 2 or more targets and `MAX_HEAVY_AGENTS >= 2`, launch alpha/bravo in parallel. Otherwise, launch alpha only and assign all targets sequentially.
+#### P2.2: Worker returns
 
-### P3: Monitor & Facilitate
+The Worker's completion report includes Findings (free text), test counts per category, and self-check results (dotnet format / dotnet build -warnaserror / dotnet test). Extract these into your session state for this domain.
 
-Main loop: monitor until all tasks are complete.
+Append a `worker-return` event with `domain={domain}` `cycle={N}` `result={PASS|FAIL based on self-checks}` and `test_counts`, `findings_excerpt` (one-line) details.
 
-**When a Worker completes**:
-1. Copy Worker Findings to the whiteboard
-2. Request a review from Pentagon
+#### P2.3: Launch Pentagon fresh
 
-**When Pentagon returns PASS**:
-1. Update the Quality Gate Results on the whiteboard
-2. Assign the next unassigned task to a Worker if one exists
+Append a `pentagon-launch` event with `domain={domain}` `cycle={N}`.
 
-**When Pentagon returns FAIL**:
-1. Count the number of reviews (per test class)
-2. Under 3 times: re-run the Worker with a prompt including the review comments
-3. 3rd time: mark as complete with remaining issues noted on the whiteboard
+Launch Pentagon with the Worker's Findings embedded in the prompt. Pentagon is re-launched per review request — it does NOT persist across domains. See [auditor-prompt.md](references/auditor-prompt.md) for the prompt template.
 
-### P4: Final Verification
+```
+Agent(
+  subagent_type: "spec-workflow-mcp:integ-test-auditor",
+  prompt: "Language: dotnet
+Test file: tests/<ProjectName>.IntegrationTests/{Domain}EndpointTests.cs
+
+## Target API
+{endpoint_list}
+
+## Worker Findings (from alpha)
+{worker_findings_block}
+
+## Instructions
+Apply the quality gate review per your agent definition and return PASS / FAIL with details in your completion report."
+)
+```
+
+#### P2.4: Process Pentagon result
+
+Append a `pentagon-return` event with `domain={domain}` `cycle={N}` `verdict={PASS|FAIL}` and `issues_excerpt` detail (one-line summary when FAIL).
+
+| Pentagon verdict | Action |
+|---|---|
+| **PASS** | Append `domain-done domain={domain} status=PASS cycles={N}`, move to the next domain |
+| **FAIL** (cycle < 3) | Re-launch alpha with the same prompt **plus** the Pentagon Issues block. Increment the cycle counter for this domain. |
+| **FAIL** (cycle = 3) | Append `domain-done domain={domain} status=done-with-issues cycles=3`, attach Pentagon's remaining Issues to the final report, move to the next domain |
+
+When re-launching alpha for rework, prepend the Pentagon Issues block:
+
+```
+## Pentagon Review Feedback (cycle {N})
+{issues_block}
+
+Apply the fixes per the issues above, then re-run your quality self-check and return an updated completion report.
+```
+
+### P3: Final Verification
 
 ```bash
 # Run all integration tests
@@ -438,15 +484,16 @@ dotnet format tests/<ProjectName>.IntegrationTests/ --verify-no-changes --no-res
 dotnet build tests/<ProjectName>.IntegrationTests/ --no-restore -warnaserror
 ```
 
-If verification fails, Command fixes it directly.
+If verification fails, Command fixes it directly (do not launch a new Worker for harness-level fixes).
 
-### P5: Cleanup & Report
+### P4: Report
 
-1. Move the whiteboard to `.claude/_docs/deleted/`
-2. Output the final report:
+Append a `job-end` event with `targets={domains}` and `status={success|partial}` (partial = at least one `done-with-issues`).
+
+Aggregate the per-domain state from your session and output:
 
 ```
-integration-test-dotnet parallel implementation complete
+integration-test-dotnet implementation complete
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Targets: {targets}
@@ -458,7 +505,11 @@ Test results:
   {test_summary}
 
 Quality gate:
-  {quality_gate_results}
+  - {domain_a}: PASS / done-with-issues (cycles: {N})
+  - {domain_b}: PASS / done-with-issues (cycles: {N})
+
+Remaining issues (if any):
+  {remaining_issues_block}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -475,5 +526,3 @@ Quality gate:
 | [external-api-mock.md](references/external-api-mock.md) | WireMock.NET external API mock patterns |
 | [worker-prompt.md](references/worker-prompt.md) | Worker prompt template |
 | [auditor-prompt.md](references/auditor-prompt.md) | Pentagon prompt template |
-| [whiteboard-template.md](references/whiteboard-template.md) | Whiteboard template |
-| [parallel-execution.md](references/parallel-execution.md) | Parallel execution flow details |

@@ -15,13 +15,13 @@ Unlike Rust's sccache, .NET relies on built-in cache mechanisms.
 - Immediately before running dotnet build / test / publish
 - Configuring the NuGet cache in CI (deciding what to target with `actions/cache`)
 - Pre-processing before parallel `dotnet` command execution within a worktree
-- Before launching .NET-flavored `parallel-worker` / `integ-test-worker` / `wave-harness-worker`
+- Before launching .NET-flavored `parallel-worker` / `integ-test-worker`
 
 ## Out of Scope
 
 - Rust build cache -> `rust-build-cache` Skill
 - Detailed `actions/cache` setup in CI workflows -> `setup-ci` Skill
-- Agent parallelism control -> `resource-aware-parallelism` Skill
+- Agent parallelism control -> `rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
 
 ## MSBuild Incremental Build
 
@@ -88,5 +88,6 @@ dotnet restore
 ## Related Rules / Skills
 
 - Universal constraints: `quality-checks` (QC12)
-- Related Skills: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`, `resource-aware-parallelism`
-- Related Agents: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`
+- Related Skills: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`
+- Related Rule: `rules/serial-execution-policy.md`
+- Related Agents: `parallel-worker`, `integ-test-worker`, `review-worker`

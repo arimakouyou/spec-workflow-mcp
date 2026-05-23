@@ -2,7 +2,9 @@
 # log-implementation.sh
 #
 # Stop hook: 実装セッション中にタスクが [x] にマークされた直後、該当タスクの
-# Implementation Log が未作成なら**スケルトンログ**を自動生成する。
+# task log に Completion sections (## Summary / ## Statistics / ## Files Modified /
+# ## Files Created / ## Artifacts / ## Review Process) が未追記なら、
+# **スケルトンの completion sections を append** する。
 #
 # 目的: /log-implementation skill の呼び忘れ防止（安全網）。
 #   - Skill: 主機能。artifact / integration 等の構造化情報を LLM が記録する
@@ -10,12 +12,12 @@
 #
 # 動作:
 #   - 実装セッション中（.implement-session.json 存在）のみ動作
-#   - tasks.md から最初の [x] タスク（かつ該当ログ未作成）を検出
-#   - .spec-workflow/specs/{spec_id}/Implementation Logs/ にスケルトン生成
-#   - 詳細は LLM が後から /log-implementation で追記可能
+#   - tasks.md から [x] にマークされた current task を検出
+#   - .spec-workflow/specs/{spec_id}/task-logs/{taskId}.log.md (task-log-format.md TL2 準拠) を対象に append
+#   - 既に ## Summary section があれば idempotent (no-op)
 #
 # 注意:
-#   - Skill の詳細ログを上書きしない（既存ログがあれば何もしない）
+#   - 既存 completion sections を上書きしない（idempotent）
 #   - 非ブロッキング（常に exit 0）。失敗しても完了を妨げない
 
 set -euo pipefail
@@ -41,7 +43,7 @@ fi
 
 SPEC_DIR="${PROJECT_DIR}/.spec-workflow/specs/${SPEC_ID}"
 TASKS_FILE="${SPEC_DIR}/tasks.md"
-LOGS_DIR="${SPEC_DIR}/Implementation Logs"
+TASK_LOGS_DIR="${SPEC_DIR}/task-logs"
 
 if [ ! -f "$TASKS_FILE" ]; then
   exit 0
@@ -53,30 +55,42 @@ if ! grep -qE "^\s*-\s*\[x\]\s*\**${CURRENT_TASK}(\b|\**)" "$TASKS_FILE" 2>/dev/
   exit 0
 fi
 
-SANITIZED_TASK_ID=$(echo "$CURRENT_TASK" | tr './' '--')
+# task log file path (taskId を verbatim で使用、サニタイズなし)
+TASK_LOG_FILE="${TASK_LOGS_DIR}/${CURRENT_TASK}.log.md"
 
-# 既存ログがあればスキップ（Skill が詳細記録済みの可能性）
-if compgen -G "${LOGS_DIR}/task-${SANITIZED_TASK_ID}_*.md" > /dev/null 2>&1; then
-  exit 0
-fi
+mkdir -p "$TASK_LOGS_DIR"
 
-mkdir -p "$LOGS_DIR"
+TIMESTAMP_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-TIMESTAMP_FS=$(date -u +%Y%m%dT%H%M%S)
-TIMESTAMP_ISO=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
-
-# Log ID (UUID) の生成
+# Log ID (UUID) の生成 (task log が無い場合の Metadata 用)
 if command -v uuidgen >/dev/null 2>&1; then
   LOG_ID=$(uuidgen | tr 'A-Z' 'a-z')
 elif [ -r /proc/sys/kernel/random/uuid ]; then
   LOG_ID=$(cat /proc/sys/kernel/random/uuid)
 else
-  # fallback: 時刻ベースの疑似 UUID
   LOG_ID=$(printf "%08x-%04x-%04x-%04x-%012x" "$RANDOM$RANDOM" "$RANDOM" "$RANDOM" "$RANDOM" "$RANDOM$RANDOM")
 fi
-ID_PREFIX=$(echo "$LOG_ID" | cut -c1-8)
 
-LOG_FILE="${LOGS_DIR}/task-${SANITIZED_TASK_ID}_${TIMESTAMP_FS}_${ID_PREFIX}.md"
+# task log が存在しない場合: header + ## Metadata + 空 ## Events を作成
+if [ ! -f "$TASK_LOG_FILE" ]; then
+  cat > "$TASK_LOG_FILE" <<EOF
+# Task Log: ${CURRENT_TASK}
+
+## Metadata
+- spec: ${SPEC_ID}
+- task-id: ${CURRENT_TASK}
+- created: ${TIMESTAMP_ISO}
+- log-id: ${LOG_ID}
+
+## Events
+
+EOF
+fi
+
+# 既に ## Summary section があれば skill が既に動いている → idempotent (no-op)
+if grep -qE "^## Summary\b" "$TASK_LOG_FILE" 2>/dev/null; then
+  exit 0
+fi
 
 # git 情報の取得
 cd "$PROJECT_DIR"
@@ -85,39 +99,35 @@ STAT_LINES=$(git diff HEAD~1 HEAD --shortstat 2>/dev/null | head -1 || echo '')
 LINES_ADDED=$(echo "$STAT_LINES" | grep -oE '[0-9]+ insertions?' | grep -oE '[0-9]+' || echo 0)
 LINES_REMOVED=$(echo "$STAT_LINES" | grep -oE '[0-9]+ deletions?' | grep -oE '[0-9]+' || echo 0)
 FILES_CHANGED=$(git diff HEAD~1 HEAD --name-only 2>/dev/null | wc -l || echo 0)
+FILES_MODIFIED=$(git diff HEAD~1 HEAD --name-only --diff-filter=M 2>/dev/null | sed 's/^/- /' || true)
+FILES_CREATED=$(git diff HEAD~1 HEAD --name-only --diff-filter=A 2>/dev/null | sed 's/^/- /' || true)
 
-cat > "$LOG_FILE" <<EOF
-# Implementation Log: Task ${CURRENT_TASK}
+if [ -z "$FILES_MODIFIED" ]; then FILES_MODIFIED='_No files modified_'; fi
+if [ -z "$FILES_CREATED" ]; then FILES_CREATED='_No files created_'; fi
 
-**Summary:** (auto-logged by hook — please enrich via /log-implementation)
+# Append completion sections to the task log
+cat >> "$TASK_LOG_FILE" <<EOF
 
-**Timestamp:** ${TIMESTAMP_ISO}
-**Log ID:** ${LOG_ID}
+## Summary
 
----
+(auto-logged by hook — please enrich via /log-implementation)
 
 ## Statistics
 
-- **Lines Added:** +${LINES_ADDED}
-- **Lines Removed:** -${LINES_REMOVED}
-- **Files Changed:** ${FILES_CHANGED}
-- **Net Change:** $((LINES_ADDED - LINES_REMOVED))
+- Lines Added: +${LINES_ADDED}
+- Lines Removed: -${LINES_REMOVED}
+- Files Changed: ${FILES_CHANGED}
+- Net Change: $((LINES_ADDED - LINES_REMOVED))
 
 ## Files Modified
-
-$(git diff HEAD~1 HEAD --name-only --diff-filter=M 2>/dev/null | sed 's/^/- /' || echo '_No files modified_')
+${FILES_MODIFIED}
 
 ## Files Created
-
-$(git diff HEAD~1 HEAD --name-only --diff-filter=A 2>/dev/null | sed 's/^/- /' || echo '_No files created_')
-
----
+${FILES_CREATED}
 
 ## Artifacts
 
 _No artifacts recorded (auto-logged skeleton — enrich via /log-implementation)_
-
----
 
 ## Review Process
 
@@ -130,5 +140,5 @@ _No artifacts recorded (auto-logged skeleton — enrich via /log-implementation)
 _Reference commit: ${LAST_COMMIT}_
 EOF
 
-echo "auto-logged: ${LOG_FILE}"
+echo "auto-appended completion sections: ${TASK_LOG_FILE}"
 exit 0

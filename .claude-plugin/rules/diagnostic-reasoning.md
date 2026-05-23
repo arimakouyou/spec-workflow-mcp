@@ -4,66 +4,72 @@ always_apply: true
 
 # Diagnostic Reasoning
 
-Structured diagnosis before every fix attempt, with session state persistence across retries.
+Structured diagnosis before every fix attempt, persisted in the task log across retries. The task log (`rules/task-log-format.md`) is the durable record; this rule defines *what* to record at each retry point.
 
 ## DR1: Mandatory Diagnosis Before Fix
 
-Before writing ANY fix (code change intended to resolve a test failure, quality check failure, or review finding), write the diagnosis for the current attempt into `diagnosis.md` (located in the current worktree root) as that attempt's structured entry (see DR2 for the exact entry format and phase grouping). This `diagnosis.md` entry is the required durable record and must be written before implementing the fix.
+Before writing ANY fix (code change intended to resolve a test failure, quality check failure, or review finding), append an `attempt-start` event to the `## Events` section of the task log with the diagnosis details. This event must be appended **before** implementing the fix.
 
-The diagnosis entry must contain:
+The `attempt-start` event must contain (per `task-log-format.md` TL4):
 
-1. **Root cause**: What is the actual cause of the failure? (Not just "the test failed" but WHY it failed)
-2. **Responsible**: Which file(s) and line(s) are responsible?
-3. **Expected behavior**: What should the correct behavior be, per design docs / test expectations?
-4. **Approach**: What fix strategy will you use?
-5. **Failure category**: The FC1 main category (and optional subcategory) per `failure-taxonomy.md` FC2. Required — used by DR6 to detect recurring categorical failures.
+1. **approach**: What fix strategy will you use?
+2. **root_cause**: What is the actual cause of the failure? (Not just "the test failed" but WHY it failed)
+3. **responsible**: Which file(s) and line(s) are responsible?
+4. **expected_behavior**: What should the correct behavior be, per design docs / test expectations?
 
-This applies to: GREEN phase retries, quality check retries (clippy, cargo test, dotnet build, dotnet test), rework cycles, and wave-harness retries.
+Then, after running the verification, append an `attempt-result` event with:
+
+5. **result**: PASS or FAIL
+6. **category**: The FC1 main category and optional subcategory per `failure-taxonomy.md` FC2. Required on FAIL — used by DR6 to detect recurring categorical failures.
+7. **summary**: Error summary on FAIL (omit on PASS).
+
+This applies to: GREEN phase retries, quality check retries (clippy, cargo test, dotnet build, dotnet test), and rework cycles.
 
 On the first attempt for a given phase, the diagnosis serves as upfront reasoning. On subsequent attempts, it also serves as differentiation from prior failed approaches (see DR3, DR4).
 
-If a worker's completion report / response schema defines a `diagnosis` summary field (e.g., parallel-worker, wave-harness-worker), you may also summarize the diagnosis there, but that summary is optional and does NOT replace the required `diagnosis.md` entry.
+If a worker's completion report / response schema defines a `diagnosis` summary field (e.g., parallel-worker), you may also summarize the latest diagnosis there for the orchestrator's convenience, but the task log entries remain the authoritative record.
 
-## DR2: Session State Persistence
+## DR2: Task Log Persistence
 
-Persist every fix attempt as a structured entry in `diagnosis.md` (located in the current worktree root).
+Persist every fix attempt as a pair of `attempt-start` + `attempt-result` events under the `## Events` section of the task log.
 
-**File lifecycle**:
+**Task log lifecycle**:
 
-- Create at task start (alongside state.md)
-- Append after each retry attempt (before proceeding to the next attempt or reporting results)
-- Remains in the worktree after task completion for knowledge retention
-- **Must NOT be committed**: `diagnosis.md` is a local working file (like `state.md`). Workers must exclude it from `changed_files` so that review-worker does not stage it into the commit.
+- Created at task start by the first worker that runs (per `task-log-format.md` TL6)
+- Events are **appended** after each retry attempt (before proceeding to the next attempt or reporting results)
+- Lives under `.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md` (outside the worktree, survives worktree deletion)
+- **Must NOT be in `changed_files`**: the task log is project data, not an implementation change. It lives outside the worktree so review-worker will not stage it into the commit anyway.
 
-**Entry format**:
+**Event format** (see `task-log-format.md` TL4 for the full taxonomy):
 
-```markdown
-### Attempt {N}/{max}
-- **Root cause**: {specific analysis}
-- **Responsible**: {file:line}
-- **Expected behavior**: {per design docs / test spec}
-- **Approach**: {what you will do}
-- **Failure category**: `{FC1 main category}` / `{FC1 subcategory}`
-- **Result**: {PASS or FAIL — error summary}
+```
+- `{timestamp}` parallel-worker attempt-start phase={PHASE} n={N}
+  - approach: {what you will do}
+  - root_cause: {specific analysis}
+  - responsible: {file:line}
+  - expected_behavior: {per design docs / test spec}
+
+- `{timestamp}` parallel-worker attempt-result phase={PHASE} n={N} result={PASS|FAIL} category={FC1 main}/{FC1 sub}
+  - summary: {error summary on FAIL}
 ```
 
-The `Failure category` line is required per `failure-taxonomy.md` FC2 + FC4. It is written at the same time as the rest of the entry (before the fix, per the two-step write order below) — not added after the `Result` is known. It enables DR6 to detect same-category recurrence across attempts.
+The `category` inline key on `attempt-result` is required per `failure-taxonomy.md` FC2 + FC4. It enables DR6 to detect same-category recurrence across attempts.
 
-Group entries under phase headings: `## GREEN Phase`, `## Quality Checks`, `## Rework Cycle`.
+The `phase` inline key uses values `RED`, `GREEN`, `REFACTOR`, `quality_check`, or for rework cycles use the wrapping `rework-start` / `rework-complete` events (the `attempt-*` events within a rework cycle use `phase=rework` or carry the inherited phase).
 
-**Write-order (two-step)**: Write the entry without the `Result` line before implementing the fix (per DR1 — the entry must be written and saved to `diagnosis.md` before implementing the fix; "committed" here means persisted to the file, NOT a git commit — `diagnosis.md` itself must never be git-committed per the File lifecycle above). After running verification, Edit the same entry to append the `Result` line with the outcome. This keeps DR1's "diagnose before fix" timing consistent with DR2's complete entry format.
+**Write-order (two-step)**: Append the `attempt-start` event before implementing the fix (per DR1). After running verification, append a separate `attempt-result` event with the outcome. This keeps DR1's "diagnose before fix" timing as a distinct write from the verification result.
 
-For inter-agent retries (rework cycles, wave-harness), the orchestrator also passes `diagnostic_history` in the prompt. Write to `diagnosis.md` regardless — it serves as the durable record.
+For inter-agent retries (rework cycles), the orchestrator also passes `diagnostic_history` in the prompt. Append to the task log regardless — it serves as the durable record.
 
 ## DR3: Prior Attempts Review
 
-When attempt > 1, BEFORE writing your diagnosis:
+When attempt > 1, BEFORE appending your `attempt-start`:
 
-1. Read `diagnosis.md` to review all prior entries for the current phase
+1. Read the `## Events` section of the task log to review all prior `attempt-start` / `attempt-result` entries for the current phase
 2. Explicitly acknowledge what was tried and why it failed
 3. Your diagnosis MUST identify something DIFFERENT from prior diagnoses — a deeper root cause, a different responsible location, or a different mechanism
 
-If the orchestrator provides `diagnostic_history` in the prompt, cross-reference it with `diagnosis.md` for completeness.
+If the orchestrator provides `diagnostic_history` in the prompt, cross-reference it with the task log's `rework-*` events for completeness.
 
 ## DR4: Non-Repetition Constraint
 
@@ -86,7 +92,7 @@ A diagnosis is **insufficient** if it:
 - Names no specific file or line
 - Proposes the same approach that already failed
 
-Before the final allowed attempt — when you have one attempt remaining — call `advisor()` with your diagnosis for validation before implementing the fix. Include the `diagnosis.md` content in your advisor context so the reviewer can assess diagnosis quality.
+Before the final allowed attempt — when you have one attempt remaining — call `advisor()` with your diagnosis for validation before implementing the fix. Include the recent `## Events` entries (especially `attempt-result` entries for this phase) in your advisor context so the reviewer can assess diagnosis quality.
 
 ## DR6: DIVERGENT Strategy on Recurring Categorical Failures
 
@@ -94,37 +100,38 @@ When the most recent **2 attempts in the current phase** share the same `failure
 
 ### Trigger Condition (cross-references FC5)
 
-- Same phase heading in `diagnosis.md` (`## GREEN Phase`, `## Quality Checks`, or `## Rework Cycle`)
-- The most recent 2 `Result: FAIL` attempt entries both carry the same **main** `failure_category` (subcategory is ignored per FC5)
+- Same `phase=` value across `attempt-result` events (RED / GREEN / REFACTOR / quality_check, or `rework-*` wrapped events for rework cycles)
+- The most recent 2 `attempt-result` events with `result=FAIL` both carry the same **main** `failure_category` (subcategory is ignored per FC5)
 - When the main category changes or an attempt succeeds, the counter resets
-- When the phase heading changes, the counter resets (GREEN and Quality Checks are counted separately)
+- When the phase changes, the counter resets (GREEN and Quality Checks are counted separately)
 
 ### Required Procedure
 
-Before writing the next DR2 attempt entry, insert a **Divergent Analysis block** under the current phase heading. Place this block **above** the `### Attempt {N}/{max}` heading (not inside it):
+Before appending the next `attempt-start` event, insert a `divergent-analysis` event:
 
-```markdown
-## GREEN Phase
-
-### Divergent Analysis (before Attempt {N}/{max})
-- **Common implicit assumption**: {what assumption was shared across attempts {N-2} and {N-1}, not explicitly stated in either diagnosis?}
-- **Why prior attempts kept failing under this assumption**: {one-sentence explanation of how the assumption forced both fixes to miss the real cause}
-- **Challenge**: {what different premise this attempt will operate under}
-
-### Attempt {N}/{max}
-- **Root cause**: ...
-- **Responsible**: ...
-- **Expected behavior**: ...
-- **Approach**: {must invalidate the implicit assumption — not a parameter tweak, reordering, or variant of prior approaches}
-- **Failure category**: `{category}` / `{subcategory}`
+```
+- `{timestamp}` parallel-worker divergent-analysis phase={PHASE} before_attempt={N}
+  - common_implicit_assumption: {what assumption was shared across the prior 2 attempts, not explicitly stated in either diagnosis?}
+  - why_prior_failed: {one-sentence explanation of how the assumption forced both fixes to miss the real cause}
+  - challenge: {what different premise this attempt will operate under}
 ```
 
-The `Approach` in the DIVERGENT attempt must **fundamentally differ** from both prior attempts. Mechanical variants (swap two arguments, try a different constant, reorder the same operations) do NOT count as divergent and must be rejected by the worker itself before proceeding.
+Then append the next `attempt-start` event, where the `approach` field must reflect a fundamentally different premise:
+
+```
+- `{timestamp}` parallel-worker attempt-start phase={PHASE} n={N}
+  - approach: {must invalidate the implicit assumption — not a parameter tweak, reordering, or variant of prior approaches}
+  - root_cause: ...
+  - responsible: ...
+  - expected_behavior: ...
+```
+
+The `approach` in the DIVERGENT attempt must **fundamentally differ** from both prior attempts. Mechanical variants (swap two arguments, try a different constant, reorder the same operations) do NOT count as divergent and must be rejected by the worker itself before proceeding.
 
 ### Interaction with DR4 and DR5
 
 - **DR4**: DIVERGENT is a stricter form of DR4 — DR4 requires a different approach, DR6 requires a different *premise*. If the DIVERGENT attempt shows the same premise as the prior two, it is not actually divergent and violates DR6
-- **DR5**: If DIVERGENT triggers on the final attempt (the one that would normally require `advisor()`), the Divergent Analysis block becomes part of the advisor context. Include the entire `diagnosis.md` content AND the Divergent Analysis in the advisor prompt
+- **DR5**: If DIVERGENT triggers on the final attempt (the one that would normally require `advisor()`), the `divergent-analysis` event content becomes part of the advisor context. Include the entire recent `## Events` history AND the `divergent-analysis` event details in the advisor prompt
 
 ### Failure of DIVERGENT
 

@@ -143,9 +143,9 @@ As in Phase 2 step 3.5, do not use defaults from AI training data.
 
 ### 4. Generate Test Specifications via Subagents
 
-Launch multiple subagents **in parallel** to derive UT/IT/ST/E2E specs independently (CT is added after H-2).
+Launch subagents **one at a time** to derive UT/IT/ST/E2E specs independently (CT is added after H-2). Per `rules/serial-execution-policy.md`, concurrent subagent launches are prohibited across the plugin.
 
-**Important**: Make all Agent calls **simultaneously in a single message** (parallel execution).
+**Important**: Make Agent calls **one per message**. Wait for each subagent (A through E) to complete and return its output before launching the next. Do NOT batch multiple Agent calls into a single message.
 
 #### Declaration-based derivation (K-7; see `dapper-hardening-orchestrator.md`)
 

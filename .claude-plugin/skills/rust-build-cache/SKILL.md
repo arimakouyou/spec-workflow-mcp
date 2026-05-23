@@ -13,7 +13,7 @@ Sharing compilation results across worktrees significantly accelerates build, te
 ## Scope
 
 - Immediately before running cargo fmt / clippy / test / build
-- Pre-processing before launching `parallel-worker` / `integ-test-worker` / `wave-harness-worker` / `review-worker`
+- Pre-processing before launching `parallel-worker` / `integ-test-worker` / `review-worker`
 - Accelerating Rust jobs in CI environments
 - Sharing compilation results during parallel implementation that uses worktrees
 
@@ -111,5 +111,6 @@ In environments where sccache is not installed, the fallback path runs ordinary 
 ## Related Rules / Skills
 
 - Universal constraint: `quality-checks` (QC1-QC3: canonical commands for cargo fmt/clippy/test)
-- Related Skills: `cargo-toml`, `axum`, `diesel`, `leptos`, `resource-aware-parallelism` (parallelism control at launch)
-- Related Agents: `parallel-worker`, `integ-test-worker`, `wave-harness-worker`, `review-worker`
+- Related Skills: `cargo-toml`, `axum`, `diesel`, `leptos`
+- Related Rule: `rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
+- Related Agents: `parallel-worker`, `integ-test-worker`, `review-worker`

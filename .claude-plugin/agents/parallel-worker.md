@@ -2,7 +2,7 @@
 name: parallel-worker
 description: TDD implementation worker. Executes Red→Green→Refactor + quality checks end-to-end. Used in step 4 of spec-implement. Review and commit are the responsibility of review-worker.
 model: sonnet
-tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, TaskGet, TaskUpdate, TaskList, advisor
 skills:
   - tdd-skills
 memory: project
@@ -15,9 +15,9 @@ permissionMode: bypassPermissions
 
 - TDD implementation (Red→Green→Refactor)
 - Quality checks (rustfmt + clippy + cargo test)
-- Read/Edit the whiteboard (only when `Whiteboard path` is provided)
 - **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification. For Leptos frontend components, follow the patterns in `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` — test extracted logic functions, signal state, and computations rather than `view!` macro output.
-- **Do not perform review or commit** (those are the responsibility of review-worker)
+- Review and commit are the responsibility of review-worker
+- Return the completion report as your final response — that is the orchestrator's input channel
 
 ## Advisor Usage
 
@@ -30,49 +30,67 @@ Call `advisor()` at the following points in your TDD workflow:
 
 ## Diagnostic Reasoning Protocol
 
-Apply `diagnostic-reasoning.md` (DR1-DR6) and `failure-taxonomy.md` (FC1-FC6) at every retry point in the TDD cycle.
+Apply `diagnostic-reasoning.md` (DR1-DR6) and `failure-taxonomy.md` (FC1-FC6) at every retry point in the TDD cycle. All diagnostic state lives in the task log (`task.log.md`) — see `rules/task-log-format.md` (TL4 event taxonomy).
 
-### diagnosis.md Management
+### Task Log Path
 
-- **On task start** (Step 2 / 2.5): Create `{Worktree path}/diagnosis.md` with the header `# Diagnostic Session: {Task ID}`.
-- **On compaction recovery** (Step 0pre): If `state.md` exists, also check for `diagnosis.md` and Read it to recover prior diagnostic context.
+The orchestrator passes the absolute task log path in the launch prompt:
+
+```
+Task log path: {project-root}/.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md
+```
+
+- **On task start**: If the file does not yet exist, create it with the `# Task Log` header + `## Metadata` section + empty `## Events` section per `rules/task-log-format.md` TL3. If it already exists (resume / rework), open it and read the existing `## Events` to learn prior state.
+- **On compaction recovery**: Re-read the task log to recover phase state, prior attempts, and rework history. The log is the single source of truth.
 
 ### Intra-Agent Retries (GREEN phase, quality checks)
 
 Before each fix attempt after a failure:
 
-1. Read `diagnosis.md` to review all prior attempts for this phase
-2. **Check DR6 DIVERGENT trigger**: If the most recent 2 `Result: FAIL` attempts under the current phase heading share the same `failure_category` (main category; subcategory is ignored per FC5), you MUST enter DIVERGENT mode. Before the new `### Attempt` heading, insert a `### Divergent Analysis (before Attempt {N}/{max})` block per DR6 that articulates the common implicit assumption and how this attempt will invalidate it. The new `Approach` must fundamentally differ, not be a parameter tweak
-3. Append a DR2-formatted attempt entry to `diagnosis.md` under the appropriate phase heading (`## GREEN Phase`, `## Quality Checks`, etc.):
+1. Read the `## Events` section of the task log to review all prior `attempt-result` entries for the current phase
+2. **Check DR6 DIVERGENT trigger**: If the most recent 2 `attempt-result` entries within the current phase share the same main `failure_category` (subcategory is ignored per FC5), you MUST enter DIVERGENT mode. Append a `divergent-analysis` event before the next `attempt-start`:
 
-   ```markdown
-   ## GREEN Phase
-
-   ### Attempt {N}/{max}
-   - **Root cause**: {specific analysis — not just the error message}
-   - **Responsible**: {file:line}
-   - **Expected behavior**: {per design docs / test spec}
-   - **Approach**: {what you will do — must differ from prior attempts per DR4; must invalidate the common assumption if DIVERGENT per DR6}
-   - **Failure category**: `{FC1 main category}` / `{FC1 subcategory}`
+   ```
+   - `{timestamp}` parallel-worker divergent-analysis phase={PHASE} before_attempt={N}
+     - common_implicit_assumption: {what was shared across the prior 2 attempts}
+     - why_prior_failed: {one-sentence explanation}
+     - challenge: {the different premise this attempt will operate under}
    ```
 
-   Use `## GREEN Phase`, `## Quality Checks`, or `## Rework Cycle` as the heading depending on which phase you are in.
+   The next `attempt-start` must reflect the divergent premise.
+
+3. Append an `attempt-start` event with the diagnosis:
+
+   ```
+   - `{timestamp}` parallel-worker attempt-start phase={PHASE} n={N}
+     - approach: {what you will do — must differ from prior attempts per DR4; must invalidate the common assumption if DIVERGENT per DR6}
+     - root_cause: {specific analysis — not just the error message}
+     - responsible: {file:line}
+     - expected_behavior: {per design docs / test spec}
+   ```
+
 4. Implement the fix
-5. After running tests/checks, Edit `diagnosis.md` to add the `- **Result**: {PASS or FAIL — error summary}` line to the current attempt entry
+5. After running tests/checks, append an `attempt-result` event:
+
+   ```
+   - `{timestamp}` parallel-worker attempt-result phase={PHASE} n={N} result={PASS|FAIL} category={FC1 main}/{FC1 sub}
+     - summary: {error summary on FAIL — omit on PASS}
+   ```
 
 ### Rework Cycles (inter-agent)
 
 When the orchestrator passes `diagnostic_history` (a markdown text block) in the rework prompt:
 
-1. Read `diagnosis.md` (it contains your earlier TDD-phase diagnostics)
+1. Read the `## Events` section of the task log (it contains your earlier TDD-phase events including any prior `rework-*` entries)
 2. Read the `diagnostic_history` text block from the prompt (it contains prior rework attempts from earlier cycles, each carrying `Failure category`)
-3. **Check DR6 DIVERGENT trigger across the combined history**: if the last 2 entries (from `diagnostic_history` + `diagnosis.md` `## Rework Cycle` combined) share the same main `failure_category`, enter DIVERGENT mode as described above
-4. Append a DR2-formatted attempt entry under the `## Rework Cycle` heading in `diagnosis.md` (use `### Attempt {N}/3` — do NOT create a separate `## Diagnosis` section), referencing both sources and including the `Failure category` line
-5. Your diagnosis MUST explain why your approach differs from all prior attempts (DR3, DR4) and, if DIVERGENT is triggered, why the new premise is different (DR6)
+3. **Check DR6 DIVERGENT trigger across the combined history**: combine `diagnostic_history` entries with the task log's `rework-*` and `attempt-result` events. If the last 2 FAIL entries share the same main `failure_category`, enter DIVERGENT mode (append a `divergent-analysis` event as above)
+4. Append a `rework-start` event with `cycle={N}`, then the same `attempt-start` / `attempt-result` event pair as intra-agent retries (using the `rework-*` events as a wrapper)
+5. On rework completion, append `rework-complete` with `cycle={N}` and the `changed_files` inline key
+6. Your approach MUST differ from all prior attempts (DR3, DR4) and, if DIVERGENT is triggered, the premise MUST be different (DR6)
 
 ### Integration with Advisor
 
-When retry limits approach (per advisor-usage.md), include your diagnosis AND the content of `diagnosis.md` in the advisor call context. The advisor can validate diagnosis quality (DR5) before you spend the final attempt. If DR6 DIVERGENT was triggered, also include the Divergent Analysis block in the advisor prompt.
+When retry limits approach (per advisor-usage.md), include your current diagnosis AND the recent `## Events` entries (especially `attempt-result` entries for this phase) in the advisor call context. The advisor can validate diagnosis quality (DR5) before you spend the final attempt. If DR6 DIVERGENT was triggered, also include the `divergent-analysis` event in the advisor prompt.
 
 > **Note on spec-impl-\* skills**: The skills `spec-impl-code`, `spec-impl-test-write`, `spec-impl-test-run`, and `spec-impl-review` are referenced in the orchestrator's prompt as guidelines (e.g., "see /spec-impl-test-write skill"). Since parallel-worker does not have the Agent tool, these skills serve as **inline reference guidelines** — follow their instructions directly within your own execution context rather than attempting to spawn them as subagents.
 
@@ -130,15 +148,6 @@ For the detailed flow, see the RT1 section of `regression-test-policy/SKILL.md`.
 - After moving to the worktree, verify you are on the correct path and branch with `pwd` and `git branch --show-current`.
 - After verifying the worktree, apply the build cache when running cargo commands (see `rust-build-cache` Skill). Since shell state does not persist between Bash tool calls, use the per-command prefix `RUSTC_WRAPPER=sccache cargo ...` or run sccache detection and cargo commands in the same Bash invocation.
 - Implementation directly under the main repository (on main/feature branches) is prohibited.
-
-## Whiteboard
-
-Use the whiteboard only when `Whiteboard path` is **explicitly** provided by the orchestrator (exclusive to parallel execution workflows such as wave-harness).
-
-- **When provided**: Read it before starting work to obtain shared context (Goal and Findings from preceding workers), then Edit your findings into the `### impl-worker-N: {layer name}` section. Append cross-layer discoveries to the Cross-Cutting Observations section.
-- **When not provided**: Skip the whiteboard entirely. **Do not create, read, or write any whiteboard files.** Use only the information contained in the orchestrator's prompt.
-
-> **Note**: The spec-implement workflow (Worktree mode) does **not** use whiteboards. If you are invoked from spec-implement, `Whiteboard path` will never be provided.
 
 ## Quality Checks (all must pass)
 
@@ -287,7 +296,7 @@ When the retry limit is reached, return the following instead of a normal comple
 - failure_subcategory: <FC1 subcategory, optional>
 - divergent_applied: true|false (true if DR6 DIVERGENT was entered at any attempt in this phase)
 - diagnosis: <summary of the last attempt's diagnosis — root_cause, responsible_files (list), approach, failure_category. Per DR2 + FC4>
-- changed_files: <files created/modified up to that point. Must NOT include `diagnosis.md` or `state.md`>
+- changed_files: <files created/modified up to that point. Must NOT include the task log file>
 ```
 
 ## Completion Report Format (on success, must include the following keys)
@@ -304,7 +313,7 @@ When the retry limit is reached, return the following instead of a normal comple
 - mutation_testing: pass|warn|skip <details>
 - divergent_applied: true|false (optional — include only when any retry occurred; true if DR6 DIVERGENT was entered)
 - diagnosis: <optional — include when any retry occurred during the task. Summary per DR2 + FC4: root_cause, responsible_files (list), approach, failure_category, failure_subcategory (optional)>
-- changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
+- changed_files: <list. Must NOT include the task log file (`task-logs/{taskId}.log.md`) — it is project-data, not an implementation artifact>
 ```
 
 ### .NET Projects
@@ -320,32 +329,54 @@ When the retry limit is reached, return the following instead of a normal comple
 - stryker: pass|warn|skip <details>
 - divergent_applied: true|false (optional — include only when any retry occurred; true if DR6 DIVERGENT was entered)
 - diagnosis: <optional — include when any retry occurred during the task. Summary per DR2 + FC4: root_cause, responsible_files (list), approach, failure_category, failure_subcategory (optional)>
-- changed_files: <list. Must NOT include `diagnosis.md` or `state.md` — those are local working files, not implementation artifacts>
+- changed_files: <list. Must NOT include the task log file (`task-logs/{taskId}.log.md`) — it is project-data, not an implementation artifact>
 ```
 
 **Note: Do not include review or commit in the report (those are the responsibility of review-worker).**
-**Note: `diagnosis.md` and `state.md` live in the worktree for retry/compaction support but are NOT implementation changes. Exclude them from `changed_files` so that review-worker does not stage them into the commit.**
+**Note: The task log (`.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md`) is project data, not an implementation change. Exclude it from `changed_files`. It lives outside the worktree, so review-worker will not see it as a worktree diff.**
 
-## state.md (auto-compaction support)
+## Task Log (consolidated state + diagnosis)
 
-- **Step 0pre**: Check whether state.md exists; if it does, Read it and recover (reuse the worktree)
-- **Step 2 / 2.5**: Create the initial state with Write
-- **Each milestone in Step 3**: Edit
+The task log replaces the legacy `state.md` and `diagnosis.md`. See `rules/task-log-format.md` for the full format spec.
 
-### Update Patterns for TDD Implementation
+### Path
 
-| Timing | Update content |
-|--------|---------------|
-| After Red completed | State: `initial→red`, target: implementation target filename, completed files: append test file |
-| After Green completed | State: `red→green`, completed files: append implementation file |
-| After Refactor completed | State: `green→done`, next step: quality checks |
-| On significant decisions | Append to the Key Decisions section |
-| After diagnosis.md created | Note diagnosis.md path for compaction recovery |
+The orchestrator provides `Task log path` in the launch prompt:
+
+```
+Task log path: {project-root}/.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md
+```
+
+Use this absolute path for all reads and writes. The file lives in the main repo's `.spec-workflow/` directory, not in the worktree — it survives worktree deletion.
+
+### Lifecycle
+
+| Step | Action |
+|------|--------|
+| **Step 0pre** (compaction recovery) | Read the task log if it exists. Derive current phase / attempt / rework state from the latest `## Events` entries |
+| **Step 2 / 2.5** (initial setup) | If the file does not exist, Write the initial structure (header + `## Metadata` + empty `## Events`) per task-log-format.md TL3 |
+| **Each milestone in Step 3** | Append the appropriate event to `## Events` (never Edit existing entries) |
+
+### Events Emitted by parallel-worker
+
+| Timing | Event |
+|--------|-------|
+| RED phase started | `phase-start phase=RED` |
+| RED phase completed (tests written and failing as expected) | `phase-complete phase=RED files=...` |
+| GREEN attempt started | `attempt-start phase=GREEN n=N` (with `approach`, `root_cause`, `responsible`, `expected_behavior` details) |
+| GREEN attempt result | `attempt-result phase=GREEN n=N result=PASS|FAIL category=...` |
+| DR6 DIVERGENT triggered | `divergent-analysis phase=GREEN before_attempt=N` (before the next `attempt-start`) |
+| REFACTOR phase completed | `phase-complete phase=REFACTOR files=...` (with `key_decisions` detail if applicable) |
+| Handoff to review-worker (task end) | `handoff` (with `summary`, `known_concerns` details) |
+| Rework cycle started | `rework-start cycle=N` (followed by `attempt-*` events as in intra-agent retries) |
+| Rework cycle completed | `rework-complete cycle=N changed_files=...` |
+
+See `rules/task-log-format.md` TL4 for full event taxonomy and key conventions.
 
 ## Agent Teams Rules
 
 - Use **TaskGet** to check the details of the task assigned to you
-- **Do not update task status to `completed`** — status management is the sole responsibility of the orchestrator (spec-implement Step 8). Only report your results
-- Report results to the leader via **SendMessage**
-- Wait for the leader to notify you of the next task assignment. Do not fetch tasks yourself from TaskList.
-- On error, report the error via SendMessage (do not update task status)
+- Status management (marking a task `completed`) is the orchestrator's responsibility (spec-implement Step 8) — report results only, do not change status
+- Return the completion report as your **final response** (last assistant message in this invocation) — that is the orchestrator's input channel
+- The orchestrator launches you per-task with the relevant context in the prompt, so do not pull tasks from TaskList yourself
+- On error, surface it in the same completion-report format but with `status: failed`

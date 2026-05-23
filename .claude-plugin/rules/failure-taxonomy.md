@@ -4,7 +4,7 @@ always_apply: true
 
 # Failure Taxonomy
 
-Cross-cutting failure-classification vocabulary. Used as the **shared key** for retries, send-backs, and DIVERGENT decisions across `parallel-worker` / `review-worker` / `wave-harness-worker` / `spec-impl-test-run` and similar agents.
+Cross-cutting failure-classification vocabulary. Used as the **shared key** for retries, send-backs, and DIVERGENT decisions across `parallel-worker` / `review-worker` / `spec-impl-test-run` and similar agents.
 
 The objectives are the following three:
 
@@ -33,9 +33,9 @@ In the locations below, include `failure_category` as a **required field** (`fai
 
 | Location | Format |
 |---------|---------|
-| DR2 attempt entry in `diagnosis.md` | Add the following one line (see FC4): `- **Failure category**: {category} / {subcategory}` |
+| `attempt-result` event in the task log's `## Events` section (per `rules/task-log-format.md` TL4) | Inline key on the event line: `category={category}/{subcategory}` |
 | `parallel-worker`'s `retry_exhausted` report | `- failure_category: {category}` / `- failure_subcategory: {subcategory}` (optional) |
-| `diagnosis` object in the completion report of `parallel-worker` / `wave-harness-worker` | `failure_category: {category}` (alongside `root_cause` / `responsible_files` / `approach`) |
+| `diagnosis` object in the completion report of `parallel-worker` | `failure_category: {category}` (alongside `root_cause` / `responsible_files` / `approach`) |
 | `findings` entries in `review-worker` | `failure_category: {category}` / `failure_subcategory: {subcategory}` (separate from the existing `category: A|B|C|D|E|E2|F|G`; record both) |
 | Verdict in the Output Format of `spec-impl-test-run` | `- **Failure Category**: {category}` / `- **Failure Subcategory**: {subcategory}` (only on fail) |
 | `diagnostic_history` cumulative template in `spec-implement` | `- **Failure category**: {category}` / `{subcategory}` |
@@ -110,7 +110,7 @@ The threshold judgment in DR6 of `diagnostic-reasoning.md` is performed using `f
 The following are prohibited because they undermine the reliability of classification. When review-worker detects these during finding review, they serve as grounds for sending the work back via rework.
 
 1. **Repeated use of `unknown`**: `unknown` must not be reused on a second or later attempt. It must always be reduced to a concrete classification
-2. **Missing `failure_category`**: When `failure_category` is omitted in a retry, send-back, or `diagnosis.md` entry, the orchestrator records `(not reported)` and emits a warning log. The next attempt must include it
+2. **Missing `failure_category`**: When `failure_category` is omitted in a retry, send-back, or `attempt-result` task-log event, the orchestrator records `(not reported)` and emits a warning log. The next attempt must include it
 3. **Listing multiple categories**: One category per attempt. If the failure really is composite, choose **the most essential cause** (the one that serves as the starting point for the fix)
 4. **Contradiction between severity and category**: In review-worker findings, severities that contradict the FC3 correspondence table must not be assigned (e.g., assigning `Critical` to `quality_check_failure / format_violation`)
 5. **Inconsistency between `Approach` and `failure_category`**: The failure that `Approach` is trying to resolve and `failure_category` must point to the same root cause. Do not record the category of the side that is not being fixed

@@ -1,31 +1,33 @@
 ---
 name: log-implementation
-description: "Record a structured Markdown implementation log after task implementation completes. Required: specName, taskId, summary, filesModified, filesCreated, statistics, artifacts (apiEndpoints / components / functions / classes / integrations). Always invoke before marking a task as [x]. Triggers on: '/log-implementation invocation', 'implementation logging', 'task completion log', '実装ログ記録', 'タスク完了ログ'."
+description: "Append the completion sections (Summary, Statistics, Files, Artifacts, Review Process) to the per-task log after task implementation completes. Required: specName, taskId, summary, filesModified, filesCreated, statistics, artifacts (apiEndpoints / components / functions / classes / integrations). Always invoke before marking a task as [x]. Triggers on: '/log-implementation invocation', 'implementation logging', 'task completion log', '実装ログ記録', 'タスク完了ログ'."
 ---
 
-# Log Implementation — Structured Implementation Logging
+# Log Implementation — Task-completion sections of the task log
 
-After task implementation completes, **record the implementation as a structured Markdown file**. This Skill is responsible for the detailed log including semantic information about artifacts (API endpoints / components / functions / classes / integration patterns).
+After task implementation completes, this skill **appends the completion sections** (`## Summary`, `## Statistics`, `## Files Modified`, `## Files Created`, `## Artifacts`, `## Review Process`) to the per-task log. The task log itself (`## Metadata` + `## Events`) is created and maintained by `parallel-worker` and `review-worker` during the task; this skill writes the structured completion record at the end.
+
+See `.claude-plugin/rules/task-log-format.md` for the full format spec (TL3 = structure, TL5 = completion sections).
 
 ## Division of Responsibility with the Hook
 
-This skill, as the "primary feature," generates a detailed log that includes artifacts. The `log-implementation.sh` hook auto-generates only a skeleton at Stop time as a **safety net** (summary=`(auto-logged)`, empty artifacts). Information is richer when this skill is explicitly invoked.
+This skill, as the "primary feature," generates a detailed completion record that includes artifacts. The `log-implementation.sh` hook auto-generates only a skeleton at Stop time as a **safety net** (summary=`(auto-logged)`, empty artifacts). Information is richer when this skill is explicitly invoked.
 
-- **Skill (primary)**: the LLM judges semantic information and fills in artifacts — detailed implementation log
+- **Skill (primary)**: the LLM judges semantic information and fills in artifacts — detailed completion record
 - **Hook (safety net)**: auto-generates a skeleton — minimum record when the skill is forgotten
 
 ## Critical Rule
 
-**Always run this skill before marking a task as `[x]`.** When this skill is explicitly invoked, the hook respects the existing log and skips (no overwrite).
+**Always run this skill before marking a task as `[x]`.** When this skill is explicitly invoked, the hook respects the existing completion sections and skips (no overwrite).
 
 ## Inputs
 
-Collect the following information before creating the log:
+Collect the following information before appending the completion sections:
 
 | Field | Required | Description |
 |------|:---:|------|
 | specName | Yes | Spec name (kebab-case) |
-| taskId | Yes | Task ID (e.g., "1", "1.2", "3.1.4") |
+| taskId | Yes | Task ID (e.g., "1", "1.2", "3.1.4") — used verbatim in the file path, no sanitization |
 | summary | Yes | Implementation summary (one line) |
 | filesModified | Yes | List of modified files |
 | filesCreated | Yes | List of created files |
@@ -81,39 +83,36 @@ findings:           # Only when reworkCount > 0
     action: rework | commit | escalate
 ```
 
+`reviewProcess` data can be derived from the task log's `review-worker:cycle-*` and `parallel-worker:rework-*` events. When you have all of them in the events, prefer deriving over re-asking the user.
+
 ## Procedure
 
 ### 1. Task Existence Check
 
 Read `.spec-workflow/specs/{specName}/tasks.md` and verify that `{taskId}` exists.
 
-### 2. Create Log File
+### 2. Locate the Task Log
 
-**Path**: `.spec-workflow/specs/{specName}/Implementation Logs/task-{sanitizedTaskId}_{timestamp}_{idPrefix}.md`
-- `sanitizedTaskId`: replace `.` and `/` in `taskId` with `-` (e.g., `3.1.4` -> `3-1-4`)
-- `timestamp`: ISO format with separators stripped (e.g., `20260326T133000`). In Bash: `date -u +%Y%m%dT%H%M%S`
-- `idPrefix`: first 8 characters of the Log ID (UUID)
+**Path**: `.spec-workflow/specs/{specName}/task-logs/{taskId}.log.md`
 
-**Create the directory if it does not exist.**
+The file should already exist (created by `parallel-worker` at task start). If it does not exist (rare — e.g., manual task without running an impl-worker), create it first with the standard header per `rules/task-log-format.md` TL3.
 
-**File format** (compatible with the dashboard's `ImplementationLogManager` parser):
+### 3. Append Completion Sections
+
+Append the following sections to the end of the task log. Do NOT modify any existing `## Metadata` or `## Events` content.
 
 ````markdown
-# Implementation Log: Task {taskId}
 
-**Summary:** {summary}
+## Summary
 
-**Timestamp:** {ISO 8601 format, e.g., 2026-03-26T13:30:00.000Z}
-**Log ID:** {Unique ID in UUID format. Generate in Bash with `uuidgen` or `cat /proc/sys/kernel/random/uuid`}
-
----
+{summary}
 
 ## Statistics
 
-- **Lines Added:** +{linesAdded}
-- **Lines Removed:** -{linesRemoved}
-- **Files Changed:** {filesModified.length + filesCreated.length}
-- **Net Change:** {linesAdded - linesRemoved}
+- Lines Added: +{linesAdded}
+- Lines Removed: -{linesRemoved}
+- Files Changed: {filesModified.length + filesCreated.length}
+- Net Change: {linesAdded - linesRemoved}
 
 ## Files Modified
 {Each line as `- path/to/file` for filesModified. If empty, write `_No files modified_`}
@@ -121,14 +120,12 @@ Read `.spec-workflow/specs/{specName}/tasks.md` and verify that `{taskId}` exist
 ## Files Created
 {Each line as `- path/to/file` for filesCreated. If empty, write `_No files created_`}
 
----
-
 ## Artifacts
 
 {If artifacts is empty, write `_No artifacts recorded_`}
 
 ### API Endpoints
-{Each endpoint in the following format:}
+{Each endpoint in the following format. Omit the section entirely if there are none:}
 #### {method} {path}
 - **Purpose:** {purpose}
 - **Location:** {location}
@@ -136,52 +133,47 @@ Read `.spec-workflow/specs/{specName}/tasks.md` and verify that `{taskId}` exist
 - **Response Format:** {responseFormat}  <- optional
 
 ### Components
-{Each component in the following format:}
+{Each component:}
 #### {name}
 - **Type:** {type}
 - **Purpose:** {purpose}
 - **Location:** {location}
 
 ### Functions
-{Each function in the following format:}
+{Each function:}
 #### {name}
 - **Purpose:** {purpose}
 - **Location:** {location}
 - **Exported:** Yes/No
 
 ### Classes
-{Each class in the following format:}
+{Each class:}
 #### {name}
 - **Purpose:** {purpose}
 - **Location:** {location}
 - **Exported:** Yes/No
 
 ### Integrations
-{Each integration in the following format:}
+{Each integration:}
 #### Integration
 - **Description:** {description}
 - **Frontend Component:** {frontendComponent}
 - **Backend Endpoint:** {backendEndpoint}
 - **Data Flow:** {dataFlow}
 
----
-
 ## Review Process
 
-When reworkCount=0:
 ```json
-{"reworkCount": 0, "reviewOutcome": "commit", "findings": []}
+{"reworkCount": N, "reviewOutcome": "commit", "findings": [...]}
 ```
-
-When reworkCount>0:
-```json
-{"reworkCount": 2, "reviewOutcome": "commit", "findings": [{"attempt": 1, "categories": ["naming"], "summary": "Variable name is unclear", "action": "rework"}, {"attempt": 2, "categories": [], "summary": "Fix verified", "action": "commit"}]}
-```
-
 ````
 
 > **Note**: the `## Review Process` section must contain **only** the JSON block (no explanatory text — the parser uses JSON.parse).
 
-### 3. Confirm Creation
+### 4. Confirm Completion
 
-Confirm the file was created successfully and report to the user.
+Confirm the sections were appended successfully and report to the user.
+
+## Idempotency
+
+If the task log already contains a `## Summary` section (i.e., this skill ran before), do not append a second set of completion sections. Instead, report that the task log already has completion sections and exit without re-writing. The hook honors this check by skipping when `## Summary` is present.

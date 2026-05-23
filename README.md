@@ -50,7 +50,7 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 >
 > - **MCP server** for spec-driven development workflow
 > - **50+ skills** covering the full spec lifecycle (request-spec → requirements → design → test-design → tasks → implement → archive) plus integration testing (Rust / .NET), TDD, CI generation, mutation testing, arch test generation, PR comment handling, and more
-> - **7 specialized sub-agents** organized as Implementer (parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker / wave-harness-worker) and Reviewer (review-worker / integ-test-auditor) roles, with **multi-language support** (Rust + .NET via `Language:` argument)
+> - **6 specialized sub-agents** organized as Implementer (parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker) and Reviewer (review-worker / integ-test-auditor) roles, with **multi-language support** (Rust + .NET via `Language:` argument)
 > - **17 rules** covering project architecture, QC1-QC13 quality checks, OWASP security, design principles, type safety (TS-R1-R5 / TS-C1-C5), failure taxonomy (FC1-FC6), and L1-L5 enforcement levels with promotion criteria
 > - **17 hooks** for spec injection, test verification, design conformance check, arch test regeneration, build cache, diff-aware security audit, plus a **measurement framework** (`_wrap.sh` + `timing-logger-pre/post.sh`) that records Hook / Tool / Phase / Rule events to `.implement-session/metrics.jsonl`
 > - **Helper scripts** for implementation session management (`session-manage.sh`), rate-limit auto-resume wrapper (`auto-resume.sh`), and metrics aggregation (`aggregate-metrics.sh` with `hooks` / `phases` / `rules` / `speedup` subcommands)
@@ -415,18 +415,15 @@ your-project/
     handle-pr-comments/    # PR review response
     knowhow-capture/       # Knowledge capture
     feedback-loop/         # Failure → rule promotion / demotion loop
-    resource-aware-parallelism/  # CPU / memory aware concurrency limits
-
-  agents/                  # 7 specialized sub-agents
-    parallel-worker.md         # TDD core (Implementer)
-    wave-harness-worker.md     # Wave-harness parallel framework worker
+  agents/                  # 6 specialized sub-agents
+    parallel-worker.md         # TDD core (Implementer; launched serially per `rules/serial-execution-policy.md`)
     unit-test-engineer.md      # Unit test engineer (Rust + C#/.NET)
     frontend-test-engineer.md  # Leptos frontend test engineer
     integ-test-worker.md       # Integration test (Rust + .NET via Language: argument)
     integ-test-auditor.md      # Integration test auditor (Rust + .NET, read-only L3)
     review-worker.md           # Code review + commit + Phase Review (Reviewer)
 
-  rules/                   # 17 rules
+  rules/                   # 18 rules
     quality-checks.md      # QC1-QC13 quality enforcement (lint / test / coverage / mutation)
     enforcement-levels.md  # L1-L5 model + promotion / demotion criteria
     security.md            # OWASP Top 10 + auth/authz
@@ -435,7 +432,8 @@ your-project/
     type-safety.md         # TS-R1-R5 (Rust) + TS-C1-C5 (C#)
     failure-taxonomy.md    # FC1-FC6 cross-worker failure vocabulary
     diagnostic-reasoning.md # DR1-DR6 retry / divergent thinking protocol
-    ...                    # 17 rules total
+    serial-execution-policy.md # All subagent launches are serial-only
+    ...                    # 18 rules total
 ```
 
 ## 🛠️ Development

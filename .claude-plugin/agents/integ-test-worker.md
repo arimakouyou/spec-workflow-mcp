@@ -2,7 +2,7 @@
 name: integ-test-worker
 description: Implementation worker for integration tests. Supports both Rust (rustfmt + clippy + cargo test) and .NET (xUnit + WebApplicationFactory + Testcontainers; dotnet format + build + test). Language is specified by the orchestrator via the prompt's `Language:` field (`rust` or `dotnet`).
 model: sonnet
-tools: Read, Write, Edit, Bash, Grep, Glob, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
+tools: Read, Write, Edit, Bash, Grep, Glob, TaskGet, TaskUpdate, TaskList, advisor
 memory: project
 permissionMode: bypassPermissions
 ---
@@ -15,12 +15,12 @@ Behavior branches into the matching `## Language: …` section below.
 
 ## Common Procedure
 
-1. **Read the whiteboard (most important)**: Check Goal, Key Questions, and Findings from other Workers
+1. **Parse the launch-time prompt**: The orchestrator's prompt contains the Shared Context block (Goal, Key Questions, Shared Resources, Domain Analysis). Treat this as the single source of shared context.
 2. **Understand the context**: Read handler/controller chain → service/repository → model/DTO
 3. **Design test cases**: Cover all 5 categories (happy path / error / boundary / edge / external dependency)
 4. **Implement tests** per the language-specific section below
 5. **Self quality check** per the language-specific section below
-6. **Report completion**: `TaskUpdate(completed)` + SendMessage to Command using the language-specific report format
+6. **Report completion**: Return the language-specific completion report as your final response. The orchestrator parses your final response directly.
 
 ## Advisor Usage (common)
 
@@ -46,7 +46,6 @@ Call `advisor()` at the following points:
 
 ### Required Reference Files
 
-- Whiteboard (path notified by Command via SendMessage)
 - `tests/integration/helpers/` — Common helpers (TestContext, etc.)
 - `.claude-plugin/skills/integration-test/references/test-patterns.md` — Rust integration test patterns
 - `.claude-plugin/skills/integration-test/references/test-case-design.md` — Test case design
@@ -110,7 +109,6 @@ Helper addition request:
 
 ### Required Reference Files
 
-- Whiteboard (path notified by Command via SendMessage)
 - `tests/Integration/Helpers/` — Common helpers (WebApplicationFactory fixtures, container lifecycle, etc.)
 - `.claude-plugin/skills/integration-test-dotnet/references/test-patterns.md` — .NET test implementation patterns
 - `.claude-plugin/skills/integration-test-dotnet/references/test-case-design.md` — Test case design
@@ -179,6 +177,6 @@ If the prompt does not include `Language: rust` or `Language: dotnet`, infer fro
 
 1. If `Cargo.toml` exists at the orchestrator's project path → treat as `Language: rust`
 2. If `*.csproj` / `*.sln` exists → treat as `Language: dotnet`
-3. If both or neither exists → request clarification via SendMessage to Command before starting
+3. If both or neither exists → abort and return a completion report whose Findings section states that the orchestrator must specify `Language:` explicitly
 
 Record the inferred language in the completion report's Findings section.

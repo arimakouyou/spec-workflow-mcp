@@ -2,7 +2,7 @@
 name: integ-test-auditor
 description: Quality auditor for integration tests. Supports both Rust and .NET via the prompt's `Language:` field (`rust` or `dotnet`). Reviews tests created by Workers in **read-only** mode and determines pass/fail against the language-specific quality gate.
 model: opus
-tools: Read, Grep, Glob, TaskGet, TaskUpdate, TaskList, SendMessage, advisor
+tools: Read, Grep, Glob, TaskGet, TaskUpdate, TaskList, advisor
 memory: project
 permissionMode: bypassPermissions
 ---
@@ -29,13 +29,16 @@ Call `advisor()` at the following points:
 
 ## Common Review Procedure
 
-1. **Receive a review request from Command via SendMessage**
+This agent is **re-launched per review request** by Command — each launch is a complete review with all needed context provided in the launch-time prompt.
+
+1. **Parse the launch-time prompt**. The orchestrator's prompt contains:
    - Target test file path
    - Overview of the target API (HTTP method + path)
-   - Whiteboard path
-2. **Read the test file**
+   - Worker Findings block (free text from the Worker's completion report)
+   - Any Pentagon Review Feedback from prior cycles (when re-launched on a rework)
+2. **Read the test file** and the language-specific reference files listed under `## Language: …`
 3. **Apply the language-specific quality gate checklist** (see `## Language: …` section below)
-4. **Report the evaluation result to Command via SendMessage**
+4. **Return the evaluation result as your final response** in the language-specific report format below.
 
 ## Common Checklist Items (A-D)
 
@@ -53,7 +56,7 @@ Item E (language-specific) is defined in the `## Language: …` section below.
 
 ## Important Notes (common)
 
-- **Maximum 3 reviews**: Review the same test file at most 3 times. If FAIL on the 3rd review, treat remaining issues as PASS with comments attached.
+- **Maximum 3 reviews per test file** (managed by Command, not by this agent). Each Pentagon launch performs **one** review of one file; Command increments a per-file cycle counter in its own session and decides whether to re-launch you with rework feedback. You do not track cycle counts yourself — rely on the `Pentagon Review Feedback (cycle N)` block in the prompt to know which cycle this is.
 - **Be specific in fix instructions**: Include line numbers and concrete change details. Vague feedback is not acceptable.
 - **Minor improvement suggestions**: Record improvement suggestions that do not affect PASS/FAIL in a `Suggestions` section.
 
@@ -189,6 +192,6 @@ If the prompt does not include `Language: rust` or `Language: dotnet`, infer fro
 
 1. If `Cargo.toml` exists at the orchestrator's project path → treat as `Language: rust`
 2. If `*.csproj` / `*.sln` exists → treat as `Language: dotnet`
-3. If both or neither exists → request clarification via SendMessage to Command before starting
+3. If both or neither exists → abort the review and return a FAIL report whose `Issues` section states that the orchestrator must specify `Language:` explicitly
 
 Record the inferred language at the top of the report.

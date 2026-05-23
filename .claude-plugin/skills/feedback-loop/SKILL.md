@@ -85,7 +85,6 @@ Detect the following signals as agent failure patterns:
 | reworkCount | >= 2 (rework occurred two or more times for the same task) | `reviewProcess.reworkCount` in `/log-implementation` |
 | review_action: escalate | review-worker decides user escalation is needed | review-worker completion report |
 | FL3 same fix | Same fix occurs three or more times across sessions | Duplicate detection on know-how entries |
-| Wave error | CHECK_FAILED / IMPLEMENTATION_FAILED | wave-harness-worker error code |
 
 ### Recording
 
