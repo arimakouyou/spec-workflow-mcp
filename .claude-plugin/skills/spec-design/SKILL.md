@@ -513,7 +513,27 @@ Agent({
         (a) `### MOD-N:` heading in the same design.md, or
         (b) Standard library types (std::*, core::*, alloc::*) or known framework types (Leptos / Axum / .NET CLR / Node.js built-ins)
         Undefined custom types → error: `undefined_type_reference`. Examples of failures: design.md interface uses `RelativePath` but no `### MOD-N: RelativePath` heading exists.
+    14. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
+        - If request-spec.md does not exist, or task_type is absent → SKIP checks 14-17 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 14-17 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+        - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
+            Run check 14 (EC1 integrity) on every citation as described below.
+            SKIP checks 15-17 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+        - If task_type is any other declared value, run checks 14-17 normally.
+        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 14 applies:
+            a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
+            b. The referenced file's frontmatter spec_name: must equal this spec-name.
+            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+          Any failure = FAIL with rule_id EC1.
+    15. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+            - A single fenced block exceeds 20 lines.
+            - Cumulative fenced-block lines within a single H2 or H3 section exceed 40 lines.
+            - Total fenced-block lines in the document exceed 200 lines.
+          For each violation FAIL with rule_id EC3; fix_hint: 'Move the long excerpt to a new EV-{category}-{NNN}.md (pick the best-matching category from task-types.md TT3) and leave a brief summary + citation'. Markdown tables, block-quoted prose, ASCII architecture diagrams, and Mermaid diagrams are NOT counted.
+    16. PER-COMPONENT EVIDENCE (evidence-coverage.md EC2, per DES/MOD): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). Each '### DES-N:' and '### MOD-N:' section must either (a) cite at least one EV-... inside that section, or (b) carry an HTML comment '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) inside the section that explains why no existing-code anchor applies (reason must be non-empty). Missing both = FAIL rule_id EC2_perDES.
+    17. CODE REUSE ANALYSIS EVIDENCE (evidence-coverage.md EC2): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). The 'Code Reuse Analysis' section must be driven by EV citations. Every concrete reused path, module, or utility mentioned in this section must be backed by an EV-... citation on the same line or in the adjacent bullet. Missing any = FAIL rule_id EC2_codeReuse; fix_hint: 'Back each reused path with an EV citation (typically EV-entry-points-* or EV-domain-models-*). If you still need to list the path without an existing EV, create one via targeted re-investigation.'
 
+    Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
 })

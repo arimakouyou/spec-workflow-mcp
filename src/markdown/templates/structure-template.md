@@ -1,166 +1,68 @@
 # Project Structure
 
+> This document captures **project-specific structural instance information**.
+> General coding policies (separation of concerns, dependency direction, naming, import order, code organization,
+> module boundaries, documentation standards) are authoritative in `.claude-plugin/rules/`. Do not duplicate them here.
+> Record only the concrete shape of **this** project.
+> Placeholder format: `{{FIELD_NAME}}` marks required values; `[example: ...]` shows illustrative samples only.
+
 ## Directory Organization
 
+Actual top-level directory layout of this project. If the layout follows `.claude-plugin/rules/project-architecture.md`
+verbatim, record `Status: Follows project-architecture.md` and list only deviations. Otherwise document the full tree.
+
 ```
-[Define your project's directory structure. Examples below - adapt to your project type]
-
-Example for a library/package:
-project-root/
-├── src/                    # Source code
-├── tests/                  # Test files  
-├── docs/                   # Documentation
-├── examples/               # Usage examples
-└── [build/dist/out]        # Build output
-
-Example for an application:
-project-root/
-├── [src/app/lib]           # Main source code
-├── [assets/resources]      # Static resources
-├── [config/settings]       # Configuration
-├── [scripts/tools]         # Build/utility scripts
-└── [tests/spec]            # Test files
-
-Common patterns:
-- Group by feature/module
-- Group by layer (UI, business logic, data)
-- Group by type (models, controllers, views)
-- Flat structure for simple projects
+{{PROJECT_ROOT}}/
+├── {{dir}}/                 # {{one_line_purpose}}
+├── {{dir}}/                 # {{one_line_purpose}}
+└── {{dir}}/                 # {{one_line_purpose}}
 ```
+
+### Deviations from Standard Architecture
+
+| Path | Standard Location (per rules/) | Reason for Deviation |
+|------|--------------------------------|----------------------|
+| {{path}} | {{expected_location}} | {{why}} |
+
+Record `Status: N/A — no deviations` if the project matches the standard layout.
 
 ## File Placement Rules
 
-新規ファイルを追加する際の配置先ルール。種別ごとに配置先ディレクトリと命名規則を定義し、
-開発者や AI エージェントが配置先を一意に判断できるようにする。
+Rules for placing newly added files. Define target directory and naming convention per file type so that developers and
+AI agents can determine placement unambiguously.
 
-| ファイル種別 | 配置先ディレクトリ | 命名規則 | 例 |
-|-------------|-------------------|---------|-----|
-| [例: ハンドラ/コントローラ] | [例: src/handlers/] | [例: snake_case.rs] | [例: user_handler.rs] |
-| [例: サービス/ビジネスロジック] | [例: src/services/] | [例: snake_case.rs] | [例: auth_service.rs] |
-| [例: データモデル] | [例: src/models/] | [例: snake_case.rs] | [例: user.rs] |
-| [例: ユニットテスト] | [例: ソースと同階層] | [例: *_test.rs / *.test.ts] | [例: user_test.rs] |
-| [例: 統合テスト] | [例: tests/] | [例: test_*.rs / *.test.ts] | [例: test_api.rs] |
-| [例: E2E テスト] | [例: e2e/ or tests/e2e/] | [例: *.spec.ts] | [例: login.spec.ts] |
-| [例: CI ワークフロー] | [例: .github/workflows/] | [例: kebab-case.yml] | [例: ci.yml] |
-| [例: ドキュメント] | [例: docs/] | [例: kebab-case.md] | [例: api-guide.md] |
-| [例: 設定ファイル] | [例: config/] | [例: kebab-case.toml] | [例: database.toml] |
-| [例: ユーティリティスクリプト] | [例: scripts/] | [例: kebab-case.{sh,js}] | [例: seed-db.sh] |
+| File Type | Target Directory | Naming Convention | Example |
+|-----------|------------------|-------------------|---------|
+| {{e.g., Handler / Controller}} | {{e.g., src/handlers/}} | {{e.g., snake_case.rs}} | {{e.g., user_handler.rs}} |
+| {{e.g., Service / Business Logic}} | {{e.g., src/services/}} | {{e.g., snake_case.rs}} | {{e.g., auth_service.rs}} |
+| {{e.g., Data Model}} | {{e.g., src/models/}} | {{e.g., snake_case.rs}} | {{e.g., user.rs}} |
+| {{e.g., Unit Test}} | {{e.g., alongside source}} | {{e.g., *_test.rs / *.test.ts}} | {{e.g., user_test.rs}} |
+| {{e.g., Integration Test}} | {{e.g., tests/}} | {{e.g., test_*.rs / *.test.ts}} | {{e.g., test_api.rs}} |
+| {{e.g., E2E Test}} | {{e.g., e2e/ or tests/e2e/}} | {{e.g., *.spec.ts}} | {{e.g., login.spec.ts}} |
+| {{e.g., CI Workflow}} | {{e.g., .github/workflows/}} | {{e.g., kebab-case.yml}} | {{e.g., ci.yml}} |
+| {{e.g., Documentation}} | {{e.g., docs/}} | {{e.g., kebab-case.md}} | {{e.g., api-guide.md}} |
+| {{e.g., Configuration}} | {{e.g., config/}} | {{e.g., kebab-case.toml}} | {{e.g., database.toml}} |
+| {{e.g., Utility Script}} | {{e.g., scripts/}} | {{e.g., kebab-case.{sh,js}}} | {{e.g., seed-db.sh}} |
 
-> **P4-01 準拠**: このテーブルが埋められていることで、新規ファイルの配置先が一意に決定可能になる。
-> プロジェクト固有のパターンに合わせて行を追加・修正すること。
+> **P4-01 Compliance**: When this table is filled in, the target directory for a new file is uniquely determined.
+> Add or modify rows to match project-specific patterns.
 
-## Naming Conventions
+## Project-Specific Conventions
 
-### Files
-- **Components/Modules**: [e.g., `PascalCase`, `snake_case`, `kebab-case`]
-- **Services/Handlers**: [e.g., `UserService`, `user_service`, `user-service`]
-- **Utilities/Helpers**: [e.g., `dateUtils`, `date_utils`, `date-utils`]
-- **Tests**: [e.g., `[filename]_test`, `[filename].test`, `[filename]Test`]
+Conventions that **extend or override** `.claude-plugin/rules/*-style.md` for this project only. If no project-specific
+additions exist, keep `Status: N/A — follows .claude-plugin/rules/*-style.md`.
 
-### Code
-- **Classes/Types**: [e.g., `PascalCase`, `CamelCase`, `snake_case`]
-- **Functions/Methods**: [e.g., `camelCase`, `snake_case`, `PascalCase`]
-- **Constants**: [e.g., `UPPER_SNAKE_CASE`, `SCREAMING_CASE`, `PascalCase`]
-- **Variables**: [e.g., `camelCase`, `snake_case`, `lowercase`]
+| Convention | Applies To | Rule |
+|------------|------------|------|
+| {{convention_name}} | {{scope}} | {{specific_rule}} |
 
-## Import Patterns
+Status: {{N/A — follows .claude-plugin/rules/*-style.md | custom conventions listed above}}
 
-### Import Order
-1. External dependencies
-2. Internal modules
-3. Relative imports
-4. Style imports
+## See Also
 
-### Module/Package Organization
-```
-[Describe your project's import/include patterns]
-Examples:
-- Absolute imports from project root
-- Relative imports within modules
-- Package/namespace organization
-- Dependency management approach
-```
+General policies enforced project-wide (authoritative location: `.claude-plugin/rules/`):
 
-## Code Structure Patterns
-
-[Define common patterns for organizing code within files. Below are examples - choose what applies to your project]
-
-### Module/Class Organization
-```
-Example patterns:
-1. Imports/includes/dependencies
-2. Constants and configuration
-3. Type/interface definitions
-4. Main implementation
-5. Helper/utility functions
-6. Exports/public API
-```
-
-### Function/Method Organization
-```
-Example patterns:
-- Input validation first
-- Core logic in the middle
-- Error handling throughout
-- Clear return points
-```
-
-### File Organization Principles
-```
-Choose what works for your project:
-- One class/module per file
-- Related functionality grouped together
-- Public API at the top/bottom
-- Implementation details hidden
-```
-
-## Code Organization Principles
-
-1. **Single Responsibility**: Each file should have one clear purpose
-2. **Modularity**: Code should be organized into reusable modules
-3. **Testability**: Structure code to be easily testable
-4. **Consistency**: Follow patterns established in the codebase
-
-## Module Boundaries
-[Define how different parts of your project interact and maintain separation of concerns]
-
-Examples of boundary patterns:
-- **Core vs Plugins**: Core functionality vs extensible plugins
-- **Public API vs Internal**: What's exposed vs implementation details  
-- **Platform-specific vs Cross-platform**: OS-specific code isolation
-- **Stable vs Experimental**: Production code vs experimental features
-- **Dependencies direction**: Which modules can depend on which
-
-## Code Size Guidelines
-[Define your project's guidelines for file and function sizes]
-
-Suggested guidelines:
-- **File size**: [Define maximum lines per file]
-- **Function/Method size**: [Define maximum lines per function]
-- **Class/Module complexity**: [Define complexity limits]
-- **Nesting depth**: [Maximum nesting levels]
-
-## Dashboard/Monitoring Structure (if applicable)
-[How dashboard or monitoring components are organized]
-
-### Example Structure:
-```
-src/
-└── dashboard/          # Self-contained dashboard subsystem
-    ├── server/        # Backend server components
-    ├── client/        # Frontend assets
-    ├── shared/        # Shared types/utilities
-    └── public/        # Static assets
-```
-
-### Separation of Concerns
-- Dashboard isolated from core business logic
-- Own CLI entry point for independent operation
-- Minimal dependencies on main application
-- Can be disabled without affecting core functionality
-
-## Documentation Standards
-- All public APIs must have documentation
-- Complex logic should include inline comments
-- README files for major modules
-- Follow language-specific documentation conventions
+- `.claude-plugin/rules/design-principles.md` — separation of concerns, dependency direction, public API minimization, DRY, naming appropriateness
+- `.claude-plugin/rules/project-architecture.md` — baseline directory structure for Rust / .NET backends
+- `.claude-plugin/rules/rust-style.md` / `.claude-plugin/rules/csharp-style.md` — language-specific naming, formatting, import order
+- `.claude-plugin/rules/doc-crossref.md` / `.claude-plugin/rules/doc-freshness.md` — documentation standards

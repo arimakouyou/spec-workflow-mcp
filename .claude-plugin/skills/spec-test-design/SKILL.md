@@ -526,7 +526,26 @@ Agent({
     19. E2E_SNAPSHOT_PATH (F-1, dapper-hardening): If E2E specs reference snapshot comparison (toMatchSnapshot, toMatchAriaSnapshot, etc.), the test-design.md must explicitly mention `snapshotPathTemplate` configuration in `playwright.config.ts` (e.g., `tests/e2e/screenshots/{testFilePath}/{arg}.png`). Without explicit path template, baseline screenshots end up in default location and become non-portable.
     20. E2E_DOM_COMPARISON_METHOD (F-2, dapper-hardening): For E2E specs requiring **structural regression detection** (DOM tree comparison), use `toMatchAriaSnapshot` instead of `toContain` (substring match). `toContain` permits partial matches that hide structural breaking changes; `toMatchAriaSnapshot` enforces full structural equality.
     21. E2E_COMPOSITE_STATE_SCENARIO (F-3, dapper-hardening): If E2E scenario steps require a **composite state** (e.g., "showing 2 center images with left panel open"; "logged in + filter applied + sorted"), the operations to reach that state must be **explicitly specified in test-design.md** (e.g., NAV_NEXT N times + setting change X + ...). Implicit assumption of state without explicit setup steps → error: `e2e_setup_steps_missing`.
+    22. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
+        - If request-spec.md does not exist, or task_type is absent → SKIP checks 22-24 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 22-24 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+        - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
+            Run check 22 (EC1 integrity) on every citation as described below.
+            SKIP checks 23-24 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+        - If task_type is any other declared value, run checks 22-24 normally.
+        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 22 applies:
+            a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
+            b. The referenced file's frontmatter spec_name: must equal this spec-name.
+            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+          Any failure = FAIL with rule_id EC1.
+    23. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+            - A single fenced block exceeds 15 lines.
+            - Cumulative fenced-block lines within a single H2 or H3 section exceed 30 lines.
+            - Total fenced-block lines in the document exceed 120 lines.
+          For each violation FAIL with rule_id EC3; fix_hint: 'Move fixture-like or harness-like excerpts to an evidence file under evidence/test-harness/ (or a more specific category) and leave a brief summary + citation'. Markdown tables and ASCII diagrams are NOT counted.
+    24. PER-TESTCASE EVIDENCE (evidence-coverage.md EC2, per UT/IT/E2E): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Every '#### UT-N.M:', '### IT-N:', and '### E2E-N:' section must cite at least one EV-... that anchors the behavior under test. If a case exercises a truly new behavior with no existing-code anchor, use '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) with a non-empty reason inside the section. Missing both = FAIL rule_id EC2_perTestCase with fix_hint 'Cite the EV that captures the current or expected behavior the test guards (typically EV-contract-current-*, EV-branches-*, or EV-regressions-*).'
 
+    Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
 })

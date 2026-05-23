@@ -22,8 +22,10 @@ Agent({
     Task prompt: {task _Prompt content}
     Test focus areas: {_TestFocus content from task, if available}
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
+    Evidence files: {_Evidence EV IDs, resolved to full paths by the orchestrator}
 
     Follow the /spec-impl-test-write skill instructions.
+    Read ONLY the listed evidence files — do not load other EV-*.md files.
 
     Return the list of test files created and test names.`
 })
@@ -38,6 +40,16 @@ Agent({
 
 ## Execution Steps
 
+### 0. Load Project-Level Context (Steering)
+
+Before planning tests, load project-level instance information from steering documents **if they exist**:
+
+- `{project-path}/.spec-workflow/steering/tech.md` — confirms the test framework actually in use for this project (e.g., vitest vs jest, cargo test vs nextest) and any performance/compatibility targets the tests may need to guard. Treat this as the tie-breaker when multiple frameworks could apply.
+- `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)**. Use the "Unit Test" / "Integration Test" / "E2E Test" rows to decide **where the test file must live** and **how it must be named**. Do not invent a location if the rule exists.
+- `{project-path}/.spec-workflow/steering/product.md` — product principles / non-goals (skip if absent; used only to resolve ambiguity about scope).
+
+Skip any file that does not exist; steering docs are optional.
+
 ### 1. Understand What to Test
 
 - Read the task's `_Prompt` field (provided in the prompt) for Role, Task, Restrictions, Success criteria
@@ -45,14 +57,23 @@ Agent({
 - Read the design document to understand interfaces, data models, and expected behavior
 - Identify the public API surface: functions, methods, endpoints, components
 
+### 1.5 Load Evidence (Selective)
+
+If the task carries an `_Evidence:` line (`.claude-plugin/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to full `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files**.
+
+- Evidence files typically cite the current contract (`EV-contract-current-*`), branches (`EV-branches-*`), regressions (`EV-regressions-*`), or harness (`EV-test-harness-*`) that the tests must guard. Use the `sources:` frontmatter entries to locate the exact code ranges the tests should lock in.
+- Do **not** read other EV files from the spec's `evidence/` directory — they belong to other tasks.
+- Do **not** re-derive the current behavior from scratch. If an evidence file cites `path:Lx-Ly` showing the existing contract, your tests should assert compatibility with that contract, not guess at it.
+- If the task has no `_Evidence:` line, skip this step. Legacy specs (no `task_type`) will also have no evidence.
+
 ### 2. Discover Existing Test Patterns
 
-Before writing tests, understand the project's testing conventions:
+Before writing tests, understand the project's testing conventions. When `tech.md` and `structure.md` from step 0 already state the framework and test placement, trust them first and only fall back to filesystem discovery for gaps:
 
 - Search for existing test files to determine:
-  - Test framework (vitest, jest, pytest, etc.)
-  - File naming convention (`*.test.ts`, `*.spec.ts`, `*_test.py`, etc.)
-  - Directory structure (`__tests__/`, `tests/`, co-located, etc.)
+  - Test framework (vitest, jest, pytest, etc.) — prefer the one recorded in `tech.md` if set
+  - File naming convention (`*.test.ts`, `*.spec.ts`, `*_test.py`, etc.) — prefer the `structure.md` P4-01 row for the relevant test type
+  - Directory structure (`__tests__/`, `tests/`, co-located, etc.) — same: P4-01 wins when it specifies
   - Import patterns and test utilities
   - Assertion style (`expect()`, `assert`, etc.)
 

@@ -515,7 +515,27 @@ Agent({
     19. TESTFOCUS_NEGATIVE (I-1, dapper-hardening): _TestFocus must include all 6 categories (Happy Path / Boundary Values / Error Handling / Edge Cases / Negative Assertions / Isolation Properties). If Negative Assertions or Isolation Properties is "N/A", the task must be a pure function with no side effects (and the reason must be explicitly noted)
     20. ST_PLACEMENT (J-7, dapper-hardening): For every ST-N spec in test-design.md, a corresponding task must exist in tasks.md, placed at the end of the Phase that completes the target feature's component / endpoint dependencies (after CT/IT, before final E2E Phase).
     21. REGRESSION_BUG_ID (J-10, dapper-hardening): Tasks marked with `_BugFix: true` (or with `Role: Bug Fixer` in _Prompt) must include a `_RegressionBugId: BUG-NNN` (or `GH#NNN`) metadata field. The corresponding regression test must follow the naming convention `regression_issue_NNN_*` (Rust) / `regression #NNN` (TS) per regression-test-policy/SKILL.md.
+    22. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, frontmatter depends_on.refs, or _Evidence: task-level metadata).
+        - If request-spec.md does not exist, or task_type is absent → SKIP checks 22-25 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 22-25 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+        - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
+            Run check 22 (EC1 integrity) on every citation as described below.
+            SKIP checks 23-25 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+        - If task_type is any other declared value, run checks 22-25 normally.
+        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, frontmatter depends_on.refs, or _Evidence: task-level metadata) when check 22 applies:
+            a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
+            b. The referenced file's frontmatter spec_name: must equal this spec-name.
+            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+          Any failure = FAIL with rule_id EC1.
+    23. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+            - A single fenced block exceeds 10 lines.
+            - Cumulative fenced-block lines within a single H2 or H3 section exceed 20 lines.
+            - Total fenced-block lines in the document exceed 60 lines.
+          For each violation FAIL with rule_id EC3; fix_hint: 'tasks.md should carry task descriptions and metadata, not code. Move any illustrative code to an evidence file and cite it via _Evidence'. Markdown tables are NOT counted.
+    24. _Evidence METADATA (evidence-coverage.md EC2, per task): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Every implementation task MUST have an _Evidence line listing at least one EV-{category}-{NNN}. Exempt from this requirement: Phase 0 setup tasks (Git init, container setup, CI bootstrap) and tasks whose title starts with 'PhaseReview'. IT and E2E test tasks MUST carry _Evidence (typically EV-test-harness-* or EV-contract-current-*). Missing _Evidence on a non-exempt task = FAIL rule_id EC2_taskEvidence with fix_hint 'Add: _Evidence: EV-{category}-{NNN} on the line under the task header, parallel to _Leverage. Pick the EV(s) the implementer will need to open while coding this task.'
+    25. _Evidence FORMAT: Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). The _Evidence line format is `_Evidence: EV-{category}-{NNN}[ EV-{category}-{NNN}[, ...]]` — space or comma separated EV IDs. Each listed EV must exist on disk (covered by EC1 check 22). A single task should cite no more than 4 EVs; more than 4 signals the task is not atomic and should be split. = WARN rule_id EC2_taskEvidenceSplit (not blocking).
 
+    Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
 })

@@ -17,9 +17,11 @@ Create project-level guidance documents that inform all future spec-driven devel
 
 | Document | Purpose | Output Path |
 |----------|---------|-------------|
-| **product.md** | Vision, goals, target users, success metrics | `.spec-workflow/steering/product.md` |
-| **tech.md** | Project-level technology stack and architecture | `.spec-workflow/steering/tech.md` |
-| **structure.md** | Codebase organization, naming conventions, patterns | `.spec-workflow/steering/structure.md` |
+| **product.md** | Product purpose, target users, non-goals, principles, success metrics | `.spec-workflow/steering/product.md` |
+| **tech.md** | Technology stack, approved external dependencies, constraints, ADR summary | `.spec-workflow/steering/tech.md` |
+| **structure.md** | Directory layout, File Placement Rules (P4-01), project-specific conventions | `.spec-workflow/steering/structure.md` |
+
+General engineering policies (design principles, dependency direction, naming, style, security, testing, documentation) are authoritative in `.claude-plugin/rules/` and must NOT be duplicated into steering documents.
 
 ## Inputs
 
@@ -56,22 +58,25 @@ Follow the template structure exactly for consistency.
 #### Step B: Research and Write
 
 **For product.md:**
-- Discuss with the user to understand the product vision and goals
-- Define target users, key features, and success metrics
+- Discuss with the user to understand the product purpose, target users, and success metrics
+- Define non-goals explicitly to bound scope
 - Establish product principles that guide decisions
 - If web search is available, research market context
 
 **For tech.md:**
-- Analyze the existing codebase to detect technology stack (package.json, Cargo.toml, etc.)
-- Document programming languages, frameworks, and key libraries
-- Record architectural patterns and decisions
-- Technology selection rationale and decision history go to `.spec-workflow/steering/logs/tech-decisions.md`, not in tech.md itself
+- Analyze the existing codebase to detect technology stack (package.json, Cargo.toml, *.csproj, etc.)
+- Record project-specific instance data only: languages, approved dependencies, storage, integrations, constraints
+- Detect deviations from `.claude-plugin/rules/project-architecture.md`; document them rather than restating the standard
+- Populate the ADR summary table from `.claude/_docs/adr/INDEX.md` if any ADRs exist
+- Formal decisions belong to ADRs (`.claude/_docs/adr/`, managed by the `/adr` skill). Lightweight chronological notes go to `.spec-workflow/steering/logs/tech-decisions.md`
+- DO NOT duplicate policies that are already in `.claude-plugin/rules/` (security, type safety, error handling, testing, etc.); link to them instead
 
 **For structure.md:**
-- Analyze the actual directory structure and file organization
-- Document naming conventions, import patterns, and code structure
-- Define module boundaries and code organization principles
-- Include dashboard/monitoring structure if applicable
+- Capture the actual top-level directory layout as the instance record for this project
+- Fill in File Placement Rules (P4-01) so that any new file's target directory is uniquely determined
+- Record deviations from `.claude-plugin/rules/project-architecture.md` if any
+- Fill Project-Specific Conventions only with rules NOT already covered by `.claude-plugin/rules/*-style.md`; otherwise state `Status: N/A — follows .claude-plugin/rules/*-style.md`
+- DO NOT restate naming conventions, import order, module boundaries, code organization principles, or documentation standards that are already enforced by rules/
 
 #### Step C: Create the Document
 
@@ -129,8 +134,24 @@ Agent({
     Checks:
     1. TEMPLATE: Every section from the template must exist with real content (no placeholders)
     2. SPECIFICITY: Content must be specific to this project, not generic boilerplate
-    3. COMPLETENESS: All tables must have concrete entries, not placeholder rows
+    3. COMPLETENESS: All tables must have concrete entries, not placeholder rows. Sections that do not apply must read \`Status: N/A — {{reason}}\` rather than being blank
     4. ACTIONABILITY: Guidance must be clear enough to inform future spec development
+    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`.claude-plugin/rules/\`. Flag any of the following as issues (each section name maps to the \`.claude-plugin/rules/\` file that already owns it):
+       - For structure.md:
+         * \`Naming Conventions\` → owned by \`.claude-plugin/rules/*-style.md\` (rust-style.md / csharp-style.md / axum.md / etc.)
+         * \`Import Patterns\` → owned by \`.claude-plugin/rules/*-style.md\`
+         * \`Code Structure Patterns\` → owned by \`.claude-plugin/rules/design-principles.md\` / \`.claude-plugin/rules/*-style.md\`
+         * \`Code Organization Principles\` → owned by \`.claude-plugin/rules/design-principles.md\`
+         * \`Module Boundaries\` → owned by \`.claude-plugin/rules/design-principles.md\` / \`.claude-plugin/rules/project-architecture.md\`
+         * \`Documentation Standards\` → owned by \`.claude-plugin/rules/doc-crossref.md\` / \`.claude-plugin/rules/doc-freshness.md\`
+       - For tech.md:
+         * \`Prohibited Patterns\` containing general language-level prohibitions → owned by \`.claude-plugin/rules/*-style.md\` / \`.claude-plugin/rules/security.md\`
+         * Generic security policies → owned by \`.claude-plugin/rules/security.md\`
+         * Generic testing policies → owned by \`.claude-plugin/rules/flaky-test-management.md\` / \`.claude-plugin/rules/regression-test-policy.md\`
+         * Generic documentation policies → owned by \`.claude-plugin/rules/doc-crossref.md\` / \`.claude-plugin/rules/doc-freshness.md\`
+       - Generic restatements of design principles D1–D6 → owned by \`.claude-plugin/rules/design-principles.md\`
+       In each case, the fix is to remove the duplicated content and link to the authoritative \`.claude-plugin/rules/\` file named above.
+    6. ADR LINKAGE (tech.md only): The Architecture Decision Records section should either contain a populated summary table matching \`.claude/_docs/adr/INDEX.md\`, or show \`Status: N/A — no ADRs yet\` if none exist.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
     Return a structured report (PASS/FAIL with issues list)."
@@ -216,5 +237,6 @@ If CLAUDE.md does not exist, propose the structure above to the user. If it exis
 - Never accept verbal approval — dashboard/VS Code extension only
 - Never proceed if approval delete fails
 - Must have approved status AND successful cleanup before next document
-- tech.md: selection rationale goes to `.spec-workflow/steering/logs/tech-decisions.md`
+- tech.md: formal architectural decisions go to ADRs under `.claude/_docs/adr/` (use the `/adr` skill); lightweight chronological notes go to `.spec-workflow/steering/logs/tech-decisions.md`
+- Do not duplicate general engineering policies from `.claude-plugin/rules/` into steering documents; link to them instead
 - When the user requests the full steering-doc set, complete documents in the specified sequence (no skipping); users may still request or update individual documents directly.

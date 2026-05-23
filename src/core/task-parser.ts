@@ -125,6 +125,7 @@ export interface ParsedTask {
   isPhaseReview?: boolean;             // Whether this is a phase review task
   phase?: string;                      // Owning phase name (e.g., "Phase 1: Core Domain Layer")
   dependsOn?: string[];               // 依存先タスクID（例: ["1.1", "1.2"]）
+  evidence?: string[];                 // Evidence IDs (e.g., ["EV-callers-001", "EV-branches-002"])
 
   // For backward compatibility
   completed: boolean;                  // true if status === 'completed'
@@ -228,6 +229,7 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
     const purposes: string[] = [];
     const implementationDetails: string[] = [];
     const dependsOn: string[] = [];
+    const evidence: string[] = [];
     let prompt: string | undefined;
     let testFocus: string | undefined;
     let isPhaseReview = false;
@@ -300,6 +302,19 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
         if (depMatch) {
           dependsOn.push(...depMatch[1].split(',').map(d => d.trim()).filter(d => d));
         }
+      } else if (contentLine.includes('_Evidence:') && !contentLine.includes('_Prompt:')) {
+        const evMatch = contentLine.match(/_Evidence:\s*(.+?)\s*(?:_\s*$|$)/);
+        if (evMatch) {
+          const parsed = Array.from(
+            new Set(
+              evMatch[1]
+                .split(/[,\s]+/)
+                .map(e => e.trim())
+                .filter(e => /^EV-[a-z0-9_-]+-\d{3}$/.test(e))
+            )
+          );
+          evidence.push(...parsed);
+        }
       } else if (contentLine.match(/Files?:/)) {
         const fileMatch = contentLine.match(/Files?:\s*(.+)$/);
         if (fileMatch) {
@@ -327,6 +342,7 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
                       files.length > 0 ||
                       purposes.length > 0 ||
                       implementationDetails.length > 0 ||
+                      evidence.length > 0 ||
                       !!prompt ||
                       isPhaseReview;
 
@@ -368,7 +384,8 @@ export function parseTasksFromMarkdown(content: string): TaskParserResult {
       ...(testFocus && { testFocus }),
       ...(isPhaseReview && { isPhaseReview }),
       ...(taskPhase && { phase: taskPhase }),
-      ...(dependsOn.length > 0 && { dependsOn })
+      ...(dependsOn.length > 0 && { dependsOn }),
+      ...(evidence.length > 0 && { evidence })
     };
     tasks.push(task);
 

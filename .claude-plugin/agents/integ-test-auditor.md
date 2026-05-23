@@ -24,7 +24,7 @@ them against quality criteria to determine PASS/FAIL only.
 Call `advisor()` at the following points:
 
 - **On borderline PASS/FAIL decisions**: When a test file nearly meets the quality gate but has ambiguous compliance in one category
-- **On the 3rd (final) review attempt**: Before the consequential decision where remaining issues convert to PASS-with-comments
+- **On the 3rd (final) review attempt**: Before reporting `FAIL (escalated)` to Command, confirm the remaining issues truly warrant escalation rather than being spurious
 - **When test quality is high but patterns are unfamiliar**: Verify with advisor whether unconventional patterns are acceptable in this project
 
 ## Common Review Procedure
@@ -195,3 +195,36 @@ If the prompt does not include `Language: rust` or `Language: dotnet`, infer fro
 3. If both or neither exists → abort the review and return a FAIL report whose `Issues` section states that the orchestrator must specify `Language:` explicitly
 
 Record the inferred language at the top of the report.
+
+---
+
+## Reviewer rules (apply regardless of language)
+
+- **Never downgrade a FAIL to PASS**: A failing quality gate is never "PASS with comments". Cycle counting is owned by Command (auditor performs one review per launch); when Command marks a file as `done-with-issues` on the 3rd FAIL, surface the full remaining-issues list in the report so Command can escalate to the user.
+- **Be specific in fix instructions**: Include line numbers and concrete change details. Vague feedback is not acceptable.
+- **Minor improvement suggestions**: Record improvement suggestions that do not affect PASS/FAIL in a `Suggestions` section.
+
+## Escalation Report Format (used by Command on 3rd-cycle FAIL)
+
+```
+## Quality Gate Review: {test_file}
+
+### Result: FAIL (escalated)
+
+### Review Cycle: 3/3 (maximum reached, tracked by Command)
+
+### Checklist
+- [x] A. 5-category coverage: OK
+- [ ] B1. Status-code-only tests: 2 still detected after 3 cycles
+- [x] B2. Post-operation DB verification: OK
+- [x] C. Code quality: OK
+- [x] D. Determinism: OK
+- [x] E. Rust-specific: OK
+
+### Unresolved Issues
+1. **B1**: `unauthenticated_request_returns_401` (L45) still only verifies status_code after 3 cycles.
+   → Escalate to user. Worker could not produce a response-body assertion that satisfies the gate.
+
+### Escalation Reason
+Root cause (as far as the auditor can tell) and why it exceeded the retry budget.
+```

@@ -473,6 +473,8 @@ When re-launching alpha for rework, prepend the Pentagon Issues block:
 Apply the fixes per the issues above, then re-run your quality self-check and return an updated completion report.
 ```
 
+Cycle management and FAIL handling are owned by Command (see P2.4 table above): on the 3rd FAIL, Command marks the class as `done-with-issues` and escalates — **never downgrade a FAIL to PASS**.
+
 ### P3: Final Verification
 
 ```bash
@@ -490,10 +492,10 @@ If verification fails, Command fixes it directly (do not launch a new Worker for
 
 Append a `job-end` event with `targets={domains}` and `status={success|partial}` (partial = at least one `done-with-issues`).
 
-Aggregate the per-domain state from your session and output:
+Aggregate the per-domain state from your session and output. If at least one domain ended with `done-with-issues`, prepend a prominent escalation note and do **not** declare the overall run as fully complete:
 
 ```
-integration-test-dotnet implementation complete
+integration-test-dotnet implementation complete (or ESCALATED)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Targets: {targets}
@@ -507,6 +509,10 @@ Test results:
 Quality gate:
   - {domain_a}: PASS / done-with-issues (cycles: {N})
   - {domain_b}: PASS / done-with-issues (cycles: {N})
+
+Escalated items: {count}            # omit when zero
+  - {test_class}: {short_reason}    # one line per escalated class
+  User decision required before merge.
 
 Remaining issues (if any):
   {remaining_issues_block}

@@ -137,7 +137,13 @@ After categorization and **before drafting the response plan**, verify the valid
 For each comment:
 
 1. **Verify the target exists**: open `path:line` referenced by the comment with Read and confirm the issue actually exists there
-2. **Consistency with spec / context**: check the feedback against the project's `rules/` / `design.md` / intent of existing implementation
+2. **Consistency with spec / context**: check the feedback against the project's `.claude-plugin/rules/` / `.spec-workflow/steering/*.md` (product / tech / structure) / `design.md` / intent of existing implementation. In particular, steering / rules are **prior** to the feedback in the following cases:
+   - File-placement feedback ↔ File Placement Rules (P4-01) in `steering/structure.md`
+   - Dependency-addition feedback ↔ "External Dependencies (Approved)" in `steering/tech.md`
+   - Architecture-direction feedback ↔ Accepted ADRs in `steering/tech.md`
+   - Scope-creep feedback ↔ Non-Goals in `steering/product.md`
+   - Naming / style / error-handling feedback ↔ `.claude-plugin/rules/*-style.md` / `.claude-plugin/rules/design-principles.md`
+   Feedback that contradicts steering / rules is classified as `invalid`; reply to the comment with a link to the relevant document and an explanation.
 3. **Past PR resolution status**: check whether similar feedback was already addressed in merged PRs (PR description / `git log` / `CHANGELOG.md`)
 4. **Three-level validity decision**:
    - `valid` — feedback is correct and should be addressed

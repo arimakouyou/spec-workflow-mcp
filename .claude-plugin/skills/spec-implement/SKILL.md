@@ -272,6 +272,7 @@ Look at the task's `_Prompt` field for structured guidance:
 - **Restrictions**: Constraints and things to avoid
 - **_Leverage**: Existing files to reuse
 - **_Requirements**: Which requirements this implements
+- **_Evidence**: EV-{category}-{NNN} IDs that scope the existing-code context (`.claude-plugin/rules/evidence-coverage.md`). For each listed ID, resolve to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` and pass the resolved paths to the TDD subagent. Do **not** list evidence files that are not referenced by this task's `_Evidence` line — those belong to other tasks
 - **Success**: How to know you're done
 
 ### 3.5 Phase Review Tasks
@@ -569,6 +570,7 @@ Agent({
 
     Test focus areas: {_TestFocus content from task, if available}
     Leverage files: {_Leverage file paths from task}
+    Evidence files: {for each EV-{category}-{NNN} in the task's _Evidence line, pass .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md. Pass an empty list if no _Evidence line (e.g. Phase 0 setup or legacy spec).}
     Design doc path: {project-path}/.spec-workflow/specs/{spec-name}/design.md
     Test design doc path: {project-path}/.spec-workflow/specs/{spec-name}/test-design.md
 

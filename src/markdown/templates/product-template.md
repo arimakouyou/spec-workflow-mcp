@@ -1,37 +1,60 @@
 # Product Overview
 
+> This document captures **product-level instance information** for this project.
+> Fill every section with project-specific facts. Use `Status: N/A — {{reason}}` if a section does not apply.
+> Placeholder format: `{{FIELD_NAME}}` marks required values; `[example: ...]` shows illustrative samples only.
+
 ## Product Purpose
-[Describe the core purpose of this product/project. What problem does it solve?]
+
+{{PROBLEM_STATEMENT}} — the core problem this product solves.
+{{INTENDED_OUTCOME}} — the outcome users gain when the problem is solved.
 
 ## Target Users
-[Who are the primary users of this product? What are their needs and pain points?]
+
+| Persona | Needs | Pain Points |
+|---------|-------|-------------|
+| {{persona_name}} | {{primary_need}} | {{primary_pain}} |
+| {{persona_name}} | {{primary_need}} | {{primary_pain}} |
 
 ## Key Features
-[List the main features that deliver value to users]
 
-1. **Feature 1**: [Description]
-2. **Feature 2**: [Description]
-3. **Feature 3**: [Description]
+1. **{{feature_name}}** — {{one_sentence_value}}
+2. **{{feature_name}}** — {{one_sentence_value}}
+3. **{{feature_name}}** — {{one_sentence_value}}
+
+## Non-Goals / Out of Scope
+
+Scope boundaries. Items listed here will **not** be delivered by this product.
+
+| Item | Rationale |
+|------|-----------|
+| {{item}} | {{why_excluded}} |
+| {{item}} | {{why_excluded}} |
 
 ## Product Principles
-[Core principles that guide product decisions]
 
-1. **[Principle 1]**: [Explanation]
-2. **[Principle 2]**: [Explanation]
-3. **[Principle 3]**: [Explanation]
+Decision-making principles specific to this product. Keep each principle orthogonal and testable.
 
-## Monitoring & Visibility (if applicable)
-[How do users track progress and monitor the system?]
+1. **{{principle_name}}** — {{decision_rule}}
+2. **{{principle_name}}** — {{decision_rule}}
+3. **{{principle_name}}** — {{decision_rule}}
 
-- **Dashboard Type**: [e.g., Web-based, CLI, Desktop app]
-- **Real-time Updates**: [e.g., WebSocket, polling, push notifications]
-- **Key Metrics Displayed**: [What information is most important to surface]
-- **Sharing Capabilities**: [e.g., read-only links, exports, reports]
+## Success Metrics
+
+Quantitative signals used to judge whether the product is meeting its purpose.
+
+| Metric | Target | Measurement Source |
+|--------|--------|--------------------|
+| {{metric_name}} | {{target_value}} | {{source_or_tool}} |
+| {{metric_name}} | {{target_value}} | {{source_or_tool}} |
 
 ## Future Vision
-[Where do we see this product evolving in the future?]
 
-### Potential Enhancements
-- **Remote Access**: [e.g., Tunnel features for sharing dashboards with stakeholders]
-- **Analytics**: [e.g., Historical trends, performance metrics]
-- **Collaboration**: [e.g., Multi-user support, commenting]
+Direction the product is expected to evolve. Keep to concrete, scoped enhancements — speculative ideas belong in issues/discussions.
+
+### Planned Enhancements
+
+| Enhancement | Trigger / Timeline | Notes |
+|-------------|--------------------|-------|
+| {{enhancement}} | {{trigger_or_quarter}} | {{optional_note}} |
+| {{enhancement}} | {{trigger_or_quarter}} | {{optional_note}} |

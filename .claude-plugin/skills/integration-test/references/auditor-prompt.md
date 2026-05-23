@@ -79,6 +79,6 @@ Fix instructions: (only when FAIL)
 
 ## Review Cycle (managed by Command)
 - Command launches you once per review and tracks per-file cycle counts in its own session
-- After 3 FAILs on the same file, Command marks the file as done-with-issues — cycle counts are tracked by Command
+- After 3 FAILs on the same file, Command marks the file as `done-with-issues` and escalates to the user. **Never downgrade a FAIL to PASS** — Command is responsible for surfacing the escalation
 - On PASS, simply return the PASS report; Command records the result in its session and moves on
 ```
