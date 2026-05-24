@@ -1,0 +1,76 @@
+# {Rule Title}
+
+**ID Prefix**: `XX` (2-3 character identifier)
+**Scope**: All tasks / Specific language only / Specific phase only
+**Enforcement Level**: L1 (docs) / L2 (AI review) / L3 (CI) / L4 (arch test) / L5 (compiler)
+**Related**: `other-rule.md`, `some-skill`
+
+---
+
+## Purpose
+
+Describe in 1-3 sentences why this Rule is needed. Noting the kind of failure experience that prompted it helps with later maintenance decisions.
+
+---
+
+## Rules
+
+### XX-1: {Rule Title}
+
+**Rule**: (Stated concretely so that violation/compliance is decidable)
+
+**Rationale**: (Why this rule is necessary)
+
+**Violation example**:
+```rust
+// What not to do
+fn process(data: Vec<u8>) -> Vec<u8> {
+    serde_json::from_slice(&data).unwrap()  // clippy denies this at L5
+}
+```
+
+**Compliance example**:
+```rust
+fn process(data: Vec<u8>) -> Result<Value, AppError> {
+    serde_json::from_slice(&data).map_err(AppError::Parse)
+}
+```
+
+**Detection method** (which layer enforces it):
+- L5: `unwrap_used = "deny"` in `clippy.toml`
+- L4: Assert the count of `unwrap` occurrences in `tests/architecture.rs`
+
+---
+
+### XX-2: {Next Rule}
+
+...
+
+---
+
+## Promotion / Demotion Guidelines
+
+If this rule does not seem to be working, consider:
+
+- **Can it be enforced at a lower layer?** (Promote L1 → L3-L5)
+- **Is it only needed for specific tasks?** (Demote Rule → Skill)
+- **Is it no longer needed?** (Demotion decision at quarterly review)
+
+---
+
+## Change History
+
+| Date | Version | Change |
+|---|---|---|
+| 2026-01-15 | 1 | Initial version (from a failure during `feature-X` implementation) |
+| 2026-03-20 | 2 | Added XX-3 |
+
+---
+
+## Checklist When Creating a Rule
+
+- [ ] Is it required for all tasks? → If No, demote it to a Skill
+- [ ] Can it be enforced at L5 (compiler/lint)? → If yes, keep the rule description minimal and rely on L5
+- [ ] Is it written so that violation/compliance is decidable? (Vague rules cause false negatives at L2)
+- [ ] Does it overlap in responsibility with an existing Rule?
+- [ ] Is the ID Prefix unique within INDEX.md?

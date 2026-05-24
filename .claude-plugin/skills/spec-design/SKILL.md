@@ -29,17 +29,17 @@ If `requirements.md` is missing — **STOP immediately.** Inform the user: "requ
 
 Requirements must be approved and cleaned up (Phase 1 complete). If not, use `/spec-requirements` first.
 
-### Steering Documents Check (推奨)
+### Steering Documents Check (Recommended)
 
-以下の steering doc が存在するか確認する。存在しない場合はユーザーに `/steering-doc` の実行を推奨する（ブロックはしない）:
+Check whether the following steering docs exist. If they do not, recommend that the user run `/steering-doc` (do not block):
 
-| ファイル | 目的 | 必須度 |
-|---------|------|--------|
-| `.spec-workflow/steering/structure.md` | アーキテクチャ概要（モジュール構成・リクエストフロー） | 強く推奨 |
-| `.spec-workflow/steering/tech.md` | 技術スタック・環境変数・ビルドツール | 推奨 |
-| `.spec-workflow/steering/product.md` | プロダクト方針・ユーザーストーリー | 任意 |
+| File | Purpose | Required Level |
+|------|---------|----------------|
+| `.spec-workflow/steering/structure.md` | Architecture overview (module composition, request flow) | Strongly recommended |
+| `.spec-workflow/steering/tech.md` | Tech stack, environment variables, build tools | Recommended |
+| `.spec-workflow/steering/product.md` | Product direction, user stories | Optional |
 
-> **P1-01 対応**: アーキテクチャ概要（`structure.md`）が存在することで、エージェントがコードベース全体像を把握できる。未作成の場合は `/steering-doc` で生成すること。
+> **P1-01 response**: When the architecture overview (`structure.md`) exists, agents can grasp the codebase as a whole. If not yet created, generate it with `/steering-doc`.
 
 ## Inputs
 
@@ -101,6 +101,7 @@ depends_on:
 3. **Component List** — Component names with a one-line description of each role only (details in Wave 2)
 4. **DB Schema** — Table definitions, columns, and constraints (critical decisions that form the implementation foundation)
 5. **Key Design Decisions** — Technologies and patterns chosen and why (include rejected alternatives)
+6. **Phase Deliverables** (made mandatory by K-4) — For each Phase, declare in one place: **what to build** + **which Test Layer verifies it** + **smokeable deliverable**. Wave 1 finalizes Phase boundaries and the verification strategy. Each Phase lists the three items: Deliverable / Test Layers / Smokeable
 
 **Wave 1 placeholder examples:**
 ```markdown
@@ -131,72 +132,80 @@ depends_on:
 
 ### 3.5 Version Freshness Verification (MANDATORY)
 
-Key Design Decisions の記述後、記載した全てのライブラリ・フレームワークのバージョンが最新安定版であることを検証する。AI の学習データに基づくバージョンは古い可能性がある。
+After writing Key Design Decisions, verify that every library and framework version listed is the latest stable release. Versions based on AI training data may be outdated.
 
-#### 3.5.1 バージョン情報の抽出
+#### 3.5.1 Extract Version Information
 
-Key Design Decisions セクションから技術名＋バージョンのペアを全て収集する（例: 「Leptos 0.7」「Diesel 2.2」「Axum 0.8」）。
+Collect every technology + version pair from the Key Design Decisions section (e.g., "Leptos 0.7", "Diesel 2.2", "Axum 0.8").
 
-#### 3.5.2 最新安定版の確認
+#### 3.5.2 Confirm Latest Stable Versions
 
-収集した各ライブラリについて、以下の優先順で最新安定版を確認する:
+For each collected library, confirm the latest stable version using the following priority order:
 
-1. **WebSearch**（推奨）:
-   - 検索: "{ライブラリ名} latest stable release"
-   - 検索: "{ライブラリ名} crates.io"（Rust）/ "{パッケージ名} npm"（Node.js）
+1. **WebSearch** (recommended):
+   - Search: "{library name} latest stable release"
+   - Search: "{library name} crates.io" (Rust) / "{package name} npm" (Node.js)
 
-2. **context7 MCP**（補助）:
-   - resolve-library-id でライブラリを特定
-   - query-docs で最新バージョンやチェンジログを確認
+2. **context7 MCP** (supplementary):
+   - Identify the library via resolve-library-id
+   - Confirm the latest version or changelog via query-docs
 
-3. **レジストリ CLI フォールバック**（Web ツール利用不可時、crates.io / npm パッケージのみ）:
+3. **Registry CLI fallback** (when web tools are unavailable, crates.io / npm packages only):
    ```bash
    # Node.js
    npm view {package_name} version
-   # Rust（crate 名の完全一致を確認すること）
+   # Rust (verify exact crate name match)
    cargo search {crate_name} --limit 1 | grep "^{crate_name} ="
    ```
-   crates.io / npm 以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認する。
+   For tools outside crates.io / npm (docker, chromium, etc.), confirm via WebSearch on the official release page.
 
-#### 3.5.3 バージョン更新
+#### 3.5.3 Version Update
 
-検証結果をテーブルにまとめ、Key Design Decisions を更新する:
+Summarize verification results in a table and update Key Design Decisions:
 
 | Library | Design Version | Latest Stable | Action |
 |---------|---------------|---------------|--------|
-| {name} | {old} | {new} | Updated / Kept (理由) |
+| {name} | {old} | {new} | Updated / Kept (reason) |
 
-- Key Design Decisions のバージョンを最新安定版に更新
-- **例外**: steering ドキュメント（tech.md 等）が互換性のため特定バージョンを指定している場合は維持し理由を注記
-- **メジャーバージョン変更**: 設計版と最新版のメジャーバージョンが異なる場合、Architecture Confirmation (step 4) でユーザーに報告
+- Update the Key Design Decisions versions to the latest stable releases
+- **Exception**: If a steering document (e.g., tech.md) pins a specific version for compatibility, keep it and note the reason
+- **Major version change**: If the design version and latest version differ in major version, report this to the user during Architecture Confirmation (step 4)
 
 ### 3.6 Generate ADRs from Key Design Decisions
 
-Key Design Decisions セクションの各決定事項から ADR (Architecture Decision Record) を自動生成する。
+Auto-generate an ADR (Architecture Decision Record) from each decision in the Key Design Decisions section.
 
-1. `.claude/_docs/adr/` ディレクトリが存在するか確認。なければ作成する
-2. Key Design Decisions の各項目について:
-   - 「代替案と比較して選択した」技術・パターン・アプローチを ADR 候補として抽出
-   - 既存の ADR と重複しないか INDEX.md を確認
-3. 各候補について `/adr` スキルの手順に従い ADR ファイルを作成:
-   - `status: Accepted`（設計承認プロセスが意思決定承認を兼ねるため）
-   - **Context**: design.md の該当 Key Design Decision のコンテキスト
-   - **Decision**: 選択した技術・パターン
-   - **Alternatives Considered**: 検討した代替案と棄却理由（Key Design Decisions に記載されていれば転記）
-   - **Consequences**: 設計への影響
-4. INDEX.md を更新
+1. Check whether the `.claude/_docs/adr/` directory exists. Create it if not
+2. For each Key Design Decisions item:
+   - Extract the technology, pattern, or approach that was "chosen over alternatives" as an ADR candidate
+   - Check INDEX.md to ensure no duplication with existing ADRs
+3. For each candidate, create an ADR file following the `/adr` skill procedure:
+   - `status: Accepted` (the design approval process also serves as decision approval)
+   - **Context**: Context of the corresponding Key Design Decision in design.md
+   - **Decision**: The chosen technology / pattern
+   - **Alternatives Considered**: Alternatives considered and reasons for rejection (copy from Key Design Decisions if present)
+   - **Consequences**: Impact on the design
+4. Update INDEX.md
 
-**ADR 生成の判断基準** — 以下に該当する決定のみ ADR を作成:
-- フレームワーク・言語・データベースの選択（例: Axum, PostgreSQL, Leptos）
-- アーキテクチャパターンの選択（例: レイヤードアーキテクチャ、イベント駆動）
-- 重大なトレードオフを伴う決定（例: パフォーマンス vs 保守性）
+**ADR generation criteria** — Create an ADR only for decisions that match the following:
+- Choice of framework, language, or database (e.g., Axum, PostgreSQL, Leptos)
+- Choice of architecture pattern (e.g., layered architecture, event-driven)
+- Decisions involving significant trade-offs (e.g., performance vs maintainability)
 
-**ADR 不要な決定** — 以下は ADR を作成しない:
-- ライブラリのバージョン選択（バージョンは Key Design Decisions で管理）
-- 業界標準で代替案のない選択
+**Decisions not requiring an ADR** — Do not create ADRs for:
+- Library version selection (versions are managed in Key Design Decisions)
+- Choices with no alternative under industry standards
 
 
 ### 4. Architecture Confirmation (Present to User)
+
+> ⛔ **MUST: User confirmation is required** (A origin, dapper-hardening)
+>
+> The Wave 1 → Wave 2 transition is only allowed on user reply `continue`. **Do not skip user confirmation by inventing concepts that do not exist in this spec, such as "skipped due to Auto Mode" or "continuation mode."**
+>
+> Past incident (dojin-viewer): Claude invented "Auto Mode" and proceeded to Wave 2 after Wave 1 without user confirmation. The user pointed out, "I didn't issue an instruction; is this the intended behavior?" This is not part of this SKILL.md spec (hallucination).
+>
+> `auto-resume.sh` is for rate-limit recovery only; it is not a substitute for user intent confirmation. Before any Wave/Phase progression, **always receive an explicit user reply**.
 
 After creating the Wave 1 document, present the following to the user **without using the formal approval tool**:
 
@@ -250,7 +259,19 @@ Describe each component in this format. Use `### DES-N: ComponentName` headings 
 - **Dependencies:** [Components / external services depended on]
 - **Reuses:** [Existing code to leverage (with concrete paths)]
 - **Satisfies:** [REQ-N.M list that this component addresses]
+- **Test Layers:** [Declare as a combination of UT / CT / IT-N / ST-N (mandatory under K-2). See quality-checks.md Test Taxonomy for details]
 ```
+
+**Test Layers field (made mandatory by K-2; see `dapper-hardening-orchestrator.md`):**
+
+For each DES-N, explicitly declare **which test layers verify the component**:
+
+- UI component: `Test Layers: UT (extracted helpers), CT (mount + signal + DOM)`
+- Backend service: `Test Layers: UT, IT-N (HTTP)`
+- Library / utility: `Test Layers: UT`
+- Integrated component (vertical slice of a feature): `Test Layers: UT, CT, ST-N`
+
+Concrete IDs (e.g., `IT-19`) may be back-filled after they are finalized in test-design.md. At the spec-design stage, layer names alone are acceptable (e.g., `Test Layers: UT, IT`). The `spec-test-design` Subagent uses this declaration as the highest-priority input for derivation, eliminating heuristic-based automatic decisions (K-7).
 
 Data Models should use `### MOD-N: ModelName` and API sections (if present) should use `### API-N: EndpointName`.
 
@@ -258,7 +279,7 @@ Data Models should use `### MOD-N: ModelName` and API sections (if present) shou
 
 Describe all entities in type definition or schema format.
 
-> **バリデーションガイダンス**: リクエスト DTO は `#[serde(deny_unknown_fields)]` を付与し、未知フィールドを拒否すること（`api-validation.md` AV-R1 参照）。各フィールドの必須/任意（`Option<T>`）、文字列長制限、Enum 許容値を設計段階で定義しておくこと。
+> **Validation guidance**: Annotate request DTOs with `#[serde(deny_unknown_fields)]` to reject unknown fields (see `api-validation` Skill AV-R1). Define each field's required/optional status (`Option<T>`), string length limits, and allowed Enum values at design time.
 
 #### API Design (if applicable)
 
@@ -267,19 +288,47 @@ For each endpoint, describe:
 - Request / response types (fields, types, required / optional)
 - Error responses
 
-> **OpenAPI 生成ガイダンス**: OpenAPI スキーマの自動生成（`/generate-api-docs`）のため、リクエスト/レスポンス型の各フィールドにはフィールドレベルの説明を doc comment で記述すること。設計段階で説明を定義しておくことで、実装時の doc comment と OpenAPI の `description` フィールドが一貫する。
+> **OpenAPI generation guidance**: For OpenAPI schema auto-generation (`/generate-api-docs`), describe each field of request/response types with field-level doc comments. Defining descriptions at design time keeps implementation-time doc comments consistent with the OpenAPI `description` field.
 >
-> 記述例:
+> Example:
 > ```rust
 > struct UserResponse {
->     /// ユーザーの一意識別子
+>     /// Unique identifier of the user
 >     id: Uuid,
->     /// 表示用ユーザー名（2-50文字）
+>     /// Display username (2-50 characters)
 >     display_name: String,
->     /// アカウント作成日時（UTC）
+>     /// Account creation time (UTC)
 >     created_at: DateTime<Utc>,
 > }
 > ```
+
+#### Architecture for Testability (K-3 required)
+
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause K (K-3).
+> Establishes the design ↔ enforcement round-trip loop in which the direct calls to clock / RNG / env / fs / HTTP / DB prohibited by I (UT Properties Gate, QC15) are **only permitted via the Mocks declared here**.
+
+The `## Architecture for Testability` section is mandatory and must contain the following 5 sub-sections:
+
+```markdown
+## Architecture for Testability
+
+### Mock points
+[Design map for trait boundaries / DI injection points / port-adapter structure. Example: inject `trait UserRepository` from `services/` via DI; bind `MockUserRepository` for tests]
+
+### Clock injection
+[Usage policy for `trait Clock` + `MockClock` / handling of `js-sys::Date` on WASM targets]
+
+### RNG injection
+[Usage policy for `trait Rng` + `MockRng`]
+
+### External I/O isolation
+[Isolation design via HTTP (mockito / wiremock) / fs (tempfile) / env (`dotenvy::from_path_override`), etc.]
+
+### Test fixtures
+[Layout / lifetime / cleanup policy for shared fixtures. When to use docker-compose.test.yml vs testcontainers, etc.]
+```
+
+If all 5 sub-sections are not present, spec-design Step B (Check) flags an error (K-6).
 
 #### Code Reuse Analysis Format
 
@@ -326,43 +375,43 @@ Error response format: `{ "error": { "code": "...", "message": "..." } }`
 
 #### Module Boundaries
 
-プロジェクトのレイヤー構造と依存方向ルールを定義する。`/generate-arch-tests` によるアーキテクチャ不変条件テストの自動生成に使用される。
+Define the project's layer structure and dependency direction rules. Used by `/generate-arch-tests` to auto-generate architecture invariant tests.
 
-> **アーキテクチャテスト連携**: このセクションを記述することで、実装フェーズ後に `/generate-arch-tests` を実行してレイヤー間の依存方向違反を機械的に検出できる。
+> **Architecture test linkage**: Writing this section enables you to run `/generate-arch-tests` after the implementation phase to mechanically detect inter-layer dependency direction violations.
 
-> **P5-06**: Module Boundaries セクションの共有型定義テーブルを必ず埋めること。
-> モジュール間で共有される型の配置先・管理方法を明示することで、型の重複定義を防ぐ。
+> **P5-06**: Always fill in the shared-type definitions table in the Module Boundaries section.
+> Explicitly stating where shared types live and how they are managed prevents duplicate type definitions across modules.
 
 ```markdown
 ## Module Boundaries
 
-### レイヤー定義
+### Layer Definitions
 
 | Layer | Directory | Description |
 |-------|-----------|-------------|
-| handlers | src/handlers/ | HTTP ハンドラ層（最上位） |
-| services | src/services/ | ビジネスロジック層（中間） |
-| infra | src/infra/ | インフラ層（最下層・横断的関心事） |
+| handlers | src/handlers/ | HTTP handler layer (topmost) |
+| services | src/services/ | Business logic layer (middle) |
+| infra | src/infra/ | Infrastructure layer (lowest, cross-cutting concerns) |
 
-### 依存方向ルール
+### Dependency Direction Rules
 
-| From (依存元) | Allowed Dependencies (許可) | Forbidden (禁止) |
-|--------------|---------------------------|-----------------|
+| From (dependent) | Allowed Dependencies | Forbidden |
+|------------------|---------------------|-----------|
 | handlers | services, infra | — |
 | services | infra | handlers |
 | infra | — | handlers, services |
 ```
 
-記述ルール:
-1. `Layer` 名はソースコード上のモジュール名（ディレクトリ名）と一致させる
-2. `Directory` は `src/` からの相対パスで記述する
-3. 依存方向は**上位 → 下位**のみ許可。逆方向（下位 → 上位）を `Forbidden` に明記する
-4. 横断的関心事（error, config 等）は最下層に配置し、全レイヤーからの参照を許可する
-5. レイヤー定義がない場合（小規模プロジェクト等）はセクション自体を省略してよい
+Authoring rules:
+1. `Layer` names must match the module name (directory name) in source code
+2. `Directory` is written as a relative path from `src/`
+3. Only **higher → lower** dependency direction is allowed. Explicitly mark the reverse (lower → higher) as `Forbidden`
+4. Place cross-cutting concerns (error, config, etc.) in the lowest layer and allow references from all layers
+5. If there are no layer definitions (small projects, etc.), the section itself may be omitted
 
 #### Required Build Tools
 
-Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. `Min Version` は step 3.5 で検証した最新安定版を採用する。各ツールの `--version` コマンドはインストール済みバージョンの把握（Min Version との比較用）に使い、Min Version の根拠にはしない。Do NOT copy example versions from this skill file or the template — the examples below are format references only.
+Based on the Key Design Decisions from Wave 1, list all CLI tools needed to build, test, and run the project. Use the latest stable version verified in step 3.5 as the `Min Version`. Each tool's `--version` command is used to detect the installed version (for comparison with Min Version) — it is not the basis for Min Version. Do NOT copy example versions from this skill file or the template — the examples below are format references only.
 
 ```markdown
 ## Required Build Tools
@@ -373,28 +422,28 @@ Based on the Key Design Decisions from Wave 1, list all CLI tools needed to buil
 | docker | >= 29.0 | Container runtime | docker --version | apt install docker.io | Yes |
 ```
 
-導出ルール:
-1. Key Design Decisions の技術選定 → 対応するビルドツール（Rust → cargo, Node.js → node+npm 等）
+Derivation rules:
+1. Key Design Decisions tech choices → corresponding build tools (Rust → cargo, Node.js → node+npm, etc.)
 2. Container Architecture → docker / podman
-3. Testing Strategy 概要 → ビルドや基本テストに必要なツール（E2E ブラウザテスト用の playwright/chromium 等は test-design.md の Required Test Tools に記載）
-4. Check Command は、ツールがインストール済みなら exit 0 になる単一コマンド
-5. Required 列: `Yes`（必須）または `Recommended`（推奨）のみ。E2E テストに必要なツール（Playwright, Chrome等）は設計時に Required=Yes として明記すること
-6. Min Version は step 3.5 で検証した最新安定版を反映すること。AI の学習データのデフォルト値を使用しない
-7. Container Architecture の Base Image タグ（例: `rust:X.YZ-slim`）は Required Build Tools の Min Version と一致させること。不一致は Wave 2 Self-Review で FAIL
+3. Testing Strategy overview → tools needed for build and basic tests (E2E browser test tools such as playwright/chromium go in test-design.md's Required Test Tools)
+4. Check Command is a single command that exits 0 if the tool is installed
+5. Required column: only `Yes` (required) or `Recommended` (recommended). Tools required for E2E tests (Playwright, Chrome, etc.) must be listed as Required=Yes at design time
+6. Min Version must reflect the latest stable verified in step 3.5. Do not use default values from AI training data
+7. Container Architecture Base Image tags (e.g., `rust:X.YZ-slim`) must match the Required Build Tools Min Version. Mismatches FAIL Wave 2 Self-Review
 
 #### Excluded Test Environments
 
-特定環境でのみ実行可能なテスト（特殊ハードウェア依存等）がある場合に、除外理由と代替検証方法を明記する。
+When tests can only run in a specific environment (e.g., depending on specialized hardware), document the exclusion reason and an alternative verification method.
 
 ```markdown
 ## Excluded Test Environments
 
 | Test Category | Excluded Tests | Reason | Alternative Verification |
 |--------------|---------------|--------|------------------------|
-| E2E | E2E-3 (iOS Safari 検証) | CI に iOS デバイスがない | BrowserStack で手動検証 |
+| E2E | E2E-3 (iOS Safari verification) | No iOS device in CI | Manual verification on BrowserStack |
 ```
 
-**重要**: 設計時に明示的に除外宣言されていないテストは、すべて実装フェーズで実行必須。Docker/Chrome/サーバー起動/DB 等の不足は除外理由にならない（design.md/test-design.md の Required Tools で対応すべき）。除外テストがない場合はテーブルを空にする（セクション自体は残す）。
+**Important**: Any test not explicitly excluded at design time is required to run in the implementation phase. Missing Docker / Chrome / server / DB, etc., is not a valid exclusion reason (handle these in Required Tools of design.md / test-design.md). When there are no excluded tests, leave the table empty (but keep the section).
 
 ### 6. Self-Review via Subagent (before approval)
 
@@ -448,34 +497,41 @@ Agent({
     1. TEMPLATE: Every section from the template must exist with real content (no placeholders or '(to be written in Wave 2)' remaining)
     2. CROSS-REFERENCE: Read requirements.md — every requirement must have a corresponding design solution.
        No design component should exist without a backing requirement.
-    3. Must include: Overview, Architecture diagram, Component details (Purpose/Interfaces/Dependencies/Reuses),
+    3. Must include: Overview, Architecture diagram, Component details (Purpose/Interfaces/Dependencies/Reuses/Test Layers),
        Data Models, Error Handling table, Requirements Traceability Matrix, Code Reuse Analysis with concrete paths,
-       Required Build Tools table, Excluded Test Environments section
+       Required Build Tools table, Excluded Test Environments section, Phase Deliverables section, Architecture for Testability section
     4. Data models must cover all entities referenced in requirements
     5. Error Handling must have a complete table (not just scenario descriptions)
     6. Required Build Tools section must exist with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns)
     7. Excluded Test Environments section must exist (table may be empty if no exclusions, but section must be present)
     8. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: design, version, depends_on (file: requirements.md, refs: [REQ-...]) must exist at the top of the file
     9. IDENTIFIERS (spec-dependency-graph.md SD1): Components and Interfaces use '### DES-N: Name' headings, Data Models use '### MOD-N: Name', API sections use '### API-N: Name'. depends_on.refs must point to REQ-N (or REQ-N.M) that exist in requirements.md
-    10. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
-        - If request-spec.md does not exist, or task_type is absent → SKIP checks 10-13 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
-        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 10-13 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+    10. TEST LAYERS PER DES (K-2, dapper-hardening): Every '### DES-N:' must declare a 'Test Layers:' field with values from quality-checks.md Test Taxonomy (combinations of UT/CT/IT/IT-N/ST/ST-N/E2E/E2E-N)
+    11. ARCHITECTURE FOR TESTABILITY (K-3): A '## Architecture for Testability' section must exist and contain all 5 sub-sections: Mock points, Clock injection, RNG injection, External I/O isolation, Test fixtures
+    12. PHASE DELIVERABLES (K-4): A '## Phase Deliverables' section must exist with at least one '### Phase N:' heading, each declaring Deliverable / Test Layers / Smokeable
+    13. TYPE_REFERENCE_RESOLUTION (C-1, dapper-hardening): Every custom type referenced in the `Interfaces:` field signatures of DES-N (e.g., the inner types of `Result<X, E>`, `Vec<T>`, `Signal<T>`, `Callback<T>`) must be defined in either:
+        (a) `### MOD-N:` heading in the same design.md, or
+        (b) Standard library types (std::*, core::*, alloc::*) or known framework types (Leptos / Axum / .NET CLR / Node.js built-ins)
+        Undefined custom types → error: `undefined_type_reference`. Examples of failures: design.md interface uses `RelativePath` but no `### MOD-N: RelativePath` heading exists.
+    14. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
+        - If request-spec.md does not exist, or task_type is absent → SKIP checks 14-17 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 14-17 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
         - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
-            Run check 10 (EC1 integrity) on every citation as described below.
-            SKIP checks 11-13 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
-        - If task_type is any other declared value, run checks 10-13 normally.
-        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 10 applies:
+            Run check 14 (EC1 integrity) on every citation as described below.
+            SKIP checks 15-17 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+        - If task_type is any other declared value, run checks 14-17 normally.
+        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 14 applies:
             a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
             b. The referenced file's frontmatter spec_name: must equal this spec-name.
             c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
           Any failure = FAIL with rule_id EC1.
-    11. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 10 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+    15. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
             - A single fenced block exceeds 20 lines.
             - Cumulative fenced-block lines within a single H2 or H3 section exceed 40 lines.
             - Total fenced-block lines in the document exceed 200 lines.
           For each violation FAIL with rule_id EC3; fix_hint: 'Move the long excerpt to a new EV-{category}-{NNN}.md (pick the best-matching category from task-types.md TT3) and leave a brief summary + citation'. Markdown tables, block-quoted prose, ASCII architecture diagrams, and Mermaid diagrams are NOT counted.
-    12. PER-COMPONENT EVIDENCE (evidence-coverage.md EC2, per DES/MOD): Apply this check only when check 10 routed to full enforcement (non-legacy classified task_type). Each '### DES-N:' and '### MOD-N:' section must either (a) cite at least one EV-... inside that section, or (b) carry an HTML comment '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) inside the section that explains why no existing-code anchor applies (reason must be non-empty). Missing both = FAIL rule_id EC2_perDES.
-    13. CODE REUSE ANALYSIS EVIDENCE (evidence-coverage.md EC2): Apply this check only when check 10 routed to full enforcement (non-legacy classified task_type). The 'Code Reuse Analysis' section must be driven by EV citations. Every concrete reused path, module, or utility mentioned in this section must be backed by an EV-... citation on the same line or in the adjacent bullet. Missing any = FAIL rule_id EC2_codeReuse; fix_hint: 'Back each reused path with an EV citation (typically EV-entry-points-* or EV-domain-models-*). If you still need to list the path without an existing EV, create one via targeted re-investigation.'
+    16. PER-COMPONENT EVIDENCE (evidence-coverage.md EC2, per DES/MOD): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). Each '### DES-N:' and '### MOD-N:' section must either (a) cite at least one EV-... inside that section, or (b) carry an HTML comment '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) inside the section that explains why no existing-code anchor applies (reason must be non-empty). Missing both = FAIL rule_id EC2_perDES.
+    17. CODE REUSE ANALYSIS EVIDENCE (evidence-coverage.md EC2): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). The 'Code Reuse Analysis' section must be driven by EV citations. Every concrete reused path, module, or utility mentioned in this section must be backed by an EV-... citation on the same line or in the adjacent bullet. Missing any = FAIL rule_id EC2_codeReuse; fix_hint: 'Back each reused path with an EV citation (typically EV-entry-points-* or EV-domain-models-*). If you still need to list the path without an existing EV, create one via targeted re-investigation.'
 
     Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
@@ -491,17 +547,17 @@ Formal approval — verbal approval is not accepted.
 
 1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only (do not include content). Save the returned `approvalId`.
 
-2. **Automatic polling with auto-transition**: Start approval polling (Bash script with 60-minute timeout):
+2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run:
    ```
    /check-approval <approvalId> next:/spec-test-design
    ```
-   The polling script will automatically check approval status and handle the result:
-   - **approved**: Cleanup is performed automatically, and check-approval automatically invokes `/spec-test-design`
+   `check-approval` fetches status once via the `approvals` MCP tool (no polling) and branches:
+   - **pending**: User has not acted yet — instruct the user to approve, then re-run `/check-approval`
+   - **approved**: Cleanup is performed automatically, and `check-approval` automatically invokes `/spec-test-design`
    - **needs-revision**: Reviewer comments are displayed
    - **rejected**: Rejection reason is displayed — revise and create a new approval
-   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if polling ends with needs-revision):
+3. **Handle needs-revision** (if status was needs-revision):
    - Read the review comments, update the document, re-run the subagent review
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-test-design`
 

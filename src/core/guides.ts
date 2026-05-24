@@ -18,13 +18,13 @@ Follow this workflow exactly to avoid errors.
 - Define basic use cases, technology stack selection, and execution environment
 - If steering/tech.md exists, only describe feature-specific additional technologies
 - Create: \`.spec-workflow/specs/{spec-name}/request-spec.md\`
-- Approval: request -> poll status -> handle revision/approved -> delete -> proceed
+- Approval: request -> check status (synchronous) -> handle revision/approved -> delete -> proceed
 
 ### Phase 1: Requirements — Define WHAT to build
 - Read request-spec.md and steering docs from \`.spec-workflow/steering/*.md\` if they exist
 - Load template: check \`user-templates/\` first, then \`templates/requirements-template.md\`
 - Create: \`.spec-workflow/specs/{spec-name}/requirements.md\`
-- Approval: request -> poll status -> handle revision/approved -> delete -> proceed
+- Approval: request -> check status (synchronous) -> handle revision/approved -> delete -> proceed
 
 ### Phase 2: Design — Define HOW to build it
 - Load template: check \`user-templates/\` first, then \`templates/design-template.md\`
@@ -67,7 +67,7 @@ Follow this workflow exactly to avoid errors.
    - Test Design -> Tasks: \`/check-approval <approvalId> next:/spec-tasks\`
    - Tasks -> Implementation: \`/check-approval <approvalId> next:/spec-implementation\`
    - Final phase with no next phase: run \`/check-approval <approvalId>\` without \`next:\`
-3. check-approval handles polling, cleanup on approval, and result handling
+3. check-approval fetches status once (no polling), performs cleanup on approval, and handles the result
 4. If needs-revision: update doc, request NEW approval (new approvalId), then rerun \`/check-approval\` with the same concrete next phase skill for that phase
 5. If rejected: revise doc, request NEW approval, then rerun \`/check-approval\` with the same concrete next phase skill for that phase
 6. If approved: check-approval automatically runs \`approvals\` action:'delete' and, when a \`next:\` parameter was provided, invokes that concrete next phase skill
@@ -79,7 +79,7 @@ Follow this workflow exactly to avoid errors.
 - One spec at a time, kebab-case names
 - Verbal approval is NEVER accepted — dashboard or VS Code extension only
 - Never proceed if approval delete fails
-- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter when there is a next phase. Use the concrete phase skill names listed above; do not use placeholders. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension). Polling uses a Bash script with 60-minute timeout — no \`/loop\` required
+- **Auto-transition**: After each phase's approval is approved and cleaned up, check-approval automatically invokes the next phase's skill via the \`next:\` parameter when there is a next phase. Use the concrete phase skill names listed above; do not use placeholders. Do not stop between phases to ask user for skill names. The only user interaction points are approval reviews (dashboard/VS Code extension). check-approval is synchronous (no polling): if status is \`pending\`, instruct the user to approve and re-run \`/check-approval\`
 - Every task marked [x] MUST have log-implementation called first
 - Steering docs are optional — only create when explicitly requested
 
@@ -119,7 +119,7 @@ flowchart TD
     P1_Template --> P1_Generate[Generate vision & goals]
     P1_Generate --> P1_Create[Create file:<br/>.spec-workflow/steering/<br/>product.md]
     P1_Create --> P1_Approve[approvals<br/>action: request<br/>filePath only]
-    P1_Approve --> P1_Status[/check-approval<br/>Bash script polling]
+    P1_Approve --> P1_Status[/check-approval<br/>synchronous status check]
     P1_Status --> P1_Check{Status?}
     P1_Check -->|needs-revision| P1_Update[Update document using user comments for guidance]
     P1_Update --> P1_Create
@@ -131,7 +131,7 @@ flowchart TD
     P2_Template --> P2_Analyze[Analyze tech stack]
     P2_Analyze --> P2_Create[Create file:<br/>.spec-workflow/steering/<br/>tech.md]
     P2_Create --> P2_Approve[approvals<br/>action: request<br/>filePath only]
-    P2_Approve --> P2_Status[/check-approval<br/>Bash script polling]
+    P2_Approve --> P2_Status[/check-approval<br/>synchronous status check]
     P2_Status --> P2_Check{Status?}
     P2_Check -->|needs-revision| P2_Update[Update document using user comments for guidance]
     P2_Update --> P2_Create
@@ -143,7 +143,7 @@ flowchart TD
     P3_Template --> P3_Analyze[Analyze codebase structure]
     P3_Analyze --> P3_Create[Create file:<br/>.spec-workflow/steering/<br/>structure.md]
     P3_Create --> P3_Approve[approvals<br/>action: request<br/>filePath only]
-    P3_Approve --> P3_Status[/check-approval<br/>Bash script polling]
+    P3_Approve --> P3_Status[/check-approval<br/>synchronous status check]
     P3_Status --> P3_Check{Status?}
     P3_Check -->|needs-revision| P3_Update[Update document using user comments for guidance]
     P3_Update --> P3_Create
@@ -180,7 +180,7 @@ flowchart TD
 4. Generate product vision and goals
 5. Create \`product.md\` at \`.spec-workflow/steering/product.md\`
 6. Request approval using approvals tool with action:'request' (filePath only)
-7. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout (NEVER accept verbal approval)
+7. Run \`/check-approval <approvalId>\` — synchronous status check (NEVER accept verbal approval). If pending, instruct the user to approve and re-run
 8. If needs-revision: update document using comments, create NEW approval, do NOT proceed
 9. Once approved: use approvals with action:'delete' (must succeed) before proceeding
 10. If delete fails: STOP — report error and ask user to retry
@@ -204,7 +204,7 @@ flowchart TD
 5. Populate the ADR summary table from \`.claude/_docs/adr/INDEX.md\` if ADRs exist; otherwise leave with a placeholder row noting N/A.
 6. Create \`tech.md\` at \`.spec-workflow/steering/tech.md\`
 7. Request approval using approvals tool with action:'request'
-8. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
+8. Run \`/check-approval <approvalId>\` — synchronous status check. If pending, instruct the user to approve and re-run
 9. If needs-revision: update document using comments, create NEW approval, do NOT proceed
 10. Once approved: use approvals with action:'delete' (must succeed) before proceeding
 11. If delete fails: STOP — report error and ask user to retry
@@ -228,7 +228,7 @@ flowchart TD
 5. Populate Project-Specific Conventions only with rules that are NOT already enforced by \`.claude-plugin/rules/*-style.md\`; otherwise leave \`Status: N/A — follows .claude-plugin/rules/*-style.md\`
 6. Create \`structure.md\` at \`.spec-workflow/steering/structure.md\`
 7. Request approval using approvals tool with action:'request'
-8. Run \`/check-approval <approvalId>\` — polls via Bash script with 60-minute timeout
+8. Run \`/check-approval <approvalId>\` — synchronous status check. If pending, instruct the user to approve and re-run
 9. If needs-revision: update document using comments, create NEW approval, do NOT proceed
 10. Once approved: use approvals with action:'delete' (must succeed) before proceeding
 11. If delete fails: STOP — report error and ask user to retry

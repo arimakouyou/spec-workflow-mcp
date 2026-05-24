@@ -1,153 +1,153 @@
 ---
 name: create-pr
-description: "テスト結果とUIスクリーンショットを含むPRを作成する。IT/E2Eテスト実行→UI変更検出→スクリーンショット取得→PRボディ構築→gh pr create。単独でも他スキルからの参照でも使用可能。Triggers on: 'create PR', 'PRを作成', 'PR作成', '/create-pr'."
+description: "Create a PR with test results and UI screenshots. Runs IT/E2E tests, detects UI changes, captures screenshots, builds the PR body, then runs gh pr create. Usable standalone or via reference from other skills. Triggers on: 'create PR', 'open pull request', 'PRを作成', 'PR作成', '/create-pr'."
 user-invokable: true
 argument-hint: "[--title <title>] [--closes <issue-number>] [--spec <spec-name>] [--skip-tests] [--base <branch>]"
 ---
 
-# PR 作成 — テスト結果・スクリーンショット付き
+# Create PR — with test results and screenshots
 
-テスト結果と UI スクリーンショットを含む PR を作成する。単独でも、`/handle-issue` や `/spec-implement` からの参照でも使用可能。
+Create a PR including test results and UI screenshots. Usable standalone or via reference from `/handle-issue` or `/spec-implement`.
 
-## 実行コンテキスト
+## Execution Context
 
-このスキルは以下の2つのコンテキストで使用される。コミット/プッシュの責務が異なる点に注意:
+This skill is used in two contexts. Note that the responsibility for commit/push differs:
 
-| コンテキスト | コミット/プッシュの責務 |
-|-------------|----------------------|
-| **スタンドアロン実行** (`/create-pr` を直接実行) | このスキル自身がコミット/プッシュを実行する |
-| **spec-implement からの呼び出し** (Step 10 経由) | review-worker がこのスキルを実行する。コミット/プッシュは review-worker の責務 |
+| Context | Commit / Push Responsibility |
+|---------|------------------------------|
+| **Standalone execution** (running `/create-pr` directly) | This skill itself runs commit/push |
+| **Invocation from spec-implement** (via Step 10) | review-worker runs this skill. Commit/push is review-worker's responsibility |
 
-`/handle-issue` の 4B パスから呼び出される場合はスタンドアロン実行と同じ扱い。
+When invoked from the 4B path of `/handle-issue`, treat it the same as standalone execution.
 
-## 入力
+## Inputs
 
-`$ARGS` から以下の引数を解析する。全て省略可能。
+Parse the following arguments from `$ARGS`. All are optional.
 
-| 引数 | 必須 | 説明 |
-|------|:----:|------|
-| `--title <title>` | NO | PR タイトル。省略時はブランチ名から自動生成（kebab-case → スペース区切り、先頭大文字化） |
-| `--closes <issue-number>` | NO | 関連 Issue 番号。指定時は PR ボディ末尾に `Closes #{number}` を追加 |
-| `--spec <spec-name>` | NO | Spec 名。指定時は Spec ドキュメントリンクを PR ボディに追加し、`final-e2e-gate.md` から結果を読み取る |
-| `--skip-tests` | NO | テスト実行をスキップ。品質チェック/Final E2E Gate 実行済みの場合に使用 |
-| `--base <branch>` | NO | ベースブランチ。省略時は自動検出 |
+| Argument | Required | Description |
+|----------|:--------:|-------------|
+| `--title <title>` | NO | PR title. If omitted, auto-generated from the branch name (kebab-case → space-separated, leading uppercase) |
+| `--closes <issue-number>` | NO | Related Issue number. When specified, append `Closes #{number}` to the end of the PR body |
+| `--spec <spec-name>` | NO | Spec name. When specified, add Spec doc links to the PR body and read results from `final-e2e-gate.md` |
+| `--skip-tests` | NO | Skip test execution. Use when quality checks / Final E2E Gate already ran |
+| `--base <branch>` | NO | Base branch. Auto-detected if omitted |
 
-**呼び出し例**:
+**Examples**:
 - `/create-pr --title "Fix null pointer in parser" --closes 42`
 - `/create-pr --spec user-export --skip-tests`
-- `/create-pr`（引数なし — 全自動）
+- `/create-pr` (no arguments — fully automated)
 
-## 引数パース
+## Argument Parsing
 
-`$ARGS` 文字列から以下の変数を抽出する。Claude が `$ARGS` を意味的に解析し、各変数に値を設定する。
+Extract the following variables from the `$ARGS` string. Claude parses `$ARGS` semantically and assigns each variable.
 
-| 変数 | 対応引数 | デフォルト |
-|------|---------|-----------|
-| `TITLE_ARG` | `--title <value>` | `""` （省略時はブランチ名から自動生成） |
+| Variable | Argument | Default |
+|----------|---------|---------|
+| `TITLE_ARG` | `--title <value>` | `""` (auto-generated from branch name when omitted) |
 | `CLOSES_ARG` | `--closes <number>` | `""` |
 | `SPEC_ARG` | `--spec <name>` | `""` |
 | `BASE_ARG` | `--base <branch>` | `""` |
 | `SKIP_TESTS` | `--skip-tests` | `false` |
 
-**パース規則**: `--title` など値にスペースを含む引数は、引用符で囲まれた部分を1つの値として扱う（例: `--title "Fix null pointer in parser"` → `TITLE_ARG="Fix null pointer in parser"`）。Claude はシェルの `set --` による分割ではなく、`$ARGS` 文字列を直接読み取って意味的に解析すること。
+**Parsing rule**: For arguments whose values may contain spaces (e.g., `--title`), treat the quoted portion as a single value (e.g., `--title "Fix null pointer in parser"` → `TITLE_ARG="Fix null pointer in parser"`). Claude must read the `$ARGS` string directly and parse semantically rather than splitting via shell `set --`.
 
-## 前提条件チェック（MANDATORY）
+## Prerequisites Check (MANDATORY)
 
-以下のチェックを順番に実行する。いずれかが失敗した場合は **STOP** し、対処方法を案内する。
+Run the following checks in order. If any fails, **STOP** and report the remediation.
 
-### 1. gh CLI 認証確認
+### 1. Verify gh CLI authentication
 
 ```bash
 gh auth status
 ```
 
-失敗時: 「`gh auth login` を実行して GitHub CLI を認証してください」と案内して STOP。
+On failure: instruct "Run `gh auth login` to authenticate the GitHub CLI" and STOP.
 
-### 2. リポジトリ確認
+### 2. Verify repository
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
 ```
 
-失敗時: 「GitHub リポジトリのルートディレクトリで実行してください」と案内して STOP。
+On failure: instruct "Run from the GitHub repository's root directory" and STOP.
 
-### 3. ワーキングツリー確認
+### 3. Verify working tree
 
 ```bash
 git status --porcelain
 ```
 
-未コミットの変更がある場合: 警告を表示し、コミットするか stash するか確認する。未コミットの変更を残したまま PR 作成に進まない。
+If there are uncommitted changes: display a warning and confirm whether to commit or stash. Do not proceed to PR creation while uncommitted changes remain.
 
-### 4. ベースブランチの特定
+### 4. Identify base branch
 
 ```bash
-# --base 未指定時の自動検出
+# Auto-detect when --base is unspecified
 BASE_BRANCH=${BASE_ARG:-$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')}
-# フォールバック
+# Fallback
 BASE_BRANCH=${BASE_BRANCH:-main}
 ```
 
-### 5. 差分の確認
+### 5. Verify diff
 
 ```bash
 BRANCH=$(git branch --show-current)
-# リモート追跡ブランチを最新化して差分を正確に算出する
+# Refresh remote tracking branch to compute diff accurately
 git fetch origin "${BASE_BRANCH}" --quiet 2>/dev/null
 COMMIT_COUNT=$(git rev-list --count "origin/${BASE_BRANCH}..HEAD")
 ```
 
-差分が 0 コミットの場合: 「ベースブランチとの差分がありません」と案内して STOP。
+If the diff is 0 commits: instruct "No diff against the base branch" and STOP.
 
-以降のベースブランチとの比較コマンド（`git diff`, `git rev-list`, `git log` 等）でも `origin/${BASE_BRANCH}` を使用する。
+Use `origin/${BASE_BRANCH}` for subsequent base-branch comparison commands as well (`git diff`, `git rev-list`, `git log`, etc.).
 
-### 6. ブランチ名のサニタイズ
+### 6. Sanitize branch name
 
-ブランチ名に `/` が含まれるとディレクトリパスがネストして壊れるため、ファイルシステム用の slug を生成する:
+A `/` in the branch name nests directory paths and breaks them, so generate a filesystem-safe slug:
 
 ```bash
 BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-')
 ```
 
-**使い分け:**
-- **ファイルシステムパス**（スクリーンショット保存先等）: `${BRANCH_SLUG}` を使用
-- **GitHub URL の ref 部分**（`blob/{ref}/...`）: `${BRANCH}` を使用（`blob/` 形式では `/` を含む ref を正しく解釈する）
-- **git 操作・`gh pr create`**: `${BRANCH}` を使用
+**Usage:**
+- **Filesystem paths** (screenshot save destinations, etc.): use `${BRANCH_SLUG}`
+- **The ref portion of GitHub URLs** (`blob/{ref}/...`): use `${BRANCH}` (the `blob/` form correctly interprets refs containing `/`)
+- **git operations / `gh pr create`**: use `${BRANCH}`
 
-## 手順
+## Procedure
 
-### 1. テスト結果の収集
+### 1. Collect Test Results
 
-`--skip-tests` が指定されている場合はこのステップをスキップし、Step 1.5 の既存レポート読み取りのみ実行する。
+If `--skip-tests` is specified, skip this step and only run the existing-report read in Step 1.5.
 
-#### 1.1 プロジェクトタイプ検出
+#### 1.1 Project Type Detection
 
-`quality-checks.md` のプロジェクトタイプ検出ロジックに準拠する:
+Follow the project type detection logic in `quality-checks.md`:
 
 ```bash
-# 1. Leptos フルスタック検出
+# 1. Leptos full-stack detection
 if grep -q '\[package.metadata.leptos\]' Cargo.toml 2>/dev/null; then
   PROJECT_TYPE="leptos"
-# 2. Rust API 検出（axum, actix-web, rocket 等）
+# 2. Rust API detection (axum, actix-web, rocket, etc.)
 elif grep -qE '(axum|actix-web|rocket)' Cargo.toml 2>/dev/null; then
   PROJECT_TYPE="rust-api"
-# 3. Node.js 検出
+# 3. Node.js detection
 elif test -f package.json; then
   PROJECT_TYPE="nodejs"
-# 4. いずれにも該当しない
+# 4. None of the above
 else
   PROJECT_TYPE="generic"
 fi
 ```
 
-#### 1.2 ユニットテスト実行・結果キャプチャ
+#### 1.2 Run Unit Tests and Capture Results
 
 ```bash
-# 変数を明示初期化（環境値の誤拾い防止）
+# Explicitly initialize variables (avoid picking up environment values)
 unset UT_EXIT; UT_RESULT=""; UT_OUTPUT=""
 
-# Rust（rust-api, leptos を含む）— IT と重複しないよう lib テスト優先
-# bin-only クレート（src/lib.rs なし）では cargo test --lib が失敗するためフォールバック
+# Rust (includes rust-api, leptos) — prefer lib tests so they don't overlap with IT
+# For bin-only crates (no src/lib.rs) cargo test --lib fails, so fall back
 if [[ "$PROJECT_TYPE" =~ ^(rust-api|leptos)$ ]]; then
   if [ -f src/lib.rs ] || grep -qE '^\s*\[lib\]' Cargo.toml 2>/dev/null; then
     UT_OUTPUT=$(cargo test --lib --quiet 2>&1) ; UT_EXIT=$?
@@ -159,35 +159,35 @@ if [[ "$PROJECT_TYPE" =~ ^(rust-api|leptos)$ ]]; then
 elif [ "$PROJECT_TYPE" = "nodejs" ]; then
   UT_OUTPUT=$(npm test 2>&1) ; UT_EXIT=$?
 
-# テストランナー未検出（generic 等）
+# No test runner detected (generic, etc.)
 else
   UT_RESULT="SKIP"
-  UT_OUTPUT="ユニットテストなし"
+  UT_OUTPUT="No unit tests"
 fi
 
-# ランナー実行時の結果判定
+# Result judgment when the runner ran
 if [ -n "$UT_EXIT" ]; then
   if [ "$UT_EXIT" -eq 0 ]; then UT_RESULT="PASS"; else UT_RESULT="FAIL"; fi
 fi
 ```
 
-#### 1.3 統合テスト実行・結果キャプチャ
+#### 1.3 Run Integration Tests and Capture Results
 
-`quality-checks.md` の「Step C: 統合テスト実行」の検出ロジックに従う:
+Follow the detection logic in `quality-checks.md` "Step C: Run integration tests":
 
 ```bash
-# Rust: 統合テストの存在確認（tests/ 配下の .rs。e2e/ と unit/ は -path で除外）
+# Rust: check for integration tests (.rs under tests/. Exclude e2e/ and unit/ via -path)
 IT_EXISTS=$(find tests -path 'tests/e2e' -prune -o -path 'tests/unit' -prune -o -type f -name '*.rs' -print -quit 2>/dev/null)
 
-# Node.js: 統合テストスクリプトまたはファイルの存在確認
+# Node.js: check for an integration test script or files
 IT_SCRIPT=$(grep -q '"test:integration"' package.json 2>/dev/null && echo "yes")
 IT_FILES=$(find tests test __tests__ -type f -name 'integration*' -print -quit 2>/dev/null)
 ```
 
-`IT_EXISTS`、`IT_SCRIPT`、`IT_FILES` のいずれかが非空の場合のみテストを実行する:
+Run the tests only if any of `IT_EXISTS`, `IT_SCRIPT`, or `IT_FILES` is non-empty:
 
 ```bash
-# 変数を明示初期化
+# Explicitly initialize variables
 unset IT_EXIT; IT_RESULT=""; IT_OUTPUT=""
 
 if [ -n "$IT_EXISTS" ]; then
@@ -195,42 +195,42 @@ if [ -n "$IT_EXISTS" ]; then
   IT_OUTPUT=$(cargo test --tests --quiet 2>&1) ; IT_EXIT=$?
 
 elif [ "$IT_SCRIPT" = "yes" ]; then
-  # Node.js（スクリプトあり）
+  # Node.js (script available)
   IT_OUTPUT=$(npm run test:integration 2>&1) ; IT_EXIT=$?
 
 elif [ -n "$IT_FILES" ]; then
-  # Node.js（ファイルパターンのみ — スクリプトなし）
+  # Node.js (file pattern only — no script)
   IT_OUTPUT=$(npm test -- --testPathPattern=integration 2>&1) ; IT_EXIT=$?
 
 else
-  # 統合テストが存在しない
+  # No integration tests
   IT_RESULT="SKIP"
-  IT_OUTPUT="統合テストなし"
+  IT_OUTPUT="No integration tests"
 fi
 
-# ランナー実行時の結果判定
+# Result judgment when the runner ran
 if [ -n "$IT_EXIT" ]; then
   if [ "$IT_EXIT" -eq 0 ]; then IT_RESULT="PASS"; else IT_RESULT="FAIL"; fi
 fi
 ```
 
-#### 1.4 E2E テスト実行・結果キャプチャ
+#### 1.4 Run E2E Tests and Capture Results
 
 ```bash
-# 変数を明示初期化
+# Explicitly initialize variables
 unset E2E_EXIT; E2E_RESULT=""; E2E_OUTPUT=""
 
 # Playwright
 if test -f playwright.config.ts || test -f playwright.config.js; then
   E2E_OUTPUT=$(npx playwright test 2>&1) ; E2E_EXIT=$?
 
-# Rust E2E（tests/e2e/ 配下のみ対象 — IT と範囲が重複しないよう --test で個別指定）
+# Rust E2E (target only files under tests/e2e/ — specify per-test via --test so range does not overlap with IT)
 elif test -d tests/e2e; then
   E2E_RS_COUNT=$(find tests/e2e -maxdepth 1 -name '*.rs' -type f 2>/dev/null | wc -l)
   if [ "$E2E_RS_COUNT" -eq 0 ]; then
-    # ディレクトリは存在するが .rs ファイルがない場合は SKIP
+    # Directory exists but no .rs files → SKIP
     E2E_RESULT="SKIP"
-    E2E_OUTPUT="tests/e2e/ にテストファイルなし"
+    E2E_OUTPUT="No test files in tests/e2e/"
   else
     E2E_OUTPUT=""
     E2E_EXIT=0
@@ -244,13 +244,13 @@ elif test -d tests/e2e; then
     done
   fi
 
-# Node.js E2E スクリプト
+# Node.js E2E script
 elif grep -q '"test:e2e"' package.json 2>/dev/null; then
   E2E_OUTPUT=$(npm run test:e2e 2>&1) ; E2E_EXIT=$?
 
 else
   E2E_RESULT="SKIP"
-  E2E_OUTPUT="E2Eテストなし"
+  E2E_OUTPUT="No E2E tests"
 fi
 
 if [ -n "$E2E_EXIT" ]; then
@@ -258,47 +258,47 @@ if [ -n "$E2E_EXIT" ]; then
 fi
 ```
 
-#### 1.5 Spec 指定時の既存レポート読み取り
+#### 1.5 Read Existing Report When Spec Is Specified
 
-`--spec` が指定されている場合（`SPEC_ARG` が非空）、引数パースで得た spec 名を使ってレポートパスを構築し、`final-e2e-gate.md` が存在すれば結果を読み取る:
+When `--spec` is specified (`SPEC_ARG` is non-empty), build the report path using the spec name from argument parsing and read the result if `final-e2e-gate.md` exists:
 
 ```bash
 if [ -n "$SPEC_ARG" ]; then
   GATE_REPORT=".spec-workflow/specs/${SPEC_ARG}/reviews/final-e2e-gate.md"
   if test -f "$GATE_REPORT"; then
-    # レポートの Results テーブル、Verdict、Notes を抽出
-    # テスト再実行の代わりにレポートの内容を PR ボディに転記
+    # Extract the report's Results table, Verdict, and Notes
+    # Instead of re-running tests, copy the report content into the PR body
   fi
 fi
 ```
 
-`--skip-tests` が指定されている場合はこの読み取り結果のみを使用する。レポートも存在しない場合は、テスト結果セクションに「テスト結果: 手動確認が必要」と記載する。
+When `--skip-tests` is specified, use only this read result. If the report does not exist either, write "Test results: manual verification required" in the test results section.
 
-#### 1.6 テスト失敗時の振る舞い
+#### 1.6 Behavior on Test Failure
 
-いずれかのテスト結果が `FAIL` の場合:
+If any test result is `FAIL`:
 
-1. 失敗したテストの結果をユーザーに提示する
-2. 以下の選択肢を提示する:
-   - A) テスト失敗のまま PR を作成する（PR ボディに FAIL が記載される）
-   - B) PR 作成を中止し、テスト修正を行う
-3. ユーザーが B を選択した場合は PR 作成をスキップして STOP
+1. Show the failing test results to the user
+2. Present these options:
+   - A) Create the PR with tests failing (the PR body will include FAIL)
+   - B) Abort PR creation and fix the tests
+3. If the user chooses B, skip PR creation and STOP
 
-### 2. UI 変更検出
+### 2. UI Change Detection
 
-変更されたファイルから UI 関連の変更を検出する。
+Detect UI-related changes from the changed files.
 
 ```bash
-# フロントエンド関連ファイルの変更検出
+# Detect changes in frontend-related files
 UI_FILES=$(git diff --name-only "origin/${BASE_BRANCH}...HEAD" -- \
   '*.tsx' '*.jsx' '*.vue' '*.svelte' \
   '*.css' '*.scss' '*.less' '*.pcss' '*.html')
 
-# UI 関連ディレクトリ内の変更検出
+# Detect changes inside UI-related directories
 UI_DIR_FILES=$(git diff --name-only "origin/${BASE_BRANCH}...HEAD" | \
   grep -E '(components|pages|dashboard_frontend|webview|frontend|ui)/')
 
-# Leptos: view! マクロを含む Rust ファイルの変更検出
+# Leptos: detect changes in Rust files containing the view! macro
 if [ "$PROJECT_TYPE" = "leptos" ]; then
   LEPTOS_UI=$(
     git diff --name-only "origin/${BASE_BRANCH}...HEAD" -- '*.rs' | \
@@ -310,28 +310,28 @@ if [ "$PROJECT_TYPE" = "leptos" ]; then
 fi
 ```
 
-**判定**: `UI_FILES`、`UI_DIR_FILES`、`LEPTOS_UI` のいずれかが非空 → `HAS_UI_CHANGES=true`
+**Judgment**: If any of `UI_FILES`, `UI_DIR_FILES`, or `LEPTOS_UI` is non-empty → `HAS_UI_CHANGES=true`
 
-`HAS_UI_CHANGES=false` の場合は Step 3 をスキップ。
+If `HAS_UI_CHANGES=false`, skip Step 3.
 
-### 3. スクリーンショット取得
+### 3. Capture Screenshots
 
-`HAS_UI_CHANGES=true` の場合のみ実行する。
+Run only when `HAS_UI_CHANGES=true`.
 
-#### 3.1 スクリーンショット収集方針
+#### 3.1 Screenshot Collection Policy
 
-以下の優先順位で取得を試みる:
+Try in the following priority order:
 
-**優先度 1: E2E テスト実行済みの場合**
-- Playwright が生成したスクリーンショットを収集する
-- `test-results/` ディレクトリ内の `.png` ファイル
-- `docs/screenshots/` ディレクトリ内の新規・更新ファイル（`git diff --name-only` で検出）
+**Priority 1: When E2E tests have already run**
+- Collect screenshots produced by Playwright
+- `.png` files inside the `test-results/` directory
+- Newly added or updated files inside the `docs/screenshots/` directory (detected via `git diff --name-only`)
 
-**優先度 2: dev サーバーが起動可能な場合**
-- E2E テスト未実行だが UI 変更がある場合に使用
+**Priority 2: When a dev server can be started**
+- Used when E2E tests have not run but UI has changed
 
 ```bash
-# dev サーバーの起動コマンドを検出
+# Detect the dev server start command
 if grep -q '"dev:dashboard"' package.json 2>/dev/null; then
   DEV_CMD="npm run dev:dashboard"
 elif grep -q '"dev"' package.json 2>/dev/null; then
@@ -341,173 +341,173 @@ elif [ "$PROJECT_TYPE" = "leptos" ]; then
 fi
 ```
 
-dev サーバー起動 → Playwright で変更された UI 画面を巡回しスクリーンショット取得 → dev サーバー停止
+Start dev server → walk through changed UI screens with Playwright and capture screenshots → stop dev server
 
 ```bash
-# Playwright を使った手動スクリーンショット取得（パスには BRANCH_SLUG を使用）
+# Manual screenshot capture using Playwright (use BRANCH_SLUG in the path)
 npx playwright screenshot --browser chromium "http://localhost:${PORT:-5173}" \
   "docs/screenshots/pr-evidence/${BRANCH_SLUG}/page.png"
 ```
 
-**優先度 3: いずれも不可の場合**
-- スクリーンショット取得をスキップ
-- PR ボディに「UI 変更を検出しましたが、スクリーンショットの自動取得ができませんでした。手動で確認してください。」と注記
+**Priority 3: When neither is feasible**
+- Skip screenshot capture
+- Note in the PR body: "UI changes were detected, but automatic screenshot capture failed. Please verify manually."
 
-#### 3.2 スクリーンショットの保存とコミット
+#### 3.2 Save and Commit Screenshots
 
 ```bash
-# 保存先ディレクトリ（パスには BRANCH_SLUG を使用）
+# Save destination directory (use BRANCH_SLUG in the path)
 SCREENSHOT_DIR="docs/screenshots/pr-evidence/${BRANCH_SLUG}"
 mkdir -p "$SCREENSHOT_DIR"
 
-# 収集したスクリーンショットのパスを配列で保持する
-# （優先度 1 or 2 の手順で取得できた実ファイルパスを格納する）
+# Hold the collected screenshot paths in an array
+# (store the actual file paths obtained via Priority 1 or 2)
 COLLECTED_SCREENSHOTS=(
-  # 例: "test-results/screenshot-1.png"
-  # 例: "docs/screenshots/pr-evidence/.../page.png"
+  # e.g., "test-results/screenshot-1.png"
+  # e.g., "docs/screenshots/pr-evidence/.../page.png"
 )
 
-# スクリーンショットが1枚以上収集できた場合のみコピー・コミット
+# Copy / commit only when at least one screenshot was collected
 if [ "${#COLLECTED_SCREENSHOTS[@]}" -gt 0 ]; then
   cp "${COLLECTED_SCREENSHOTS[@]}" "$SCREENSHOT_DIR/"
 
-  # コミットとプッシュ
+  # Commit and push
   git add docs/screenshots/pr-evidence/
-  git commit -m "docs: PR用スクリーンショットを追加"
+  git commit -m "docs: add screenshots for PR"
   git push
 fi
 ```
 
-スクリーンショットが 0 枚の場合はコピー・コミット・プッシュを行わず、PR ボディに「UI 変更を検出しましたが、スクリーンショットの自動取得ができませんでした。手動で確認してください。」と注記する（優先度 3 と同じ扱い）。
+If 0 screenshots were collected, do not copy / commit / push, and note in the PR body: "UI changes were detected, but automatic screenshot capture failed. Please verify manually." (same handling as Priority 3).
 
-### 4. PR ボディ構築
+### 4. Build the PR Body
 
-以下のテンプレートに従って PR ボディを構築する。セクションはコンテキストに応じて動的に組み立てる。
+Build the PR body using the template below. Sections are assembled dynamically depending on the context.
 
-#### 4.1 概要セクション
+#### 4.1 Overview Section
 
-| 条件 | 概要テキスト |
-|------|-------------|
-| `--closes` 指定あり | `Issue #${CLOSES_ARG} の修正。` |
-| `--spec` 指定あり | `Spec: ${SPEC_ARG} の実装。` |
-| いずれも未指定 | ブランチの変更概要を `git log --oneline origin/${BASE_BRANCH}..HEAD` から生成 |
+| Condition | Overview Text |
+|-----------|---------------|
+| `--closes` specified | `Fix for Issue #${CLOSES_ARG}.` |
+| `--spec` specified | `Implementation of spec: ${SPEC_ARG}.` |
+| Neither specified | Generate a branch change overview from `git log --oneline origin/${BASE_BRANCH}..HEAD` |
 
-#### 4.2 変更内容セクション
+#### 4.2 Changes Section
 
 ```bash
 git log --oneline origin/${BASE_BRANCH}..HEAD
 ```
 
-各コミットメッセージを箇条書きで列挙する。
+List each commit message as a bullet item.
 
-#### 4.3 テスト結果セクション
+#### 4.3 Test Results Section
 
-各テストカテゴリの結果を以下のフォーマットで構築する:
+Build each test category's result in the following format:
 
-**PASS/FAIL の場合**（出力を折りたたみで表示）:
+**For PASS/FAIL** (output displayed collapsed):
 
 ```markdown
-### ユニットテスト
-{UT_RESULT}: {pass数} passed, {fail数} failed
+### Unit Tests
+{UT_RESULT}: {pass count} passed, {fail count} failed
 
-### 統合テスト (IT)
+### Integration Tests (IT)
 <details>
-<summary>{IT_RESULT}: {概要行}</summary>
+<summary>{IT_RESULT}: {summary line}</summary>
 
 ```
-{IT_OUTPUT の末尾50行}
+{last 50 lines of IT_OUTPUT}
 ```
 </details>
 
-### E2E テスト
+### E2E Tests
 <details>
-<summary>{E2E_RESULT}: {概要行}</summary>
+<summary>{E2E_RESULT}: {summary line}</summary>
 
 ```
-{E2E_OUTPUT の末尾50行}
+{last 50 lines of E2E_OUTPUT}
 ```
 </details>
 ```
 
-**SKIP の場合**（簡略表示）:
+**For SKIP** (concise display):
 
 ```markdown
-### 統合テスト (IT)
-SKIP — 統合テストなし
+### Integration Tests (IT)
+SKIP — No integration tests
 ```
 
-**Spec 指定 + final-e2e-gate.md 存在時**（レポート転記）:
+**When --spec is specified and final-e2e-gate.md exists** (copy report):
 
 ```markdown
 ### Final E2E Gate
 | Step | Result | Details |
 |------|--------|---------|
-{final-e2e-gate.md の Results テーブルをそのまま転記}
+{Copy the Results table from final-e2e-gate.md verbatim}
 
-**Verdict**: {PASS / PASS(SKIP含む)}
+**Verdict**: {PASS / PASS(with SKIP)}
 
 ### Notes
-{final-e2e-gate.md の Notes セクションをそのまま転記。SKIP 理由、設計時除外の根拠等を含む}
+{Copy the Notes section from final-e2e-gate.md verbatim. Includes SKIP reasons, exclusion-at-design-time rationale, etc.}
 ```
 
-Notes セクションが空または存在しない場合は Notes セクション自体を省略する。
+If the Notes section is empty or absent, omit the Notes section itself.
 
-#### 4.4 UI スクリーンショットセクション（`HAS_UI_CHANGES=true` の場合のみ）
+#### 4.4 UI Screenshots Section (only when `HAS_UI_CHANGES=true`)
 
 ```markdown
-## UI スクリーンショット
-| 画面 | スクリーンショット |
-|------|------------------|
-| {画面名} | ![{画面名}](https://github.com/{REPO}/blob/{BRANCH}/docs/screenshots/pr-evidence/{BRANCH_SLUG}/{filename}.png?raw=1) |
+## UI Screenshots
+| Screen | Screenshot |
+|--------|-----------|
+| {screen name} | ![{screen name}](https://github.com/{REPO}/blob/{BRANCH}/docs/screenshots/pr-evidence/{BRANCH_SLUG}/{filename}.png?raw=1) |
 ```
 
-スクリーンショット取得がスキップされた場合:
+When screenshot capture was skipped:
 
 ```markdown
-## UI 変更
-UI 変更を検出しましたが、スクリーンショットの自動取得ができませんでした。
-変更ファイル:
-- {UI_FILES の一覧}
+## UI Changes
+UI changes were detected, but automatic screenshot capture failed.
+Changed files:
+- {list of UI_FILES}
 ```
 
-#### 4.5 Spec ドキュメントセクション（`--spec` 指定時のみ）
+#### 4.5 Spec Documents Section (only when `--spec` is specified)
 
-引数パースで得た `SPEC_ARG` を使ってリンク先を確定させる:
+Use `SPEC_ARG` from argument parsing to fix the link target:
 
 ```markdown
-## Spec ドキュメント
+## Spec Documents
 - [Requirements](.spec-workflow/specs/${SPEC_ARG}/requirements.md)
 - [Design](.spec-workflow/specs/${SPEC_ARG}/design.md)
 - [Test Design](.spec-workflow/specs/${SPEC_ARG}/test-design.md)
 - [Tasks](.spec-workflow/specs/${SPEC_ARG}/tasks.md)
 ```
 
-#### 4.5.5 CI フィードバックセクション
+#### 4.5.5 CI Feedback Section
 
-`.github/workflows/ci.yml` が存在する場合のみ表示:
+Display only when `.github/workflows/ci.yml` exists:
 
 ```markdown
-## CI フィードバック
-CI テスト結果は PR コメントに自動投稿されます（sticky comment 方式）。詳細はコメント欄を確認してください。
+## CI Feedback
+CI test results are auto-posted to PR comments (sticky comment scheme). See the comment thread for details.
 ```
 
-`.github/workflows/ci.yml` が存在しない場合はこのセクションを省略する。
+If `.github/workflows/ci.yml` does not exist, omit this section.
 
-#### 4.6 フッター
+#### 4.6 Footer
 
 ```markdown
-{CLOSES_ARG が非空の場合}
+{When CLOSES_ARG is non-empty}
 Closes #${CLOSES_ARG}
 ```
 
-### 5. PR 作成
+### 5. Create the PR
 
-構築した PR ボディを一時ファイルに書き出し、`--body-file` で渡す（改行や引用符を含むボディでもクォート崩れを防止）:
+Write the assembled PR body to a temp file and pass it via `--body-file` (prevents quote breakage even when the body contains newlines or quotes):
 
 ```bash
 PR_BODY_FILE="$(mktemp)"
 cat > "${PR_BODY_FILE}" <<'PRBODY'
-{4.1〜4.6 で構築したボディ}
+{Body assembled in 4.1–4.6}
 PRBODY
 
 gh pr create \
@@ -519,31 +519,31 @@ gh pr create \
 rm -f "${PR_BODY_FILE}"
 ```
 
-PR 作成後、**PR の URL をユーザーに報告する**。
+After PR creation, **report the PR URL to the user**.
 
-### 6. 完了レポート
+### 6. Completion Report
 
 ```
-## PR 作成完了
+## PR Creation Complete
 
 - **PR**: {PR URL}
-- **タイトル**: {title}
-- **ベース**: {BASE_BRANCH} ← {BRANCH}
-- **テスト結果**: UT={UT_RESULT}, IT={IT_RESULT}, E2E={E2E_RESULT}
-- **UI スクリーンショット**: {あり（N枚）/ なし / スキップ}
-{--closes 指定時}
-- **関連 Issue**: #${CLOSES_ARG}
-{--spec 指定時}
+- **Title**: {title}
+- **Base**: {BASE_BRANCH} ← {BRANCH}
+- **Test results**: UT={UT_RESULT}, IT={IT_RESULT}, E2E={E2E_RESULT}
+- **UI screenshots**: {present (N images) / none / skipped}
+{When --closes is specified}
+- **Related Issue**: #${CLOSES_ARG}
+{When --spec is specified}
 - **Spec**: ${SPEC_ARG}
 ```
 
-## ルール
+## Rules
 
-- 未コミットの変更がある状態で PR を作成しない
-- テスト失敗時は必ずユーザーに確認を取る（自動で FAIL のまま PR を作成しない）
-- スクリーンショットは `docs/screenshots/pr-evidence/` に保存する（既存の `docs/screenshots/` は変更しない）
-- 出力が長い場合は末尾 50 行に切り詰め、`<details>` タグで折りたたむ
-- `--skip-tests` 指定時でもテスト結果セクションは省略しない（既存レポートから転記、またはレポートがない場合は「手動確認が必要」と記載）
-- PR ボディ内のスクリーンショット URL には `blob/{BRANCH}/...?raw=1` 形式を使用する（`/` を含むブランチ名でも ref が正しく解釈される）
-- ファイルパスにブランチ名を使う場合は `BRANCH_SLUG`（`/` → `-` 置換済み）を使用する
-- プロジェクトタイプの検出は `quality-checks.md` のロジックに準拠する
+- Do not create a PR with uncommitted changes
+- On test failure, always confirm with the user (do not auto-create a PR with FAIL)
+- Save screenshots under `docs/screenshots/pr-evidence/` (do not modify the existing `docs/screenshots/`)
+- Truncate long output to the last 50 lines and collapse it under a `<details>` tag
+- Even when `--skip-tests` is specified, do not omit the test results section (copy from existing report, or write "manual verification required" if no report exists)
+- Use the `blob/{BRANCH}/...?raw=1` form for screenshot URLs in the PR body (refs are interpreted correctly even when the branch name contains `/`)
+- When using a branch name in a file path, use `BRANCH_SLUG` (with `/` already replaced by `-`)
+- Project type detection follows the logic in `quality-checks.md`

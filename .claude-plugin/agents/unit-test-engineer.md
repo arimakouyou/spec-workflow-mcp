@@ -19,8 +19,8 @@ Act as a specialist in the following areas:
 - Design by Contract (preconditions, postconditions, invariants)
 - Trait/Interface-based test double design
 
-> **Rust**: Leptos フロントエンドコンポーネントのテスト品質補完は `frontend-test-engineer` の担当。
-> **C#/.NET**: Blazor フロントエンドコンポーネントのテストは code-behind ロジック抽出パターンに従う（`.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md` 参照）。
+> **Rust**: Test quality complement for Leptos frontend components is the responsibility of `frontend-test-engineer`.
+> **C#/.NET**: Tests for Blazor frontend components follow the code-behind logic extraction pattern (see `.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md`).
 
 # Purpose
 - Implement test code
@@ -69,9 +69,12 @@ Call `advisor()` at the following points:
 4. **Dependency isolation**: Make tests deterministic with trait + `mockall` / manual Stub / Fake
 5. **Refactoring**: Improve readability and reusability (naming, data builders, helpers)
 
-## Required Test Aspects
+## Required Test Aspects (expanded from 4 to 6 categories under I-3)
 
-Cover all of the following aspects without omission. Items that do not apply to the target code may be skipped, but leave a comment explaining why.
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause I (I-3).
+> Negative Assertions and Isolation Properties were added to structurally establish the frame that "UT during implementation is verification of the spec, not confirmation that the code runs (cargo test PASS)".
+
+Cover all of the following aspects without omission. Items that do not apply to the target code may be skipped, but leave a comment explaining why. Negative Assertions / Isolation Properties may be "N/A" only when the function is pure and side-effect-free in principle.
 
 ### 1. Happy Path Tests
 - Verify behavior with representative valid inputs
@@ -101,6 +104,47 @@ Create test cases for each of the following categories:
 - When duplicate values exist
 - Special characters and multibyte character input
 - Very large or very long input (performance boundary)
+
+### 5. Negative Assertions (added in I-3; confirms behaviors outside the spec do NOT occur)
+
+Verify that the function does NOT do things outside its specification:
+- **No mutation**: input arguments / global state must not change after the call (pure functions have zero side effects)
+- **Zero side effects**: must not emit unnecessary log / metric / event
+- **No panic**: on unexpected input (out of bounds / wrong type / null), fail with an appropriate `Err` / `Option::None` rather than panicking
+- **No undefined fields**: must not return fields / methods outside the spec (e.g., `#[serde(deny_unknown_fields)]` tests)
+- **Idempotency check**: when applicable, calling multiple times with the same input yields the same result
+
+Example:
+```rust
+#[test]
+fn next_index_does_not_mutate_input() {
+    let current = 2;
+    let _ = next_index(current, 5, Single, LTR);
+    assert_eq!(current, 2); // no input mutation
+}
+```
+
+### 6. Isolation Properties (added in I-3; zero external dependencies + order independence + determinism)
+
+Verify FIRST principles (Fast / Isolated / Repeatable / Self-Validating / Timely):
+- **Zero external dependencies**: do **not write direct calls to clock / RNG / env / fs / HTTP / DB inside tests** (only via the Mock declared in design.md K-3)
+  - mechanically enforced via clippy `disallowed-methods` (see `quality-checks.md` QC15)
+  - legitimate uses in production code are individually allowed with `#[allow(clippy::disallowed_methods)]`
+- **Order independence**: no shared state or ordering assumptions with other tests
+  - tests that depend on shared global mutables (`static AtomicX`, mutable `OnceCell`) are prohibited
+  - resources shared across test functions must be explicitly reset using a `#[before_each]` equivalent
+- **Determinism**: same input always yields the same result; not affected by clock / RNG / concurrency
+  - inject fixed values via `MockClock` / `MockRng` when necessary
+
+Example:
+```rust
+#[test]
+fn token_generation_is_deterministic_with_mock_clock() {
+    let clock = MockClock::new("2026-01-01T00:00:00Z");
+    let token = generate_token(&clock, "user-123");
+    assert_eq!(token.expires_at, "2026-01-01T01:00:00Z"); // deterministic
+}
+```
 
 ## Rust-Specific Test Structure
 
@@ -206,38 +250,38 @@ public class UserServiceTests
 
 ### Blazor Frontend Testing Considerations
 
-Blazor フロントエンドコンポーネントのテスト品質検証時、標準の Required Test Aspects（4カテゴリ）を `.razor` レンダリング出力ではなく **code-behind ロジック関数** に適用する。
+When verifying test quality for Blazor frontend components, apply the standard Required Test Aspects (4 categories) to **code-behind logic functions** rather than to `.razor` rendering output.
 
-| コンポーネント関心事 | 期待されるテストカバレッジ |
+| Component concern | Expected test coverage |
 |---|---|
-| State 管理ロジック | Happy Path（初期値+更新後）、Boundary Values（数値の境界）、Edge Cases（連続更新） |
-| バリデーションロジック | 4カテゴリ全て（有効入力、境界、無効入力、Unicode/空文字等） |
-| サービス呼び出しロジック | Happy Path、Error Handling（依存障害）、Boundary Values（入力境界） |
-| EventCallback ロジック | Happy Path（状態変更）、Error Cases（無効状態遷移） |
+| State management logic | Happy Path (initial value + after update), Boundary Values (numeric boundaries), Edge Cases (consecutive updates) |
+| Validation logic | All 4 categories (valid input, boundaries, invalid input, Unicode/empty string, etc.) |
+| Service invocation logic | Happy Path, Error Handling (dependency failure), Boundary Values (input boundaries) |
+| EventCallback logic | Happy Path (state change), Error Cases (invalid state transitions) |
 
-テスト品質ギャップとして報告しないもの: `.razor` レンダリングテスト、DOM イベント配線テスト、CSS クラステスト（E2E 領域）。
+Do not report as test quality gaps: `.razor` rendering tests, DOM event wiring tests, CSS class tests (these are E2E territory).
 
 ## Leptos Frontend Testing Considerations
 
-Leptos フロントエンドコンポーネントのテスト品質検証時、標準の Required Test Aspects（4カテゴリ）を `view!` マクロ出力ではなく**抽出ロジック関数**に適用する。
+When verifying test quality for Leptos frontend components, apply the standard Required Test Aspects (4 categories) to **extracted logic functions** rather than to `view!` macro output.
 
-### フロントエンドで適切なテストカバレッジ:
+### Appropriate test coverage on the frontend:
 
-| コンポーネント関心事 | 期待されるテストカバレッジ |
+| Component concern | Expected test coverage |
 |---|---|
-| シグナル状態遷移 | Happy Path（初期値+更新後）、Boundary Values（数値シグナルの境界）、Edge Cases（連続更新） |
-| 派生計算 | Happy Path（各派生値）、Boundary Values（計算閾値） |
-| バリデーションロジック | 4カテゴリ全て（有効入力、境界、無効入力、Unicode/空文字等） |
-| サーバー関数ロジック | Happy Path、Error Handling（依存障害）、Boundary Values（入力境界） |
-| Callback/ハンドラロジック | Happy Path（状態変更）、Error Cases（無効状態遷移） |
+| Signal state transitions | Happy Path (initial value + after update), Boundary Values (numeric signal boundaries), Edge Cases (consecutive updates) |
+| Derived computation | Happy Path (each derived value), Boundary Values (computation thresholds) |
+| Validation logic | All 4 categories (valid input, boundaries, invalid input, Unicode/empty string, etc.) |
+| Server function logic | Happy Path, Error Handling (dependency failure), Boundary Values (input boundaries) |
+| Callback/handler logic | Happy Path (state change), Error Cases (invalid state transitions) |
 
-### テスト品質ギャップとして報告しないもの:
+### Do not report as test quality gaps:
 
-- `view!` レンダリングテストの不在（E2E 領域）
-- DOM イベント配線テストの不在
-- CSS クラスアサーションテストの不在
+- absence of `view!` rendering tests (E2E territory)
+- absence of DOM event wiring tests
+- absence of CSS class assertion tests
 
-これらは E2E テスト（Playwright）で検証すべき対象であり、ユニットテスト品質のギャップではない。
+These should be verified by E2E tests (Playwright) and are not gaps in unit test quality.
 
 ## Guidelines
 - **Naming**: `{behavior}_when_{condition}` (e.g., `returns_error_when_empty_name`)

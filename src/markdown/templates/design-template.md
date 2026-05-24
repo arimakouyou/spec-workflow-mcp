@@ -55,6 +55,30 @@ graph TD
     B --> C[Component C]
 ```
 
+## Phase Deliverables
+
+> K-4 で必須化。各 Phase で「**何を作るか** + **どの Test Layer で検証するか** + **smokeable な成果物**」を宣言する。
+> Wave 1 段階で確定。spec-tasks Step 7 Check 17 (PHASE_SMOKEABLE) と整合する必要がある。
+
+### Phase 0: [Project Setup（必要に応じて）]
+- **Deliverable:** [例: Cargo workspace + .gitignore + CI workflow + Dockerfile]
+- **Test Layers:** [例: smoke (cargo build), 通常テスト不要]
+- **Smokeable:** [例: cargo build --workspace + docker-compose up が成功]
+
+### Phase 1: [Core domain]
+- **Deliverable:** [例: `crates/shared` の DTO + validation]
+- **Test Layers:** [例: UT (Negative Assertions 含む)]
+- **Smokeable:** [例: cargo build --lib + cargo test --lib]
+
+### Phase 2: [HTTP server]
+- **Deliverable:** [例: `crates/server` の axum endpoints]
+- **Test Layers:** [例: UT, IT (HTTP), smoke (L1 Health + L2 Wiring)]
+- **Smokeable:** [例: server boot + /health 200 + 各 endpoint で 5xx なし]
+
+### Phase 3: [...]
+
+> Phase の境界が「smokeable な成果物が無い」状態になる場合は、Phase 分割の見直しが必要（spec-implement Step 3.5.1.5 で escalate）
+
 ## Components and Interfaces
 
 ### DES-1: [Component Name]
@@ -63,6 +87,7 @@ graph TD
 - **Dependencies:** [What it depends on]
 - **Reuses:** [Existing components/utilities it builds upon]
 - **Satisfies:** [REQ-N.M を列挙。対応する Acceptance Criteria]
+- **Test Layers:** [K-2 必須。例: UT (extracted helpers), CT (mount + signal + DOM), ST-1]
 - **Evidence:** [EV-{category}-{NNN} を列挙。このコンポーネントの設計判断の根拠となる EV]
 
 ### DES-2: [Component Name]
@@ -71,6 +96,44 @@ graph TD
 - **Dependencies:** [What it depends on]
 - **Reuses:** [Existing components/utilities it builds upon]
 - **Satisfies:** [REQ-N.M を列挙]
+- **Test Layers:** [例: UT, IT-1 (HTTP API)]
+
+## Architecture for Testability
+
+> K-3 で必須化。design.md の testability 設計を一元宣言する。
+> I (UT Properties Gate, QC15) で禁止される clock / RNG / env / fs / HTTP / DB の直接呼出について、**ここで宣言された Mock 経由のみ許可** されるという design ↔ enforcement の往復ループを成立させる。
+> 5 サブセクションすべての記載が必須（spec-design Step B Check で error 判定）。
+
+### Mock points
+[trait 境界 / DI 注入点 / port-adapter 構造の設計図]
+- 例: `trait UserRepository` を `services/` から DI 注入、テスト時は `MockUserRepository` を bind
+- 例: `port::ImageStore` を adapter 層で隔離
+
+### Clock injection
+[Clock 系の隔離戦略]
+- 例: `trait Clock { fn now() -> DateTime<Utc>; }` を services から注入
+- 例: WASM target では `js-sys::Date::now` を直接呼ばず、`MockClock` 経由
+- 禁止: `chrono::Utc::now()` / `std::time::SystemTime::now()` の直接呼出（I-2 で lint enforcement）
+
+### RNG injection
+[RNG 系の隔離戦略]
+- 例: `trait Rng` を services から注入、テスト時は `MockRng`（固定 seed）を bind
+- 禁止: `rand::thread_rng()` / `rand::random()` の直接呼出
+
+### External I/O isolation
+[HTTP / fs / env / DB / network の隔離戦略]
+- HTTP: 例: mockito / wiremock 経由でテスト
+- fs: 例: tempfile crate の TempDir で隔離
+- env: 例: `dotenvy::from_path_override` でテスト用 env を inject
+- DB: 例: testcontainers で実 DB を起動 / docker-compose.test.yml
+- 禁止: `std::fs::read*` / `std::env::var()` / `reqwest::*` の直接呼出（テストコード内）
+
+### Test fixtures
+[共通 fixture の配置 / lifetime / clean-up 方針]
+- 配置: 例: `tests/fixtures/` 直下、target 別に subdirectory
+- lifetime: 例: per-test scope (TempDir) / per-suite scope (docker-compose.test.yml)
+- clean-up: 例: `Drop` impl / Test Hook で自動削除
+- docker-compose.test.yml と testcontainers の使い分け方針
 
 ## Data Models
 

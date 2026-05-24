@@ -104,7 +104,7 @@ Every `REQ-N.M` in `requirements.md` must be covered by at least one task in `ta
 | `N` / `REQ-N` | **Bare Requirement form** — covers every `REQ-N.*` under requirement N |
 | `All` | Blanket coverage — matches every `REQ-N.M` in requirements.md. Typically used by final integration / PhaseReview tasks (see `tasks-template.md:107`) |
 | `REQ-0` | Setup pseudo-requirement (Phase 0 Git init / container / CI / ADR). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
-| `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
+| `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts`). Does **not** cover any `REQ-N.M`; skip for Check 4 purposes |
 
 If no task covers a given `REQ-N.M` after applying the rules above → **error** (`requirement_not_implemented`).
 
@@ -133,12 +133,58 @@ Every `DES-N` in `design.md` should be reachable:
   | `N.M` / `REQ-N.M` | Must reference an existing Acceptance Criterion in requirements.md. Match is satisfied if **either** of the following is present (OR, not AND): (a) a `<!-- REQ-N.M -->` comment on an Acceptance Criterion line, or (b) the **M-th** Acceptance Criterion (numbered list item) under a `### REQ-N:` heading — the `.M` suffix maps to the Acceptance Criteria index, not to `N`. Both (a) and (b) are valid match sources — legacy specs without comments pass via (b), new specs with comments pass via (a) | If neither (a) nor (b) is found → **error** (`task_requirement_dangling`) |
   | `N` / `REQ-N` | Must reference an existing `### REQ-N:` heading in requirements.md | If not found → **error** (`task_requirement_dangling`) |
   | `All` | Blanket marker — always valid | Emit **info** (`requirements_all`) noting the task covers every requirement |
-  | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts:279`) — always valid | Emit **info** (`requirements_nfr`) |
+  | `NFR` | Non-Functional Requirement marker (filtered by `task-parser.ts`) — always valid | Emit **info** (`requirements_nfr`) |
   | `REQ-0` | Reserved setup pseudo-requirement for Phase 0 scaffolding (Git init / containers / CI / ADR — see `spec-tasks/SKILL.md` Phase 0 examples) — always valid even if `REQ-0` is not declared in requirements.md | Emit **info** (`requirements_setup`) |
   | other | Unknown form | **error** (`task_requirement_unknown_form`) with the specific value |
 
 - **`_DependsOn:` values** must reference existing task IDs within the same tasks.md → otherwise **error** (`task_dependency_dangling`)
 - **`_Leverage:` file paths** should exist (best-effort filesystem check) → otherwise **info** (`leverage_file_missing`; may be intentional for future files)
+
+#### Check 9: Type Reference Resolution (per C-3, dapper-hardening)
+
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause C (C-3).
+> Run spec-design Step B Check 13 (TYPE_REFERENCE_RESOLUTION) and spec-test-design Step B Check 18 (SIGNATURE_MATCH) cross-cuttingly at the spec-verify level.
+
+For each `### DES-N:` in design.md:
+
+1. Parse `Interfaces:` field for function signatures
+2. Extract custom type references (`X`/`E` in `Result<X, E>`, `T` in `Vec<T>`, `T` in `Signal<T>`, `T` in `Callback<T>`, etc.)
+3. Check each custom type:
+   - Is it defined as `### MOD-N: <Type>` heading in the same design.md?
+   - Or is it a standard library type (std::*, core::*, alloc::*)?
+   - Or is it on the known framework type allowlist (Leptos `Signal`, `Resource`, `Callback`; Axum `Json`, `Path`; .NET `IActionResult`; etc.)?
+4. Undefined types → **error** (`undefined_type_reference`) with the type name and location
+
+For each test specification in test-design.md (UT-N.M / CT-N.M / IT-N / ST-N / E2E-N):
+
+1. If the test references a function or method from design.md DES-N, extract the assumed signature
+2. Compare with the actual signature in the `Interfaces:` field of design.md DES-N
+3. Mismatch → **error** (`signature_mismatch`) with both signatures shown
+
+Allowlist:
+- Rust: `std::*`, `core::*`, `alloc::*`, `tokio::*`, `serde::*`, `chrono::*`
+- Leptos: `Signal`, `RwSignal`, `ReadSignal`, `WriteSignal`, `Resource`, `Memo`, `Callback`, `RwSignal`, `Effect`, `IntoView`
+- Axum: `Json`, `Path`, `Query`, `State`, `Extension`, `IntoResponse`, `Response`, `Request`
+- .NET: `Task`, `IActionResult`, `ActionResult<T>`, `IEnumerable<T>`, `List<T>`, `Dictionary<K,V>`, `Nullable<T>`
+- Node.js: built-in types (`Promise`, `Array`, `Map`, `Set`)
+- Generic types (`<T>`) are allowed without resolution
+
+#### Check 8: Requirement Test Layers Declaration (per K-1)
+
+> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause K (K-1).
+> For the Test Taxonomy, see the Test Taxonomy section of `quality-checks.md` (finalized in J-3).
+
+For each Acceptance Criterion in `requirements.md` (numbered list under `### REQ-N:`):
+
+- The line immediately below the AC must contain `- Test Layers: ...` declaring which test layers verify the criterion
+- Allowed layer values: `UT`, `CT`, `IT-N` (or `IT`), `ST-N` (or `ST`), `E2E-N` (or `E2E`)
+  - Concrete ID forms (e.g., `IT-3`) are back-filled after test-design.md is finalized; at the requirements.md stage, layer names alone are acceptable
+  - Multiple values can be combined (e.g., `Test Layers: UT, IT-1, ST-3`)
+- Missing `Test Layers:` line for any AC → **error** (`req_test_layers_missing`)
+- Layer value not in allowed set → **error** (`req_test_layers_invalid_value`)
+- Specific ID (`IT-N`) referenced does not exist in test-design.md → **warn** (`req_test_layers_dangling_id`) (ignored before test-design.md is finalized)
+
+Legacy specs without `Test Layers:` lines: emit **warn** (`req_test_layers_legacy`) instead of error, allowing gradual migration.
 
 ### 4. Generate Report
 

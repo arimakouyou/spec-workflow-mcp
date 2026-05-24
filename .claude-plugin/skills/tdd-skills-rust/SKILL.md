@@ -13,9 +13,19 @@ description: >
 
 Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with Rust language features.
 
+## MUST-READ: What UT verifies (I-5, dapper-hardening)
+
+**A UT is not a check that `cargo test` PASSes (the code works); it is verification of the specification.**
+
+- Verify both spec satisfaction and **absence of out-of-spec behavior** (Negative Assertions)
+- Zero external dependencies (direct calls to clock / RNG / env / fs / HTTP / DB are forbidden; only via Mock)
+- Order-independent and deterministic (FIRST principles)
+
+For details, see the 6 `_TestFocus` categories (`spec-tasks/SKILL.md`) and the Test Taxonomy / QC15 sections of `quality-checks.md`.
+
 ## Pre-check: Know-how Reference
 
-Read relevant know-how such as testing from the Know-how INDEX under the `feedback-loop` rule.
+Read relevant know-how such as testing from the Know-how INDEX as described in the `feedback-loop` skill (FL2).
 Incorporate checklists and counter-examples into your test design.
 
 ## The Essence of TDD
@@ -118,14 +128,14 @@ Details: [references/test-doubles.md](references/test-doubles.md)
 
 ## Leptos Frontend Testing
 
-Leptos フロントエンドコンポーネント（シグナル、view!、サーバー関数）のテスト戦略:
+Test strategy for Leptos frontend components (signals, `view!`, server functions):
 
-- **ロジックをテストし、レンダリングはテストしない**: `#[component]` からビジネスロジックを独立関数に抽出しテスト
-- **シグナルは直接テスト可能**: `signal(initial_value)` で作成、変更、派生値をアサート
-- **サーバー関数**: コアロジックをテスト可能な async 関数に抽出。依存は trait 経由でモック
-- **`cargo test` = SSR のみ**: GREEN 後に `cargo leptos build` で WASM コンパイルを検証
+- **Test the logic, not the rendering**: extract business logic from `#[component]` into standalone functions and test those
+- **Signals are directly testable**: create with `signal(initial_value)`, then assert on mutations and derived values
+- **Server functions**: extract the core logic into testable async functions; mock dependencies via traits
+- **`cargo test` = SSR only**: after GREEN, validate WASM compilation with `cargo leptos build`
 
-詳細: [references/leptos-frontend-testing.md](references/leptos-frontend-testing.md)
+Details: [references/leptos-frontend-testing.md](references/leptos-frontend-testing.md)
 
 ## Detailed References
 

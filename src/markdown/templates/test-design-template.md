@@ -111,7 +111,33 @@ Notes:
 
 ---
 
+## Component Test Specifications
+
+> **責務範囲（H-2 で新設）**: CT (Component Test) は **component reactivity**（mount → signal 操作 → DOM 観測）を対象とする。pure logic は UT の責務。実 server 通信は IT or ST。詳細は `quality-checks.md` QC14 + `tdd-skills-rust/references/leptos-frontend-testing.md` セクション 6 参照。
+
+### CT-1: [コンポーネント名 — 検証シナリオ]
+- **Component:** [対象 component（design.md DES-N の Test Layers に CT/CT-N が含まれること）]
+- **Mount Setup:** [例: `mount_to(test_wrapper, || view! { <SimpleCounter initial_value=0 /> })`]
+- **Action:** [signal 操作 or DOM event trigger。例: `inc_button.click(); tick().await;` (3 回連続 click)]
+- **DOM Verification:** [query_selector + text_content / inner_html。例: `wrapper.query_selector("[data-testid='counter-value']").text_content() == "3"`]
+- **Signal Verification (該当時):** [reactive update が正しく行われたか。例: counter signal の値が 3 になっていること（DOM 経由で間接観測）]
+- **Test Tool:** wasm-bindgen-test（Rust/Leptos）/ bUnit（.NET/Blazor）/ @testing-library（React/Vue）
+
+### CT-2: [コンポーネント名 — 検証シナリオ]
+- **Component:** [対象 component]
+- **Mount Setup:** [...]
+- **Action:** [...]
+- **DOM Verification:** [...]
+- **Signal Verification (該当時):** [...]
+- **Test Tool:** [...]
+
+[必要なシナリオ分だけ繰り返す]
+
+---
+
 ## Integration Test Specifications
+
+> **責務範囲（J-1 で厳格化）**: IT は **backend HTTP API のみ**を対象とする。フロントの Resource → server fn 境界を含む統合動作は CT (Component Test) または ST (System Test) の責務。「server fn 経由」表記を IT 仕様で使うことは禁止。詳細は `quality-checks.md` の Test Taxonomy 参照。
 
 ### IT-1: [統合テストシナリオ名]
 - **Components:** [関与するコンポーネント一覧]
@@ -150,7 +176,44 @@ Notes:
 
 ---
 
+## System Test Specifications
+
+> **責務範囲（J-6 で新設）**: ST は **単一機能の full-stack 動作**（UI 操作 → backend 応答 → UI 反映）を 1 機能分検証する。複数機能の連鎖を含むシナリオは E2E に振る。pure logic / component reactivity 単独 / backend HTTP API のみ は対象外。詳細は `quality-checks.md` の Test Taxonomy 参照。
+
+### ST-1: [機能名]
+- **Feature Scope:** [対象機能の範囲（例: ログイン機能のみ、検索機能のみ）]
+- **Requirement:** [対応する REQ-N / Acceptance Criteria]
+- **Technology:**
+  - **Runner:** Playwright | Cypress
+  - **App Container:** docker-compose up で実 server 起動
+  - **DB Setup:** migration + seed via container
+  - **Browser:** Chromium | Firefox | WebKit
+- **Test Path:**
+  1. [UI 操作1] → [backend 応答] → [UI 反映]
+  2. [UI 操作2] → [backend 応答] → [UI 反映]
+- **Verification Points:**
+  - [検証ポイント1: 例 — 入力に対して期待されるレスポンスが UI に表示されること]
+  - [検証ポイント2: 例 — エラー時に適切なメッセージが UI に表示されること]
+- **Expected Outcome:** [機能が期待通り動作する全体像]
+
+### ST-2: [機能名]
+- **Feature Scope:** [対象機能]
+- **Requirement:** [対応する REQ-N]
+- **Technology:**
+  - **Runner:** Playwright | Cypress
+- **Test Path:**
+  1. [UI 操作] → [backend 応答] → [UI 反映]
+- **Verification Points:**
+  - [検証ポイント]
+- **Expected Outcome:** [期待結果]
+
+[必要な機能分だけ繰り返す]
+
+---
+
 ## E2E Test Specifications
+
+> **責務範囲（J-2 で厳格化）**: E2E は **user journey 専用**（複数機能の連鎖を含むエンドツーエンドのフロー）。個別機能の単独テスト（zoom のみ、検索のみ など）は ST の責務。「e2e-zoom-rotate.spec.ts」のような単一機能 E2E は禁止。詳細は `quality-checks.md` の Test Taxonomy 参照。
 
 ### E2E-1: [ユーザージャーニー名]
 - **User Story:** [対応するユーザーストーリー（REQ-N の参照）]

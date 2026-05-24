@@ -13,9 +13,19 @@ description: >
 
 Provides TDD principles and practices based on the teachings of t-wada (Takuto Wada), aligned with .NET 10 language features.
 
+## MUST-READ: What UT verifies (I-5, dapper-hardening)
+
+**A UT is not a check that `dotnet test` PASSes (the code works); it is verification of the specification.**
+
+- Verify both spec satisfaction and **absence of out-of-spec behavior** (Negative Assertions)
+- Zero external dependencies (direct calls to clock / RNG / env / fs / HTTP / DB are forbidden; only via Mock)
+- Order-independent and deterministic (FIRST principles)
+
+For details, see the 6 `_TestFocus` categories (`spec-tasks/SKILL.md`) and the Test Taxonomy / QC15 sections of `quality-checks.md`.
+
 ## Pre-check: Know-how Reference
 
-Read relevant know-how such as testing from the Know-how INDEX under the `feedback-loop` rule.
+Read relevant know-how such as testing from the Know-how INDEX as described in the `feedback-loop` skill (FL2).
 Incorporate checklists and counter-examples into your test design.
 
 ## The Essence of TDD

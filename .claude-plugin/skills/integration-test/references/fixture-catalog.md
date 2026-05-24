@@ -1,10 +1,10 @@
-# 共通ヘルパー・Fixture カタログ
+# Common Helpers and Fixture Catalog
 
-`tests/integration/helpers/` で定義するテスト用ヘルパーの一覧。
+A catalog of test helpers defined in `tests/integration/helpers/`.
 
-## TestContext（中核ヘルパー）
+## TestContext (Core Helper)
 
-各テストで独立した DB コンテナと Axum アプリケーションを提供する。
+Provides an independent DB container and Axum application for each test.
 
 ```rust
 pub struct TestContext {
@@ -15,32 +15,32 @@ pub struct TestContext {
 }
 
 impl TestContext {
-    /// 新しいテストコンテキストを作成（実 PostgreSQL コンテナ起動）
+    /// Create a new test context (starts a real PostgreSQL container)
     pub async fn new() -> Self { /* ... */ }
 
-    /// 外部 API がエラーを返す設定で作成
+    /// Create with the external API configured to return errors
     pub async fn with_failing_external_api() -> Self { /* ... */ }
 
-    /// GET リクエスト（認証ヘッダー付き）
+    /// GET request (with authentication header)
     pub async fn get(&self, path: &str) -> TestResponse { /* ... */ }
 
-    /// GET リクエスト（認証なし）
+    /// GET request (without authentication)
     pub async fn get_without_auth(&self, path: &str) -> TestResponse { /* ... */ }
 
-    /// POST リクエスト（認証ヘッダー付き）
+    /// POST request (with authentication header)
     pub async fn post(&self, path: &str) -> RequestBuilder { /* ... */ }
 
-    /// PUT リクエスト（認証ヘッダー付き）
+    /// PUT request (with authentication header)
     pub async fn put(&self, path: &str) -> RequestBuilder { /* ... */ }
 
-    /// DELETE リクエスト（認証ヘッダー付き）
+    /// DELETE request (with authentication header)
     pub async fn delete(&self, path: &str) -> TestResponse { /* ... */ }
 }
 ```
 
-## DB 関連ヘルパー
+## DB Helpers
 
-### PostgreSQL コンテナ
+### PostgreSQL Container
 
 ```rust
 use testcontainers::runners::AsyncRunner;
@@ -54,7 +54,7 @@ async fn create_pg_container() -> (ContainerAsync<Postgres>, String) {
 }
 ```
 
-### マイグレーション実行
+### Migration Execution
 
 ```rust
 use diesel_async::AsyncPgConnection;
@@ -63,7 +63,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 async fn run_migrations(database_url: &str) {
-    // diesel の同期マイグレーションを blocking task で実行
+    // Run diesel synchronous migrations inside a blocking task
     let url = database_url.to_string();
     tokio::task::spawn_blocking(move || {
         use diesel::prelude::*;
@@ -75,7 +75,7 @@ async fn run_migrations(database_url: &str) {
 }
 ```
 
-### テストデータ投入 (Seed)
+### Seeding Test Data
 
 ```rust
 impl TestContext {
@@ -109,7 +109,7 @@ impl TestContext {
 }
 ```
 
-## 認証ヘッダー
+## Authentication Header
 
 ```rust
 fn test_auth_header() -> HeaderMap {
@@ -122,7 +122,7 @@ fn test_auth_header() -> HeaderMap {
 }
 ```
 
-## Axum アプリ構築
+## Axum App Construction
 
 ```rust
 async fn build_test_app(db_pool: DbPool, valkey: ConnectionManager) -> Router {
@@ -132,24 +132,24 @@ async fn build_test_app(db_pool: DbPool, valkey: ConnectionManager) -> Router {
         config: Arc::new(test_config()),
     };
 
-    // 本番と同じルーター構成を使用
+    // Use the same router configuration as production
     crate::routes::routes()
         .with_state(state)
 }
 ```
 
-## Fixture 選択フロー
+## Fixture Selection Flow
 
 ```
-テストで何が必要？
-  ├─ DB アクセスが必要
-  │   └─ TestContext::new() を使用
-  │       ├─ テストデータ投入 → seed_user(), seed_users()
-  │       └─ DB 検証 → find_user_by_id(), find_user_by_email()
+What does the test need?
+  ├─ DB access required
+  │   └─ Use TestContext::new()
+  │       ├─ Seed data → seed_user(), seed_users()
+  │       └─ DB verification → find_user_by_id(), find_user_by_email()
   │
-  ├─ 外部 API のモック
-  │   └─ TestContext::with_failing_external_api() or カスタム trait 実装
+  ├─ External API mocking
+  │   └─ TestContext::with_failing_external_api() or a custom trait implementation
   │
-  └─ HTTP リクエスト送信
+  └─ HTTP request dispatch
       └─ ctx.get(), ctx.post(), ctx.put(), ctx.delete()
 ```

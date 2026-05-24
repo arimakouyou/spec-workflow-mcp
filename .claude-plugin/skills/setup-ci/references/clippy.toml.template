@@ -1,0 +1,20 @@
+# clippy.toml — TS-R4 supplementary configuration
+# Supports L3 enforcement of `.claude-plugin/rules/type-safety.md` TS-R4 (no unwrap).
+# Forbids unwrap / expect / panic / dbg in production code while allowing them in test code.
+#
+# Place this file at the project root before enabling CI.
+# CI (ci-rust.yml / ci-leptos.yml) explicitly denies the following lint flags:
+#   -D clippy::unwrap_used
+#   -D clippy::expect_used
+#   -D clippy::panic
+
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-dbg-in-tests = true
+
+# As needed, forbid specific methods (project-specific additions)
+# disallowed-methods = [
+#     { path = "std::option::Option::unwrap", reason = "unwrap can panic; use ? or unwrap_or_default" },
+#     { path = "std::result::Result::unwrap", reason = "unwrap can panic; use ? or proper error handling" },
+# ]

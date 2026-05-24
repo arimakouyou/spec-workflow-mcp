@@ -407,7 +407,7 @@ async function handleGetApprovalStatus(
       nextSteps.push('BLOCKED - Do not proceed');
       nextSteps.push('VERBAL APPROVAL NOT ACCEPTED - Use dashboard or VS Code extension only');
       nextSteps.push('Approval must be done via dashboard or VS Code extension');
-      nextSteps.push('Continue polling with approvals action:"status"');
+      nextSteps.push('Re-check later with approvals action:"status" or /check-approval (no polling loop — user must approve via dashboard first)');
     } else if (approval.status === 'approved') {
       nextSteps.push('APPROVED - Can proceed');
       nextSteps.push('Run approvals action:"delete" before continuing');

@@ -74,7 +74,7 @@ Utility methods for seeding test data and verifying DB state:
 ```csharp
 public static class DatabaseHelper
 {
-    /// Create a scoped DbContext from the factory（スコープも一緒に返し、呼び出し側で Dispose する）
+    /// Create a scoped DbContext from the factory (also returns the scope so the caller can Dispose it)
     public static (AppDbContext Db, IServiceScope Scope) CreateDbContext(WebApplicationFactory<Program> factory)
     {
         var scope = factory.Services.CreateScope();
@@ -168,7 +168,7 @@ global using Xunit;
 ## NuGet Package References
 
 Required packages for the integration test project (`*.IntegrationTests.csproj`).
-バージョンは `*` 表記（ショートハンド）。実プロジェクトでは `csproj.md` に従い具体バージョンを指定するか、Central Package Management (`Directory.Packages.props`) を使用すること:
+Versions use `*` notation (shorthand). In real projects, either specify concrete versions per the `csproj` Skill, or use Central Package Management (`Directory.Packages.props`):
 
 ```xml
 <ItemGroup>

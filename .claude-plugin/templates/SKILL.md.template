@@ -1,0 +1,80 @@
+---
+name: {skill-name}
+description: |
+  {Describe in 1-3 sentences what this skill covers. Include concrete nouns and concrete use-case phrases.
+
+  (Good example)
+  Implementation guide for the Axum web framework. Router splitting and composition, AppState design,
+  extractor argument ordering, AppError and IntoResponse implementations, middleware composition with
+  tower ServiceBuilder, graceful shutdown, and unit testing handlers. Reference when implementing Axum
+  handlers, adding API endpoints, building HTTP servers, or working on a Rust backend.
+
+  (Bad example)
+  Best practices for the Axum web framework. <- too abstract, discovery will not trigger}
+
+allowed-tools: [Read, Edit, Write, Bash, Grep, Glob]
+---
+
+# {Skill Title}
+
+## In Scope
+- List 3-5 concrete examples of tasks that should read this skill
+- (e.g., Adding a new Axum handler, modifying an existing endpoint, unifying error types, adding middleware)
+
+## Out of Scope
+- State explicitly what this skill does not cover (and where to go instead)
+- (e.g., Diesel query optimization -> `diesel` skill; E2E tests -> `integration-test`)
+
+## Key Topics
+
+### Topic 1: {e.g., Router Configuration}
+
+- Bullet the rules (what to do / what not to do)
+- Code example
+
+```rust
+// Good
+// (example code)
+
+// Bad (also show counter-examples)
+// (counter-example code)
+```
+
+### Topic 2: {e.g., State Management}
+
+...
+
+### Topic 3: {e.g., Error Handling}
+
+...
+
+## Common Pitfalls
+
+1. **Pitfall 1**: Description -> the correct approach
+2. **Pitfall 2**: Description -> the correct approach
+
+## Project-Specific Conventions
+
+- Things that must be observed specifically in this project (including deviations from common best practices)
+- Version-specific caveats
+
+## Related Rules / Skills
+
+- Universal constraints to observe: `design-principles`, `type-safety`, `security`
+- Related Skills: `tdd-skills-rust`, `diesel` (when DB is involved)
+
+## References
+
+- Official documentation
+- Internal ADRs (if any)
+
+---
+
+## Authoring Checklist
+
+- [ ] Did you include concrete nouns (technology names, function names, identifiers) in `description`?
+- [ ] Did you include concrete use-case phrases (e.g., "when implementing X", "when adding Y") in `description`?
+- [ ] Is the body around 2000-5000 tokens (assuming hint-style reference)?
+- [ ] Did you state "Out of Scope" explicitly (to prevent responsibility creep into other skills)?
+- [ ] Do code examples include both Good and Bad cases?
+- [ ] Did you link to related Rules?

@@ -1,10 +1,10 @@
-# テストパターン
+# Test Patterns
 
-## テストフィクスチャ
+## Test Fixtures
 
-テストで共通して使うデータやオブジェクトの準備。
+Preparing data and objects shared across tests.
 
-### ヘルパー関数
+### Helper Functions
 
 ```rust
 #[cfg(test)]
@@ -34,9 +34,9 @@ mod tests {
 }
 ```
 
-### rstest によるフィクスチャ
+### Fixtures with rstest
 
-`rstest` クレートで pytest 風のフィクスチャを使える。
+The `rstest` crate provides pytest-style fixtures.
 
 ```rust
 use rstest::*;
@@ -63,9 +63,9 @@ fn add_item(mut cart: ShoppingCart, sample_item: Item) {
 }
 ```
 
-## テストデータビルダー
+## Test Data Builders
 
-複雑なオブジェクトを柔軟に構築。
+Flexibly construct complex objects.
 
 ```rust
 struct ItemBuilder {
@@ -118,9 +118,9 @@ fn expensive_item() {
 }
 ```
 
-## パラメータ化テスト
+## Parameterized Tests
 
-### rstest によるパラメータ化
+### Parameterization with rstest
 
 ```rust
 use rstest::rstest;
@@ -138,7 +138,7 @@ fn calculate_discount(#[case] amount: u64, #[case] expected: u64) {
 }
 ```
 
-### マクロによるパラメータ化（rstest 不使用時）
+### Parameterization via Macro (when not using rstest)
 
 ```rust
 macro_rules! discount_tests {
@@ -161,22 +161,22 @@ discount_tests! {
 }
 ```
 
-## 1テスト1アサート（の意図）
+## One Assertion per Test (in spirit)
 
-原則: 1つのテストで検証する概念は1つ。
+Principle: each test verifies one concept.
 
 ```rust
-// 悪い: 複数の概念
+// Bad: multiple concepts
 #[test]
 fn shopping_cart() {
     let mut cart = ShoppingCart::new();
-    assert!(cart.is_empty());         // 空の検証
+    assert!(cart.is_empty());         // verifies empty
     cart.add_item(Item { price: 100 });
-    assert_eq!(cart.item_count(), 1); // 個数の検証
-    assert_eq!(cart.total(), 100);    // 合計の検証
+    assert_eq!(cart.item_count(), 1); // verifies count
+    assert_eq!(cart.total(), 100);    // verifies total
 }
 
-// 良い: 概念ごとに分割
+// Good: split per concept
 #[test]
 fn new_cart_should_be_empty() {
     let cart = ShoppingCart::new();
@@ -198,7 +198,7 @@ fn add_item_increases_total() {
 }
 ```
 
-例外: 関連する複数のアサートが1つの概念を検証する場合は OK。
+Exception: it is OK when several related assertions verify a single concept.
 
 ```rust
 #[test]
@@ -208,16 +208,16 @@ fn add_item_updates_cart_state() {
 
     cart.add_item(item);
 
-    // これらは全て「商品追加」という1つの概念を検証
+    // All of these verify the single concept "item added"
     assert_eq!(cart.item_count(), 1);
     assert_eq!(cart.total(), 100);
     assert!(cart.contains("Book"));
 }
 ```
 
-## まとめ
+## Summary
 
-- ヘルパー関数 or `rstest` フィクスチャで共通データを準備
-- Builder パターンで柔軟なテストデータ
-- `rstest` のパラメータ化で重複削減
-- 1テスト1概念を意識
+- Prepare shared data via helper functions or `rstest` fixtures
+- Use the Builder pattern for flexible test data
+- Reduce duplication via `rstest` parameterization
+- Aim for one concept per test

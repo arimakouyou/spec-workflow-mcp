@@ -55,105 +55,116 @@ The same **spec name** used in previous phases (kebab-case, e.g., `user-authenti
 - `.spec-workflow/specs/{spec-name}/requirements.md`
 - `.spec-workflow/specs/{spec-name}/design.md`
 
-### 3. Analyze (メインエージェント)
+### 3. Analyze (Main Agent)
 
-メインエージェントが以下を調査・決定する。サブエージェントに渡すコンテキストとなる。
+The main agent investigates and decides the following. This becomes context handed to subagents.
 
-#### 3.1 コンテナ・テストインフラの技術選定
+#### 3.1 Container / Test Infrastructure Technology Selection
 
-プロジェクトタイプとコンテナ構成を検出し、テスト技術を選定する:
+Detect the project type and container configuration, and select test technologies:
 
-1. **コンテナ構成の確認**:
-   - design.md の Container Architecture セクションを読む
-   - docker-compose.yml / Dockerfile の存在確認
+1. **Confirm container configuration**:
+   - Read the Container Architecture section of design.md
+   - Confirm whether docker-compose.yml / Dockerfile exist
 
-2. **DB テスト戦略の決定**:
-   - DB 依存あり → testcontainers（デフォルト）
-   - docker-compose.test.yml が既存 → それを活用
-   - DB なし → 不要
+2. **Decide DB test strategy**:
+   - DB dependency present → testcontainers (default)
+   - docker-compose.test.yml already exists → leverage it
+   - No DB → not needed
 
-3. **E2E テストランナーの決定**:
-   - フロントエンドあり（HTML テンプレート、JSX/TSX、Leptos view! マクロ）→ Playwright
-   - API のみ → reqwest (Rust) / supertest (Node.js)
+3. **Decide E2E test runner**:
+   - Frontend present (HTML templates, JSX/TSX, Leptos view! macro) → Playwright
+   - API only → reqwest (Rust) / supertest (Node.js)
 
-#### 3.2 既存テストパターンの把握
+#### 3.2 Existing Test Pattern Survey
 
-コードベースを探索し、既存のテストフレームワーク・パターン・ヘルパーを把握する:
+Explore the codebase and survey existing test frameworks, patterns, and helpers:
 
 ```bash
-# テストファイルの構造を確認
+# Check test file structure
 find . -name "*test*" -o -name "*spec*" | head -20
 
-# テストフレームワークの確認
+# Check test framework
 grep -r "mockall\|rstest\|jest\|pytest\|vitest" Cargo.toml package.json 2>/dev/null
 
-# 既存のテストヘルパー
+# Existing test helpers
 find . -path "*/test*/*helper*" -o -path "*/test*/*fixture*" -o -path "*/test*/*util*" | head -10
 ```
 
-調査結果を以下の形式でまとめ、サブエージェントへの入力とする:
+Summarize the findings as input to subagents in the following form:
 ```
-テスト技術サマリー:
-- テストフレームワーク: [vitest / jest / rstest / pytest 等]
-- DB テスト戦略: [testcontainers / docker-compose.test.yml / 不要]
-- E2E テストランナー: [Playwright / reqwest / supertest 等]
-- 既存テストヘルパー: [ファイルパスのリスト]
-- 既存テストパターン: [パターンの概要]
+Test technology summary:
+- Test framework: [vitest / jest / rstest / pytest, etc.]
+- DB test strategy: [testcontainers / docker-compose.test.yml / not needed]
+- E2E test runner: [Playwright / reqwest / supertest, etc.]
+- Existing test helpers: [list of file paths]
+- Existing test patterns: [summary of patterns]
 ```
 
-#### 3.3 テスト用ツール要件の列挙
+#### 3.3 Enumerate Required Test Tools
 
-セクション 3.1 と 3.2 の結果に基づき、テスト実行に必要なツールを Required Test Tools テーブル形式で列挙する:
+Based on the results of sections 3.1 and 3.2, list the tools required for test execution in Required Test Tools table form:
 
-1. **テストフレームワーク**（cargo test, vitest, jest 等）→ Check Command と共に Required=Yes で記録
-2. **コンテナランタイム**（testcontainers 使用時）→ docker (Required=Yes)
-3. **E2E テストランナー**（Playwright, Cypress 等）→ Required=Yes、Install Command 含めて記録
-4. **ブラウザエンジン**（Browser E2E 時）→ chromium (Required=Yes) — **環境依存スキップ不可**
-5. **DB ツール**（diesel_cli, prisma 等）→ Required=Yes
-6. **ビルドキャッシュ等の最適化ツール** → Recommended
+1. **Test framework** (cargo test, vitest, jest, etc.) → record with Check Command and Required=Yes
+2. **Container runtime** (when using testcontainers) → docker (Required=Yes)
+3. **E2E test runner** (Playwright, Cypress, etc.) → Required=Yes, recorded with Install Command
+4. **Browser engine** (for Browser E2E) → chromium (Required=Yes) — **Environment-dependent skipping not allowed**
+5. **DB tools** (diesel_cli, prisma, etc.) → Required=Yes
+6. **Optimization tools such as build cache** → Recommended
 
-結果を以下の形式でまとめ、Step 5 で test-design.md に挿入する:
+Summarize results in the following form, to be inserted into test-design.md in Step 5:
 ```
-テスト用ツール一覧:
+Required test tools:
 | Tool | Min Version | Purpose | Check Command | Install Command | Required |
 |------|-------------|---------|---------------|-----------------|----------|
 | ... | ... | ... | ... | ... | ... |
 ```
 
-**重要**: E2E テストに必要なツール（Playwright, Chrome等）は必ず Required=Yes とする。design.md の「Excluded Test Environments」で明示的に除外されているテスト以外は、すべて実行必須。
+**Important**: Tools required for E2E tests (Playwright, Chrome, etc.) must always be Required=Yes. Except for tests explicitly excluded under "Excluded Test Environments" in design.md, every test is mandatory to run.
 
-#### 3.3.1 テストツールバージョン検証
+#### 3.3.1 Test Tool Version Verification
 
-Required Test Tools テーブルの各ツールについて、**「インストール済みバージョンの検出」** と **「最新安定版の調査」** を分けて扱うこと。`Min Version` に採用するのは、前者ではなく**後者で確認した最新安定版**である。
+For each tool in the Required Test Tools table, treat **"detecting the installed version"** and **"researching the latest stable version"** separately. The `Min Version` is taken from the **latest stable confirmed in the latter**, not from the former.
 
-1. WebSearch またはレジストリ CLI で**最新安定版**を確認する
-   - crates.io / npm のパッケージの場合のみレジストリ CLI を使ってよい
+1. Confirm the **latest stable version** via WebSearch or registry CLI
+   - You may use registry CLI only for crates.io / npm packages
      - `npm view {pkg} version`
-     - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` （完全一致を確認）
-   - それ以外のツール（docker, chromium 等）は WebSearch で公式リリースページを確認
-   - Playwright: `npm view playwright version` で最新安定版を確認する
-   - Chromium: Playwright バージョンに対応するバンドル版を使用（`npx playwright install chromium`）。Min Version は `(bundled with playwright)` と記載
-2. 必要に応じて、ローカル環境・プロジェクト依存として**現在インストール済みのバージョン**を別途検出する
-   - Playwright: `npx playwright --version` は最新安定版の調査ではなく、インストール済みバージョンの検出として扱う
-3. `Min Version` は、手順 1 で検証した最新安定版を採用して更新する。手順 2 の結果は差分確認用の参考情報であり、`Min Version` の根拠にしない
+     - Rust: `cargo search {crate} --limit 1 | grep "^{crate} ="` (verify exact match)
+   - For other tools (docker, chromium, etc.), confirm via WebSearch on the official release page
+   - Playwright: confirm the latest stable via `npm view playwright version`
+   - Chromium: use the bundled version corresponding to the Playwright version (`npx playwright install chromium`). Record Min Version as `(bundled with playwright)`
+2. If needed, separately detect the **currently installed version** as a local environment / project dependency
+   - Playwright: `npx playwright --version` is treated as installed-version detection, not as latest-stable research
+3. Update `Min Version` with the latest stable verified in step 1. Step 2 results are only diff-check reference info, not the basis for `Min Version`
 
-Phase 2 step 3.5 と同様、AI の学習データのデフォルト値を使用しない。
+As in Phase 2 step 3.5, do not use defaults from AI training data.
 
 ---
 
 ### 4. Generate Test Specifications via Subagents
 
-3つのサブエージェントを **並列で** 起動し、UT/IT/E2E 仕様をそれぞれ独立に導出する。
+Launch subagents **one at a time** to derive UT/IT/ST/E2E specs independently (CT is added after H-2). Per `rules/serial-execution-policy.md`, concurrent subagent launches are prohibited across the plugin.
 
-**重要**: 3つの Agent 呼び出しを **1つのメッセージ内で同時に** 行うこと（並列実行）。
+**Important**: Make Agent calls **one per message**. Wait for each subagent (A through E) to complete and return its output before launching the next. Do NOT batch multiple Agent calls into a single message.
 
-#### Subagent A: UT 仕様の導出
+#### Declaration-based derivation (K-7; see `dapper-hardening-orchestrator.md`)
+
+Each Subagent reads, as the **highest-priority input** for derivation, **the `Test Layers:` field declaration in design.md DES-N** (made mandatory by K-2) and **the `Test Layers:` field declaration in requirements.md REQ-N.M** (made mandatory by K-1), and derives **only specs corresponding to the declared layers**. Heuristic derivation of non-declared layers is forbidden.
+
+- If DES-11 declares `Test Layers: UT, CT, ST-1` → Subagent A derives UT-11.x, Subagent D (after H-2) derives CT-11, Subagent E derives ST-1
+- If DES-3 declares `Test Layers: UT, IT-19` → Subagent A derives UT-3.x, Subagent B derives IT-19. Subagents C/D/E do not generate specs for it
+
+**Fallback**: Only when design.md / requirements.md lack Test Layers declarations (legacy), each Subagent falls back to the conventional heuristic derivation. New specs require declaration-based derivation (K-2 / K-1 / K-6 / K-7 are linked).
+
+Each Subagent's prompt must read the `Test Layers:` field from design.md / requirements.md and only process components / requirements corresponding to its responsibility layer.
+
+#### Subagent A: Derive UT Specs
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "UT 仕様を導出",
+  description: "Derive UT specs",
   prompt: "You are a test specification engineer. Generate Unit Test specifications.
 
     Read the following files:
@@ -161,47 +172,49 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Task:
-    design.md の **Components and Interfaces** セクションから、各コンポーネントのユニットテスト仕様を導出せよ。
+    From the **Components and Interfaces** section of design.md, derive unit test specs for each component.
 
-    導出ルール:
-    1. 各コンポーネントの公開インターフェース（メソッド/関数）を列挙
-    2. 各インターフェースに対して、4カテゴリ（Happy Path / Boundary Values / Error Handling / Edge Cases）のテストケースを設計
-    3. コンポーネントの **Dependencies** からモック対象を特定
-    4. design.md の **Error Handling** テーブルから、各エラーコードに対応するエラーハンドリングテストを設計
-    5. **Leptos フロントエンドコンポーネント**: コンポーネントが Leptos フロントエンドコンポーネント（view! マクロ、#[component]、signal 使用、pages/ / components/ ディレクトリ配置）の場合:
-       - HTML レンダリングや DOM 構造のテストは指定しない
-       - 代わりに以下のテストを指定:
-         a. シグナル状態遷移（初期状態、更新後の値）
-         b. 派生計算の正しさ（クロージャ、Memo の値）
-         c. バリデーションロジック（コンポーネントから抽出）
-         d. Callback/ハンドラロジック（抽出した関数の動作）
-         e. サーバー関数ビジネスロジック（コア計算）
-       - UT テーブルの Verification 列に「Test target: extracted logic function」と注記
+    Derivation rules:
+    1. Enumerate each component's public interfaces (methods / functions)
+    2. For each interface, design test cases across 4 categories (Happy Path / Boundary Values / Error Handling / Edge Cases)
+    3. Identify mock targets from each component's **Dependencies**
+    4. From the **Error Handling** table in design.md, design error-handling tests for each error code
+    5. **Leptos frontend components**: When a component is a Leptos frontend component (uses view! macro, #[component], signals; located under pages/ / components/):
+       - Do NOT specify tests for HTML rendering or DOM structure
+       - Instead, specify the following tests:
+         a. Signal state transitions (initial state, value after update)
+         b. Correctness of derived computations (closures, Memo values)
+         c. Validation logic (extracted from the component)
+         d. Callback / handler logic (behavior of extracted functions)
+         e. Server function business logic (core computation)
+       - Annotate the Verification column of the UT table with 'Test target: extracted logic function'
 
-    命名規則: UT-{コンポーネント番号}.{テストケース番号} (例: UT-1.1, UT-1.2, UT-2.1)
+    Naming convention: UT-{component number}.{test case number} (e.g., UT-1.1, UT-1.2, UT-2.1)
 
-    品質基準:
-    - design.md の全コンポーネントに対して UT 仕様が存在すること
-    - 各 UT は 4カテゴリのうち該当するカテゴリを網羅していること
-    - テストケースの Input / Expected Output / Verification が具体的であること（プレースホルダー不可）
-    - Leptos フロントエンドコンポーネントの UT 仕様は抽出可能なロジック（シグナル、バリデーション、計算）を対象とし、HTML レンダリングは対象としないこと
+    Quality criteria:
+    - Every component in design.md must have a UT spec
+    - Each UT must cover the applicable categories among the 4
+    - Each test case's Input / Expected Output / Verification must be concrete (no placeholders)
+    - Leptos frontend component UT specs target extractable logic (signals, validation, computation), not HTML rendering
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## Unit Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各コンポーネントをサブセクション (###) とし、テストケースをテーブル形式で記載。"
+    Output the ## Unit Test Specifications markdown section as-is.
+    Each component is a subsection (###); list test cases in table form."
 })
 ```
 
-#### Subagent B: IT 仕様の導出
+#### Subagent B: Derive IT Specs (**backend HTTP API only**, tightened by J-1)
+
+> J-1 tightens scope: IT targets the **backend HTTP API only**. Integrations crossing the frontend Resource → server fn boundary are the responsibility of CT (component reactivity) or ST (single feature full-stack); they are not IT. The phrasing "via server fn" is forbidden.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "IT 仕様を導出",
+  description: "Derive IT specs",
   prompt: "You are a test specification engineer. Generate Integration Test specifications.
 
     Read the following files:
@@ -209,35 +222,44 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
 
     Task:
-    design.md の **Architecture** 図と **Components and Interfaces** の Dependencies 記述から、コンポーネント間の重要な相互作用を特定しテストケース化せよ。
+    From the **Architecture** diagram and the Dependencies sections of **Components and Interfaces** in design.md, identify component-to-component interactions for the **backend HTTP API only** and turn them into test cases.
 
-    導出ルール:
-    1. Architecture 図の矢印（依存関係）ごとに、結合テストシナリオを検討
-    2. DB アクセスを伴うコンポーネントには DB 統合テストを設計
-    3. 外部 API 連携がある場合はモック/スタブを使った統合テストを設計
+    Scope (tightened by J-1):
+    - **In scope**: HTTP API endpoint behavior on the backend server (status code / response body / DB state changes / authentication and authorization)
+    - **Out of scope**: UI operations / DOM checks / the frontend Resource → server fn boundary. These belong to CT (component reactivity) or ST (single feature full-stack). The phrasing "via server fn" is forbidden in IT specs
+    - See the Test Taxonomy section in quality-checks.md for details
 
-    命名規則: IT-{シナリオ番号} (例: IT-1, IT-2)
+    Derivation rules:
+    1. Among the arrows (dependencies) in the Architecture diagram, design HTTP integration test scenarios for each **backend-internal** edge
+    2. Design DB integration tests for components that touch the DB (real DB / TempDir / docker-compose.test.yml)
+    3. For external API integrations, design integration tests using mocks / stubs (mockito / wiremock)
+    4. Interactions that require UI-driven behavior verification go to **ST or CT, not IT** (Subagent E / Subagent D's responsibility)
 
-    品質基準:
-    - design.md Architecture の全主要依存関係に IT 仕様が存在すること
-    - 各 IT に Components, Interaction, Technology, Preconditions, Steps, Expected Result, Verification Points を記載
+    Naming convention: IT-{scenario number} (e.g., IT-1, IT-2)
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Quality criteria:
+    - An IT spec must exist for components whose `Test Layers:` field in design.md DES-N includes `IT-N` or `IT` (consistent with K-2)
+    - Each IT must record Components, Interaction, Technology, Preconditions, Steps, Expected Result, and Verification Points
+    - **IT specs that include UI verification / DOM operations are not allowed** (detected by Step B Check 15)
+
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## Integration Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
+    Output the ## Integration Test Specifications markdown section as-is.
+    Each scenario is a subsection (###); record details in a table or structured list."
 })
 ```
 
-#### Subagent C: E2E 仕様の導出
+#### Subagent C: Derive E2E Specs (**user journey only**, tightened by J-2)
+
+> J-2 tightens scope: E2E is **strictly for user journeys**, covering only end-to-end flows that chain multiple features. "Tests of individual features" (e.g., zoom/rotate only, search only) belong to ST (System Test) and are not E2E.
 
 ```
 Agent({
   subagent_type: "general-purpose",
   model: "sonnet",
-  description: "E2E 仕様を導出",
+  description: "Derive E2E specs",
   prompt: "You are a test specification engineer. Generate End-to-End Test specifications.
 
     Read the following files:
@@ -245,62 +267,166 @@ Agent({
     - {project-path}/.spec-workflow/specs/{spec-name}/design.md
 
     Task:
-    requirements.md の **ユーザーストーリー** と **Acceptance Criteria** から、ユーザージャーニーレベルのテストシナリオを導出せよ。
+    From the **user stories** and **Acceptance Criteria** in requirements.md, derive **user journey** test scenarios (end-to-end flows that chain multiple features).
 
-    導出ルール:
-    1. 各ユーザーストーリーの正常フローを E2E シナリオ化
-    2. 重要な失敗シナリオ（認証エラー、権限不足等）も E2E シナリオに含める
-    3. design.md の API Design セクションがある場合、API レスポンスの検証ポイントを明記
+    Scope (tightened by J-2):
+    - **In scope**: User journeys that chain multiple features (e.g., login → search → click result → view details → logout)
+    - **Out of scope**: Tests of individual features in isolation (e.g., zoom feature only / info panel toggle only / localStorage persistence only). These belong to ST (System Test). Per-feature E2E names like 'e2e-zoom-rotate.spec.ts' are forbidden
+    - See the Test Taxonomy section in quality-checks.md for details
 
-    命名規則: E2E-{シナリオ番号} (例: E2E-1, E2E-2)
+    Derivation rules:
+    1. From each user story, turn the happy-path user journey containing **multiple feature chains** into an E2E scenario
+    2. Include important failure scenarios (auth errors, insufficient permissions, etc.) as user-journey E2E scenarios
+    3. If design.md has an API Design section, explicitly state API response verification points for each step of the user journey
+    4. **Single-feature test demand** goes to ST specs (Subagent E), not E2E
 
-    品質基準:
-    - requirements.md の全ユーザーストーリーに最低1つの E2E 仕様が存在すること
-    - 各 E2E に User Story 参照、Test Type、Technology、Scenario Steps、Success Criteria、Failure Scenarios を記載
+    Naming convention: E2E-{scenario number} (e.g., E2E-1, E2E-2)
 
-    テスト技術コンテキスト:
-    {メインエージェントが調査したテスト技術サマリーをここに挿入}
+    Quality criteria:
+    - Each E2E must include **chains of multiple features** (no chain → ST candidate)
+    - Each E2E must record User Story reference, Test Type, Technology, Scenario Steps, Success Criteria, and Failure Scenarios
+    - **Calling individual-feature tests (no chain) E2E is forbidden** (detected by Step B Check 15)
+
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
 
     Output format:
-    ## E2E Test Specifications のマークダウンセクションをそのまま出力せよ。
-    各シナリオをサブセクション (###) とし、詳細をテーブルまたは構造化リストで記載。"
+    Output the ## E2E Test Specifications markdown section as-is.
+    Each scenario is a subsection (###); record details in a table or structured list."
+})
+```
+
+#### Subagent D: Derive CT Specs (newly added by H-2)
+
+> Newly added by H-2: CT (Component Test) targets **component reactivity** (mount → signal manipulation → DOM observation). Practicality on Leptos 0.7 + wasm-bindgen-test is confirmed in POC `wasm-bindgen-test-leptos-poc.md`.
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  description: "Derive CT specs",
+  prompt: "You are a test specification engineer. Generate Component Test specifications.
+
+    Read the following files:
+    - {project-path}/.spec-workflow/specs/{spec-name}/design.md
+    - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+
+    Task:
+    For components whose `Test Layers:` field in design.md DES-N (made mandatory by K-2) contains `CT` or `CT-N`, derive **component reactivity** test specs.
+
+    Scope (finalized by H-2):
+    - **In scope**: Reactivity of a single component (mount → signal manipulation → DOM observation)
+    - **Out of scope**: Pure logic (UT's responsibility; verify with extracted functions) / real server communication (IT or ST) / user journeys (E2E)
+    - **Typical verification items**:
+      1. initial render: whether the signal's initial value is reflected in the DOM (query_selector + text_content)
+      2. event wiring: whether on:click / on:submit / on:input update the signal (trigger via HtmlElement::click(); observe DOM after tick().await)
+      3. signal-driven DOM update: signal change → reactive re-render → DOM verification
+      4. Suspense / Resource: verify pending / loaded / error states via mocks (declared in design.md K-3)
+      5. Effect: verify that on signal change, the Effect runs exactly once (no repeated firing)
+
+    Implementation:
+    - Rust / Leptos: wasm-bindgen-test + cargo test --target wasm32-unknown-unknown (wasm-pack not required)
+    - .NET / Blazor: bUnit (standard)
+    - Details: see quality-checks.md QC14 + tdd-skills-rust/references/leptos-frontend-testing.md
+
+    Naming convention: CT-{component number}.{test case number} (e.g., CT-11.1, CT-11.2)
+
+    Quality criteria:
+    - A CT spec must exist for components whose `Test Layers:` field in design.md DES-N includes `CT` or `CT-N` (consistent with K-2)
+    - Each CT must include the 4 fields: Mount Setup / Action (signal manipulation or event trigger) / DOM Verification / Signal Verification
+    - **Verifying pure logic with CT is forbidden** (route to UT; detected by Step B Check 17/18)
+
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
+
+    Output format:
+    Output the ## Component Test Specifications markdown section as-is.
+    Each scenario is a subsection (####); record Mount Setup / Action / DOM Verification / Signal Verification in a table or structured list."
+})
+```
+
+#### Subagent E: Derive ST Specs (newly added by J-6)
+
+> Newly added by J-6: ST (System Test) targets **full-stack behavior of a single feature** (UI operation → backend response → UI reflection). It is the middle layer between E2E (user journey) and CT (component reactivity in isolation).
+> Subagent D is reserved as the CT spec deriver under H-2 (enabled after H is implemented). This Subagent is E.
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  description: "Derive ST specs",
+  prompt: "You are a test specification engineer. Generate System Test specifications.
+
+    Read the following files:
+    - {project-path}/.spec-workflow/specs/{spec-name}/requirements.md
+    - {project-path}/.spec-workflow/specs/{spec-name}/design.md
+
+    Task:
+    From the user stories / individual features in requirements.md, derive **single-feature full-stack** test scenarios (verify UI operation → backend response → UI reflection for one feature).
+
+    Scope (finalized by J-6):
+    - **In scope**: Full-stack behavior of a single feature (e.g., 'login feature only', 'search feature only', 'zoom feature only')
+    - **Out of scope**: Chains of multiple features (E2E's responsibility) / pure logic (UT) / component reactivity in isolation (CT) / backend HTTP API only (IT)
+    - See the Test Taxonomy section in quality-checks.md for details
+
+    Derivation rules:
+    1. Decompose each REQ-N / Acceptance Criterion from a 'single-feature full-stack' viewpoint, turning each independent feature unit into a test scenario
+    2. Components whose `Test Layers:` field in design.md DES-N declares `ST` or `ST-N` are ST targets (consistent with K-2)
+    3. Verify by starting the real server, operating the UI, and confirming that the backend response is reflected in the UI
+    4. **Scenarios that chain multiple features go to E2E (Subagent C), not ST**
+
+    Naming convention: ST-{scenario number} (e.g., ST-1: login feature, ST-2: search feature)
+
+    Quality criteria:
+    - An ST spec must exist for features whose `Test Layers:` field in design.md DES-N includes `ST-N` or `ST`
+    - Each ST must record Feature Scope (target feature scope), Test Path (UI → backend → UI route), Verification Points, and Expected Outcome
+    - **STs that chain multiple features are not allowed** (use E2E if a chain is needed)
+
+    Test technology context:
+    {Insert the test technology summary investigated by the main agent here}
+
+    Output format:
+    Output the ## System Test Specifications markdown section as-is.
+    Each scenario is a subsection (###); record details in a table or structured list."
 })
 ```
 
 ---
 
-### 5. Integrate and Create Document (メインエージェント)
+### 5. Integrate and Create Document (Main Agent)
 
-3つのサブエージェントの出力を統合し、完全な `test-design.md` を作成する。
+Integrate the outputs of the three subagents into a complete `test-design.md`.
 
-1. **Test Strategy Overview** を冒頭に追加:
-   - テスト全体方針、Test Pyramid（UT > IT > E2E）、環境要件
-   - セクション 3 で決定したテスト技術選定の結果
-   - **Required Test Tools** テーブル: セクション 3.3 で列挙したツール一覧
+1. Add a **Test Strategy Overview** at the top:
+   - Overall test policy, Test Pyramid (UT > IT > E2E), environment requirements
+   - Results of the test technology selection from section 3
+   - **Required Test Tools** table: list of tools enumerated in section 3.3
 
-2. **サブエージェント結果を順序通り配置**:
-   - Unit Test Specifications（Subagent A の出力）
-   - Integration Test Specifications（Subagent B の出力）
-   - E2E Test Specifications（Subagent C の出力）
+2. **Place subagent outputs in order**:
+   - Unit Test Specifications (Subagent A's output)
+   - Component Test Specifications (Subagent D's output, component reactivity — newly added by H-2)
+   - Integration Test Specifications (Subagent B's output, backend HTTP API only — J-1)
+   - System Test Specifications (Subagent E's output, single-feature full-stack — newly added by J-6)
+   - E2E Test Specifications (Subagent C's output, user journey only — J-2)
 
-3. **Requirements-Test Traceability Matrix** を構築:
-   - 全サブエージェント結果を横断し、全 Requirement ID に UT/IT/E2E が紐づくことを確認
-   - 漏れがある場合はメインエージェントが追加
+3. Build a **Requirements-Test Traceability Matrix**:
+   - Cross-reference all subagent outputs and confirm every Requirement ID is linked to UT/IT/E2E
+   - If anything is missing, the main agent adds it
 
-4. **Test Data Requirements** を追加:
-   - 共有フィクスチャ、テストデータ生成方針
+4. Add **Test Data Requirements**:
+   - Shared fixtures, test data generation policy
 
-5. **E2E Test Infrastructure** を追加:
-   - Project Type Detection、Container Test Setup、Test Runner Configuration
+5. Add **E2E Test Infrastructure**:
+   - Project Type Detection, Container Test Setup, Test Runner Configuration
 
-6. ファイルに書き出し:
+6. Write to file:
 ```
 .spec-workflow/specs/{spec-name}/test-design.md
 ```
 
 **Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
 
-以下の YAML frontmatter をファイル冒頭に追加する。`depends_on` は requirements.md の REQ-N と design.md の DES-N のうち、このテスト設計が対象とするものを列挙する:
+Add the following YAML frontmatter at the top of the file. `depends_on` enumerates the REQ-N from requirements.md and the DES-N from design.md that this test design targets:
 
 ```yaml
 ---
@@ -315,13 +441,13 @@ depends_on:
 ---
 ```
 
-UT-N.M / IT-N / E2E-N の識別子は従来通り `####` 見出しで明示する（SD1）。
+The UT-N.M / IT-N / E2E-N identifiers are still made explicit via `####` headings as before (SD1).
 
-**品質基準（統合時チェック）:**
-- 全 Requirement ID に最低1つの UT と、関連する IT または E2E が紐づいていること
-- design.md の全コンポーネントに対して UT 仕様が存在すること
-- テストケースの Input / Expected Output / Verification が具体的であること（プレースホルダー不可）
-- サブエージェント間で命名・フォーマットが一貫していること（不一致があれば統一する）
+**Quality criteria (integration-time checks):**
+- Every Requirement ID must be linked to at least one UT and a related IT or E2E
+- Every component in design.md must have a UT spec
+- Each test case's Input / Expected Output / Verification must be concrete (no placeholders)
+- Naming and formatting must be consistent across subagents (resolve any inconsistencies)
 
 ### 6. Self-Review via Subagent (before approval)
 
@@ -387,24 +513,37 @@ Agent({
     12. CONTAINER CONSISTENCY: IT/E2E specs Technology fields must be consistent with design.md Container Architecture and E2E Test Infrastructure section
     13. REQUIRED TEST TOOLS: Required Test Tools section must exist within Test Environment Requirements, with at least one tool entry in table format (Tool, Min Version, Purpose, Check Command, Install Command, Required columns). All E2E test tools must be Required=Yes.
     14. FRONTMATTER (spec-dependency-graph.md SD2): Valid YAML frontmatter with spec_id, phase: test-design, version, depends_on (file entries pointing to requirements.md and design.md with refs) must exist at the top of the file. Every REQ-/DES- ID in depends_on.refs must exist in the referenced upstream file (SD4)
-    15. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
-        - If request-spec.md does not exist, or task_type is absent → SKIP checks 15-17 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
-        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 15-17 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
+    15. TEST_LAYER_BOUNDARY (J-4, dapper-hardening): Each test specification must respect its layer boundary as defined in quality-checks.md Test Taxonomy:
+       - IT-N specs must NOT include UI operations or DOM verifications (move to ST or E2E)
+       - E2E-N specs must include chains of multiple features (single-feature tests must be moved to ST)
+       - ST-N specs must NOT span multiple features (move to E2E if multi-feature journey)
+       - UT specs must NOT depend on external I/O (clock / RNG / env / fs / HTTP / DB) — must use Mock points declared in design.md Architecture for Testability (K-3)
+    16. CT_COVERAGE (H-2, dapper-hardening): For every UI component DES-N in design.md whose Test Layers field (K-2) declares `CT` or `CT-N`, a corresponding Component Test specification must exist in test-design.md `## Component Test Specifications` section. CT specs must include Mount Setup / Action / DOM Verification / Signal Verification fields
+    17. CT_INTEGRATION_VERIFY (H-2, dapper-hardening): Each CT-N spec must verify component reactivity (mount + signal + DOM observation), NOT pure logic. Pure logic verification belongs in UT. Specifically: each CT-N must specify (a) how the component is mounted (`mount_to(...)`), (b) what signal is updated or what event is triggered, (c) how DOM is observed (query_selector + text_content / inner_html / outer_html)
+    18. SIGNATURE_MATCH (C-2, dapper-hardening): For every test specification (UT / CT / IT / ST / E2E) that references a function or method from design.md DES-N, the function signature (return type + argument types) must **exactly match** the corresponding interface defined in the `Interfaces:` field of design.md DES-N. Mismatch examples:
+        - design.md: `pub async fn list_roots(&self) -> Result<Vec<RootEntry>, AppError>` vs test-design.md UT: assumes `Vec<RootEntry>` (Result unwrapped) → error: `signature_mismatch`
+        - design.md: `pub fn count(&self) -> usize` vs test-design.md UT: assumes `i32` return → error: `signature_mismatch`
+    19. E2E_SNAPSHOT_PATH (F-1, dapper-hardening): If E2E specs reference snapshot comparison (toMatchSnapshot, toMatchAriaSnapshot, etc.), the test-design.md must explicitly mention `snapshotPathTemplate` configuration in `playwright.config.ts` (e.g., `tests/e2e/screenshots/{testFilePath}/{arg}.png`). Without explicit path template, baseline screenshots end up in default location and become non-portable.
+    20. E2E_DOM_COMPARISON_METHOD (F-2, dapper-hardening): For E2E specs requiring **structural regression detection** (DOM tree comparison), use `toMatchAriaSnapshot` instead of `toContain` (substring match). `toContain` permits partial matches that hide structural breaking changes; `toMatchAriaSnapshot` enforces full structural equality.
+    21. E2E_COMPOSITE_STATE_SCENARIO (F-3, dapper-hardening): If E2E scenario steps require a **composite state** (e.g., "showing 2 center images with left panel open"; "logged in + filter applied + sorted"), the operations to reach that state must be **explicitly specified in test-design.md** (e.g., NAV_NEXT N times + setting change X + ...). Implicit assumption of state without explicit setup steps → error: `e2e_setup_steps_missing`.
+    22. EVIDENCE CITATIONS (evidence-coverage.md EC1): Read task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter and detect whether this document contains any EV-{category}-{NNN} citation (HTML comment, inline paren form, or frontmatter depends_on.refs).
+        - If request-spec.md does not exist, or task_type is absent → SKIP checks 22-24 (EC5) and note 'evidence checks skipped (no request-spec / unclassified)' in the report.
+        - If task_type is 'legacy' AND no EV-{category}-{NNN} citation is present in this document → SKIP checks 22-24 (EC5) and note 'evidence checks skipped (legacy, no EV citations)' in the report.
         - If task_type is 'legacy' AND at least one EV-{category}-{NNN} citation is present (opt-in legacy mode, EC5):
-            Run check 15 (EC1 integrity) on every citation as described below.
-            SKIP checks 16-17 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
-        - If task_type is any other declared value, run checks 15-17 normally.
-        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 15 applies:
+            Run check 22 (EC1 integrity) on every citation as described below.
+            SKIP checks 23-24 and note 'legacy spec: ran EC1 only due to EV citations; skipped EC2 / EC3' in the report.
+        - If task_type is any other declared value, run checks 22-24 normally.
+        - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 22 applies:
             a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
             b. The referenced file's frontmatter spec_name: must equal this spec-name.
             c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
           Any failure = FAIL with rule_id EC1.
-    16. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 15 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
+    23. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
             - A single fenced block exceeds 15 lines.
             - Cumulative fenced-block lines within a single H2 or H3 section exceed 30 lines.
             - Total fenced-block lines in the document exceed 120 lines.
           For each violation FAIL with rule_id EC3; fix_hint: 'Move fixture-like or harness-like excerpts to an evidence file under evidence/test-harness/ (or a more specific category) and leave a brief summary + citation'. Markdown tables and ASCII diagrams are NOT counted.
-    17. PER-TESTCASE EVIDENCE (evidence-coverage.md EC2, per UT/IT/E2E): Apply this check only when check 15 routed to full enforcement (non-legacy classified task_type). Every '#### UT-N.M:', '### IT-N:', and '### E2E-N:' section must cite at least one EV-... that anchors the behavior under test. If a case exercises a truly new behavior with no existing-code anchor, use '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) with a non-empty reason inside the section. Missing both = FAIL rule_id EC2_perTestCase with fix_hint 'Cite the EV that captures the current or expected behavior the test guards (typically EV-contract-current-*, EV-branches-*, or EV-regressions-*).'
+    24. PER-TESTCASE EVIDENCE (evidence-coverage.md EC2, per UT/IT/E2E): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Every '#### UT-N.M:', '### IT-N:', and '### E2E-N:' section must cite at least one EV-... that anchors the behavior under test. If a case exercises a truly new behavior with no existing-code anchor, use '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) with a non-empty reason inside the section. Missing both = FAIL rule_id EC2_perTestCase with fix_hint 'Cite the EV that captures the current or expected behavior the test guards (typically EV-contract-current-*, EV-branches-*, or EV-regressions-*).'
 
     Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
@@ -420,17 +559,17 @@ Same strict process — verbal approval is never accepted.
 
 1. **Request approval**: `approvals` tool, `action: 'request'`, filePath only. Save the returned `approvalId`.
 
-2. **Automatic polling with auto-transition**: Start approval polling (Bash script with 60-minute timeout):
+2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run:
    ```
    /check-approval <approvalId> next:/spec-tasks
    ```
-   The polling script will automatically check approval status and handle the result:
-   - **approved**: Cleanup is performed automatically, and check-approval automatically invokes `/spec-tasks`
+   `check-approval` fetches status once via the `approvals` MCP tool (no polling) and branches:
+   - **pending**: User has not acted yet — instruct the user to approve, then re-run `/check-approval`
+   - **approved**: Cleanup is performed automatically, and `check-approval` automatically invokes `/spec-tasks`
    - **needs-revision**: Reviewer comments are displayed
    - **rejected**: Rejection reason is displayed — revise and create a new approval
-   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if polling ends with needs-revision):
+3. **Handle needs-revision** (if status was needs-revision):
    - Update test-design using reviewer comments, spawn the review subagent again
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-tasks`
 

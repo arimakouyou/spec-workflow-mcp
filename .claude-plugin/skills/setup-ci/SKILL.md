@@ -5,7 +5,7 @@ description: >
   Detects project type (Rust/Leptos/Node.js/.NET/Blazor) and creates ci.yml, e2e.yml,
   scheduled-quality.yml, dependabot.yml, release.yml mirroring quality-checks.md.
   Options like --with-sast, --with-auto-merge, --with-auto-fix generate additional workflow files.
-  Triggers: 'setup CI', 'add CI workflow', 'create GitHub Actions', 'PR checks',
+  Triggers on: 'setup CI', 'add CI workflow', 'create GitHub Actions', 'PR checks',
   'CI/CD を追加', 'CI ワークフロー', 'GitHub Actions を設定'.
 argument-hint: "[--with-e2e] [--with-services] [--with-scheduled] [--no-pr-comments] [--with-docs-lint] [--with-sast] [--with-flaky-detection] [--with-auto-merge] [--with-auto-fix]"
 user-invokable: true
@@ -15,7 +15,7 @@ user-invokable: true
 
 Generate GitHub Actions CI/CD workflows that mirror the quality check commands defined in `.claude-plugin/rules/quality-checks.md`. Ensures parity between local agent-chain quality checks and external CI.
 
-**P4-02 準拠**: このスキルは基本 5 つの CI/CD 設定ファイルを生成し、harness-maturity-check P4-02 の要件（CI/CD 設定ファイル 5 個以上）を満たす。オプション（`--with-sast` 等）で追加ファイルも生成される。
+**P4-02 compliance**: This skill generates 5 base CI/CD configuration files and satisfies the harness-maturity-check P4-02 requirement (5 or more CI/CD configuration files). Options (`--with-sast`, etc.) generate additional files.
 
 ## Process
 
@@ -51,20 +51,20 @@ fi
 
 | Setting | Detection | Default |
 |---------|-----------|---------|
-| Toolchain | `rust-toolchain.toml` の `channel` フィールド | `stable` |
-| Workspace | `Cargo.toml` に `[workspace]` セクションがあるか | single crate |
+| Toolchain | `channel` field in `rust-toolchain.toml` | `stable` |
+| Workspace | Whether `Cargo.toml` has a `[workspace]` section | single crate |
 
 #### Node.js
 
 | Setting | Detection | Default |
 |---------|-----------|---------|
-| Node version | `package.json` の `engines.node` | `20` |
-| Package manager | lockfile 種別で判定 | `npm` |
-| ESLint | `devDependencies` に `eslint` があるか | 未導入ならステップ除外 |
-| Prettier | `devDependencies` に `prettier` があるか | 未導入ならステップ除外 |
-| TypeScript | `devDependencies` に `typescript` があるか | 未導入ならステップ除外 |
-| Build script | `package.json` の `scripts.build` があるか | なければステップ除外 |
-| Test script | `package.json` の `scripts.test` があるか | なければステップ除外 |
+| Node version | `engines.node` in `package.json` | `20` |
+| Package manager | Determined by lockfile type | `npm` |
+| ESLint | Whether `eslint` is in `devDependencies` | Step removed if not installed |
+| Prettier | Whether `prettier` is in `devDependencies` | Step removed if not installed |
+| TypeScript | Whether `typescript` is in `devDependencies` | Step removed if not installed |
+| Build script | Whether `scripts.build` exists in `package.json` | Step removed if absent |
+| Test script | Whether `scripts.test` exists in `package.json` | Step removed if absent |
 
 **Package manager detection:**
 
@@ -79,9 +79,9 @@ fi
 
 | Setting | Detection | Default |
 |---------|-----------|---------|
-| .NET version | `<TargetFramework>` in .csproj or `global.json` の `sdk.version` | `10.0.x` |
-| Solution file | リポジトリルートの `*.sln`（**必須** — 未存在時は `dotnet new sln` + `dotnet sln add` を指示） | — |
-| Blazor WASM | .csproj に `Microsoft.AspNetCore.Components.WebAssembly` | false |
+| .NET version | `<TargetFramework>` in .csproj or `sdk.version` in `global.json` | `10.0.x` |
+| Solution file | `*.sln` at the repository root (**required** — if absent, instruct `dotnet new sln` + `dotnet sln add`) | — |
+| Blazor WASM | `Microsoft.AspNetCore.Components.WebAssembly` in .csproj | false |
 
 #### Common
 
@@ -89,17 +89,25 @@ Read `.spec-workflow/steering/tech.md` if it exists for additional context (lang
 
 ### 3. Select and Customize Templates
 
-Read the reference templates matching the detected project type. **5 ファイルすべて**を生成する:
+Read the reference templates matching the detected project type. Generate **all 5 files**:
 
-| # | 出力先 | テンプレート | 目的 |
-|---|--------|------------|------|
-| 1 | `.github/workflows/ci.yml` | `references/ci-{type}.yml` | PR 品質チェック |
-| 2 | `.github/workflows/e2e.yml` | `references/e2e-standalone.yml` | E2E / 統合テスト |
-| 3 | `.github/workflows/scheduled-quality.yml` | `references/scheduled-quality-standalone.yml` | 週次品質スキャン |
-| 4 | `.github/dependabot.yml` | `references/dependabot.yml` | 依存関係自動更新 |
-| 5 | `.github/workflows/release.yml` | `references/release.yml` | リリース / パブリッシュ |
+| # | Output | Template | Purpose |
+|---|--------|----------|---------|
+| 1 | `.github/workflows/ci.yml` | `references/ci-{type}.yml` | PR quality checks |
+| 2 | `.github/workflows/e2e.yml` | `references/e2e-standalone.yml` | E2E / integration tests |
+| 3 | `.github/workflows/scheduled-quality.yml` | `references/scheduled-quality-standalone.yml` | Weekly quality scan |
+| 4 | `.github/dependabot.yml` | `references/dependabot.yml` | Automatic dependency updates |
+| 5 | `.github/workflows/release.yml` | `references/release.yml` | Release / publish |
 
-`{type}` は `rust` / `leptos` / `dotnet` / `nodejs` に置換（`dotnet-blazor` は `dotnet` テンプレートを使用し、Blazor 固有ステップを追加）。
+Replace `{type}` with `rust` / `leptos` / `dotnet` / `nodejs` (for `dotnet-blazor`, use the `dotnet` template and add Blazor-specific steps).
+
+**Additional placement for Rust / Leptos only (project root):**
+
+| Output | Template | Purpose |
+|--------|----------|---------|
+| `clippy.toml` (repository root) | `references/clippy.toml.template` | Auxiliary configuration to enforce TS-R4 (no unwrap) at L3 CI. Denies unwrap/expect/panic in production code while allowing them in test code (`allow-*-in-tests = true`). The CI side (`ci-rust.yml` / `ci-leptos.yml`) explicitly sets `-D clippy::unwrap_used / clippy::expect_used / clippy::panic` |
+
+If a `clippy.toml` already exists in the project, do not overwrite it. Verify that necessary keys such as `allow-unwrap-in-tests` are included, and only propose merging the missing entries.
 
 Replace placeholders with the values gathered in Step 2:
 
@@ -108,7 +116,7 @@ Replace placeholders with the values gathered in Step 2:
 
 **.NET / .NET Blazor:**
 - `{{DOTNET_VERSION}}` → detected .NET version (e.g., `10.0.x`)
-- 前提: リポジトリルートに `.sln` が1つ存在すること（コマンドは `.sln` パスを指定せず実行）
+- Prerequisite: exactly one `.sln` exists at the repository root (commands run without specifying a `.sln` path)
 
 **Node.js:**
 - `{{NODE_VERSION}}` → detected Node version (e.g., `20`)
@@ -122,134 +130,134 @@ Replace placeholders with the values gathered in Step 2:
 - No `build` script in package.json → remove "Build" step
 - No `test` script in package.json → remove "Tests" step
 
-**PR コメントステップ**（全プロジェクトタイプ共通）:
-- PR コメント投稿ステップ（"Post CI results to PR"）はデフォルトで全テンプレートに含まれる
-- `--no-pr-comments` 指定時は "Post CI results to PR" ステップをテンプレートから除去
+**PR comment step** (common to all project types):
+- The PR comment posting step ("Post CI results to PR") is included in all templates by default
+- When `--no-pr-comments` is specified, the "Post CI results to PR" step is removed from the template
 
 ### 4. Handle Options
 
 #### `--with-e2e`
 
-`e2e-standalone.yml` テンプレート内の、検出されたプロジェクトタイプに該当するセクションをアンコメントし、プレースホルダを置換する。
-- Node.js: setup-node → install → Playwright install → Playwright test → PR コメント
-- Rust: rust-toolchain → cargo test --test → PR コメント
-- `pull_request` トリガーと `pull-requests: write` 権限もアンコメントする
-- このオプションが**指定されない場合**も `e2e.yml` は生成されるが、テスト実行ステップ・`pull_request` トリガー・PR コメント権限はコメントアウトのままとなる（`workflow_dispatch` のみ有効）
+Uncomment the section in the `e2e-standalone.yml` template that matches the detected project type, and replace placeholders.
+- Node.js: setup-node → install → Playwright install → Playwright test → PR comment
+- Rust: rust-toolchain → cargo test --test → PR comment
+- Also uncomment the `pull_request` trigger and `pull-requests: write` permission
+- **Even when this option is not specified**, `e2e.yml` is still generated, but the test execution step, `pull_request` trigger, and PR comment permission remain commented out (only `workflow_dispatch` is active)
 
 #### `--with-services`
 
-`e2e.yml` のサービスコンテナセクションをアンコメントする。
-プロジェクトの依存関係（`docker-compose.yml`、`design.md` Container Architecture、`Cargo.toml` の `diesel`/`redis` 等）から必要なサービスを検出して有効化。
+Uncomment the service container section in `e2e.yml`.
+Detect required services from the project's dependencies (`docker-compose.yml`, design.md Container Architecture, `diesel`/`redis` in `Cargo.toml`, etc.) and enable them.
 
 #### `--no-pr-comments`
 
-PR コメントフィードバックステップを削除する:
-- `ci.yml` から "Post CI results to PR" ステップを削除
-- `e2e.yml` から "Post E2E results to PR" ステップを削除
-- 各ワークフローの `permissions` ブロックから `pull-requests: write` を削除
+Remove the PR comment feedback steps:
+- Remove the "Post CI results to PR" step from `ci.yml`
+- Remove the "Post E2E results to PR" step from `e2e.yml`
+- Remove `pull-requests: write` from each workflow's `permissions` block
 
-デフォルトでは PR コメントフィードバックは**有効**。このオプションで明示的にオプトアウトする。
+PR comment feedback is **enabled** by default. Use this option to opt out explicitly.
 
 #### `--with-sast`
 
-セキュリティ特化の静的解析（SAST）を有効化する（P6-04）:
-- **Rust / Leptos**: `ci.yml` のセキュリティ特化 clippy lint セクションをアンコメント
+Enable security-focused static analysis (SAST) (P6-04):
+- **Rust / Leptos**: Uncomment the security-focused clippy lint section in `ci.yml`
   (`-W clippy::suspicious -W clippy::correctness -W clippy::complexity`)
-- **.NET / .NET Blazor**: `ci.yml` に `AnalysisLevel=latest-all` セキュリティ Analyzer ステップを追加
-  (`CA2xxx` セキュリティ系、`CA3xxx` セキュリティ設計ガイドライン）。CodeQL C# も利用可能
-- **Node.js**: `codeql.yml` ワークフローファイルを追加生成（`javascript-typescript`）
-  - CodeQL は GitHub の無料 SAST ツールで、公開リポジトリでは無制限に使用可能
-  - Rust 向け CodeQL は 2025 年時点でベータ段階のため、clippy security lints を推奨
+- **.NET / .NET Blazor**: Add an `AnalysisLevel=latest-all` security Analyzer step to `ci.yml`
+  (`CA2xxx` security category, `CA3xxx` security design guidelines). CodeQL C# is also available
+- **Node.js**: Generate an additional `codeql.yml` workflow file (`javascript-typescript`)
+  - CodeQL is GitHub's free SAST tool, available without limits on public repositories
+  - CodeQL for Rust is in beta as of 2025, so clippy security lints are recommended
 
-生成時にプロジェクトタイプが Node.js の場合のみ `codeql.yml` を生成する。
+Generate `codeql.yml` only when the project type is Node.js.
 
 #### `--with-flaky-detection`
 
-flaky test 対策設定を有効化する（P6-08/P6-09）:
-- `ci.yml` のテストリトライセクション（`nick-fields/retry@v3`）をアンコメント
-- リトライ回数: 3（2回目以降の成功は flaky 候補として警告）
-- flaky test 管理ポリシーは `.claude-plugin/rules/flaky-test-management.md` を参照
+Enable flaky test mitigation settings (P6-08/P6-09):
+- Uncomment the test retry section (`nick-fields/retry@v3`) in `ci.yml`
+- Retry count: 3 (success on the 2nd or later attempt is warned as a flaky candidate)
+- See the `flaky-test-management` Skill for the flaky test management policy
 
 #### `--with-auto-merge`
 
-自動マージワークフローを生成する（P6-10/P6-11）:
-- `auto-merge.yml` を `.github/workflows/` に生成
-- dependabot PR と `auto-merge` ラベル付き PR を自動マージ
-- **前提条件**: GitHub リポジトリ設定で以下を有効化する必要あり:
-  - "Require status checks to pass before merging"（必須ステータスチェック）
-  - "Allow auto-merge"（自動マージ許可）
+Generate an auto-merge workflow (P6-10/P6-11):
+- Generate `auto-merge.yml` under `.github/workflows/`
+- Auto-merge dependabot PRs and PRs labeled `auto-merge`
+- **Prerequisites**: The following must be enabled in GitHub repository settings:
+  - "Require status checks to pass before merging"
+  - "Allow auto-merge"
 
-**自動マージ条件（P6-11）:**
+**Auto-merge conditions (P6-11):**
 
-| PR ソース | 必須チェック | 必須承認 | 自動マージ |
-|-----------|------------|---------|----------|
-| dependabot | CI 全パス | 不要（bot PR） | Yes |
-| human + `auto-merge` ラベル | CI 全パス | 1人以上 | Yes |
-| human（ラベルなし） | CI 全パス | 1人以上 | No（手動） |
+| PR source | Required checks | Required approvals | Auto-merge |
+|-----------|-----------------|--------------------|------------|
+| dependabot | All CI passes | Not required (bot PR) | Yes |
+| human + `auto-merge` label | All CI passes | 1 or more | Yes |
+| human (no label) | All CI passes | 1 or more | No (manual) |
 
 #### `--with-auto-fix`
 
-品質 Issue 検出時にエージェントが自動修正 PR を生成するワークフローを追加する（P8-07）:
-- `auto-fix-quality.yml` を `.github/workflows/` に生成
-- `[quality]` + `[automated]` ラベル付き Issue が作成されたときに Claude Code を起動し、`/handle-issue` で自動修正
-- **前提条件**:
-  - GitHub リポジトリに `ANTHROPIC_API_KEY` シークレットが設定されていること
-  - `anthropics/claude-code-action@v1` が利用可能であること
+Add a workflow where the agent generates an auto-fix PR when a quality issue is detected (P8-07):
+- Generate `auto-fix-quality.yml` under `.github/workflows/`
+- Launch Claude Code when an issue with both `[quality]` + `[automated]` labels is created, and auto-fix via `/handle-issue`
+- **Prerequisites**:
+  - The `ANTHROPIC_API_KEY` secret must be set on the GitHub repository
+  - `anthropics/claude-code-action@v1` must be available
 
-**自動修正フロー（P8-07）:**
+**Auto-fix flow (P8-07):**
 
-1. `scheduled-quality.yml` が品質違反を検出し `[quality]` + `[automated]` ラベル付き Issue を作成
-2. `auto-fix-quality.yml` が Issue 作成イベントで起動
-3. Claude Code が `/handle-issue {issue-number}` を実行
-4. 修正を実装し `/create-pr --closes {issue-number}` で PR を作成
-5. CI + review-worker による品質検証
-6. `--with-auto-merge` が有効なら `auto-merge` ラベルで自動マージ
+1. `scheduled-quality.yml` detects a quality violation and creates an issue with `[quality]` + `[automated]` labels
+2. `auto-fix-quality.yml` is triggered by the issue creation event
+3. Claude Code runs `/handle-issue {issue-number}`
+4. Implements the fix and creates a PR via `/create-pr --closes {issue-number}`
+5. Quality verification by CI + review-worker
+6. If `--with-auto-merge` is enabled, auto-merge via the `auto-merge` label
 
-**自動修正の対象範囲:**
+**Auto-fix scope:**
 
-| 問題種別 | 自動修正 | 理由 |
-|---------|---------|------|
-| フォーマット違反 | Yes | `cargo fmt` / `prettier --write` で機械的に修正可能 |
-| 未使用依存 | Yes | `Cargo.toml` / `package.json` から削除 |
-| doc comment 不足 | Yes | `/generate-api-docs` の提案を適用 |
-| Stale ドキュメント | Yes | 内容を現状に合わせて更新 |
-| セキュリティ脆弱性 | No | Issue コメントで報告のみ（人間の判断が必要） |
-| 設計逸脱 | No | Issue コメントで報告のみ（人間の判断が必要） |
+| Issue type | Auto-fix | Reason |
+|------------|----------|--------|
+| Format violation | Yes | Mechanically fixable with `cargo fmt` / `prettier --write` |
+| Unused dependency | Yes | Remove from `Cargo.toml` / `package.json` |
+| Missing doc comment | Yes | Apply suggestions from `/generate-api-docs` |
+| Stale documentation | Yes | Update content to match the current state |
+| Security vulnerability | No | Report only via issue comment (human judgment required) |
+| Design deviation | No | Report only via issue comment (human judgment required) |
 
 #### `--with-docs-lint`
 
-`ci.yml` および `scheduled-quality.yml` のドキュメント Lint セクション（QC10 / P5-03）をアンコメントする:
-- markdownlint-cli2 によるフォーマットチェック
-- markdown-link-check によるリンク検証（scheduled-quality.yml のみ）
-- いずれも `continue-on-error: true`（Advisory）
+Uncomment the documentation lint sections (QC10 / P5-03) in `ci.yml` and `scheduled-quality.yml`:
+- Format check via markdownlint-cli2
+- Link verification via markdown-link-check (scheduled-quality.yml only)
+- Both are `continue-on-error: true` (Advisory)
 
 #### `--with-scheduled`
 
-`scheduled-quality-standalone.yml` テンプレート内の、検出されたプロジェクトタイプに該当する品質チェックセクションをアンコメントする:
-- Node.js: npm audit, jscpd コード重複検出
+Uncomment the quality check sections in the `scheduled-quality-standalone.yml` template that match the detected project type:
+- Node.js: npm audit, jscpd code duplication detection
 - Rust: cargo audit, cargo udeps, clippy
-- このオプションが**指定されない場合**も `scheduled-quality.yml` は生成されるが、lockfile 検証とドキュメント鮮度チェックのみ有効
+- **Even when this option is not specified**, `scheduled-quality.yml` is still generated, but only lockfile verification and documentation freshness checks are active
 
 
 ### 5. Generate Workflow Files
 
-以下の 5 ファイルをすべて生成する（P4-02 準拠のため常に 5 ファイル）:
+Generate all 5 of the following files (always 5 files for P4-02 compliance):
 
-1. `.github/workflows/` ディレクトリが存在しなければ作成
-2. 各ファイルについて順に処理:
-   - `.github/workflows/ci.yml` — `ci-{type}.yml` テンプレートから生成
-   - `.github/workflows/e2e.yml` — `e2e-standalone.yml` テンプレートから生成
-   - `.github/workflows/scheduled-quality.yml` — `scheduled-quality-standalone.yml` テンプレートから生成
-   - `.github/dependabot.yml` — `dependabot.yml` テンプレートから生成
-   - `.github/workflows/release.yml` — `release.yml` テンプレートから生成
-3. 各ファイルが既に存在する場合:
-   - 既存ファイルとの差分を表示
-   - ユーザーに上書き確認を求める
-   - 確認なしの上書きは行わない
-4. `dependabot.yml` は検出されたプロジェクトタイプに応じたエコシステムをアンコメント:
-   - Node.js → `npm` セクション
-   - Rust / Leptos → `cargo` セクション
-   - `github-actions` セクションは常に有効
+1. Create the `.github/workflows/` directory if it does not exist
+2. Process each file in turn:
+   - `.github/workflows/ci.yml` — generated from the `ci-{type}.yml` template
+   - `.github/workflows/e2e.yml` — generated from the `e2e-standalone.yml` template
+   - `.github/workflows/scheduled-quality.yml` — generated from the `scheduled-quality-standalone.yml` template
+   - `.github/dependabot.yml` — generated from the `dependabot.yml` template
+   - `.github/workflows/release.yml` — generated from the `release.yml` template
+3. If any file already exists:
+   - Show the diff against the existing file
+   - Ask the user for overwrite confirmation
+   - Do not overwrite without confirmation
+4. In `dependabot.yml`, uncomment the ecosystem matching the detected project type:
+   - Node.js → `npm` section
+   - Rust / Leptos → `cargo` section
+   - The `github-actions` section is always enabled
 
 ### 6. Verify and Report
 
@@ -257,11 +265,11 @@ After writing all files, report:
 
 ```
 CI/CD workflows generated (P4-02 compliant):
-  1. .github/workflows/ci.yml          — PR 品質チェック
-  2. .github/workflows/e2e.yml         — E2E テスト
-  3. .github/workflows/scheduled-quality.yml — 週次品質スキャン
-  4. .github/dependabot.yml            — 依存関係自動更新
-  5. .github/workflows/release.yml     — リリース
+  1. .github/workflows/ci.yml          — PR quality checks
+  2. .github/workflows/e2e.yml         — E2E tests
+  3. .github/workflows/scheduled-quality.yml — Weekly quality scan
+  4. .github/dependabot.yml            — Automatic dependency updates
+  5. .github/workflows/release.yml     — Release
 
 Total CI/CD config files: 5 (P4-02 requires ≥ 5)
 
@@ -273,17 +281,17 @@ Options applied:
   - E2E tests: {active/commented-out (--with-e2e)}
   - Service containers: {yes/no (--with-services)}
   - Scheduled quality checks: {active/minimal (--with-scheduled)}
-  - PR コメントフィードバック: {有効/無効 (--no-pr-comments)}
-  - ドキュメント Lint: {有効/無効 (--with-docs-lint)}
-  - SAST: {有効/無効 (--with-sast)}
-  - Flaky test リトライ: {有効/無効 (--with-flaky-detection)}
-  - Auto-merge: {有効/無効 (--with-auto-merge)}
-  - Auto-fix: {有効/無効 (--with-auto-fix)}
+  - PR comment feedback: {enabled/disabled (--no-pr-comments)}
+  - Documentation lint: {enabled/disabled (--with-docs-lint)}
+  - SAST: {enabled/disabled (--with-sast)}
+  - Flaky test retry: {enabled/disabled (--with-flaky-detection)}
+  - Auto-merge: {enabled/disabled (--with-auto-merge)}
+  - Auto-fix: {enabled/disabled (--with-auto-fix)}
 
 Next steps:
   - Commit and push to verify the workflows run correctly
   - Configure repository secrets if publishing or integration tests require them
-  - E2E テストが未設定なら /setup-ci --with-e2e で有効化
+  - If E2E tests are not configured, enable them via /setup-ci --with-e2e
 ```
 
 ## Source of Truth

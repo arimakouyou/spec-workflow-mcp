@@ -1,52 +1,53 @@
 ---
 name: generate-api-docs
 description: >
-  ソースコードからOpenAPI 3.1ドキュメントを自動生成する。APIルート定義の解析、
-  ハンドラシグネチャ・型定義・doc comment収集、OpenAPI YAML生成、doc comment改善提案を行う。
-  Triggers: 'generate API docs', 'OpenAPI生成', 'APIドキュメント生成', '/generate-api-docs'.
+  Auto-generate OpenAPI 3.1 documentation from source code. Parses API route definitions,
+  collects handler signatures, type definitions, and doc comments, generates OpenAPI YAML,
+  and offers doc comment improvement suggestions.
+  Triggers on: 'generate API docs', 'OpenAPI generation', 'API documentation generation', '/generate-api-docs', 'OpenAPI生成', 'APIドキュメント生成'.
 argument-hint: "[--output <path>] [--framework <axum|actix-web|express|fastify|auto>]"
 user-invokable: true
 ---
 
-# OpenAPI ドキュメント自動生成
+# OpenAPI Documentation Auto-Generation
 
-ソースコードの API ルート定義・ハンドラ・型定義を解析し、OpenAPI 3.1 YAML を生成する。
+Parse the API route definitions, handlers, and type definitions in source code, and generate OpenAPI 3.1 YAML.
 
-## 引数パース
+## Argument Parsing
 
-| 引数 | デフォルト | 説明 |
-|------|-----------|------|
-| `--output <path>` | `docs/openapi.yaml` | 出力先パス |
-| `--framework <name>` | `auto` | フレームワーク指定（`axum` / `actix-web` / `express` / `fastify` / `auto`） |
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--output <path>` | `docs/openapi.yaml` | Output path |
+| `--framework <name>` | `auto` | Framework selection (`axum` / `actix-web` / `express` / `fastify` / `auto`) |
 
-## Step 1: フレームワーク検出
+## Step 1: Framework Detection
 
-`--framework auto`（デフォルト）の場合、以下の優先順で検出する:
+For `--framework auto` (the default), detect in this priority order:
 
-| 優先度 | 検出条件 | フレームワーク |
-|--------|---------|---------------|
-| 1 | `Cargo.toml` に `axum` 依存 | Axum |
-| 2 | `Cargo.toml` に `actix-web` 依存 | Actix-web |
-| 3 | `package.json` に `express` 依存 | Express |
-| 4 | `package.json` に `fastify` 依存 | Fastify |
+| Priority | Detection condition | Framework |
+|----------|---------------------|-----------|
+| 1 | `axum` dependency in `Cargo.toml` | Axum |
+| 2 | `actix-web` dependency in `Cargo.toml` | Actix-web |
+| 3 | `express` dependency in `package.json` | Express |
+| 4 | `fastify` dependency in `package.json` | Fastify |
 
-いずれにも該当しない場合はエラーを報告し終了する。`--framework` で明示指定されている場合はこのステップをスキップする。
+If none match, report an error and exit. Skip this step when `--framework` is specified explicitly.
 
-## Step 2: API ルート解析
+## Step 2: API Route Parsing
 
-フレームワーク別のパターンでソースコードを検索し、ルート定義を収集する。
+Search source code with framework-specific patterns and collect route definitions.
 
 ### Axum
 
 ```bash
-# Router 定義の検索
+# Search Router definitions
 grep -rn 'Router::new\(\)\|\.route(\|\.nest(' --include='*.rs' src/
 ```
 
-抽出対象:
-- `.route("/path", get(handler))` → メソッド: GET、パス: `/path`、ハンドラ: `handler`
-- `.nest("/prefix", router)` → ネストされたルーターのプレフィックス
-- `.with_state(...)` → 共有状態の型
+Items to extract:
+- `.route("/path", get(handler))` -> method: GET, path: `/path`, handler: `handler`
+- `.nest("/prefix", router)` -> prefix of nested router
+- `.with_state(...)` -> shared state type
 
 ### Actix-web
 
@@ -60,54 +61,54 @@ grep -rn '\.route(\|\.resource(\|web::\(get\|post\|put\|delete\|patch\)' --inclu
 grep -rn 'app\.\(get\|post\|put\|delete\|patch\)\|router\.\(get\|post\|put\|delete\|patch\)' --include='*.ts' --include='*.js' src/
 ```
 
-各ルートについて以下を記録する:
-- HTTP メソッド
-- パス
-- ハンドラ関数名
-- ハンドラ定義のファイルパスと行番号
+For each route, record:
+- HTTP method
+- Path
+- Handler function name
+- File path and line number of the handler definition
 
-## Step 3: ハンドラ分析
+## Step 3: Handler Analysis
 
-各ハンドラ関数について以下を収集する:
+For each handler function, collect:
 
-### 3.1 関数シグネチャ
+### 3.1 Function Signature
 
-ハンドラ関数の引数型（リクエストボディ）と戻り値型（レスポンス）を抽出する。
+Extract the handler function's argument types (request body) and return type (response).
 
-**Rust (Axum) の例:**
+**Rust (Axum) example:**
 ```rust
 async fn create_user(
     State(pool): State<PgPool>,
-    Json(payload): Json<CreateUserRequest>,  // → リクエスト型
-) -> Result<Json<UserResponse>, AppError>    // → レスポンス型
+    Json(payload): Json<CreateUserRequest>,  // -> request type
+) -> Result<Json<UserResponse>, AppError>    // -> response type
 ```
 
-**TypeScript (Express) の例:**
+**TypeScript (Express) example:**
 ```typescript
 async function createUser(
-  req: Request<{}, {}, CreateUserBody>,  // → リクエスト型
-  res: Response<UserResponse>            // → レスポンス型
+  req: Request<{}, {}, CreateUserBody>,  // -> request type
+  res: Response<UserResponse>            // -> response type
 ): Promise<void>
 ```
 
-### 3.2 Doc Comment 収集
+### 3.2 Doc Comment Collection
 
-ハンドラ関数の直上にある Rustdoc (`///`) または JSDoc (`/** */`) コメントを収集する。これが OpenAPI の operation `description` になる。
+Collect Rustdoc (`///`) or JSDoc (`/** */`) comments immediately above the handler function. These become the OpenAPI operation `description`.
 
-### 3.3 型定義の解析
+### 3.3 Type Definition Analysis
 
-リクエスト/レスポンス型の定義を辿り、各フィールドの情報を収集する:
+Follow the request/response type definitions and collect each field's information:
 
-- フィールド名
-- 型（OpenAPI の type/format にマッピング）
-- Doc comment（OpenAPI の field `description` にマッピング）
-- `Option<T>` / `?` → `required: false`
-- バリデーション属性（`#[validate]`, `@IsEmail()` 等）→ OpenAPI の format/pattern
+- Field name
+- Type (mapped to OpenAPI type/format)
+- Doc comment (mapped to OpenAPI field `description`)
+- `Option<T>` / `?` -> `required: false`
+- Validation attributes (`#[validate]`, `@IsEmail()`, etc.) -> OpenAPI format/pattern
 
-**Rust 型マッピング:**
+**Rust type mapping:**
 
-| Rust 型 | OpenAPI type | OpenAPI format |
-|---------|-------------|----------------|
+| Rust type | OpenAPI type | OpenAPI format |
+|-----------|--------------|----------------|
 | `String` | string | — |
 | `i32` / `i64` | integer | int32 / int64 |
 | `f32` / `f64` | number | float / double |
@@ -117,25 +118,25 @@ async function createUser(
 | `Vec<T>` | array (items: T) | — |
 | `Option<T>` | T (required: false) | — |
 
-## Step 4: OpenAPI 3.1 YAML 生成
+## Step 4: OpenAPI 3.1 YAML Generation
 
-収集した情報から OpenAPI 3.1 準拠の YAML を構成する:
+Compose OpenAPI 3.1-compliant YAML from the collected information:
 
 ```yaml
 openapi: "3.1.0"
 info:
-  title: "{プロジェクト名（Cargo.toml の package.name または package.json の name）}"
-  version: "{バージョン}"
-  description: "{Cargo.toml の description または package.json の description}"
+  title: "{Project name (Cargo.toml package.name or package.json name)}"
+  version: "{version}"
+  description: "{Cargo.toml description or package.json description}"
 paths:
   /path:
     get:
-      summary: "{ハンドラの doc comment 1行目}"
-      description: "{ハンドラの doc comment 全文}"
+      summary: "{First line of handler doc comment}"
+      description: "{Full handler doc comment}"
       parameters: [...]
       responses:
         "200":
-          description: "成功"
+          description: "Success"
           content:
             application/json:
               schema:
@@ -150,58 +151,58 @@ components:
       properties:
         field1:
           type: string
-          description: "{フィールドの doc comment}"
+          description: "{Field doc comment}"
 ```
 
-### エラーレスポンスのマッピング
+### Error Response Mapping
 
-design.md の Error Handling セクションが存在する場合、そのテーブルからエラーコードとHTTPステータスを取得し、各エンドポイントの responses に反映する。存在しない場合は一般的なエラーレスポンス（400, 404, 500）を生成する。
+If design.md has an Error Handling section, take error codes and HTTP statuses from that table and reflect them in each endpoint's responses. If absent, generate generic error responses (400, 404, 500).
 
-### 出力
+### Output
 
-生成した YAML を `--output` パス（デフォルト: `docs/openapi.yaml`）に書き出す。`docs/` ディレクトリが存在しない場合は作成する。
+Write the generated YAML to the `--output` path (default: `docs/openapi.yaml`). Create the `docs/` directory if it does not exist.
 
-既存ファイルがある場合は差分を表示し、上書き前にユーザーに確認する。
+If the file already exists, show the diff and confirm with the user before overwriting.
 
-## Step 5: Doc Comment ギャップ分析
+## Step 5: Doc Comment Gap Analysis
 
-型定義の各フィールドを走査し、doc comment が不足しているフィールドを一覧で報告する:
-
-```
-## Doc Comment 改善提案
-
-| ファイル | 行 | 型 | フィールド | 提案 |
-|---------|-----|-----|-----------|------|
-| src/models/user.rs | 15 | UserResponse | display_name | /// 表示用ユーザー名 |
-| src/models/user.rs | 16 | UserResponse | created_at | /// アカウント作成日時（UTC） |
-```
-
-不足がない場合は「全フィールドに doc comment が記述されています」と報告する。
-
-## Step 6: Design.md クロスリファレンス（オプション）
-
-`.spec-workflow/specs/*/design.md` が存在する場合、設計書の API Design セクションと生成した OpenAPI を比較する:
-
-### 差分検出
-
-| 差分タイプ | 説明 | アクション |
-|-----------|------|----------|
-| 設計にあるがコードにない | design.md に定義されたエンドポイントが未実装 | 警告として報告 |
-| コードにあるが設計にない | 実装済みだが design.md に未定義 | 警告として報告（設計逸脱の可能性） |
-| 型の不一致 | リクエスト/レスポンスのフィールドが異なる | 差分を詳細に報告 |
-
-design.md が存在しない場合はこのステップをスキップする。
-
-## 完了レポート
+Scan each field of the type definitions and report fields lacking doc comments:
 
 ```
-## /generate-api-docs 完了レポート
+## Doc Comment Improvement Suggestions
 
-- フレームワーク: {検出されたフレームワーク}
-- 出力先: {出力パス}
-- エンドポイント数: {N}
-- スキーマ数: {M}
-- Doc comment カバレッジ: {X}/{Y} フィールド ({Z}%)
-- 改善提案: {K} 件
-- Design.md 差分: {あり/なし/スキップ}
+| File | Line | Type | Field | Suggestion |
+|------|------|------|-------|------------|
+| src/models/user.rs | 15 | UserResponse | display_name | /// Display-purpose user name |
+| src/models/user.rs | 16 | UserResponse | created_at | /// Account creation timestamp (UTC) |
+```
+
+If no gaps exist, report "Doc comments are present on all fields".
+
+## Step 6: Design.md Cross-Reference (Optional)
+
+If `.spec-workflow/specs/*/design.md` exists, compare the design's API Design section against the generated OpenAPI:
+
+### Diff Detection
+
+| Diff type | Description | Action |
+|-----------|-------------|--------|
+| In design but not in code | Endpoint defined in design.md but not implemented | Report as warning |
+| In code but not in design | Implemented but not defined in design.md | Report as warning (possible design drift) |
+| Type mismatch | Request/response fields differ | Report the diff in detail |
+
+Skip this step when design.md does not exist.
+
+## Completion Report
+
+```
+## /generate-api-docs Completion Report
+
+- Framework: {detected framework}
+- Output: {output path}
+- Endpoint count: {N}
+- Schema count: {M}
+- Doc comment coverage: {X}/{Y} fields ({Z}%)
+- Improvement suggestions: {K} items
+- Design.md diff: {present / none / skipped}
 ```

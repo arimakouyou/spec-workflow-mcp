@@ -4,83 +4,83 @@ always_apply: true
 
 # Failure Taxonomy
 
-横断的な失敗分類語彙。`parallel-worker` / `review-worker` / `wave-harness-worker` / `spec-impl-test-run` 等のリトライ・差し戻し・DIVERGENT 判定で**共通キー**として使う。
+Cross-cutting failure-classification vocabulary. Used as the **shared key** for retries, send-backs, and DIVERGENT decisions across `parallel-worker` / `review-worker` / `spec-impl-test-run` and similar agents.
 
-目的は以下の 3 点：
+The objectives are the following three:
 
-1. 各エージェントが独自に用いていた自由記述の `last_error` に加え、**機械可読な分類タグ** `failure_category` を必須化する
-2. `diagnostic-reasoning.md` DR6（DIVERGENT Strategy）の閾値判定を「同一カテゴリの連続失敗」で行うための語彙を提供する
-3. review-worker の Severity Classification（Minor / Moderate / Critical）と失敗分類の対応を明示し、差し戻し判定を一貫させる
+1. In addition to the free-text `last_error` each agent had been using on its own, require a **machine-readable classification tag** `failure_category`
+2. Provide the vocabulary so that the threshold check for DR6 (DIVERGENT Strategy) in `diagnostic-reasoning.md` can be performed in terms of "consecutive failures of the same category"
+3. Make the correspondence between review-worker's Severity Classification (Minor / Moderate / Critical) and the failure classification explicit, so that send-back decisions are consistent
 
 ## FC1: Category Set
 
-主要カテゴリは 4 種類。それぞれにサブカテゴリを定義する。
+There are four primary categories. Each one defines its own subcategories.
 
 | Category | When to use | Sub-categories |
 |----------|-------------|---------------|
-| `compile_error` | ソースコード・テストコードがビルド／コンパイルを通らない。実行以前の失敗 | `syntax_error`, `type_error`, `unresolved_import`, `missing_symbol`, `borrow_check_error`, `trait_bound_unsatisfied` |
-| `test_failure` | ビルドは成功するが、テスト実行で失敗 | `assertion_failure`, `panic`, `timeout`, `unexpected_pass`（RED 期待のテストが PASS した場合）, `flaky` |
-| `quality_check_failure` | 品質ゲートでの失敗 | `format_violation`（rustfmt / dotnet format）, `lint_violation`（clippy / Roslyn）, `dependency_vulnerability`（cargo audit / dotnet list package --vulnerable）, `mutation_survived`（cargo-mutants / Stryker.NET）, `wasm_build_failure`（cargo leptos build）, `trim_aot_incompatibility`（dotnet publish -p:PublishTrimmed=true） |
-| `spec_mismatch` | 実装と仕様書（requirements.md / design.md / tasks.md の `_Prompt`）との乖離 | `design_conformance_violation`（review カテゴリ F）, `requirement_missing`（D）, `restriction_violated`（D）, `api_contract_mismatch`（G）, `test_design_missing`（E） |
+| `compile_error` | Source code or test code does not pass build/compile. A failure prior to execution | `syntax_error`, `type_error`, `unresolved_import`, `missing_symbol`, `borrow_check_error`, `trait_bound_unsatisfied` |
+| `test_failure` | Build succeeds, but test execution fails | `assertion_failure`, `panic`, `timeout`, `unexpected_pass` (a test expected to be RED passed), `flaky` |
+| `quality_check_failure` | Failure at a quality gate | `format_violation` (rustfmt / dotnet format), `lint_violation` (clippy / Roslyn), `dependency_vulnerability` (cargo audit / dotnet list package --vulnerable), `mutation_survived` (cargo-mutants / Stryker.NET), `wasm_build_failure` (cargo leptos build), `trim_aot_incompatibility` (dotnet publish -p:PublishTrimmed=true) |
+| `spec_mismatch` | Divergence between the implementation and the spec documents (requirements.md / design.md / `_Prompt` in tasks.md) | `design_conformance_violation` (review category F), `requirement_missing` (D), `restriction_violated` (D), `api_contract_mismatch` (G), `test_design_missing` (E) |
 
-**Escalation-only category（DIVERGENT のカウント対象外）**:
+**Escalation-only category (excluded from the DIVERGENT count)**:
 
-- `unknown`: 他のどの分類にも当てはまらない場合**のみ**使用する。2 回目以降の attempt で `unknown` を再利用してはならない（FC6 で明示的に禁止）
+- `unknown`: Use this **only** when the failure does not fit any other classification. `unknown` must not be reused on a second or later attempt (FC6 explicitly prohibits this)
 
 ## FC2: Required Reporting Fields
 
-以下の箇所では `failure_category` を**必須フィールド**として含める（`failure_subcategory` は optional、省略時は空文字列または未指定）。
+In the locations below, include `failure_category` as a **required field** (`failure_subcategory` is optional; when omitted, leave it as an empty string or unspecified).
 
-| 記述場所 | 記述形式 |
+| Location | Format |
 |---------|---------|
-| `diagnosis.md` の DR2 attempt エントリ | 次の 1 行を追加（FC4 参照）: `- **Failure category**: {category} / {subcategory}` |
-| `parallel-worker` の `retry_exhausted` レポート | `- failure_category: {category}` / `- failure_subcategory: {subcategory}`（optional） |
-| `parallel-worker` / `wave-harness-worker` の completion report の `diagnosis` オブジェクト | `failure_category: {category}`（`root_cause` / `responsible_files` / `approach` と並置） |
-| `review-worker` の `findings` エントリ | `failure_category: {category}` / `failure_subcategory: {subcategory}`（既存の `category: A|B|C|D|E|E2|F|G` とは別。両方記載する） |
-| `spec-impl-test-run` の Output Format の Verdict | `- **Failure Category**: {category}` / `- **Failure Subcategory**: {subcategory}`（fail 時のみ） |
-| `spec-implement` の `diagnostic_history` 累積テンプレート | `- **Failure category**: {category}` / `{subcategory}` |
+| `attempt-result` event in the task log's `## Events` section (per `rules/task-log-format.md` TL4) | Inline key on the event line: `category={category}/{subcategory}` |
+| `parallel-worker`'s `retry_exhausted` report | `- failure_category: {category}` / `- failure_subcategory: {subcategory}` (optional) |
+| `diagnosis` object in the completion report of `parallel-worker` | `failure_category: {category}` (alongside `root_cause` / `responsible_files` / `approach`) |
+| `findings` entries in `review-worker` | `failure_category: {category}` / `failure_subcategory: {subcategory}` (separate from the existing `category: A|B|C|D|E|E2|F|G`; record both) |
+| Verdict in the Output Format of `spec-impl-test-run` | `- **Failure Category**: {category}` / `- **Failure Subcategory**: {subcategory}` (only on fail) |
+| `diagnostic_history` cumulative template in `spec-implement` | `- **Failure category**: {category}` / `{subcategory}` |
 
-`failure_category` が得られないレガシー経路では `(not reported)` と記録するが、その次の attempt では必ず具体化する。
+For legacy paths where `failure_category` cannot be obtained, record `(not reported)`, but the next attempt must concretize it.
 
 ## FC3: Severity Mapping (with review-worker)
 
-`review-worker.md` の Severity Classification（Minor / Moderate / Critical）との対応。**review-worker が findings を生成するとき**にこの表を参照し、`failure_category` / `failure_subcategory` と `severity` を矛盾なく付与する。
+Correspondence with the Severity Classification (Minor / Moderate / Critical) in `review-worker.md`. **When review-worker generates findings**, refer to this table and assign `failure_category` / `failure_subcategory` and `severity` consistently.
 
-| failure_category | failure_subcategory | review-worker category | severity | 備考 |
+| failure_category | failure_subcategory | review-worker category | severity | Notes |
 |------------------|---------------------|------------------------|----------|------|
-| `compile_error` | (any) | — | N/A | review 到達前に `parallel-worker` が解消する。万一 review で検出された場合は Moderate (B) |
+| `compile_error` | (any) | — | N/A | Resolved by `parallel-worker` before reaching review. If detected during review, treat as Moderate (B) |
 | `test_failure` | (any) | E | Moderate | send back |
-| `quality_check_failure` | `format_violation` | A | Minor | review-worker が auto-fix |
-| `quality_check_failure` | `lint_violation` | A / B | Minor / Moderate | 警告レベル依存。clippy `-D warnings` 相当は Moderate |
-| `quality_check_failure` | `dependency_vulnerability` | C | Critical | blocking（コミット不可） |
-| `quality_check_failure` | `mutation_survived` | E | Moderate | テスト不足として send back |
+| `quality_check_failure` | `format_violation` | A | Minor | review-worker auto-fixes |
+| `quality_check_failure` | `lint_violation` | A / B | Minor / Moderate | Depends on the warning level. clippy `-D warnings` equivalent is Moderate |
+| `quality_check_failure` | `dependency_vulnerability` | C | Critical | blocking (cannot commit) |
+| `quality_check_failure` | `mutation_survived` | E | Moderate | Send back as insufficient tests |
 | `quality_check_failure` | `wasm_build_failure` / `trim_aot_incompatibility` | B | Moderate | |
 | `spec_mismatch` | `design_conformance_violation` | F | Critical | escalate to user |
 | `spec_mismatch` | `requirement_missing` / `restriction_violated` | D | Critical | escalate to user |
-| `spec_mismatch` | `api_contract_mismatch` | G | Minor | `/generate-api-docs` 推奨として報告 |
+| `spec_mismatch` | `api_contract_mismatch` | G | Minor | Report as a `/generate-api-docs` recommendation |
 | `spec_mismatch` | `test_design_missing` | E | Moderate | send back |
 
-Severity と action の対応（`review-worker.md` 既存ルールの再掲）:
+Correspondence between severity and action (re-stated from existing rules in `review-worker.md`):
 
-- **Minor** → auto-fix or advisory
-- **Moderate** → send back to parallel-worker（最大 3 rework）
-- **Critical** → escalate to user
+- **Minor** -> auto-fix or advisory
+- **Moderate** -> send back to parallel-worker (up to 3 reworks)
+- **Critical** -> escalate to user
 
-### 外部 severity スケールとの対応（正本）
+### Correspondence with External Severity Scales (Source of Truth)
 
-`review-worker.md` findings / log-implementation 等の各所で使われる Minor / Moderate / Critical を、外部の一般的 severity 語彙と対応付ける。**本表が正本（SSoT）**で、他のドキュメント（例: `review-worker.md` の severity 対応表）は本表の再掲として扱う。
+Map the Minor / Moderate / Critical labels used in `review-worker.md` findings, log-implementation, and elsewhere onto common external severity vocabularies. **This table is the source of truth (SSoT)**, and other documents (e.g., the severity correspondence table in `review-worker.md`) are treated as a re-statement of this table.
 
-| FC3（本書） | 一般的な外部スケール | CVSS 相当 |
+| FC3 (this document) | Common external scale | CVSS equivalent |
 |-------------|---------------------|----------|
 | Minor | low | informational / low |
 | Moderate | medium | medium |
 | Critical | high / critical | high / critical |
 
-findings を emit する際は Minor / Moderate / Critical のラベルを使い、Severity Classification 表 / FC3 表 / findings 出力のすべてで語彙を揃える。外部ツール（`cargo audit` / `npm audit` / GitHub Advisory 等）の出力を取り込む場合は、本表を使って FC3 語彙に正規化する。
+When emitting findings, use Minor / Moderate / Critical labels and align the vocabulary across the Severity Classification table, the FC3 table, and the findings output. When ingesting output from external tools (`cargo audit` / `npm audit` / GitHub Advisory and so on), normalize them to the FC3 vocabulary using this table.
 
 ## FC4: Integration with DR2 (diagnostic-reasoning.md)
 
-`diagnostic-reasoning.md` DR2 の attempt エントリに `Failure category` 行を追加する。**書き込みタイミングは DR1 の "write before fix"** と同じ（Attempt エントリ本体と同時に、`Result` 行より前に書き切る）。
+Add a `Failure category` line to DR2 attempt entries in `diagnostic-reasoning.md`. **The write timing is the same "write before fix"** as in DR1 (write it together with the body of the attempt entry, before the `Result` line).
 
 ```markdown
 ### Attempt {N}/{max}
@@ -92,25 +92,25 @@ findings を emit する際は Minor / Moderate / Critical のラベルを使い
 - **Result**: {PASS or FAIL — error summary}
 ```
 
-- `Root cause` / `Approach` と矛盾しないこと（例: `Root cause` が「テストが通らない」なのに `Failure category: compile_error` は不整合）
-- `failure_category` は attempt を書き始める時点で決定する（原因調査の一環）。`Result` 確定後に事後的に書き足すのは不可
-- 以前の attempt と**主要カテゴリ**が連続した場合は FC5 の DIVERGENT 判定対象
+- Must not contradict `Root cause` / `Approach` (e.g., `Root cause` says "the test does not pass" while `Failure category: compile_error` is inconsistent)
+- `failure_category` is determined at the time the attempt begins to be written (as part of the cause investigation). It is not allowed to add it after the fact once `Result` is decided
+- If the **primary category** is consecutive with a previous attempt, it becomes a candidate for DIVERGENT under FC5
 
 ## FC5: DIVERGENT Trigger Condition
 
-`diagnostic-reasoning.md` DR6 の閾値判定は `failure_category`（**主要カテゴリのみ**、サブカテゴリは無視）で行う。
+The threshold judgment in DR6 of `diagnostic-reasoning.md` is performed using `failure_category` (**primary category only**; subcategories are ignored).
 
-- 同一 phase（`## GREEN Phase` / `## Quality Checks` / `## Rework Cycle`）内で、直近 **2 回連続** で同じ `failure_category` が `Result: FAIL` として記録された場合、次の attempt は DR6 DIVERGENT モードで実行
-- `failure_subcategory` が違っても主要カテゴリが同じならカウントされる（例: `test_failure / assertion_failure` → `test_failure / panic` は「同じ mechanism」として扱う）
-- 主要カテゴリが変わった場合はカウンタをリセット（例: `compile_error` → `test_failure`）
-- phase をまたいだ場合もカウンタをリセット（GREEN Phase の test_failure と Quality Checks の test_failure は別カウント）
+- Within the same phase (`## GREEN Phase` / `## Quality Checks` / `## Rework Cycle`), if the same `failure_category` is recorded as `Result: FAIL` **2 consecutive times** in the most recent attempts, the next attempt runs in DR6 DIVERGENT mode
+- Even if `failure_subcategory` differs, the count applies as long as the primary category is the same (e.g., `test_failure / assertion_failure` -> `test_failure / panic` is treated as the "same mechanism")
+- If the primary category changes, the counter is reset (e.g., `compile_error` -> `test_failure`)
+- The counter is also reset across phases (test_failure in GREEN Phase and test_failure in Quality Checks are counted separately)
 
 ## FC6: Prohibited Patterns
 
-以下は分類の信頼性を損なうため禁止する。review-worker は findings のレビュー時にこれらを検出した場合、rework 差し戻しの根拠とする。
+The following are prohibited because they undermine the reliability of classification. When review-worker detects these during finding review, they serve as grounds for sending the work back via rework.
 
-1. **`unknown` の連続使用**: 2 回目以降の attempt で `unknown` を再利用してはならない。必ず具体的な分類に落とし込む
-2. **`failure_category` の未記載**: リトライ・差し戻し・`diagnosis.md` エントリで `failure_category` が省略されている場合、orchestrator は `(not reported)` と記録した上で警告ログを出す。次の attempt では必ず記載する
-3. **複数カテゴリの並記**: 1 つの attempt につき 1 カテゴリ。本当に複合的な失敗であれば、**最も本質的な原因**（fix の起点になるもの）を選ぶ
-4. **Severity と category の矛盾**: review-worker の findings で、FC3 の対応表と矛盾する severity を付けてはならない（例: `quality_check_failure / format_violation` に `Critical` を付けるなど）
-5. **`Approach` と `failure_category` の不整合**: `Approach` が解消しようとしている失敗と `failure_category` は同じ原因を指していなければならない。fix しない側のカテゴリを書いてはならない
+1. **Repeated use of `unknown`**: `unknown` must not be reused on a second or later attempt. It must always be reduced to a concrete classification
+2. **Missing `failure_category`**: When `failure_category` is omitted in a retry, send-back, or `attempt-result` task-log event, the orchestrator records `(not reported)` and emits a warning log. The next attempt must include it
+3. **Listing multiple categories**: One category per attempt. If the failure really is composite, choose **the most essential cause** (the one that serves as the starting point for the fix)
+4. **Contradiction between severity and category**: In review-worker findings, severities that contradict the FC3 correspondence table must not be assigned (e.g., assigning `Critical` to `quality_check_failure / format_violation`)
+5. **Inconsistency between `Approach` and `failure_category`**: The failure that `Approach` is trying to resolve and `failure_category` must point to the same root cause. Do not record the category of the side that is not being fixed

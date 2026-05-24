@@ -7,7 +7,7 @@ argument-hint: "<spec-name> [--scope it|e2e|all] [--spec-id IT-1,E2E-1]"
 
 # E2E Test Implementation (Independent Line)
 
-メイン実装（`/spec-implement`）とは独立して、test-design.md の IT/E2E 仕様に基づいてテストコードを生成する。コンテナベースのテストインフラ（testcontainers、docker-compose.test.yml、Playwright）を使用する。
+Independently of the main implementation (`/spec-implement`), generate test code based on the IT/E2E specifications in test-design.md. Uses container-based test infrastructure (testcontainers, docker-compose.test.yml, Playwright).
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -30,8 +30,8 @@ If ANY file is missing — **STOP immediately.** Inform the user which file is m
 | Argument | Required | Description |
 |----------|:--------:|-------------|
 | `spec-name` | YES | Spec name in kebab-case |
-| `--scope` | NO | `it` (統合テストのみ), `e2e` (E2E のみ), `all` (デフォルト: 両方) |
-| `--spec-id` | NO | 特定の仕様のみ実装（例: `IT-1,E2E-2`） |
+| `--scope` | NO | `it` (integration tests only), `e2e` (E2E only), `all` (default: both) |
+| `--spec-id` | NO | Implement only specific specs (e.g., `IT-1,E2E-2`) |
 
 ## Process
 
@@ -48,64 +48,64 @@ Skip any file that does not exist; steering docs are optional.
 ### 1. Read Test Design
 
 1. Read `.spec-workflow/specs/{spec-name}/test-design.md`
-2. IT/E2E 仕様を抽出（`--scope` / `--spec-id` でフィルタ）
-3. **E2E Test Infrastructure** セクションから技術選定を取得:
-   - テストランナー（Playwright / reqwest / supertest 等）
-   - DB 戦略（testcontainers / docker-compose.test.yml）
-   - Container Test Setup 方法
+2. Extract IT/E2E specifications (filter by `--scope` / `--spec-id`)
+3. Get the technology selection from the **E2E Test Infrastructure** section:
+   - Test runner (Playwright / reqwest / supertest, etc.)
+   - DB strategy (testcontainers / docker-compose.test.yml)
+   - Container Test Setup method
 
 ### 2. Check Implementation Readiness
 
-IT/E2E テストの対象コンポーネントがメイン実装で実装済みか確認する:
+Verify that the components targeted by the IT/E2E tests have been implemented in the main implementation:
 
 ```bash
-# tasks.md で対象タスクの完了状態を確認
+# Check the completion status of target tasks in tasks.md
 grep -E '\[x\]|\[-\]|\[ \]' .spec-workflow/specs/{spec-name}/tasks.md
 ```
 
-| 状態 | アクション |
-|------|----------|
-| 対象コンポーネントが全て `[x]` | テスト実装を開始 |
-| 一部が `[-]` (実装中) | 完了済みコンポーネントの IT のみ実装可。E2E は待機 |
-| 対象が `[ ]` (未着手) | ユーザーに報告: 「対象コンポーネントが未実装です。`/spec-implement` でメイン実装を先に進めてください」 |
+| Status | Action |
+|--------|--------|
+| All target components `[x]` | Begin test implementation |
+| Some are `[-]` (in progress) | Implement IT only for completed components. E2E waits |
+| Targets are `[ ]` (not started) | Report to user: "Target components are not yet implemented. Please advance the main implementation via `/spec-implement` first." |
 
-### 3. Infrastructure Setup (初回のみ)
+### 3. Infrastructure Setup (first time only)
 
-テストインフラが未セットアップの場合、以下を実行する。`_TDDSkip: true` 相当（テストインフラ自体のテストは不要）。
+If the test infrastructure is not set up, run the following. Equivalent to `_TDDSkip: true` (no test required for the test infrastructure itself).
 
-#### 3.1 docker-compose.test.yml の確認
+#### 3.1 Verify docker-compose.test.yml
 
 ```bash
-# docker-compose.test.yml が存在するか確認
+# Check whether docker-compose.test.yml exists
 test -f docker-compose.test.yml && echo "exists" || echo "missing"
 ```
 
-- 存在しない場合 → parallel-worker でdocker-compose.test.ymlを作成
-- 存在する場合 → スキップ
+- If absent → create docker-compose.test.yml by launching a single `parallel-worker` agent (per `rules/serial-execution-policy.md`, agents MUST be launched one at a time)
+- If present → skip
 
-#### 3.2 テストランナーのセットアップ
+#### 3.2 Test Runner Setup
 
-E2E Test Infrastructure の選定に基づいて:
+Based on the E2E Test Infrastructure selection:
 
-| ランナー | セットアップ |
-|---------|-------------|
-| Playwright | `npm init playwright@latest`、`playwright.config.ts` 生成 |
-| reqwest | `Cargo.toml` に `[dev-dependencies]` 追加 |
+| Runner | Setup |
+|--------|-------|
+| Playwright | `npm init playwright@latest`, generate `playwright.config.ts` |
+| reqwest | Add `[dev-dependencies]` to `Cargo.toml` |
 | supertest | `npm install --save-dev supertest @types/supertest` |
-| testcontainers (Rust) | `Cargo.toml` に `testcontainers` 依存追加 |
+| testcontainers (Rust) | Add `testcontainers` dependency to `Cargo.toml` |
 | testcontainers (Node) | `npm install --save-dev testcontainers` |
 
-#### 3.3 テストヘルパー・共通フィクスチャの作成
+#### 3.3 Create Test Helpers and Shared Fixtures
 
-parallel-worker で以下を作成:
+Create the following by launching `parallel-worker` agents one at a time (per `rules/serial-execution-policy.md`). Wait for each to complete before launching the next:
 
-- **テスト用 DB ヘルパー**: testcontainers の起動・マイグレーション・シードデータ投入を共通化
-- **テスト用 HTTP クライアント**: 認証トークン付きリクエスト送信のヘルパー
-- **共通フィクスチャ**: test-design.md の Test Data Requirements に基づくシードデータ
+- **Test DB helper**: Centralize testcontainers startup, migration, and seed-data loading
+- **Test HTTP client**: Helper for sending requests with authentication tokens
+- **Shared fixtures**: Seed data based on the Test Data Requirements in test-design.md
 
 ### 4. IT Implementation
 
-test-design.md の各 IT 仕様に対して parallel-worker でテストコードを生成する。
+For each IT spec in test-design.md, generate test code by launching a `parallel-worker` agent. **One agent at a time** — do not launch IT-1 and IT-2 in parallel (per `rules/serial-execution-policy.md`). Wait for each to complete before launching the next.
 
 ```javascript
 Agent({
@@ -141,7 +141,7 @@ Agent({
 
 ### 5. E2E Implementation
 
-test-design.md の各 E2E 仕様に対してテストコードを生成する。
+For each E2E spec in test-design.md, generate test code. **Launch one `parallel-worker` agent at a time** (per `rules/serial-execution-policy.md`); do not launch multiple E2E-N agents concurrently.
 
 #### 5.1 API E2E (Test Type: API E2E)
 
@@ -192,24 +192,24 @@ Agent({
     - Use expect(page).toHaveURL() for navigation assertions
     - Use expect(locator).toHaveText() for content assertions
 
-    Playwright MCP 連携（CDP 経由、.mcp.json に設定がある場合）:
-    - browser_snapshot で DOM スナップショット・アクセシビリティツリーを取得し構造検証に使用
-    - browser_take_screenshot でランタイムスクリーンショットを取得し VRT に使用
-    - browser_evaluate で CDP 経由の JavaScript 実行（パフォーマンス計測等）
-    - これらは標準の Playwright テストアサーションを補完するもので、置き換えではない`
+    Playwright MCP integration (via CDP, when configured in .mcp.json):
+    - Use browser_snapshot to capture DOM snapshots and the accessibility tree for structural verification
+    - Use browser_take_screenshot to capture runtime screenshots for VRT
+    - Use browser_evaluate for JavaScript execution via CDP (performance measurement, etc.)
+    - These complement standard Playwright test assertions; they do not replace them.`
 })
 ```
 
 ### 6. Quality Verification
 
-全 IT/E2E テストを実行し、品質を検証する。
+Run all IT/E2E tests and verify quality.
 
 ```bash
-# IT テスト実行
+# Run IT tests
 cargo test --tests --quiet                 # Rust
 npm run test:integration                   # Node.js
 
-# E2E テスト実行
+# Run E2E tests
 docker-compose -f docker-compose.test.yml up -d
 npx playwright test                        # Browser E2E
 cargo test --tests --quiet                 # Rust API E2E
@@ -217,15 +217,15 @@ npm run test:e2e                           # Node.js API E2E
 docker-compose -f docker-compose.test.yml down
 ```
 
-review-worker でテストコードのレビュー:
-- テストが test-design.md の仕様を正しく反映しているか
-- テストの独立性（他テストへの依存がないか）
-- コンテナの適切なクリーンアップ
-- テストデータの適切な管理
+Review the test code with review-worker:
+- Whether the tests correctly reflect the specs in test-design.md
+- Test independence (no dependency between tests)
+- Proper container cleanup
+- Proper management of test data
 
 ### 7. Report
 
-結果を `.spec-workflow/specs/{spec-name}/reviews/e2e-implementation.md` に保存:
+Save the result to `.spec-workflow/specs/{spec-name}/reviews/e2e-implementation.md`:
 
 ```markdown
 # E2E Test Implementation Report
@@ -258,18 +258,18 @@ review-worker でテストコードのレビュー:
 | E2E | {N} | {M} | {K} |
 ```
 
-## メイン実装との関係
+## Relationship with the Main Implementation
 
-- `/spec-implement` と `/spec-e2e-implement` は**独立して実行可能**
-- `/spec-implement` の Final E2E Gate (Step 9) は `/spec-e2e-implement` で作成したテストも自動的に実行する
-- メイン実装の進捗に応じて、実装済みコンポーネントから順次 IT テストを作成できる
-- E2E テストは全コンポーネントが実装済みになってから実行する
+- `/spec-implement` and `/spec-e2e-implement` can run **independently**
+- The Final E2E Gate of `/spec-implement` (Step 9) automatically runs the tests created by `/spec-e2e-implement` as well
+- IT tests can be created incrementally for components that are already implemented, as the main implementation progresses
+- E2E tests should run only after all components have been implemented
 
 ## Rules
 
 - Feature names use kebab-case
-- テストコードはコンテナベースで実装する（testcontainers / docker-compose.test.yml）
-- テストは自己完結的であること（他テストへの依存禁止）
-- コンテナは必ずクリーンアップすること
-- test-design.md の仕様に忠実に実装すること
-- 口頭承認は不要（テスト実装は承認プロセスなし、Final E2E Gate で検証）
+- Implement test code on a container-based foundation (testcontainers / docker-compose.test.yml)
+- Tests must be self-contained (no dependency on other tests)
+- Always clean up containers
+- Implement faithfully to the specs in test-design.md
+- No verbal approval required (test implementation has no approval step; verification happens at the Final E2E Gate)

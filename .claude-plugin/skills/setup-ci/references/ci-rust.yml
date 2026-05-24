@@ -51,13 +51,81 @@ jobs:
 
       - name: Clippy
         id: clippy
-        run: cargo clippy --quiet --all-targets -- -D warnings
+        # TS-R4 (unwrap 禁止) を L3 CI で強制: プロダクションコードで unwrap/expect/panic を deny。
+        # テストコードでの許可は clippy.toml の allow-*-in-tests で制御 (setup-ci/references/clippy.toml.template)。
+        run: |
+          cargo clippy --quiet --all-targets -- \
+            -D warnings \
+            -D clippy::unwrap_used \
+            -D clippy::expect_used \
+            -D clippy::panic
 
       - name: Tests
         id: tests
         run: |
           set -o pipefail
           cargo test --quiet 2>&1 | tee /tmp/test-output.txt
+
+      - name: Architecture tests (L4)
+        id: architecture-tests
+        # plan-redesign #15: design.md の Module Boundaries に基づく依存方向 / 循環依存テストを
+        # tests/architecture.rs として明示実行。/generate-arch-tests Skill で生成。
+        # ファイルが存在しない場合は skip (Module Boundaries 未定義のプロジェクト用)。
+        run: |
+          if [ -f tests/architecture.rs ]; then
+            cargo test --test architecture --quiet
+          else
+            echo "tests/architecture.rs not found — skipping (run /generate-arch-tests if Module Boundaries are defined)"
+          fi
+
+      - name: Regression Gate (QC16)
+        id: regression-gate
+        # dapper-hardening J-9: regression-test-policy/SKILL.md の命名規則
+        # (regression_issue_NNN_*) で書かれた test を全件抽出して実行。
+        # 1 件でも fail したら CI 失敗（修正による新規バグ流入を即検出）。
+        run: |
+          set -o pipefail
+          # regression test を含む可能性があるか確認
+          if grep -rq "regression_issue_" --include="*.rs" . 2>/dev/null; then
+            echo "Detected regression_issue_* tests — running Regression Gate"
+            cargo test --workspace --quiet -- regression_issue_ 2>&1 | tee /tmp/regression-output.txt
+          else
+            echo "No regression_issue_* tests detected — Regression Gate dormant"
+          fi
+
+      - name: UT Properties Gate (QC15)
+        id: ut-properties-gate
+        # dapper-hardening I-2: clippy disallowed-methods で clock / RNG / env /
+        # fs / HTTP の直接呼出を deny-level で禁止。design.md K-3 で宣言された
+        # Mock 経由のみ許可。clippy.toml に disallowed-methods が設定済前提。
+        if: hashFiles('clippy.toml') != ''
+        run: |
+          if grep -q "disallowed-methods" clippy.toml 2>/dev/null; then
+            cargo clippy --all-targets --workspace -- -D clippy::disallowed_methods
+          else
+            echo "clippy.toml has no disallowed-methods — UT Properties Gate dormant (configure per quality-checks.md QC15 to enable)"
+          fi
+
+      - name: Mutation testing (cargo-mutants, --in-diff, advisory)
+        id: mutation-testing
+        # plan-redesign #7: 差分モードで mutation testing を実行。
+        # PR で変更された行のみを対象に survived mutant を検出する。
+        # 初期は advisory (continue-on-error: true)。安定したら除去して blocking に昇格。
+        # cargo-mutants Skill の Core Command Pattern に整合。
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          cargo install cargo-mutants --locked
+          BASE_REF="${{ github.base_ref }}"
+          BASE_REF="${BASE_REF:-main}"
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff "origin/$BASE_REF" -- '*.rs' > git.diff
+          if [ -s git.diff ]; then
+            cargo mutants --no-shuffle -vV --in-diff git.diff --timeout 300
+          else
+            echo "No .rs changes vs $BASE_REF — skipping mutation testing"
+          fi
+          rm -f git.diff
 
       - name: Security audit
         id: security-audit

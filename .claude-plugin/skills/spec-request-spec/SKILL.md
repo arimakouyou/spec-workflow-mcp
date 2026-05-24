@@ -123,9 +123,8 @@ This is a strict, automated process. Verbal approval from the user is never acce
 
 1. **Request approval**: Use the `approvals` MCP tool with `action: 'request'`. Pass `filePath` only — never include content in the request. Save the returned `approvalId`.
 
-2. **Automatic polling with auto-transition**: Start approval polling (Bash script with 60-minute timeout).
+2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run `/check-approval` with a `next:` argument chosen based on the document's frontmatter `task_type`:
 
-   Pick the `next:` skill based on `task_type` in the document's frontmatter:
    - `feature-add` / `feature-modify` / `bugfix` / `refactor` / `legacy-migration` → `next:/spec-investigate`
    - `legacy` or missing `task_type` → `next:/spec-requirements` (Phase 0.5 is skipped for these specs, per `.claude-plugin/rules/task-types.md` TT5)
 
@@ -133,14 +132,13 @@ This is a strict, automated process. Verbal approval from the user is never acce
    /check-approval <approvalId> next:/spec-investigate      # default for classified specs
    /check-approval <approvalId> next:/spec-requirements     # legacy / unclassified specs only
    ```
-
-   The polling script will automatically check approval status and handle the result:
-   - **approved**: Cleanup is performed automatically, and check-approval automatically invokes the chosen next skill
+   `check-approval` fetches status once via the `approvals` MCP tool (no polling) and branches:
+   - **pending**: User has not acted yet — instruct the user to approve, then re-run `/check-approval`
+   - **approved**: Cleanup is performed automatically, and `check-approval` automatically invokes the chosen `next:` skill
    - **needs-revision**: Reviewer comments are displayed
    - **rejected**: Rejection reason is displayed — revise and create a new approval
-   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if polling ends with needs-revision):
+3. **Handle needs-revision** (if status was needs-revision):
    - Read the reviewer's comments, update the document accordingly
    - Spawn the review subagent again (Step A + B)
    - Submit a NEW approval request and run `/check-approval <newApprovalId> next:/spec-investigate` (or `next:/spec-requirements` if the spec is legacy/unclassified)

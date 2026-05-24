@@ -166,17 +166,17 @@ This is a strict, automated process. Verbal approval from the user is never acce
 
 1. **Request approval**: Use the `approvals` MCP tool with `action: 'request'`. Pass `filePath` only — never include content in the request. Save the returned `approvalId`.
 
-2. **Automatic polling**: Start approval polling (Bash script with 60-minute timeout):
+2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run:
    ```
    /check-approval <approvalId>
    ```
-   The polling script will automatically check approval status and handle the result:
+   `check-approval` fetches status once via the `approvals` MCP tool (no polling) and branches:
+   - **pending**: User has not acted yet — instruct the user to approve, then re-run `/check-approval`
    - **approved**: Cleanup is performed automatically
    - **needs-revision**: Reviewer comments are displayed
    - **rejected**: Rejection reason is displayed — revise and create a new approval
-   - **timeout**: Reported to user, can re-run to resume
 
-3. **Handle needs-revision** (if polling ends with needs-revision):
+3. **Handle needs-revision** (if status was needs-revision):
    - Read the reviewer's comments, update the document accordingly
    - Re-run the review subagent (fix + check)
    - Submit a NEW approval request and run `/check-approval <newApprovalId>`
@@ -189,18 +189,18 @@ After all requested steering documents are approved:
 - Inform the user: "Steering documents are complete. These will be referenced automatically during spec creation phases."
 - If the user wants to start spec development, suggest: "Ready to create a spec? Use `/spec-request-spec` to begin Phase 0."
 
-### 4. CLAUDE.md Maintenance Guidance (P1-02)
+### 4. CLAUDE.md Setup Guidance (P1-02)
 
-> **P1-02**: This step addresses item P1-02 of the harness-maturity-check P1 (context engineering) checklist:
-> "An agent-facing instruction file is in place."
+> **P1-02**: Item P1-02 of the harness-maturity-check checklist P1 (context engineering),
+> "Agent-facing instruction file is in place."
 
-After steering docs are created, verify the state of the project's root-level agent instruction file (`CLAUDE.md`, or equivalents such as `.cursorrules`, `.github/copilot-instructions.md`).
+After steering doc creation is finished, check the state of `CLAUDE.md` at the project root (or other agent-facing instruction files such as `.cursorrules` or `.github/copilot-instructions.md`).
 
-**Checks:**
+**Checklist:**
 
-1. **Existence**: An agent instruction file exists at the project root.
-2. **Conciseness**: Aim for ≤ 100 lines; push details behind pointers to other files.
-3. **Pointer design**: Concrete rules and patterns should be expressed as links to `.claude-plugin/rules/` and steering docs, not inlined.
+1. **Existence**: Does an agent-facing instruction file exist at the project root?
+2. **Conciseness**: Aim for under 100 lines; defer details via pointers to other files
+3. **Pointer design**: Compose concrete rules and patterns as references to `.claude-plugin/rules/` or steering docs
 
 **Recommended structure:**
 
@@ -208,25 +208,25 @@ After steering docs are created, verify the state of the project's root-level ag
 # CLAUDE.md
 
 ## Project Overview
-{1-2 lines. Details: .spec-workflow/steering/product.md}
+{1-2 line overview. See .spec-workflow/steering/product.md for details}
 
 ## Architecture
-{1-2 lines. Details: .spec-workflow/steering/structure.md}
+{1-2 line structural overview. See .spec-workflow/steering/structure.md for details}
 
-## Tech Stack
-{Key technologies. Details: .spec-workflow/steering/tech.md}
+## Technology Stack
+{List of primary technologies. See .spec-workflow/steering/tech.md for details}
 
 ## Coding Rules
-- Rule index: `.claude-plugin/rules/INDEX.md`
-- Style: `.claude-plugin/rules/rust-style.md` (or `csharp-style.md`)
+- Rule index: under the `.claude-plugin/rules/` directory
+- Style: `.claude-plugin/rules/rust-style.md`
 - Security: `.claude-plugin/rules/security.md`
 
 ## Workflow
-- Spec-driven development via spec-workflow.
-- Always obtain design approval before implementation.
+- Adopt spec-driven development via spec-workflow
+- Always obtain design approval before implementation
 ```
 
-If no CLAUDE.md exists, propose the above structure. If one exists, review for conciseness and pointer design and suggest improvements.
+If CLAUDE.md does not exist, propose the structure above to the user. If it exists, check its conciseness and pointer design and propose improvements.
 
 ## Rules
 

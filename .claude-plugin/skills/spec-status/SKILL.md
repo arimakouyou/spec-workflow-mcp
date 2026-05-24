@@ -1,25 +1,25 @@
 ---
 name: spec-status
-description: "仕様の進捗状態を確認する。指定したスペック名のフェーズ完了状態（request-spec → requirements → design → test-design → tasks → implementation）とタスク進捗を表示。Triggers on: /spec-status invocation, or when user asks about spec progress."
+description: "Show the progress state of a spec. Displays phase completion (request-spec → requirements → design → test-design → tasks → implementation) and task progress for the given spec name. Triggers on: '/spec-status invocation', 'check spec progress', 'spec status', '仕様の進捗状態を確認', 'when user asks about spec progress'."
 ---
 
-# Spec Status — 仕様進捗確認
+# Spec Status — Spec Progress Check
 
-指定スペックの現在の進捗を確認・表示する。
+Check and display the current progress of the specified spec.
 
-## 入力
+## Inputs
 
-- **specName** (spec-name): スペック名（kebab-case）。`$ARGS` の最初の引数として受け取る。
+- **specName** (spec-name): Spec name (kebab-case). Received as the first argument of `$ARGS`.
 
-**呼び出し形式**: `/spec-status <spec-name>` （例: `/spec-status user-authentication`）
+**Invocation form**: `/spec-status <spec-name>` (e.g., `/spec-status user-authentication`)
 
-## 手順
+## Process
 
-### 1. ファイル存在チェック
+### 1. File Existence Check
 
-`.spec-workflow/specs/{spec-name}/` 配下のファイルを Glob で確認する:
+Use Glob to check the files under `.spec-workflow/specs/{spec-name}/`:
 
-| ファイル | フェーズ |
+| File | Phase |
 |---------|---------|
 | `request-spec.md` | Phase 0: Request Spec |
 | `requirements.md` | Phase 1: Requirements |
@@ -27,52 +27,52 @@ description: "仕様の進捗状態を確認する。指定したスペック名
 | `test-design.md` | Phase 3: Test Design |
 | `tasks.md` | Phase 4: Tasks |
 
-### 2. タスク進捗集計
+### 2. Task Progress Aggregation
 
-`tasks.md` が存在する場合、タスクのステータスをカウントする:
-- `[ ]` → pending（未着手）
-- `[-]` → in-progress（進行中）
-- `[x]` → completed（完了）
+If `tasks.md` exists, count the task statuses:
+- `[ ]` → pending (not started)
+- `[-]` → in-progress
+- `[x]` → completed
 
-Grep で各パターンをカウント:
+Count each pattern with grep:
 ```bash
 grep -c '^\- \[ \]' .spec-workflow/specs/{spec-name}/tasks.md || echo 0
 grep -c '^\- \[-\]' .spec-workflow/specs/{spec-name}/tasks.md || echo 0
 grep -c '^\- \[x\]' .spec-workflow/specs/{spec-name}/tasks.md || echo 0
 ```
 
-### 3. 現在フェーズの判定
+### 3. Determine the Current Phase
 
-存在するファイルから現在のフェーズを判定する。**次に必要なフェーズ**を報告する:
-- tasks.md あり + タスク全完了 → `completed`
-- tasks.md あり + 未完了タスクあり → `implementation`
-- tasks.md あり + 全タスク未着手 → `tasks`（実装開始待ち）
-- test-design.md まで存在 → `tasks-needed`（Phase 4 未完了）
-- design.md まで存在 → `test-design-needed`（Phase 3 未完了）
-- requirements.md まで存在 → `design-needed`（Phase 2 未完了）
-- request-spec.md のみ存在 → `requirements-needed`（Phase 1 未完了）
-- 何もなし → `not-started`
+Determine the current phase from the existing files. Report **the next required phase**:
+- tasks.md exists + all tasks completed → `completed`
+- tasks.md exists + some tasks incomplete → `implementation`
+- tasks.md exists + no tasks started → `tasks` (waiting for implementation to begin)
+- up to test-design.md exists → `tasks-needed` (Phase 4 not complete)
+- up to design.md exists → `test-design-needed` (Phase 3 not complete)
+- up to requirements.md exists → `design-needed` (Phase 2 not complete)
+- only request-spec.md exists → `requirements-needed` (Phase 1 not complete)
+- nothing → `not-started`
 
-**レガシースペック互換**: `request-spec.md` が存在しなくても `requirements.md` が存在する場合は、Phase 0 をスキップして Phase 1 完了として扱う（request-spec は後から導入されたフェーズのため）。
+**Legacy spec compatibility**: If `request-spec.md` does not exist but `requirements.md` does, skip Phase 0 and treat Phase 1 as complete (request-spec is a phase introduced later).
 
-### 4. 結果表示
+### 4. Result Display
 
-以下のフォーマットで表示:
+Display in the following format:
 
 ```
-## {spec-name} — 仕様進捗
+## {spec-name} — Spec Progress
 
-**現在フェーズ**: {currentPhase}
+**Current phase**: {currentPhase}
 
-### フェーズ状態
+### Phase Status
 - [x] Phase 0: Request Spec
 - [x] Phase 1: Requirements
 - [ ] Phase 2: Design
 - [ ] Phase 3: Test Design
 - [ ] Phase 4: Tasks
 
-### タスク進捗（Phase 4 完了時）
-- 完了: {completed}/{total}
-- 進行中: {inProgress}
-- 未着手: {pending}
+### Task Progress (when Phase 4 is complete)
+- Completed: {completed}/{total}
+- In progress: {inProgress}
+- Not started: {pending}
 ```

@@ -1,58 +1,58 @@
-# 型安全性ガイドライン
+# Type Safety Guidelines
 
-プロジェクトの型チェック設定と型安全なコーディングパターンを定義する。
+Defines type checking settings and type-safe coding patterns for the project.
 
-## Rust 型安全性
+## Rust Type Safety
 
-Rust はコンパイラレベルで強い型安全性を提供するが、以下のパターンで更に安全性を高める。
+While Rust provides strong type safety at the compiler level, the following patterns further enhance safety.
 
-### TS-R1: Newtype パターン
+### TS-R1: Newtype Pattern
 
-ドメイン固有の値には newtype を使用し、型の取り違えを防止する:
+Use newtypes for domain-specific values to prevent type confusion:
 
 ```rust
-// NG: 生の型をそのまま使用
+// NG: Using raw types directly
 fn get_user(id: i64) -> User { ... }
 fn get_order(id: i64) -> Order { ... }
-// get_user(order_id) がコンパイル可能 — 危険
+// get_user(order_id) is compilable — dangerous
 
-// OK: newtype で区別
+// OK: Distinguished by newtypes
 struct UserId(i64);
 struct OrderId(i64);
 fn get_user(id: UserId) -> User { ... }
 fn get_order(id: OrderId) -> Order { ... }
-// get_user(order_id) はコンパイルエラー
+// get_user(order_id) causes a compile error
 ```
 
-適用対象: ID、金額、メールアドレス等のドメイン値
+Applies to: Domain values such as IDs, amounts, email addresses, etc.
 
-### TS-R2: 安全な数値キャスト
+### TS-R2: Safe Numeric Casting
 
-`as` による数値キャストは精度損失やオーバーフローのリスクがある:
+Casting with `as` carries risks of precision loss or overflow:
 
 ```rust
-// NG: 暗黙の切り捨て
+// NG: Implicit truncation
 let x: i64 = 300;
-let y: i8 = x as i8; // 44 — サイレントオーバーフロー
+let y: i8 = x as i8; // 44 — silent overflow
 
-// OK: 明示的な変換
+// OK: Explicit conversion
 let y: i8 = x.try_into().map_err(|_| AppError::Overflow)?;
 ```
 
-`as` は `usize` ↔ ポインタ変換等の安全が保証される場合のみ許可。
+`as` is only permitted when safety is guaranteed, such as `usize` ↔ pointer conversions.
 
-### TS-R3: 網羅的パターンマッチ
+### TS-R3: Exhaustive Pattern Matching
 
-`match` は必ず全パターンを網羅し、`_ =>` ワイルドカードは避ける:
+`match` must always cover all patterns, and the `_ =>` wildcard should be avoided:
 
 ```rust
-// NG: 新しいバリアント追加時にコンパイルエラーにならない
+// NG: Does not trigger compile error when a new variant is added
 match status {
     Status::Active => { ... },
-    _ => { ... },  // 新バリアントが暗黙的にここに落ちる
+    _ => { ... },  // New variants implicitly fall into here
 }
 
-// OK: 明示的に全バリアントを列挙
+// OK: Explicitly list all variants
 match status {
     Status::Active => { ... },
     Status::Inactive => { ... },
@@ -60,26 +60,26 @@ match status {
 }
 ```
 
-例外: 外部クレートの `#[non_exhaustive]` 列挙型は `_ =>` が必要。
+Exception: `#[non_exhaustive]` enums from external crates require `_ =>`.
 
-### TS-R4: Option/Result の安全な処理
+### TS-R4: Safe Handling of Option/Result
 
 ```rust
-// NG: パニックのリスク
+// NG: Risk of panic
 let value = map.get("key").unwrap();
 
-// OK: エラーハンドリング
+// OK: Error handling
 let value = map.get("key").ok_or(AppError::NotFound("key"))?;
 
-// OK: デフォルト値
+// OK: Default value
 let value = map.get("key").unwrap_or(&default);
 ```
 
-`unwrap()` はテストコードでのみ許可。プロダクションコードでは `?` 演算子、`unwrap_or`、`unwrap_or_else` を使用する。
+`unwrap()` is permitted only in test code. In production code, use the `?` operator, `unwrap_or`, or `unwrap_or_else`.
 
-### TS-R5: PhantomData による型レベル状態管理
+### TS-R5: Type-Level State Management via PhantomData
 
-状態遷移を型で表現し、不正な状態遷移をコンパイル時に防止する:
+Express state transitions through types to prevent invalid state transitions at compile time:
 
 ```rust
 struct Draft;
@@ -94,16 +94,16 @@ struct Article<State> {
 impl Article<Draft> {
     fn publish(self) -> Article<Published> { ... }
 }
-// Article<Published> には publish() がない — 二重公開を防止
+// Article<Published> does not have publish() — prevents double publication
 ```
 
-## C# 型安全性
+## C# Type Safety
 
-C# は .NET の型システムと Nullable Reference Types (NRT) により強い型安全性を提供する。以下のパターンで更に安全性を高める。
+C# provides strong type safety through the .NET type system and Nullable Reference Types (NRT). The following patterns further enhance safety.
 
 ### TS-C1: Nullable Reference Types (NRT)
 
-プロジェクト全体で NRT を有効化し、null 安全性をコンパイラで検証する:
+Enable NRT project-wide to verify null safety at the compiler level:
 
 ```xml
 <!-- Directory.Build.props -->
@@ -113,69 +113,69 @@ C# は .NET の型システムと Nullable Reference Types (NRT) により強い
 ```
 
 ```csharp
-// NG: null-forgiving operator をプロダクションコードで使用
+// NG: Using null-forgiving operator in production code
 var user = repository.FindById(id)!;
 
-// OK: null チェックを明示
+// OK: Explicit null check
 var user = await repository.FindByIdAsync(id)
     ?? throw new NotFoundException($"User {id} not found");
 
-// OK: nullable 型で明示
+// OK: Explicitly using nullable types
 public async Task<User?> FindByIdAsync(UserId id);
 ```
 
-`!` null-forgiving operator はテストコードでのみ許可。プロダクションコードでは `??`、`?.`、`??=` を使用する。
+The `!` null-forgiving operator is permitted only in test code. In production code, use `??`, `?.`, and `??=`.
 
-### TS-C2: Strong Typing（readonly record struct）
+### TS-C2: Strong Typing (readonly record struct)
 
-ドメイン固有の値には readonly record struct を使用し、型の取り違えを防止する:
+Use `readonly record struct` for domain-specific values to prevent type confusion:
 
 ```csharp
-// NG: 生の型をそのまま使用
+// NG: Using raw types directly
 public User GetUser(int id) { ... }
 public Order GetOrder(int id) { ... }
-// GetUser(orderId) がコンパイル可能 — 危険
+// GetUser(orderId) is compilable — dangerous
 
-// OK: readonly record struct で区別
+// OK: Distinguished by readonly record struct
 public readonly record struct UserId(int Value);
 public readonly record struct OrderId(int Value);
 public User GetUser(UserId id) { ... }
 public Order GetOrder(OrderId id) { ... }
-// GetUser(orderId) はコンパイルエラー
+// GetUser(orderId) causes a compile error
 ```
 
-適用対象: ID、金額、メールアドレス等のドメイン値
+Applies to: Domain values such as IDs, amounts, email addresses, etc.
 
-### TS-C3: 網羅的パターンマッチ（switch expression）
+### TS-C3: Exhaustive Pattern Matching (switch expression)
 
-switch expression は全パターンを網羅し、`_` ワイルドカードは避ける:
+Switch expressions must cover all patterns, and the `_` wildcard should be avoided:
 
 ```csharp
-// NG: 新しいバリアント追加時にコンパイル警告にならない
+// NG: Does not trigger compiler warning when a new variant is added
 var message = status switch
 {
     Status.Active => "Active",
-    _ => "Unknown",  // 新バリアントが暗黙的にここに落ちる
+    _ => "Unknown",  // New variants implicitly fall into here
 };
 
-// OK: 明示的に全バリアントを列挙
+// OK: Explicitly list all variants
 var message = status switch
 {
     Status.Active => "Active",
     Status.Inactive => "Inactive",
     Status.Suspended => "Suspended",
 };
-// 新バリアント追加時にコンパイラ警告 CS8509
+// Triggers compiler warning CS8509 when a new variant is added
 ```
 
-`<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` と併用し、網羅漏れをビルドエラーにする。
+Use in conjunction with `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` to turn coverage gaps into build errors.
 
-### TS-C4: Result パターン
+### TS-C4: Result Pattern
 
-予期されるエラーには例外ではなく Result パターンを使用する:
+Use the Result pattern instead of exceptions for expected errors:
 
 ```csharp
-// NG: 業務エラーに例外を使用
+// NG: Using exceptions for business errors
 public User CreateUser(CreateUserRequest req)
 {
     if (string.IsNullOrEmpty(req.Name))
@@ -183,7 +183,7 @@ public User CreateUser(CreateUserRequest req)
     // ...
 }
 
-// OK: OneOf / カスタム Result で表現
+// OK: Expressed via OneOf / custom Result
 public OneOf<User, ValidationError> CreateUser(CreateUserRequest req)
 {
     if (string.IsNullOrEmpty(req.Name))
@@ -193,34 +193,34 @@ public OneOf<User, ValidationError> CreateUser(CreateUserRequest req)
 }
 ```
 
-例外は真に例外的な状況（ネットワーク障害、DB 接続断等）にのみ使用する。
+Exceptions should only be used for truly exceptional situations (e.g., network failure, DB connection loss).
 
 ### TS-C5: Immutability Defaults
 
-デフォルトで不変を志向し、可変は必要な場合のみ許可する:
+Aim for immutability by default, and allow mutability only when necessary:
 
 ```csharp
-// OK: record で不変データ型
+// OK: Using record for immutable data types
 public record UserResponse(string Name, string Email, DateTime CreatedAt);
 
-// OK: init-only property
+// OK: Using init-only properties
 public class AppConfig
 {
     public required string DatabaseUrl { get; init; }
     public required int Port { get; init; }
 }
 
-// OK: readonly コレクション
+// OK: Using readonly collections
 public IReadOnlyList<User> GetUsers() => users.AsReadOnly();
 ```
 
-`record`、`init`、`required`、`IReadOnlyList<T>`、`IReadOnlyDictionary<K,V>` を活用する。
+Utilize `record`, `init`, `required`, `IReadOnlyList<T>`, and `IReadOnlyDictionary<K,V>`.
 
-## TypeScript 型安全性（将来対応）
+## TypeScript Type Safety (Future Support)
 
-TypeScript プロジェクトでは以下の設定を必須とする:
+The following settings are mandatory for TypeScript projects:
 
-### TS-T1: tsconfig.json 厳格モード
+### TS-T1: tsconfig.json Strict Mode
 
 ```json
 {
@@ -233,9 +233,9 @@ TypeScript プロジェクトでは以下の設定を必須とする:
 }
 ```
 
-### TS-T2: any 禁止
+### TS-T2: Ban 'any'
 
-`any` の使用は原則禁止。やむを得ない場合は `unknown` + 型ガードを使用する:
+The use of `any` is prohibited in principle. If unavoidable, use `unknown` + type guards:
 
 ```typescript
 // NG
@@ -248,34 +248,35 @@ function parse(data: unknown): User {
 }
 ```
 
-## review-worker との連携
+## Integration with review-worker
 
-review-worker のカテゴリ B（Design and Structure）で以下を確認:
+The `review-worker` verifies the following in Category B (Design and Structure):
 
 ### Rust
-- TS-R1: ドメイン値に newtype が使用されているか
-- TS-R2: `as` キャストに正当な理由があるか
-- TS-R3: `match` が `_ =>` ワイルドカードを避けているか
-- TS-R4: `unwrap()` がプロダクションコードで使用されていないか
+- TS-R1: Are newtypes used for domain values?
+- TS-R2: Is there a legitimate reason for `as` casting?
+- TS-R3: Does `match` avoid the `_ =>` wildcard?
+- TS-R4: Is `unwrap()` avoided in production code?
 
 ### C#
-- TS-C1: NRT が有効で `!` null-forgiving operator がプロダクションコードで使用されていないか
-- TS-C2: ドメイン値に readonly record struct が使用されているか
-- TS-C3: switch expression が網羅的か（`_` ワイルドカードを避けているか）
-- TS-C4: 業務エラーに Result パターンが使用されているか
-- TS-C5: デフォルトで不変（record, init, IReadOnlyList）が使用されているか
+- TS-C1: Is NRT enabled and is the `!` null-forgiving operator avoided in production code?
+- TS-C2: Are readonly record structs used for domain values?
+- TS-C3: Is the switch expression exhaustive (avoiding the `_` wildcard)?
+- TS-C4: Is the Result pattern used for business errors?
+- TS-C5: Are immutability defaults (record, init, IReadOnlyList) used?
 
-## 執行レベル
+## Enforcement Levels
 
-| ルール | 現在の執行レベル | 目標 |
-|--------|---------------|------|
-| TS-R1 (Newtype) | L1 ドキュメント | L2 AI レビュー |
-| TS-R2 (安全キャスト) | L3 CI (`clippy::cast_possible_truncation`) | L3 維持 |
-| TS-R3 (網羅的 match) | L5 コンパイラ（`#[deny(unreachable_patterns)]`） | L5 維持 |
-| TS-R4 (unwrap 禁止) | L2 AI レビュー | L3 CI (`clippy::unwrap_used`) |
-| TS-R5 (PhantomData) | L1 ドキュメント | L2 AI レビュー |
-| TS-C1 (NRT 有効化) | L5 コンパイラ（`<Nullable>enable</Nullable>`） | L5 維持 |
-| TS-C2 (Strong Typing) | L1 ドキュメント | L2 AI レビュー |
-| TS-C3 (網羅的 switch) | L3 CI（CS8509 + TreatWarningsAsErrors） | L3 維持 |
-| TS-C4 (Result パターン) | L1 ドキュメント | L2 AI レビュー |
-| TS-C5 (Immutability) | L1 ドキュメント | L2 AI レビュー |
+| Rule | Current Enforcement Level | Target |
+|------|---------------------------|------|
+| TS-R1 (Newtype) | L1 Documentation | L2 AI Review |
+| TS-R2 (Safe Casting) | L3 CI (`clippy::cast_possible_truncation`) | L3 Maintain |
+| TS-R3 (Exhaustive match) | L5 Compiler (`#[deny(unreachable_patterns)]`) | L5 Maintain |
+| TS-R4 (Ban unwrap) | L3 CI (`clippy::unwrap_used` / `clippy::expect_used` / `clippy::panic`; exclude tests via `clippy.toml`) | L3 Maintain |
+| TS-R5 (PhantomData) | L1 Documentation | L2 AI Review |
+| TS-C1 (Enable NRT) | L5 Compiler (`<Nullable>enable</Nullable>`) | L5 Maintain |
+| TS-C2 (Strong Typing) | L1 Documentation | L2 AI Review |
+| TS-C3 (Exhaustive switch) | L3 CI (CS8509 + TreatWarningsAsErrors) | L3 Maintain |
+| TS-C4 (Result Pattern) | L1 Documentation | L2 AI Review |
+| TS-C5 (Immutability) | L1 Documentation | L2 AI Review |
+```

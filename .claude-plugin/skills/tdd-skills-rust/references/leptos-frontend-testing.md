@@ -1,41 +1,41 @@
-# Leptos フロントエンドテストパターン
+# Leptos Frontend Testing Patterns
 
-Leptos フルスタックプロジェクトにおけるフロントエンドコンポーネント（シグナル、view!、サーバー関数）のユニットテスト戦略とパターン。
+Unit testing strategies and patterns for frontend components (signals, `view!`, server functions) in a Leptos full-stack project.
 
-## テスト戦略: ロジック抽出
+## Test Strategy: Logic Extraction
 
-`view!` マクロの出力（HTML 構造、DOM イベント配線、CSS クラス）はユニットテストの対象としない。代わりに、コンポーネントからビジネスロジックを独立関数に**抽出**し、標準の `#[test]` でテストする。
+The output of the `view!` macro (HTML structure, DOM event wiring, CSS classes) is not the target of unit tests. Instead, **extract** business logic from components into independent functions and test them with standard `#[test]`.
 
 ```
-コンポーネント
-├── view! マクロ（レンダリング）   → E2E テスト（Playwright）
-└── ビジネスロジック（抽出対象）   → ユニットテスト（cargo test）
-    ├── シグナル状態遷移
-    ├── バリデーション
-    ├── 派生計算
-    ├── サーバー関数コアロジック
-    └── イベントハンドラロジック
+Component
+├── view! macro (rendering)            -> E2E test (Playwright)
+└── Business logic (extraction target) -> Unit test (cargo test)
+    ├── Signal state transitions
+    ├── Validation
+    ├── Derived computation
+    ├── Server function core logic
+    └── Event handler logic
 ```
 
-> **Note**: `cargo test` は SSR ターゲットでのみコンパイルする。GREEN 後に `cargo leptos build` で WASM コンパイルを検証すること。
+> **Note**: `cargo test` only compiles for the SSR target. After Green, verify WASM compilation with `cargo leptos build`.
 
 ---
 
-## 1. シグナル・リアクティブロジックのテスト
+## 1. Testing Signals and Reactive Logic
 
-シグナルの作成・更新・派生値は `#[test]` で直接テスト可能。
+Signal creation, updates, and derived values can be tested directly with `#[test]`.
 
-### 基本: シグナルの状態遷移
+### Basics: Signal State Transitions
 
 ```rust
 use leptos::prelude::*;
 
-/// カウンターのインクリメントロジック
+/// Counter increment logic
 pub fn increment_count(current: i32, step: i32) -> i32 {
     current + step
 }
 
-/// カウンターが偶数かどうか
+/// Whether the counter value is even
 pub fn is_even(value: i32) -> bool {
     value % 2 == 0
 }
@@ -72,12 +72,12 @@ mod tests {
 }
 ```
 
-### 派生計算（Memo 相当ロジック）
+### Derived Computation (Memo-equivalent Logic)
 
-Memo のロジックは純粋関数として抽出しテストする。
+Extract Memo logic as a pure function and test it.
 
 ```rust
-/// 価格計算ロジック（コンポーネント内の Memo から抽出）
+/// Price calculation logic (extracted from a Memo inside a component)
 pub fn calculate_total(items: &[CartItem]) -> u64 {
     items.iter().map(|item| item.price * item.quantity as u64).sum()
 }
@@ -114,11 +114,11 @@ mod tests {
 
 ---
 
-## 2. コンポーネントロジック抽出パターン
+## 2. Component Logic Extraction Pattern
 
-`#[component]` 関数から、テスト可能なロジックを独立関数に抽出する。
+Extract testable logic from `#[component]` functions into independent functions.
 
-### 抽出前（テスト困難）
+### Before Extraction (Hard to Test)
 
 ```rust
 #[component]
@@ -126,13 +126,13 @@ fn CreateUserForm() -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (error, set_error) = signal(None::<String>);
 
-    // ロジックがクロージャ内に埋め込まれている → テスト困難
+    // Logic embedded in a closure -> hard to test
     let on_submit = move |_| {
         let n = name.get();
         if n.is_empty() {
-            set_error.set(Some("名前は必須です".into()));
+            set_error.set(Some("Name is required".into()));
         } else if n.len() > 50 {
-            set_error.set(Some("名前は50文字以内です".into()));
+            set_error.set(Some("Name must be 50 characters or fewer".into()));
         } else {
             set_error.set(None);
             // submit...
@@ -143,16 +143,16 @@ fn CreateUserForm() -> impl IntoView {
 }
 ```
 
-### 抽出後（テスト可能）
+### After Extraction (Testable)
 
 ```rust
-/// バリデーションロジックを独立関数に抽出
+/// Validation logic extracted into an independent function
 pub fn validate_username(name: &str) -> Result<(), String> {
     if name.is_empty() {
-        return Err("名前は必須です".into());
+        return Err("Name is required".into());
     }
     if name.chars().count() > 50 {
-        return Err("名前は50文字以内です".into());
+        return Err("Name must be 50 characters or fewer".into());
     }
     Ok(())
 }
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn validate_username_rejects_empty() {
         let result = validate_username("");
-        assert_eq!(result.unwrap_err(), "名前は必須です");
+        assert_eq!(result.unwrap_err(), "Name is required");
     }
 
     // Edge Cases
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn validate_username_accepts_50_multibyte_chars() {
-        // 'あ' は3バイトだが chars().count() では1文字。50文字 ≦ 50 → Ok
+        // 'あ' is 3 bytes but counts as 1 character via chars().count(). 50 chars <= 50 -> Ok
         let name: String = std::iter::repeat('あ').take(50).collect();
         assert!(validate_username(&name).is_ok());
     }
@@ -224,14 +224,14 @@ mod tests {
 
 ---
 
-## 3. サーバー関数テスト
+## 3. Server Function Tests
 
-`#[server]` 関数のコアロジックを抽出し、依存は trait 経由でモック。
+Extract the core logic of `#[server]` functions and mock dependencies via traits.
 
-### ロジック抽出パターン
+### Logic Extraction Pattern
 
 ```rust
-/// サーバー関数のコアロジック（trait 経由で依存注入）
+/// Server function core logic (dependencies injected via trait)
 pub async fn get_user_logic<R: UserRepository>(
     repo: &R,
     id: i64,
@@ -240,7 +240,7 @@ pub async fn get_user_logic<R: UserRepository>(
     Ok(user.into())
 }
 
-/// サーバー関数本体（Leptos コンテキストから依存を取得）
+/// Server function entry point (resolves dependencies from the Leptos context)
 #[server]
 pub async fn get_user(id: i64) -> Result<UserDto, ServerFnError> {
     let pool = use_context::<DbPool>()
@@ -255,7 +255,7 @@ mod tests {
     use super::*;
     use mockall::predicate::*;
 
-    // mockall でリポジトリのモック生成
+    // Generate a repository mock with mockall
     mock! {
         UserRepo {}
         #[async_trait]
@@ -298,12 +298,12 @@ mod tests {
 
 ---
 
-## 4. Callback・イベントハンドラテスト
+## 4. Callback / Event Handler Tests
 
-`on:click` や `on:submit` クロージャの本体を名前付き関数に抽出する。
+Extract the body of `on:click` and `on:submit` closures into named functions.
 
 ```rust
-/// フォーム送信ハンドラのロジック（抽出済み）
+/// Form submission handler logic (extracted)
 pub fn handle_form_submit(
     name: &str,
     email: &str,
@@ -311,10 +311,10 @@ pub fn handle_form_submit(
     let mut errors = Vec::new();
 
     if name.is_empty() {
-        errors.push("名前は必須です".into());
+        errors.push("Name is required".into());
     }
     if !email.contains('@') {
-        errors.push("メールアドレスの形式が不正です".into());
+        errors.push("Email address format is invalid".into());
     }
 
     if errors.is_empty() {
@@ -343,14 +343,14 @@ mod tests {
     fn handle_form_submit_fails_with_empty_name() {
         let result = handle_form_submit("", "alice@example.com");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains(&"名前は必須です".to_string()));
+        assert!(result.unwrap_err().contains(&"Name is required".to_string()));
     }
 
     #[test]
     fn handle_form_submit_fails_with_invalid_email() {
         let result = handle_form_submit("Alice", "invalid");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains(&"メールアドレスの形式が不正です".to_string()));
+        assert!(result.unwrap_err().contains(&"Email address format is invalid".to_string()));
     }
 
     #[test]
@@ -364,12 +364,12 @@ mod tests {
 
 ---
 
-## 5. Props と初期状態のテスト
+## 5. Testing Props and Initial State
 
-Props から導出される初期状態ロジックをテストする。
+Test logic that derives initial state from Props.
 
 ```rust
-/// ページネーションの初期状態計算
+/// Pagination initial-state calculation
 pub fn calculate_pagination(total_items: usize, items_per_page: usize) -> Pagination {
     let total_pages = if items_per_page == 0 {
         0
@@ -426,63 +426,138 @@ mod tests {
 
 ---
 
-## 6. ユニットテストで扱わないもの
+## 6. UT vs CT vs E2E Coverage (Revised in H, dapper-hardening)
 
-以下は E2E テスト（Playwright）で検証する。
+> The POC `wasm-bindgen-test-leptos-poc.md` confirmed that the **CT (Component Test) layer is practical** (3 tests PASS in 5 seconds). `view!` / event wiring / Suspense / Resource are now **verified at the CT layer** (the previous spec's "everything is E2E's responsibility" was revised in H-3).
 
-| 対象 | 理由 |
-|------|------|
-| `view!` マクロの HTML 出力 | SSR/CSR でレンダリング挙動が異なる、DOM 依存 |
-| DOM イベント配線（`on:click` が発火するか） | ブラウザ環境が必要 |
-| CSS クラスの適用（`class:active=signal`） | DOM 依存 |
-| ルーティング遷移（`<A href="...">`） | Router コンテキストが必要 |
-| `Suspense` / `Resource` のローディング表示 | 非同期レンダリングフロー |
-| ハイドレーション動作 | SSR → CSR 遷移はブラウザ環境必須 |
+### UT (pure logic, millisecond scale, zero external dependencies)
+
+- Extracted pure functions (state-update logic, derived computation, validation, server fn core)
+- Run with `cargo test`
+- Details: sections 1-5 of this document
+
+### CT (Component Test, wasm-bindgen-test, seconds)
+
+With `wasm-bindgen-test` + `cargo test --target wasm32-unknown-unknown`, mount the real component, manipulate signals, and observe the DOM:
+
+```rust
+#[wasm_bindgen_test]
+async fn click_increment_updates_dom() {
+    let wrapper = fresh_wrapper();
+    let _dispose = mount_to(
+        wrapper.clone().unchecked_into(),
+        || view! { <SimpleCounter initial_value=0 /> },
+    );
+
+    let inc_button = wrapper
+        .query_selector("[data-testid='btn-inc']")
+        .unwrap().unwrap()
+        .unchecked_into::<web_sys::HtmlElement>();
+    inc_button.click();
+    tick().await; // wait for the reactive update with gloo-timers
+
+    let value_span = wrapper
+        .query_selector("[data-testid='counter-value']")
+        .unwrap().unwrap();
+    assert_eq!(value_span.text_content().unwrap(), "1");
+}
+```
+
+**What CT can cover**:
+
+| Target | Verifiable via CT |
+|--------|-------------------|
+| `view!` DOM output (initial render) | Yes - query_selector + text_content |
+| DOM event wiring (`on:click`, etc.) | Yes - trigger via HtmlElement::click(), observe update with tick().await |
+| Signal-driven DOM updates | Yes - verify the DOM after tick().await |
+| `Suspense` / `Resource` (via mock) | Yes - via the mock declared in design.md K-3 (mockito, etc.) |
+| DOM reflection of derived computation | Yes - verify that values via Memo / derive appear in the DOM |
+
+**Minimum setup** (established in the POC):
+
+```toml
+# Cargo.toml
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+```
+
+```toml
+# .cargo/config.toml
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"
+```
+
+Run: `cargo test --target wasm32-unknown-unknown`
+
+CI: Firefox + geckodriver (snap or apt), or Chromium + chromedriver
+
+### E2E (Playwright, user journey only)
+
+- User journeys that chain multiple features (composite cases that cannot be reduced to CT / ST)
+- Hydration behavior (SSR -> CSR transition)
+- Routing transitions (navigation verification of `<A href="...">`)
+
+### Changes from the Previous Spec (dapper-hardening H-3)
+
+The following items, formerly listed in `frontend-test-engineer.md` L104-112 "Out of unit-test scope" as **entirely E2E's responsibility**, have been moved to CT's responsibility:
+
+| Target | Old | New |
+|--------|-----|-----|
+| `view!` DOM output | E2E | CT verifies via query_selector / inner_html |
+| DOM event wiring (`on:click`) | E2E | CT triggers via HtmlElement::click() |
+| `Suspense` / `Resource` display switching | E2E | CT observes via mock + tick().await |
+| CSS class application (`class:active=signal`) | E2E | CT can verify via classList (when needed) |
+
+**What remains in E2E**:
+- Hydration behavior (SSR -> CSR)
+- Routing transitions (across multiple pages)
+- Chaining of multiple features (user journey)
 
 ---
 
-## 7. テストファイル配置
+## 7. Test File Layout
 
 ```
 src/
 ├── pages/
-│   └── users_page.rs        # コンポーネント + 抽出ロジック + #[cfg(test)] mod tests
+│   └── users_page.rs        # component + extracted logic + #[cfg(test)] mod tests
 ├── components/
-│   └── user_card.rs          # コンポーネント + #[cfg(test)] mod tests
+│   └── user_card.rs          # component + #[cfg(test)] mod tests
 ├── server_fns/
-│   └── users.rs              # #[server] 関数 + コアロジック + #[cfg(test)] mod tests
-└── helpers/                  # 共有バリデーション・計算ロジック
+│   └── users.rs              # #[server] function + core logic + #[cfg(test)] mod tests
+└── helpers/                  # shared validation / computation logic
     ├── validation.rs         # + #[cfg(test)] mod tests
     └── formatting.rs         # + #[cfg(test)] mod tests
 ```
 
-原則: テストは実装と同ファイルの `#[cfg(test)] mod tests` 内に記述する。共有ロジックを `helpers/` に抽出した場合も同様。
+Principle: write tests inside `#[cfg(test)] mod tests` in the same file as the implementation. The same applies when shared logic is extracted into `helpers/`.
 
-### feature flag の考慮
+### Feature Flag Considerations
 
-- テストは `cargo test` で SSR feature 付きで実行される
-- サーバー関数のテストは `#[cfg(test)]` 内に書く（`#[cfg(feature = "ssr")]` ではない）
-- テスト内でサーバー専用の依存を使う場合は `#[cfg(all(test, feature = "ssr"))]` も可
+- Tests run via `cargo test` with the SSR feature enabled
+- Write server-function tests inside `#[cfg(test)]` (not `#[cfg(feature = "ssr")]`)
+- When tests use server-only dependencies, `#[cfg(all(test, feature = "ssr"))]` is also acceptable
 
 ---
 
-## パターンサマリー
+## Pattern Summary
 
-| テスト対象 | 抽出パターン | アサーション例 |
-|-----------|-------------|---------------|
-| シグナル状態遷移 | 状態更新関数を純粋関数に | `assert_eq!(increment_count(5, 3), 8)` |
-| 派生計算 | Memo ロジックを純粋関数に | `assert_eq!(calculate_total(&items), 700)` |
-| バリデーション | validate 関数を抽出 | `assert!(validate_username("").is_err())` |
-| サーバー関数 | コアロジックを async 関数に、依存を trait 注入 | `assert_eq!(get_user_logic(&mock, 1).await?.name, "Alice")` |
-| ハンドラロジック | on:click/on:submit の本体を関数に | `assert!(handle_form_submit("", "bad").is_err())` |
-| Props 初期状態 | 初期化ロジックを関数に | `assert_eq!(calculate_pagination(21, 10).total_pages, 3)` |
-| 表示フォーマット | format 関数を抽出 | `assert_eq!(format_price(1000), "¥1,000")` |
+| Test Target | Extraction Pattern | Assertion Example |
+|-------------|--------------------|-------------------|
+| Signal state transitions | Make state-update functions pure | `assert_eq!(increment_count(5, 3), 8)` |
+| Derived computation | Make Memo logic pure | `assert_eq!(calculate_total(&items), 700)` |
+| Validation | Extract a validate function | `assert!(validate_username("").is_err())` |
+| Server functions | Make core logic an async function with traits injected | `assert_eq!(get_user_logic(&mock, 1).await?.name, "Alice")` |
+| Handler logic | Extract on:click/on:submit bodies into functions | `assert!(handle_form_submit("", "bad").is_err())` |
+| Props initial state | Extract initialization logic into a function | `assert_eq!(calculate_pagination(21, 10).total_pages, 3)` |
+| Display formatting | Extract a format function | `assert_eq!(format_price(1000), "¥1,000")` |
 
-## 4カテゴリカバレッジ（フロントエンド適用）
+## Four-Category Coverage (Frontend Application)
 
-| カテゴリ | フロントエンドでの適用例 |
-|---------|----------------------|
-| Happy Path | 有効な Props でロジックが正しく動作する |
-| Boundary Values | 空文字列、最大長、0件、1件、ページ境界 |
-| Error Handling | バリデーションエラー、API 失敗時の状態遷移 |
-| Edge Cases | マルチバイト文字、連続呼び出し、ゼロ除算 |
+| Category | Frontend Application Examples |
+|----------|-------------------------------|
+| Happy Path | Logic works correctly with valid Props |
+| Boundary Values | Empty string, max length, 0 items, 1 item, page boundary |
+| Error Handling | Validation errors, state transitions on API failure |
+| Edge Cases | Multibyte characters, repeated calls, division by zero |

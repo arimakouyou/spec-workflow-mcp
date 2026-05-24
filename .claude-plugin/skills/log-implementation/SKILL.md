@@ -1,180 +1,179 @@
 ---
 name: log-implementation
-description: "タスク実装完了後にMarkdown形式の実装ログを記録する。必須: specName, taskId, summary, filesModified, filesCreated, statistics, artifacts。タスクを [x] にする前に必ず呼び出すこと。Triggers on: /log-implementation invocation, or when implementation logging is needed after task completion."
+description: "Append the completion sections (Summary, Statistics, Files, Artifacts, Review Process) to the per-task log after task implementation completes. Required: specName, taskId, summary, filesModified, filesCreated, statistics, artifacts (apiEndpoints / components / functions / classes / integrations). Always invoke before marking a task as [x]. Triggers on: '/log-implementation invocation', 'implementation logging', 'task completion log', '実装ログ記録', 'タスク完了ログ'."
 ---
 
-# Log Implementation — 実装ログ記録
+# Log Implementation — Task-completion sections of the task log
 
-タスク実装完了後に、実装内容をMarkdownファイルとして構造化記録する。
+After task implementation completes, this skill **appends the completion sections** (`## Summary`, `## Statistics`, `## Files Modified`, `## Files Created`, `## Artifacts`, `## Review Process`) to the per-task log. The task log itself (`## Metadata` + `## Events`) is created and maintained by `parallel-worker` and `review-worker` during the task; this skill writes the structured completion record at the end.
 
-## 重要ルール
+See `.claude-plugin/rules/task-log-format.md` for the full format spec (TL3 = structure, TL5 = completion sections).
 
-**タスクを `[x]` にマークする前に、必ずこのスキルを実行すること。** ログのないタスク完了は許可されない。
+## Division of Responsibility with the Hook
 
-## 入力
+This skill, as the "primary feature," generates a detailed completion record that includes artifacts. The `log-implementation.sh` hook auto-generates only a skeleton at Stop time as a **safety net** (summary=`(auto-logged)`, empty artifacts). Information is richer when this skill is explicitly invoked.
 
-以下の情報を収集してからログを作成する:
+- **Skill (primary)**: the LLM judges semantic information and fills in artifacts — detailed completion record
+- **Hook (safety net)**: auto-generates a skeleton — minimum record when the skill is forgotten
 
-| 項目 | 必須 | 説明 |
+## Critical Rule
+
+**Always run this skill before marking a task as `[x]`.** When this skill is explicitly invoked, the hook respects the existing completion sections and skips (no overwrite).
+
+## Inputs
+
+Collect the following information before appending the completion sections:
+
+| Field | Required | Description |
 |------|:---:|------|
-| specName | Yes | スペック名（kebab-case） |
-| taskId | Yes | タスクID（例: "1", "1.2", "3.1.4"） |
-| summary | Yes | 実装概要（1行） |
-| filesModified | Yes | 変更したファイル一覧 |
-| filesCreated | Yes | 作成したファイル一覧 |
-| statistics | Yes | `linesAdded` と `linesRemoved` |
-| artifacts | Yes | 構造化データ（下記参照） |
-| reviewProcess | No | レビュー品質メトリクス |
+| specName | Yes | Spec name (kebab-case) |
+| taskId | Yes | Task ID (e.g., "1", "1.2", "3.1.4") — used verbatim in the file path, no sanitization |
+| summary | Yes | Implementation summary (one line) |
+| filesModified | Yes | List of modified files |
+| filesCreated | Yes | List of created files |
+| statistics | Yes | `linesAdded` and `linesRemoved` |
+| artifacts | Yes | Structured data (see below) |
+| reviewProcess | No | Review quality metrics |
 
-### artifacts 構造
+### artifacts Structure
 
 ```yaml
-apiEndpoints:     # 作成/変更したAPIエンドポイント
+apiEndpoints:     # API endpoints created/modified
   - method: GET/POST/PUT/DELETE
     path: /api/...
-    purpose: ...            # このエンドポイントの目的・役割
-    location: path/to/file  # 実装されているソースファイル
-    requestFormat: ...      # (任意) 主なリクエスト形式
-    responseFormat: ...     # (任意) 主なレスポンス形式
-components:       # 作成したUIコンポーネント
+    purpose: ...            # Purpose / role of this endpoint
+    location: path/to/file  # Source file where it is implemented
+    requestFormat: ...      # (optional) Main request format
+    responseFormat: ...     # (optional) Main response format
+components:       # UI components created
   - name: ...
-    type: ...               # コンポーネントの種類（page, widget等）
-    purpose: ...            # コンポーネントの目的・役割
-    location: path/to/file  # 実装されているソースファイル
-    props: ...              # (任意) 主要なプロパティ
-    exports: [...]          # (任意) エクスポートされる名前
-functions:        # 作成したユーティリティ関数
+    type: ...               # Type of component (page, widget, etc.)
+    purpose: ...            # Purpose / role of the component
+    location: path/to/file  # Source file where it is implemented
+    props: ...              # (optional) Major properties
+    exports: [...]          # (optional) Exported names
+functions:        # Utility functions created
   - name: ...
-    purpose: ...            # 関数の目的・役割
-    location: path/to/file  # 実装されているソースファイル
-    signature: ...          # (任意) 関数シグネチャ
-    isExported: true/false  # モジュールの公開APIかどうか
-classes:          # 作成したクラス
+    purpose: ...            # Purpose / role of the function
+    location: path/to/file  # Source file where it is implemented
+    signature: ...          # (optional) Function signature
+    isExported: true/false  # Whether it is part of the module's public API
+classes:          # Classes created
   - name: ...
-    purpose: ...            # クラスの目的・役割
-    location: path/to/file  # 実装されているソースファイル
-    methods: [...]          # (任意) 主要メソッド名
-    isExported: true/false  # モジュールの公開APIかどうか
-integrations:     # フロントエンド-バックエンド連携パターン
-  - description: ...          # 連携の目的・ユースケース
-    frontendComponent: ...    # 関連するUIコンポーネント名/パス
-    backendEndpoint: ...      # 関連するAPIエンドポイント（method + path）
-    dataFlow: ...             # どのAPI/コンポーネント間でどのようにデータが流れるか
+    purpose: ...            # Purpose / role of the class
+    location: path/to/file  # Source file where it is implemented
+    methods: [...]          # (optional) Major method names
+    isExported: true/false  # Whether it is part of the module's public API
+integrations:     # Frontend-backend integration patterns
+  - description: ...          # Purpose / use case of the integration
+    frontendComponent: ...    # Related UI component name/path
+    backendEndpoint: ...      # Related API endpoint (method + path)
+    dataFlow: ...             # How data flows between which APIs/components
 ```
 
-### reviewProcess 構造（オプション）
+### reviewProcess Structure (optional)
 
 ```yaml
-reworkCount: 0      # 差し戻し回数（0 = 初回レビュー通過）
+reworkCount: 0      # Number of reworks (0 = passed first review)
 reviewOutcome: commit  # commit | escalated
-findings:           # reworkCount > 0 の場合のみ
+findings:           # Only when reworkCount > 0
   - attempt: 1
     categories: [...]
     summary: ...
     action: rework | commit | escalate
 ```
 
-## 手順
+`reviewProcess` data can be derived from the task log's `review-worker:cycle-*` and `parallel-worker:rework-*` events. When you have all of them in the events, prefer deriving over re-asking the user.
 
-### 1. タスク存在チェック
+## Procedure
 
-`.spec-workflow/specs/{specName}/tasks.md` を読み、`{taskId}` が存在するか確認する。
+### 1. Task Existence Check
 
-### 2. ログファイル作成
+Read `.spec-workflow/specs/{specName}/tasks.md` and verify that `{taskId}` exists.
 
-**パス**: `.spec-workflow/specs/{specName}/Implementation Logs/task-{sanitizedTaskId}_{timestamp}_{idPrefix}.md`
-- `sanitizedTaskId`: `taskId` の `.` と `/` を `-` に置換（例: `3.1.4` → `3-1-4`）
-- `timestamp`: ISO形式から記号を除去（例: `20260326T133000`）。Bashで: `date -u +%Y%m%dT%H%M%S`
-- `idPrefix`: Log ID（UUID）の先頭8文字
+### 2. Locate the Task Log
 
-**ディレクトリが存在しない場合は作成する。**
+**Path**: `.spec-workflow/specs/{specName}/task-logs/{taskId}.log.md`
 
-**ファイル形式**（ダッシュボードの `ImplementationLogManager` パーサーと互換性のある形式）:
+The file should already exist (created by `parallel-worker` at task start). If it does not exist (rare — e.g., manual task without running an impl-worker), create it first with the standard header per `rules/task-log-format.md` TL3.
+
+### 3. Append Completion Sections
+
+Append the following sections to the end of the task log. Do NOT modify any existing `## Metadata` or `## Events` content.
 
 ````markdown
-# Implementation Log: Task {taskId}
 
-**Summary:** {summary}
+## Summary
 
-**Timestamp:** {ISO 8601形式、例: 2026-03-26T13:30:00.000Z}
-**Log ID:** {UUID形式のユニークID。Bashで `uuidgen` または `cat /proc/sys/kernel/random/uuid` で生成}
-
----
+{summary}
 
 ## Statistics
 
-- **Lines Added:** +{linesAdded}
-- **Lines Removed:** -{linesRemoved}
-- **Files Changed:** {filesModified.length + filesCreated.length}
-- **Net Change:** {linesAdded - linesRemoved}
+- Lines Added: +{linesAdded}
+- Lines Removed: -{linesRemoved}
+- Files Changed: {filesModified.length + filesCreated.length}
+- Net Change: {linesAdded - linesRemoved}
 
 ## Files Modified
-{filesModified を各行 `- path/to/file` 形式で。なければ `_No files modified_`}
+{Each line as `- path/to/file` for filesModified. If empty, write `_No files modified_`}
 
 ## Files Created
-{filesCreated を各行 `- path/to/file` 形式で。なければ `_No files created_`}
-
----
+{Each line as `- path/to/file` for filesCreated. If empty, write `_No files created_`}
 
 ## Artifacts
 
-{artifacts が空なら `_No artifacts recorded_`}
+{If artifacts is empty, write `_No artifacts recorded_`}
 
 ### API Endpoints
-{各エンドポイントを以下の形式で:}
+{Each endpoint in the following format. Omit the section entirely if there are none:}
 #### {method} {path}
 - **Purpose:** {purpose}
 - **Location:** {location}
-- **Request Format:** {requestFormat}  ← 任意
-- **Response Format:** {responseFormat}  ← 任意
+- **Request Format:** {requestFormat}  <- optional
+- **Response Format:** {responseFormat}  <- optional
 
 ### Components
-{各コンポーネントを以下の形式で:}
+{Each component:}
 #### {name}
 - **Type:** {type}
 - **Purpose:** {purpose}
 - **Location:** {location}
 
 ### Functions
-{各関数を以下の形式で:}
+{Each function:}
 #### {name}
 - **Purpose:** {purpose}
 - **Location:** {location}
 - **Exported:** Yes/No
 
 ### Classes
-{各クラスを以下の形式で:}
+{Each class:}
 #### {name}
 - **Purpose:** {purpose}
 - **Location:** {location}
 - **Exported:** Yes/No
 
 ### Integrations
-{各連携を以下の形式で:}
+{Each integration:}
 #### Integration
 - **Description:** {description}
 - **Frontend Component:** {frontendComponent}
 - **Backend Endpoint:** {backendEndpoint}
 - **Data Flow:** {dataFlow}
 
----
-
 ## Review Process
 
-reworkCount=0 の場合:
 ```json
-{"reworkCount": 0, "reviewOutcome": "commit", "findings": []}
+{"reworkCount": N, "reviewOutcome": "commit", "findings": [...]}
 ```
-
-reworkCount>0 の場合:
-```json
-{"reworkCount": 2, "reviewOutcome": "commit", "findings": [{"attempt": 1, "categories": ["naming"], "summary": "変数名が不明瞭", "action": "rework"}, {"attempt": 2, "categories": [], "summary": "修正確認", "action": "commit"}]}
-```
-
 ````
 
-> **注意**: `## Review Process` セクションには JSON ブロック**のみ**を記述すること（説明テキスト禁止。パーサーが JSON.parse する）。
+> **Note**: the `## Review Process` section must contain **only** the JSON block (no explanatory text — the parser uses JSON.parse).
 
-### 3. 作成確認
+### 4. Confirm Completion
 
-ファイルが正常に作成されたことを確認し、ユーザーに報告する。
+Confirm the sections were appended successfully and report to the user.
+
+## Idempotency
+
+If the task log already contains a `## Summary` section (i.e., this skill ran before), do not append a second set of completion sections. Instead, report that the task log already has completion sections and exit without re-writing. The hook honors this check by skipping when `## Summary` is present.

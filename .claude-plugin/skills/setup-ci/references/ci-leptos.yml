@@ -52,13 +52,91 @@ jobs:
 
       - name: Clippy
         id: clippy
-        run: cargo clippy --quiet --all-targets -- -D warnings
+        # TS-R4 (unwrap 禁止) を L3 CI で強制: プロダクションコードで unwrap/expect/panic を deny。
+        # テストコードでの許可は clippy.toml の allow-*-in-tests で制御 (setup-ci/references/clippy.toml.template)。
+        run: |
+          cargo clippy --quiet --all-targets -- \
+            -D warnings \
+            -D clippy::unwrap_used \
+            -D clippy::expect_used \
+            -D clippy::panic
 
       - name: Tests
         id: tests
         run: |
           set -o pipefail
           cargo test --quiet 2>&1 | tee /tmp/test-output.txt
+
+      - name: Architecture tests (L4)
+        id: architecture-tests
+        # plan-redesign #15: design.md の Module Boundaries に基づく依存方向 / 循環依存テストを
+        # tests/architecture.rs として明示実行。/generate-arch-tests Skill で生成。
+        # ファイルが存在しない場合は skip (Module Boundaries 未定義のプロジェクト用)。
+        run: |
+          if [ -f tests/architecture.rs ]; then
+            cargo test --test architecture --quiet
+          else
+            echo "tests/architecture.rs not found — skipping (run /generate-arch-tests if Module Boundaries are defined)"
+          fi
+
+      - name: Component Tests (QC14, wasm-bindgen-test)
+        id: component-tests
+        # dapper-hardening H-1: Leptos component の reactivity test を
+        # cargo test --target wasm32-unknown-unknown で実行（wasm-pack 不要）。
+        # .cargo/config.toml に runner = "wasm-bindgen-test-runner" 設定 + Firefox/Chromium 必要。
+        # Component test (#[wasm_bindgen_test]) が存在しない場合は skip。
+        run: |
+          if grep -rq "wasm_bindgen_test" --include="*.rs" . 2>/dev/null; then
+            echo "Detected wasm-bindgen-test — running Component Tests"
+            # Firefox（snap/apt）or Chromium が必要。CI runner で event 前に install を想定
+            cargo test --target wasm32-unknown-unknown --lib --quiet 2>&1 | tee /tmp/ct-output.txt
+          else
+            echo "No wasm-bindgen-test found — Component Test Gate dormant"
+          fi
+
+      - name: Regression Gate (QC16)
+        id: regression-gate
+        # dapper-hardening J-9: regression_issue_NNN_* test を全件抽出して実行
+        run: |
+          set -o pipefail
+          if grep -rq "regression_issue_" --include="*.rs" . 2>/dev/null; then
+            cargo test --workspace --quiet -- regression_issue_ 2>&1 | tee /tmp/regression-output.txt
+          else
+            echo "No regression_issue_* tests detected — Regression Gate dormant"
+          fi
+
+      - name: UT Properties Gate (QC15)
+        id: ut-properties-gate
+        # dapper-hardening I-2: clippy disallowed-methods で clock/RNG/env/fs/HTTP の
+        # 直接呼出を deny-level で禁止
+        if: hashFiles('clippy.toml') != ''
+        run: |
+          if grep -q "disallowed-methods" clippy.toml 2>/dev/null; then
+            cargo clippy --all-targets --workspace -- -D clippy::disallowed_methods
+          else
+            echo "clippy.toml has no disallowed-methods — UT Properties Gate dormant"
+          fi
+
+      - name: Mutation testing (cargo-mutants, --in-diff, advisory)
+        id: mutation-testing
+        # plan-redesign #7: 差分モードで mutation testing を実行。
+        # PR で変更された行のみを対象に survived mutant を検出する。
+        # 初期は advisory (continue-on-error: true)。安定したら除去して blocking に昇格。
+        # cargo-mutants Skill の Core Command Pattern に整合。
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          cargo install cargo-mutants --locked
+          BASE_REF="${{ github.base_ref }}"
+          BASE_REF="${BASE_REF:-main}"
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff "origin/$BASE_REF" -- '*.rs' > git.diff
+          if [ -s git.diff ]; then
+            cargo mutants --no-shuffle -vV --in-diff git.diff --timeout 300
+          else
+            echo "No .rs changes vs $BASE_REF — skipping mutation testing"
+          fi
+          rm -f git.diff
 
       - name: Security audit
         id: security-audit

@@ -1,24 +1,36 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { ImplementationLog, ImplementationLogEntry } from '../types.js';
+import { ImplementationLog, ImplementationLogEntry, TaskLogEvent } from '../types.js';
 import { randomUUID } from 'crypto';
 
 /**
- * Manager for implementation logs using markdown file format
- * Each implementation log entry is stored as an individual markdown file
- * in the spec's "Implementation Logs" directory
+ * Manager for implementation logs using markdown file format.
+ *
+ * Supports two formats (auto-detected per file):
+ * - New (consolidated task-log): `# Task Log: {taskId}` with `## Metadata`, `## Events`,
+ *   then `## Summary` etc. Stored under `{spec}/task-logs/{taskId}.log.md`.
+ *   See `.claude-plugin/rules/task-log-format.md`.
+ * - Legacy Implementation Log: `# Implementation Log: Task {taskId}` with inline
+ *   `**Log ID:**` / `**Timestamp:**` metadata and no `## Events` section.
+ *   Stored under `{spec}/Implementation Logs/task-*.md`.
+ *
+ * `loadLog()` reads both directories so the dashboard shows pre- and post-consolidation
+ * tasks side by side.
  */
 export class ImplementationLogManager {
   private specPath: string;
-  private logsDir: string;
+  private logsDir: string;          // legacy: {spec}/Implementation Logs/
+  private taskLogsDir: string;      // new:    {spec}/task-logs/
 
   constructor(specPath: string) {
     this.specPath = specPath;
     this.logsDir = join(specPath, 'Implementation Logs');
+    this.taskLogsDir = join(specPath, 'task-logs');
   }
 
   /**
-   * Ensure the Implementation Logs directory exists
+   * Ensure log directories exist. Both legacy and new directories are
+   * created opportunistically so writes succeed either way.
    */
   private async ensureLogsDir(): Promise<void> {
     try {
@@ -26,6 +38,79 @@ export class ImplementationLogManager {
     } catch (error) {
       // Directory might already exist, ignore
     }
+    try {
+      await fs.mkdir(this.taskLogsDir, { recursive: true });
+    } catch (error) {
+      // ignore
+    }
+  }
+
+  /**
+   * Parse the `## Events` section of a new-format task log into TaskLogEvent[].
+   * See `.claude-plugin/rules/task-log-format.md` TL4 for the event format spec.
+   */
+  private parseEventsSection(lines: string[], startIndex: number): { events: TaskLogEvent[]; endIndex: number } {
+    const events: TaskLogEvent[] = [];
+    let idx = startIndex;
+    let current: TaskLogEvent | null = null;
+
+    // Event header: "- `{timestamp}` {agent} {event-type} [key=value ...]"
+    const headerRe = /^- `([^`]+)` (\S+) (\S+)(?:\s+(.*))?$/;
+    // Detail line: "  - key: value" (2-space indent, hyphen, key, colon)
+    const detailRe = /^  - ([^:]+): (.*)$/;
+    // Inline key=value (quoted value supported)
+    const inlineRe = /(\w+)=("[^"]*"|\S+)/g;
+
+    while (idx < lines.length) {
+      const line = lines[idx];
+
+      // Stop on the next top-level section heading
+      if (line.startsWith('## ') && idx !== startIndex) {
+        break;
+      }
+
+      const headerMatch = line.match(headerRe);
+      if (headerMatch) {
+        const [, timestamp, agent, eventType, rest] = headerMatch;
+        const inlineKeys: Record<string, string> = {};
+        if (rest) {
+          inlineRe.lastIndex = 0;
+          let m: RegExpExecArray | null;
+          while ((m = inlineRe.exec(rest)) !== null) {
+            const v = m[2];
+            inlineKeys[m[1]] = v.startsWith('"') && v.endsWith('"') ? v.slice(1, -1) : v;
+          }
+        }
+        current = {
+          timestamp,
+          agent,
+          eventType,
+          inlineKeys,
+          details: {}
+        };
+        events.push(current);
+        idx++;
+        continue;
+      }
+
+      const detailMatch = line.match(detailRe);
+      if (detailMatch && current) {
+        const key = detailMatch[1].trim();
+        const rawValue = detailMatch[2].trim();
+        const value = rawValue.startsWith('"') && rawValue.endsWith('"') ? rawValue.slice(1, -1) : rawValue;
+        current.details[key] = value;
+        idx++;
+        continue;
+      }
+
+      // Blank / unrelated line — drop out of the current event but keep scanning the section
+      if (line.trim() === '') {
+        current = null;
+      }
+      idx++;
+    }
+
+    return { events, endIndex: idx };
   }
 
   /**
@@ -48,7 +133,9 @@ export class ImplementationLogManager {
   }
 
   /**
-   * Parse markdown content to extract metadata and artifacts
+   * Parse markdown content to extract metadata and artifacts.
+   * Auto-detects new task-log format (`# Task Log: ...`) vs legacy Implementation Log
+   * (`# Implementation Log: Task ...`) and parses accordingly.
    */
   private parseMarkdownContent(content: string): ImplementationLogEntry | null {
     try {
@@ -63,11 +150,21 @@ export class ImplementationLogManager {
       const filesModified: string[] = [];
       const filesCreated: string[] = [];
       const artifacts: ImplementationLogEntry['artifacts'] = {};
+      let events: TaskLogEvent[] | undefined;
 
       let currentSection = '';
       let currentArtifactType: keyof ImplementationLogEntry['artifacts'] | null = null;
       let currentItem: any = {};
       let reviewProcessJson = '';
+
+      // Detect new format: first non-blank line starts with "# Task Log:"
+      let isNewFormat = false;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed === '') continue;
+        isNewFormat = trimmed.startsWith('# Task Log:');
+        break;
+      }
 
       // Helper function to normalize markdown keys to camelCase
       const normalizeKey = (key: string): string => {
@@ -122,12 +219,28 @@ export class ImplementationLogManager {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
-        // Parse metadata
+        // ---- Title line (both formats) ----
+        if (line.startsWith('# Task Log:')) {
+          taskId = line.replace(/^# Task Log:\s*/, '').trim();
+        } else if (line.startsWith('# Implementation Log: Task')) {
+          taskId = line.split('Task ')[1] || '';
+        }
+
+        // ---- Metadata: new format uses a `## Metadata` section with bare key/value list ----
+        if (isNewFormat && currentSection === 'metadata') {
+          const metaMatch = line.match(/^- ([\w-]+):\s*(.*)$/);
+          if (metaMatch) {
+            const key = metaMatch[1];
+            const value = metaMatch[2].trim();
+            if (key === 'log-id') idValue = value;
+            if (key === 'created') timestamp = value;
+            if (key === 'task-id' && !taskId) taskId = value;
+          }
+        }
+
+        // ---- Metadata: legacy format inlines metadata as `**Key:**` markers ----
         if (line.includes('**Log ID:**')) {
           idValue = line.split('**Log ID:**')[1]?.trim() || '';
-        }
-        if (line.startsWith('# Implementation Log: Task')) {
-          taskId = line.split('Task ')[1] || '';
         }
         if (line.includes('**Summary:**')) {
           summary = line.split('**Summary:**')[1]?.trim() || '';
@@ -135,21 +248,52 @@ export class ImplementationLogManager {
         if (line.includes('**Timestamp:**')) {
           timestamp = line.split('**Timestamp:**')[1]?.trim() || new Date().toISOString();
         }
-        if (line.includes('**Lines Added:**')) {
+
+        // ---- Summary (new format): captured as the first non-empty line under `## Summary` ----
+        if (isNewFormat && currentSection === 'summary' && !summary) {
+          const trimmed = line.trim();
+          if (trimmed !== '' && !trimmed.startsWith('#')) {
+            summary = trimmed;
+          }
+        }
+
+        // ---- Statistics: both formats. New format uses bare `- Lines Added: +N`, legacy uses `**Lines Added:**` ----
+        if (line.includes('**Lines Added:**') || /^- Lines Added:/.test(line)) {
           const match = line.match(/\+(\d+)/);
           linesAdded = match ? parseInt(match[1]) : 0;
         }
-        if (line.includes('**Lines Removed:**')) {
+        if (line.includes('**Lines Removed:**') || /^- Lines Removed:/.test(line)) {
           const match = line.match(/-(\d+)/);
           linesRemoved = match ? parseInt(match[1]) : 0;
         }
-        if (line.includes('**Files Changed:**')) {
+        if (line.includes('**Files Changed:**') || /^- Files Changed:/.test(line)) {
           const match = line.match(/(\d+)/);
           filesChanged = match ? parseInt(match[1]) : 0;
         }
 
-        // Parse sections (## headers)
-        if (line.startsWith('## Files Modified')) {
+        // ---- Section delimiters (## headers) ----
+        if (line.startsWith('## Metadata')) {
+          flushCurrentItem();
+          currentSection = 'metadata';
+          currentArtifactType = null;
+        } else if (line.startsWith('## Events')) {
+          flushCurrentItem();
+          currentSection = 'events';
+          currentArtifactType = null;
+          const result = this.parseEventsSection(lines, i + 1);
+          events = result.events;
+          // Skip ahead — parseEventsSection has consumed up to the next `## ` heading
+          i = result.endIndex - 1;
+          continue;
+        } else if (line.startsWith('## Summary')) {
+          flushCurrentItem();
+          currentSection = 'summary';
+          currentArtifactType = null;
+        } else if (line.startsWith('## Statistics')) {
+          flushCurrentItem();
+          currentSection = 'statistics';
+          currentArtifactType = null;
+        } else if (line.startsWith('## Files Modified')) {
           flushCurrentItem();
           currentSection = 'filesModified';
           currentArtifactType = null;
@@ -271,6 +415,7 @@ export class ImplementationLogManager {
           filesChanged
         },
         artifacts,
+        ...(events !== undefined && { events }),
         ...(reviewProcess !== undefined && { reviewProcess })
       };
 
@@ -282,48 +427,54 @@ export class ImplementationLogManager {
   }
 
   /**
-   * Load all implementation logs from markdown files (new format)
-   * Also checks for legacy JSON file and returns empty if found (migration handled separately)
+   * Load all implementation logs from markdown files.
+   * Reads both the new task-logs/ directory (consolidated task log format) and the
+   * legacy Implementation Logs/ directory so the dashboard surfaces pre- and post-
+   * consolidation tasks together.
    */
   async loadLog(): Promise<ImplementationLog> {
     await this.ensureLogsDir();
 
-    try {
-      const files = await fs.readdir(this.logsDir);
-      const mdFiles = files.filter(f => f.endsWith('.md'));
+    const entries: ImplementationLogEntry[] = [];
 
-      const entries: ImplementationLogEntry[] = [];
+    // Read both directories; missing directory is not an error
+    const dirsToScan: Array<{ dir: string }> = [
+      { dir: this.taskLogsDir },
+      { dir: this.logsDir }
+    ];
 
-      for (const file of mdFiles) {
-        try {
-          const filePath = join(this.logsDir, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const entry = this.parseMarkdownContent(content);
-          if (entry) {
-            entries.push(entry);
+    for (const { dir } of dirsToScan) {
+      try {
+        const files = await fs.readdir(dir);
+        const mdFiles = files.filter(f => f.endsWith('.md'));
+
+        for (const file of mdFiles) {
+          try {
+            const filePath = join(dir, file);
+            const content = await fs.readFile(filePath, 'utf-8');
+            const entry = this.parseMarkdownContent(content);
+            if (entry) {
+              entries.push(entry);
+            }
+          } catch (error) {
+            console.error(`Error reading log file ${file}:`, error);
           }
-        } catch (error) {
-          console.error(`Error reading log file ${file}:`, error);
         }
+      } catch (error: any) {
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+        // Directory doesn't exist — fine, just skip
       }
-
-      // Sort by timestamp (newest first)
-      entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-      return {
-        entries,
-        lastUpdated: new Date().toISOString()
-      };
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        // Directory doesn't exist yet
-        return {
-          entries: [],
-          lastUpdated: new Date().toISOString()
-        };
-      }
-      throw error;
     }
+
+    // Sort by timestamp (newest first)
+    entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return {
+      entries,
+      lastUpdated: new Date().toISOString()
+    };
   }
 
   /**

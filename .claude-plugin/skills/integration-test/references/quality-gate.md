@@ -1,80 +1,80 @@
-# 品質ゲート
+# Quality Gate
 
-Pentagon（Reviewer）がテストファイルをレビューする際の判定基準。
-全項目 PASS で合格、1 項目でも FAIL で差し戻し。
+Decision criteria Pentagon (Reviewer) uses when reviewing test files.
+All items must PASS to be approved; even one FAIL triggers a send-back.
 
-## 判定項目
+## Decision Items
 
-### A. 5 分類カバレッジ
+### A. 5-Category Coverage
 
-- [ ] 正常系テストが存在する
-- [ ] 異常系テスト（バリデーションエラー、404 等）が存在する
-- [ ] 境界値テスト（空リスト、最大長等）が存在する
-- [ ] エッジケース（重複、同時更新等）が考慮されている
-- [ ] 外部依存エラー時の挙動がテストされている（該当する場合）
+- [ ] Happy-path tests exist
+- [ ] Error-path tests exist (validation errors, 404, etc.)
+- [ ] Boundary tests exist (empty list, max length, etc.)
+- [ ] Edge cases (duplicates, concurrent updates, etc.) are considered
+- [ ] External-dependency error behavior is tested (where applicable)
 
-### B. 振る舞い契約の検証
+### B. Behavior-Contract Verification
 
-- [ ] HTTP ステータスコードが正しい
-- [ ] レスポンスボディの構造が正しい（フィールド名、型）
-- [ ] DB の状態変更が検証されている（POST/PUT/DELETE）
-- [ ] エラーレスポンスのフォーマットが統一されている
+- [ ] HTTP status code is correct
+- [ ] Response body shape is correct (field names, types)
+- [ ] DB state changes are verified (POST/PUT/DELETE)
+- [ ] Error response format is consistent
 
-### C. コード品質
+### C. Code Quality
 
-- [ ] Given-When-Then 構造が明確
-- [ ] テスト関数名が振る舞いを説明している
-- [ ] テスト間に依存がない（独立して実行可能）
-- [ ] 不要な assert がない（1 テスト 1 概念）
-- [ ] ハードコードされたマジックナンバーがない
+- [ ] Given-When-Then structure is clear
+- [ ] Test function names describe the behavior
+- [ ] No inter-test dependencies (each runs independently)
+- [ ] No unnecessary asserts (one concept per test)
+- [ ] No hard-coded magic numbers
 
 ### D. Hermetic & Deterministic
 
-- [ ] 各テストが独立した DB 状態を持つ（testcontainers or トランザクション）
-- [ ] 外部 API は trait DI でテストダブルに差し替えている
-- [ ] 時刻依存のテストは Clock trait で制御している
-- [ ] テスト実行順序に依存しない
-- [ ] `sleep` や固定タイムアウトに依存しない
+- [ ] Each test has independent DB state (testcontainers or transactions)
+- [ ] External APIs are swapped to test doubles via trait DI
+- [ ] Time-dependent tests are controlled via a Clock trait
+- [ ] No dependency on test execution order
+- [ ] No reliance on `sleep` or fixed timeouts
 
-### E. Rust 固有
+### E. Rust-Specific
 
-- [ ] `#[tokio::test]` が正しく使われている
-- [ ] `unwrap()` はテストコード内でのみ使用（本番コードに混入していない）
-- [ ] `clippy` 警告がない
-- [ ] `rustfmt` でフォーマット済み
+- [ ] `#[tokio::test]` is used correctly
+- [ ] `unwrap()` is only used in test code (not leaked into production code)
+- [ ] No `clippy` warnings
+- [ ] Formatted with `rustfmt`
 
-## 判定フロー
+## Decision Flow
 
 ```
-全項目チェック
-  ├─ 全 PASS → PASS（テスト承認）
-  ├─ FAIL あり（修正可能）→ FAIL + 具体的な修正指示
-  └─ FAIL あり（設計レベル）→ FAIL + 設計変更の提案
+Check all items
+  ├─ All PASS → PASS (test approved)
+  ├─ FAIL exists (fixable) → FAIL + concrete fix instructions
+  └─ FAIL exists (design-level) → FAIL + design change suggestion
 ```
 
-## レポートフォーマット
+## Report Format
 
 ```
 [Pentagon Review] {test_file}
 
-判定: PASS / FAIL
+Decision: PASS / FAIL
 
-A. 5分類カバレッジ: PASS / FAIL
-   {不足があれば具体的に}
+A. 5-Category Coverage: PASS / FAIL
+   {details if anything is missing}
 
-B. 振る舞い契約: PASS / FAIL
-   {問題があれば具体的に}
+B. Behavior Contract: PASS / FAIL
+   {details if there are issues}
 
-C. コード品質: PASS / FAIL
-   {問題があれば具体的に}
+C. Code Quality: PASS / FAIL
+   {details if there are issues}
 
 D. Hermetic: PASS / FAIL
-   {問題があれば具体的に}
+   {details if there are issues}
 
-E. Rust 固有: PASS / FAIL
-   {問題があれば具体的に}
+E. Rust-Specific: PASS / FAIL
+   {details if there are issues}
 
-修正指示:
-  1. {具体的な修正内容}
-  2. {具体的な修正内容}
+Fix instructions:
+  1. {concrete fix}
+  2. {concrete fix}
 ```
