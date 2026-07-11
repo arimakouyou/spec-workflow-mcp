@@ -7,7 +7,7 @@ description: "Append the completion sections (Summary, Statistics, Files, Artifa
 
 After task implementation completes, this skill **appends the completion sections** (`## Summary`, `## Statistics`, `## Files Modified`, `## Files Created`, `## Artifacts`, `## Review Process`) to the per-task log. The task log itself (`## Metadata` + `## Events`) is created and maintained by `parallel-worker` and `review-worker` during the task; this skill writes the structured completion record at the end.
 
-See `.claude-plugin/${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` for the full format spec (TL3 = structure, TL5 = completion sections).
+See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` for the full format spec (TL3 = structure, TL5 = completion sections).
 
 ## Division of Responsibility with the Hook
 

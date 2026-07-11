@@ -103,8 +103,9 @@ for PATTERN in "${CONSENT_PATTERNS[@]}"; do
   fi
 done
 
-# 英単語系は単語境界 + 大文字小文字無視で判定（"look" の "ok" 等への誤爆防止）
-if [ "$CONSENT_FOUND" -eq 0 ] && echo "$LAST_USER_MSG" | grep -qiE '\b(continue|ok(ay)?|yes|auto)\b'; then
+# 英単語系は単語単位マッチ（-w）+ 大文字小文字無視で判定（"look" の "ok" 等への誤爆防止）
+# 注意: grep -E の \b は POSIX ERE で保証されない（GNU 拡張）。移植性のため -w を使う
+if [ "$CONSENT_FOUND" -eq 0 ] && echo "$LAST_USER_MSG" | grep -qiwE 'continue|ok|okay|yes|auto'; then
   CONSENT_FOUND=1
 fi
 
