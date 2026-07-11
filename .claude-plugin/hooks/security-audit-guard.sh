@@ -22,6 +22,9 @@ if ! echo "$COMMAND" | grep -qE '^\s*git\s+commit'; then
   exit 0
 fi
 
+# ブロック理由は stderr に出す必要がある（exit 2 時に Claude へ渡るのは stderr のみ）
+exec 1>&2
+
 AUDIT_TIMEOUT=120
 
 # --- ステージ差分から対象言語を判定 ---
@@ -84,7 +87,7 @@ FAIL=false
 if [ "$CHECK_RUST" = true ] && [ -f Cargo.toml ] && [ -f Cargo.lock ]; then
   if command -v cargo-audit >/dev/null 2>&1; then
     set +e
-    timeout "${AUDIT_TIMEOUT}s" cargo audit --quiet 2>&1
+    CARGO_AUDIT_OUTPUT=$(timeout "${AUDIT_TIMEOUT}s" cargo audit --quiet 2>&1)
     RC=$?
     set -e
     if [ "$RC" -eq 124 ]; then
@@ -92,6 +95,7 @@ if [ "$CHECK_RUST" = true ] && [ -f Cargo.toml ] && [ -f Cargo.lock ]; then
       FAIL=true
     elif [ "$RC" -ne 0 ]; then
       echo "⛔ [security-audit] cargo audit: 脆弱性が検出されました"
+      echo "$CARGO_AUDIT_OUTPUT" | tail -10
       echo "   詳細: cargo audit を実行して確認してください"
       FAIL=true
     fi

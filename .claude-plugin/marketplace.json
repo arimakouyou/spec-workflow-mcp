@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "spec-workflow-mcp",
-      "version": "2.2.29",
+      "version": "2.2.30",
       "description": "MCP server for structured spec-driven development with real-time web dashboard and VSCode extension.",
       "author": {
         "name": "arimakouyou"

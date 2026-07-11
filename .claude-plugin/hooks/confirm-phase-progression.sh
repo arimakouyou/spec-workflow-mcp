@@ -7,7 +7,7 @@
 # 動作:
 #   - transcript の最後の assistant 発言から「Phase/Wave 進行宣言」パターンを検出
 #   - パターン検出時、その直前の user 発言から「明示同意」パターンを検索
-#   - 同意なしで進行宣言 → exit 1 で block + Claude に確認取得を促す
+#   - 同意なしで進行宣言 → exit 2 で block（stderr が Claude へのフィードバック）
 #   - spec-workflow 関連が見えない場合は dormant（exit 0）
 #
 # 出典: dapper-hardening-orchestrator.md 根本原因 A（A）
@@ -69,44 +69,30 @@ if [ -z "$DETECTED" ]; then
 fi
 
 # 直近の user 発言（最後から逆方向に検索）から同意パターンを検出
-# transcript は JSONL 形式の想定（role: "user", content: ...）
+# transcript は JSONL 形式の想定。type=="user" エントリには tool_result も含まれ、
+# content はブロック配列のことが多いため、text ブロックのみを抽出する
 LAST_USER_MSG=$(jq -rs '
-  [.[] | select(.type == "user" or .role == "user") | .content // .message.content // ""]
+  [.[] | select(.type == "user" or .role == "user")
+       | .message.content? // .content? // ""
+       | if type == "string" then .
+         elif type == "array" then ([.[] | select(type == "object" and .type == "text") | .text] | join("\n"))
+         else "" end
+       | select(length > 0)]
   | last // ""
 ' "$TRANSCRIPT_PATH" 2>/dev/null || echo '')
 
-if [ -z "$LAST_USER_MSG" ]; then
-  # transcript 形式が異なる場合の fallback: tail から user role 行を grep
-  LAST_USER_MSG=$(tail -n 500 "$TRANSCRIPT_PATH" 2>/dev/null | grep -E '"role": ?"user"' | tail -n 1 || echo '')
-fi
-
-# 同意パターン
+# 同意パターン（日本語は部分一致、英単語は単語境界付きで誤爆を防ぐ）
 CONSENT_PATTERNS=(
-  "continue"
-  "Continue"
-  "CONTINUE"
   "進めて"
   "進める"
   "進行"
   "次へ"
   "次に進"
-  "OK"
-  "Ok"
-  "ok"
-  "okay"
-  "Okay"
-  "yes"
-  "Yes"
-  "YES"
   "そのまま"
   "それで"
   "進んで"
-  "auto"
-  "Auto"
   "自動"
   "オート"
-  "[αβγδεABCDE1234]" # 単一文字選択（option choose）
-  "α|β|γ|δ"
 )
 
 CONSENT_FOUND=0
@@ -116,6 +102,18 @@ for PATTERN in "${CONSENT_PATTERNS[@]}"; do
     break
   fi
 done
+
+# 英単語系は単語境界 + 大文字小文字無視で判定（"look" の "ok" 等への誤爆防止）
+if [ "$CONSENT_FOUND" -eq 0 ] && echo "$LAST_USER_MSG" | grep -qiE '\b(continue|ok(ay)?|yes|auto)\b'; then
+  CONSENT_FOUND=1
+fi
+
+# 単一文字選択（option choose）: メッセージ全体が選択肢 1〜2 文字のときのみ同意扱い
+# （旧実装の文字クラス一致は「A〜E や数字を1文字でも含む」あらゆる文章を同意と誤認していた）
+TRIMMED_MSG=$(printf '%s' "$LAST_USER_MSG" | tr -d '[:space:]')
+if [ "$CONSENT_FOUND" -eq 0 ] && printf '%s' "$TRIMMED_MSG" | grep -qE '^[αβγδεA-E0-9]{1,2}$'; then
+  CONSENT_FOUND=1
+fi
 
 # 進行宣言あり + 同意なし → block
 if [ "$CONSENT_FOUND" -eq 0 ]; then
@@ -139,7 +137,7 @@ spec-workflow Phase/Wave 進行宣言を検出しました（パターン: "$DET
 - ユーザー応答を待ってから次の Phase/Wave に進むこと
 </stop_hook_blocked>
 EOF
-  exit 1
+  exit 2
 fi
 
 # 同意あり → pass

@@ -5,7 +5,7 @@ description: "Impact analysis for upstream spec changes. Use this skill when the
 
 # Spec Impact Analysis
 
-Analyze how a change in one spec file (typically `requirements.md` or `design.md`) propagates to downstream spec files via the `depends_on` frontmatter declared in `.claude-plugin/rules/spec-dependency-graph.md` SD2. Classify each downstream file into **green / amber / gray** bands per SD7 so the user can decide which files need revisiting.
+Analyze how a change in one spec file (typically `requirements.md` or `design.md`) propagates to downstream spec files via the `depends_on` frontmatter declared in `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD2. Classify each downstream file into **green / amber / gray** bands per SD7 so the user can decide which files need revisiting.
 
 This skill is **advisory** — it does not modify any file or gate any workflow. It surfaces impact so the human can decide.
 
@@ -75,7 +75,7 @@ If a downstream file has **no frontmatter**, record it as `not_available` rather
 
 ### 4. Classify Each Downstream File
 
-Apply `.claude-plugin/rules/spec-dependency-graph.md` SD7 semantics. For each (downstream file, change) pair, choose one band:
+Apply `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD7 semantics. For each (downstream file, change) pair, choose one band:
 
 | Band | Criterion | Recommended Action |
 |------|-----------|--------------------|

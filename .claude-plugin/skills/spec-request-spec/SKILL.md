@@ -40,7 +40,7 @@ Follow the template structure exactly for consistency across the project.
 - Identify the technology stack needed (feature-specific additions only if tech.md exists)
 - Confirm the execution environment and its constraints
 - Define clear scope boundaries (what's in scope and what's explicitly out of scope)
-- **Decide `task_type`** (required in frontmatter — see `.claude-plugin/rules/task-types.md` TT1/TT2). Ask the user to confirm which of `feature-add` / `feature-modify` / `bugfix` / `refactor` / `legacy-migration` best describes the work. Use `legacy` only for throwaway prototypes that should skip Phase 0.5; that value requires a `legacy_reason:` sibling. If the user is unsure between two types, prefer the one whose required evidence categories (TT2) better match the work (e.g. anything touching existing callers is `feature-modify`, not `feature-add`).
+- **Decide `task_type`** (required in frontmatter — see `${CLAUDE_PLUGIN_ROOT}/rules/task-types.md` TT1/TT2). Ask the user to confirm which of `feature-add` / `feature-modify` / `bugfix` / `refactor` / `legacy-migration` best describes the work. Use `legacy` only for throwaway prototypes that should skip Phase 0.5; that value requires a `legacy_reason:` sibling. If the user is unsure between two types, prefer the one whose required evidence categories (TT2) better match the work (e.g. anything touching existing callers is `feature-modify`, not `feature-add`).
 - If web search is available, research relevant technology options and best practices
 
 ### 4. Create the Document
@@ -104,7 +104,7 @@ Agent({
     5. SCOPE: Both 'In Scope' and 'Out of Scope' sections have concrete entries
     6. TASK_TYPE: The frontmatter contains a task_type field whose value is one of
        {feature-add, feature-modify, bugfix, refactor, legacy-migration, legacy}.
-       Consult .claude-plugin/rules/task-types.md TT1/TT2/TT5 and
+       Consult ${CLAUDE_PLUGIN_ROOT}/rules/task-types.md TT1/TT2/TT5 and
        .spec-workflow/user-config/task-types.yml if it exists (TT4 overrides add more valid values).
        If task_type is 'legacy', require a non-empty legacy_reason: sibling field; WARN but do not FAIL.
        Missing task_type is WARN (legacy exception) only if requirements.md already exists for this spec
@@ -126,7 +126,7 @@ This is a strict, automated process. Verbal approval from the user is never acce
 2. **Check approval (synchronous)**: After the user approves via the dashboard / VS Code extension, run `/check-approval` with a `next:` argument chosen based on the document's frontmatter `task_type`:
 
    - `feature-add` / `feature-modify` / `bugfix` / `refactor` / `legacy-migration` → `next:/spec-investigate`
-   - `legacy` or missing `task_type` → `next:/spec-requirements` (Phase 0.5 is skipped for these specs, per `.claude-plugin/rules/task-types.md` TT5)
+   - `legacy` or missing `task_type` → `next:/spec-requirements` (Phase 0.5 is skipped for these specs, per `${CLAUDE_PLUGIN_ROOT}/rules/task-types.md` TT5)
 
    ```
    /check-approval <approvalId> next:/spec-investigate      # default for classified specs

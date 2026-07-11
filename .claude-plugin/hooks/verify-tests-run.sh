@@ -7,12 +7,13 @@
 # 動作:
 #   - 実装セッション中（.implement-session.json 存在）のみ動作
 #   - transcript からテストランナー実行履歴を検査
-#   - 見つからなければ exit 1 でブロック（Claude に続行を促す）
-#   - 実行があっても末尾に FAILED signal があれば exit 1
+#   - 見つからなければ exit 2 でブロック（stderr が Claude へのフィードバック）
+#   - 実行があっても末尾に FAILED signal があれば exit 2
 #
 # 注意:
-#   - Stop hook の exit 1 は非実装セッションで誤発火すると UX を大きく損なう
-#   - 実装セッション外では即 exit 0 する（dormant 前提）
+#   - Stop hook のブロックは exit 2 のみ有効（exit 1 は非ブロッキングエラー扱い）
+#   - 非実装セッションで誤発火すると UX を大きく損なうため、
+#     実装セッション外では即 exit 0 する（dormant 前提）
 
 set -euo pipefail
 
@@ -77,18 +78,19 @@ if [ "$FOUND" -eq 0 ]; then
 テスト空・テスト飛ばしは構造的に禁止しています。
 </stop_hook_blocked>
 EOF
-  exit 1
+  exit 2
 fi
 
 # テスト実行履歴はあるが、末尾に失敗シグナルがないか確認
+# 注意: 失敗件数は非ゼロに限定する（"0 failed" を含む成功サマリへの誤検知防止）
 LAST_500_LINES=$(tail -n 500 "$TRANSCRIPT_PATH" 2>/dev/null || echo '')
-if echo "$LAST_500_LINES" | grep -qE "FAILED|FAIL:|test result: FAILED|test .* failed|Tests failed"; then
+if echo "$LAST_500_LINES" | grep -qE "test result: FAILED|FAIL:|Tests failed|[1-9][0-9]* failed"; then
   cat >&2 <<'EOF'
 <stop_hook_blocked>
 直近のテスト実行に失敗があるようです。失敗を修正してから完了してください。
 </stop_hook_blocked>
 EOF
-  exit 1
+  exit 2
 fi
 
 exit 0

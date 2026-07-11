@@ -52,8 +52,8 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > - **50+ skills** covering the full spec lifecycle (request-spec → requirements → design → test-design → tasks → implement → archive) plus integration testing (Rust / .NET), TDD, CI generation, mutation testing, arch test generation, PR comment handling, and more
 > - **6 specialized sub-agents** organized as Implementer (parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker) and Reviewer (review-worker / integ-test-auditor) roles, with **multi-language support** (Rust + .NET via `Language:` argument)
 > - **17 rules** covering project architecture, QC1-QC13 quality checks, OWASP security, design principles, type safety (TS-R1-R5 / TS-C1-C5), failure taxonomy (FC1-FC6), and L1-L5 enforcement levels with promotion criteria
-> - **17 hooks** for spec injection, test verification, design conformance check, arch test regeneration, build cache, diff-aware security audit, plus a **measurement framework** (`_wrap.sh` + `timing-logger-pre/post.sh`) that records Hook / Tool / Phase / Rule events to `.implement-session/metrics.jsonl`
-> - **Helper scripts** for implementation session management (`session-manage.sh`), rate-limit auto-resume wrapper (`auto-resume.sh`), and metrics aggregation (`aggregate-metrics.sh` with `hooks` / `phases` / `rules` / `speedup` subcommands)
+> - **16 hooks** for spec injection, test verification, design conformance check, arch test regeneration, build cache, diff-aware security audit, and phase progression confirmation
+> - **Helper scripts** for implementation session management (`session-manage.sh`) and rate-limit auto-resume wrapper (`auto-resume.sh`)
 
 > **Prerequisites for the plugin hooks:**
 >
@@ -370,11 +370,8 @@ your-project/
   marketplace.json         # Marketplace listing
   .mcp.json                # MCP server configuration
 
-  hooks/                   # 17 event-driven hooks
+  hooks/                   # 16 event-driven hooks
     hooks.json             # Hook registrations (PreToolUse / PostToolUse / Stop / SessionStart / UserPromptSubmit)
-    _wrap.sh               # Measurement wrapper (records duration / exit code / preview)
-    timing-logger-pre.sh   # PreToolUse: tool start-time capture
-    timing-logger-post.sh  # PostToolUse: tool duration + rule_read recording
     inject-spec.sh         # UserPromptSubmit: spec context injection
     inject-skill-hint.sh   # PreToolUse Edit|Write: skill discovery hint
     inject-build-cache.sh  # PreToolUse Bash: cargo / dotnet build cache hint
@@ -385,15 +382,16 @@ your-project/
     auto-verify-spec.sh    # PostToolUse Edit|Write: spec consistency check
     detect-new-files.sh    # PostToolUse Write: orphan file detection
     design-conformance-check.sh  # PostToolUse Edit|Write: design.md vs code drift
+    module-boundary-check.sh     # PostToolUse Edit|Write: module boundary violation check
     arch-test-regen-hint.sh      # PostToolUse Edit|Write: arch test regeneration prompt
     verify-tests-run.sh    # Stop: test runner execution check
     log-implementation.sh  # Stop: implementation log skeleton auto-generation
+    confirm-phase-progression.sh # Stop: phase progression consent check
     resume-hint.sh         # SessionStart: resume context injection
 
   scripts/                 # Helper scripts (user-invokable)
-    session-manage.sh      # Implementation session state manager + Phase metrics
+    session-manage.sh      # Implementation session state manager
     auto-resume.sh         # Rate-limit auto-resume wrapper (claude --print loop)
-    aggregate-metrics.sh   # Metrics aggregation (summary / hooks / tools / phases / rules / speedup)
 
   skills/                  # 50+ skills (excerpt below)
     spec-request-spec/     # Request spec creation

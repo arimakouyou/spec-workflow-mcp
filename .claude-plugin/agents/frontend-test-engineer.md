@@ -162,7 +162,7 @@ Aspects that do not apply may be omitted, but in that case leave the reason as a
 | Multi-feature chains (user journey) | | | | OK |
 
 ## References
-- `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-rust/references/leptos-frontend-testing.md`
 
 ## Guidelines
 - Test name: by default, use `{behavior}_when_{condition}`

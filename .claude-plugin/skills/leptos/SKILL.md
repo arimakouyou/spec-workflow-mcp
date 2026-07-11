@@ -393,7 +393,7 @@ mod tests {
 
 After tests pass in the GREEN phase, always run `cargo leptos build` to verify WASM compilation. A WASM compile failure indicates a missing `#[cfg(feature = "ssr")]` guard.
 
-For detailed test patterns, see TDD Skills (Rust) reference: [leptos-frontend-testing.md](../tdd-skills-rust/references/leptos-frontend-testing.md).
+For detailed test patterns, see TDD Skills (Rust) reference: [leptos-frontend-testing.md](${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-rust/references/leptos-frontend-testing.md).
 
 ## Performance
 

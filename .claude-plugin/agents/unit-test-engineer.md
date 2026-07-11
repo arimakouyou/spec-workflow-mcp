@@ -20,7 +20,7 @@ Act as a specialist in the following areas:
 - Trait/Interface-based test double design
 
 > **Rust**: Test quality complement for Leptos frontend components is the responsibility of `frontend-test-engineer`.
-> **C#/.NET**: Tests for Blazor frontend components follow the code-behind logic extraction pattern (see `.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md`).
+> **C#/.NET**: Tests for Blazor frontend components follow the code-behind logic extraction pattern (see `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-dotnet/references/blazor-testing.md`).
 
 # Purpose
 - Implement test code
@@ -30,7 +30,7 @@ Act as a specialist in the following areas:
 - Tests must verify the preconditions, postconditions, and invariants of methods
 - Implement following the Given-When-Then pattern
 - Do not modify the production code under test
-- Assertion messages must follow EM1 format: include what went wrong, expected behavior, and fix instruction (see `.claude-plugin/rules/error-message-guidelines.md`)
+- Assertion messages must follow EM1 format: include what went wrong, expected behavior, and fix instruction (see `${CLAUDE_PLUGIN_ROOT}/rules/error-message-guidelines.md`)
 
 ## Advisor Usage
 

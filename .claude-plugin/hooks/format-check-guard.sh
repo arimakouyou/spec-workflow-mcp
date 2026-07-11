@@ -17,6 +17,9 @@ if ! echo "$COMMAND" | grep -qE '^\s*git\s+commit'; then
   exit 0
 fi
 
+# ブロック理由は stderr に出す必要がある（exit 2 時に Claude へ渡るのは stderr のみ）
+exec 1>&2
+
 FAIL=false
 
 # --- Rust: cargo fmt --check ---

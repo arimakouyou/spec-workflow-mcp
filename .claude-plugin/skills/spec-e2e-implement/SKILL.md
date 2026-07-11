@@ -80,7 +80,7 @@ If the test infrastructure is not set up, run the following. Equivalent to `_TDD
 test -f docker-compose.test.yml && echo "exists" || echo "missing"
 ```
 
-- If absent → create docker-compose.test.yml by launching a single `parallel-worker` agent (per `rules/serial-execution-policy.md`, agents MUST be launched one at a time)
+- If absent → create docker-compose.test.yml by launching a single `parallel-worker` agent (per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`, agents MUST be launched one at a time)
 - If present → skip
 
 #### 3.2 Test Runner Setup
@@ -97,7 +97,7 @@ Based on the E2E Test Infrastructure selection:
 
 #### 3.3 Create Test Helpers and Shared Fixtures
 
-Create the following by launching `parallel-worker` agents one at a time (per `rules/serial-execution-policy.md`). Wait for each to complete before launching the next:
+Create the following by launching `parallel-worker` agents one at a time (per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`). Wait for each to complete before launching the next:
 
 - **Test DB helper**: Centralize testcontainers startup, migration, and seed-data loading
 - **Test HTTP client**: Helper for sending requests with authentication tokens
@@ -105,7 +105,7 @@ Create the following by launching `parallel-worker` agents one at a time (per `r
 
 ### 4. IT Implementation
 
-For each IT spec in test-design.md, generate test code by launching a `parallel-worker` agent. **One agent at a time** — do not launch IT-1 and IT-2 in parallel (per `rules/serial-execution-policy.md`). Wait for each to complete before launching the next.
+For each IT spec in test-design.md, generate test code by launching a `parallel-worker` agent. **One agent at a time** — do not launch IT-1 and IT-2 in parallel (per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`). Wait for each to complete before launching the next.
 
 ```javascript
 Agent({
@@ -141,7 +141,7 @@ Agent({
 
 ### 5. E2E Implementation
 
-For each E2E spec in test-design.md, generate test code. **Launch one `parallel-worker` agent at a time** (per `rules/serial-execution-policy.md`); do not launch multiple E2E-N agents concurrently.
+For each E2E spec in test-design.md, generate test code. **Launch one `parallel-worker` agent at a time** (per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`); do not launch multiple E2E-N agents concurrently.
 
 #### 5.1 API E2E (Test Type: API E2E)
 

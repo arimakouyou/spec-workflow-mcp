@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (plugin v2.2.30)
+
+- **Stop フックのブロック不能を修正** - `verify-tests-run.sh` / `confirm-phase-progression.sh` が `exit 1` を使用しており実際にはブロックできていなかった問題を `exit 2` に修正(Claude Code のフックブロックは exit 2 のみ有効)
+- **verify-tests-run.sh の誤検知修正** - 失敗検出正規表現 `test .* failed` が cargo の成功サマリ(`0 failed`)にマッチしていた問題を修正。失敗件数が非ゼロの場合のみ検出するよう変更
+- **confirm-phase-progression.sh の同意判定を修正** - あらゆる文章を同意と誤認していた単一文字クラスパターンを廃止し、「メッセージ全体が選択肢1〜2文字」のみ同意とする判定に変更。transcript からのユーザー発話抽出も tool_result を除外して text ブロックのみを対象に修正。英単語系同意パターンに単語境界を追加
+- **コミットガード3本のブロック理由が Claude に届かない問題を修正** - `lockfile-guard.sh` / `format-check-guard.sh` / `security-audit-guard.sh` がブロック理由を stdout に出力していたため、exit 2 時に Claude へフィードバックされていなかった(stderr のみ渡される)。全出力を stderr にリダイレクトするよう修正
+- **配布時のパス参照切れを修正** - agents(30箇所)・skills(26箇所)内のリポジトリ相対パス参照(`.claude-plugin/...`、`rules/...`、`../`)を `${CLAUDE_PLUGIN_ROOT}` 形式に統一。マーケットプレイス経由インストール時にも参照が解決可能に
+
+### Removed (plugin v2.2.30)
+
+- **メトリクス計測機構を削除** - `hooks/_wrap.sh`、`hooks/timing-logger-pre.sh`、`hooks/timing-logger-post.sh`、`scripts/aggregate-metrics.sh` を削除。プラグイン有効な全プロジェクトに `.implement-session/metrics.jsonl` が無制限に生成・追記され続ける問題を解消。`hooks.json` は全フックを直接呼び出しに変更
+- **plugin.json の無効な `rules` フィールドを削除** - `rules` は Claude Code プラグインマニフェストのスキーマに存在しないキーのため削除。`rules/` ディレクトリ自体は skills / agents から `${CLAUDE_PLUGIN_ROOT}/rules/` 経由で参照される参照ドキュメント集として存置
+
 ### Added
 
 - **Claude Code Plugin Distribution** - Skills, agents, rules, and hooks are now distributed as a Claude Code plugin via `.claude-plugin/` directory:

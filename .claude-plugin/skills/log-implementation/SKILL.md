@@ -7,7 +7,7 @@ description: "Append the completion sections (Summary, Statistics, Files, Artifa
 
 After task implementation completes, this skill **appends the completion sections** (`## Summary`, `## Statistics`, `## Files Modified`, `## Files Created`, `## Artifacts`, `## Review Process`) to the per-task log. The task log itself (`## Metadata` + `## Events`) is created and maintained by `parallel-worker` and `review-worker` during the task; this skill writes the structured completion record at the end.
 
-See `.claude-plugin/rules/task-log-format.md` for the full format spec (TL3 = structure, TL5 = completion sections).
+See `.claude-plugin/${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` for the full format spec (TL3 = structure, TL5 = completion sections).
 
 ## Division of Responsibility with the Hook
 
@@ -95,7 +95,7 @@ Read `.spec-workflow/specs/{specName}/tasks.md` and verify that `{taskId}` exist
 
 **Path**: `.spec-workflow/specs/{specName}/task-logs/{taskId}.log.md`
 
-The file should already exist (created by `parallel-worker` at task start). If it does not exist (rare — e.g., manual task without running an impl-worker), create it first with the standard header per `rules/task-log-format.md` TL3.
+The file should already exist (created by `parallel-worker` at task start). If it does not exist (rare — e.g., manual task without running an impl-worker), create it first with the standard header per `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL3.
 
 ### 3. Append Completion Sections
 

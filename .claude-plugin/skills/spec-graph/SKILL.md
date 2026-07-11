@@ -195,7 +195,7 @@ graph TD
 
 If legacy files (no frontmatter) are detected, append:
 
-> **Suggestion**: {N} file(s) shown with dashed borders lack frontmatter. To include them in the dependency graph, add `depends_on` frontmatter per `.claude-plugin/rules/spec-dependency-graph.md` SD2.
+> **Suggestion**: {N} file(s) shown with dashed borders lack frontmatter. To include them in the dependency graph, add `depends_on` frontmatter per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD2.
 
 If the graph shows a file with **no incoming or outgoing edges** (but frontmatter is present), append:
 

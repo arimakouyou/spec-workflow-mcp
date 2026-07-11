@@ -147,7 +147,7 @@ fi
   - File: .github/workflows/ci.yml
   - _TDDSkip: true_
   - _Requirements: REQ-0_
-  - _Prompt: Role: DevOps Engineer | Task: Use the /setup-ci skill to generate a PR-triggered GitHub Actions CI workflow appropriate for the project type. Include the same steps as the quality check commands defined in .claude-plugin/rules/quality-checks.md. If design.md has a Container Architecture, use the --with-services option | Restrictions: Do not hard-code secrets in the workflow. Do not modify existing CI workflows (e.g., npm-publish.yml) | Success: CI runs automatically on PR creation and the quality checks defined in .claude-plugin/rules/quality-checks.md pass_
+  - _Prompt: Role: DevOps Engineer | Task: Use the /setup-ci skill to generate a PR-triggered GitHub Actions CI workflow appropriate for the project type. Include the same steps as the quality check commands defined in ${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md. If design.md has a Container Architecture, use the --with-services option | Restrictions: Do not hard-code secrets in the workflow. Do not modify existing CI workflows (e.g., npm-publish.yml) | Success: CI runs automatically on PR creation and the quality checks defined in ${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md pass_
 ```
 
 **Note:** Assign the task number `0.N` based on the order within Phase 0 (Git init 0.0 → container 0.1, 0.2 → CI 0.3. If there is no container task, shift up).
@@ -401,7 +401,7 @@ Write the tasks document to:
 .spec-workflow/specs/{spec-name}/tasks.md
 ```
 
-**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2, SD6):**
+**Frontmatter (required for new specs, per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD2, SD6):**
 
 Add the following YAML frontmatter to the top of the file. This declares the upstream spec IDs that tasks.md as a **whole** depends on; it is orthogonal to per-task `_Requirements:` / `_DependsOn:` metadata, which operate at a different granularity:
 
@@ -525,7 +525,7 @@ Agent({
         - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, frontmatter depends_on.refs, or _Evidence: task-level metadata) when check 22 applies:
             a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
             b. The referenced file's frontmatter spec_name: must equal this spec-name.
-            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+            c. The {category} must be listed in ${CLAUDE_PLUGIN_ROOT}/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
           Any failure = FAIL with rule_id EC1.
     23. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
             - A single fenced block exceeds 10 lines.

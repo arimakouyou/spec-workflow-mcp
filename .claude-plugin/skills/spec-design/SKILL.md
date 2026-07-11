@@ -79,7 +79,7 @@ The same **spec name** used in Phase 1 (kebab-case, e.g., `user-authentication`)
 Write only the sections listed below and create `.spec-workflow/specs/{spec-name}/design.md`.
 Leave the detail sections (API spec, error handling, traceability, etc.) as `(to be written in Wave 2)` placeholders.
 
-**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
+**Frontmatter (required for new specs, per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD2-SD3):**
 
 Include the following YAML frontmatter at the top of the file. Populate `depends_on.refs` with the `REQ-N` IDs from requirements.md that this design implements:
 
@@ -250,7 +250,7 @@ Fill in all sections left as `(to be written in Wave 2)` from Wave 1.
 
 #### Components and Interfaces
 
-Describe each component in this format. Use `### DES-N: ComponentName` headings (per `.claude-plugin/rules/spec-dependency-graph.md` SD1) so downstream specs can reference them:
+Describe each component in this format. Use `### DES-N: ComponentName` headings (per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD1) so downstream specs can reference them:
 
 ```markdown
 ### DES-1: ComponentName
@@ -523,7 +523,7 @@ Agent({
         - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 14 applies:
             a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
             b. The referenced file's frontmatter spec_name: must equal this spec-name.
-            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+            c. The {category} must be listed in ${CLAUDE_PLUGIN_ROOT}/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
           Any failure = FAIL with rule_id EC1.
     15. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 14 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
             - A single fenced block exceeds 20 lines.

@@ -59,7 +59,7 @@ Skip any file that does not exist; steering docs are optional.
 
 ### 1.5 Load Evidence (Selective)
 
-If the task carries an `_Evidence:` line (`.claude-plugin/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to full `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files**.
+If the task carries an `_Evidence:` line (`${CLAUDE_PLUGIN_ROOT}/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to full `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files**.
 
 - Evidence files typically cite the current contract (`EV-contract-current-*`), branches (`EV-branches-*`), regressions (`EV-regressions-*`), or harness (`EV-test-harness-*`) that the tests must guard. Use the `sources:` frontmatter entries to locate the exact code ranges the tests should lock in.
 - Do **not** read other EV files from the spec's `evidence/` directory — they belong to other tasks.
@@ -108,7 +108,7 @@ When the task involves Leptos components, signals, or `view!`:
 - Extract testable logic from components (validation, computation, state transitions)
 - Write tests for the extracted functions. Do not write tests for `view!` macro output
 - Test signal behavior: creation, updates, derived state
-- Refer to patterns in `../tdd-skills-rust/references/leptos-frontend-testing.md`
+- Refer to patterns in `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-rust/references/leptos-frontend-testing.md`
 
 **Test Organization:**
 - One test file per component/module being tested
