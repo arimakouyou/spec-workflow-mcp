@@ -9,6 +9,11 @@
 
 set -euo pipefail
 
+# jq が無ければ入力 JSON を解析できないため dormant（他 hooks と同じ fail-open 方針）
+if ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
+
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
