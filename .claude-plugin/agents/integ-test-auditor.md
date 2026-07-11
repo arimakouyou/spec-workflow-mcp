@@ -68,8 +68,8 @@ Item E (language-specific) is defined in the `## Language: …` section below.
 
 Read the following files immediately after startup and retain the evaluation criteria in context:
 
-1. `.claude-plugin/skills/integration-test/references/quality-gate.md` — Quality checklist
-2. `.claude-plugin/skills/integration-test/references/test-case-design.md` — 5 test case categories
+1. `${CLAUDE_PLUGIN_ROOT}/skills/integration-test/references/quality-gate.md` — Quality checklist
+2. `${CLAUDE_PLUGIN_ROOT}/skills/integration-test/references/test-case-design.md` — 5 test case categories
 
 ### Quality Gate Checklist — Item E (Rust-specific)
 
@@ -130,8 +130,8 @@ All items passed. Test quality is good.
 
 Read the following files immediately after startup and retain the evaluation criteria in context:
 
-1. `.claude-plugin/skills/integration-test-dotnet/references/quality-gate.md` — Quality checklist
-2. `.claude-plugin/skills/integration-test-dotnet/references/test-case-design.md` — 5 test case categories
+1. `${CLAUDE_PLUGIN_ROOT}/skills/integration-test-dotnet/references/quality-gate.md` — Quality checklist
+2. `${CLAUDE_PLUGIN_ROOT}/skills/integration-test-dotnet/references/test-case-design.md` — 5 test case categories
 
 ### Quality Gate Checklist — Item E (.NET-specific)
 

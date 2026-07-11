@@ -143,7 +143,7 @@ As in Phase 2 step 3.5, do not use defaults from AI training data.
 
 ### 4. Generate Test Specifications via Subagents
 
-Launch subagents **one at a time** to derive UT/IT/ST/E2E specs independently (CT is added after H-2). Per `rules/serial-execution-policy.md`, concurrent subagent launches are prohibited across the plugin.
+Launch subagents **one at a time** to derive UT/IT/ST/E2E specs independently (CT is added after H-2). Per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`, concurrent subagent launches are prohibited across the plugin.
 
 **Important**: Make Agent calls **one per message**. Wait for each subagent (A through E) to complete and return its output before launching the next. Do NOT batch multiple Agent calls into a single message.
 
@@ -424,7 +424,7 @@ Integrate the outputs of the three subagents into a complete `test-design.md`.
 .spec-workflow/specs/{spec-name}/test-design.md
 ```
 
-**Frontmatter (required for new specs, per `.claude-plugin/rules/spec-dependency-graph.md` SD2-SD3):**
+**Frontmatter (required for new specs, per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD2-SD3):**
 
 Add the following YAML frontmatter at the top of the file. `depends_on` enumerates the REQ-N from requirements.md and the DES-N from design.md that this test design targets:
 
@@ -536,7 +536,7 @@ Agent({
         - For every EV-{category}-{NNN} citation in this document (HTML comment, inline paren form, or frontmatter depends_on.refs) when check 22 applies:
             a. .spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md must exist.
             b. The referenced file's frontmatter spec_name: must equal this spec-name.
-            c. The {category} must be listed in .claude-plugin/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
+            c. The {category} must be listed in ${CLAUDE_PLUGIN_ROOT}/rules/task-types.md TT3 (or the project's user-config/task-types.yml TT4).
           Any failure = FAIL with rule_id EC1.
     23. INLINE CODE BUDGET (evidence-coverage.md EC3): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Count fenced code block lines (between opening and closing fences, exclusive). Fail if any of:
             - A single fenced block exceeds 15 lines.

@@ -216,7 +216,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
    - Do not attempt to auto-resolve, ignore, or partially execute around cyclic dependencies; always escalate to the user for manual correction.
 3. The **next pending wave** is the first wave (in Phase order) containing at least one `[ ]` task
 
-**Wave processing is serial** (per `rules/serial-execution-policy.md`). Regardless of how many tasks a wave contains, process them one at a time. Concurrent `Agent` launches are prohibited even when the DAG admits parallelism.
+**Wave processing is serial** (per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`). Regardless of how many tasks a wave contains, process them one at a time. Concurrent `Agent` launches are prohibited even when the DAG admits parallelism.
 
 - Pick one task in the wave and mark it `[ ]` → `[-]`
 - Prepare the worktree for that task (step 3.7)
@@ -272,7 +272,7 @@ Look at the task's `_Prompt` field for structured guidance:
 - **Restrictions**: Constraints and things to avoid
 - **_Leverage**: Existing files to reuse
 - **_Requirements**: Which requirements this implements
-- **_Evidence**: EV-{category}-{NNN} IDs that scope the existing-code context (`.claude-plugin/rules/evidence-coverage.md`). For each listed ID, resolve to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` and pass the resolved paths to the TDD subagent. Do **not** list evidence files that are not referenced by this task's `_Evidence` line — those belong to other tasks
+- **_Evidence**: EV-{category}-{NNN} IDs that scope the existing-code context (`${CLAUDE_PLUGIN_ROOT}/rules/evidence-coverage.md`). For each listed ID, resolve to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` and pass the resolved paths to the TDD subagent. Do **not** list evidence files that are not referenced by this task's `_Evidence` line — those belong to other tasks
 - **Success**: How to know you're done
 
 ### 3.5 Phase Review Tasks
@@ -526,7 +526,7 @@ If the task has `_TDDSkip: true_` (tasks that cannot be tested such as project i
 
 Prepare a git worktree for each task in the wave. This allows parallel-worker and review-worker to work safely in independent working directories without affecting the orchestrator's main branch.
 
-**For multi-task waves**: Per `rules/serial-execution-policy.md`, tasks in a wave are launched one at a time. Create the worktree for the current task, run steps 4-8 to completion, then create the worktree for the next task. Do NOT pre-create worktrees for all tasks in the wave up front.
+**For multi-task waves**: Per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`, tasks in a wave are launched one at a time. Create the worktree for the current task, run steps 4-8 to completion, then create the worktree for the next task. Do NOT pre-create worktrees for all tasks in the wave up front.
 
 ```bash
 WORKTREE_PATH=".worktrees/{spec-name}/{task-id}"
@@ -549,7 +549,7 @@ Retain `WORKTREE_PATH` and `BRANCH` as variables and pass them to the agent prom
 
 Delegate the entire TDD cycle (Red → Green → Refactor + quality checks) to the `parallel-worker` agent. parallel-worker only implements; **it does not git commit** (that is review-worker's responsibility).
 
-**Tasks within a wave are launched serially** (`rules/serial-execution-policy.md`). A single message MAY contain at most one `Agent` tool invocation. Wait until the prior `parallel-worker` returns `completed` or `retry_exhausted` before launching the next task. Concurrent launches are prohibited even when the wave contains multiple tasks.
+**Tasks within a wave are launched serially** (`${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`). A single message MAY contain at most one `Agent` tool invocation. Wait until the prior `parallel-worker` returns `completed` or `retry_exhausted` before launching the next task. Concurrent launches are prohibited even when the wave contains multiple tasks.
 
 Each agent works in its own isolated worktree.
 
@@ -590,7 +590,7 @@ Agent({
        - .NET: dotnet format, dotnet build -warnaserror, dotnet test, dotnet list package --vulnerable
     8. Run mutation testing on the diff (Rust: cargo-mutants, .NET: Stryker.NET — if installed)
 
-    Apply diagnostic-reasoning.md DR1-DR6 and failure-taxonomy.md FC1-FC6 throughout retries. Persist all diagnostic state as \`## Events\` entries in the task log at \`{Task log path}\` per \`rules/task-log-format.md\` (each attempt-result event carries a \`category\` inline key). Apply DR6 DIVERGENT if the most recent 2 failed attempts in the current phase share the same main failure_category (FC5).
+    Apply ${CLAUDE_PLUGIN_ROOT}/rules/diagnostic-reasoning.md DR1-DR6 and ${CLAUDE_PLUGIN_ROOT}/rules/failure-taxonomy.md FC1-FC6 throughout retries. Persist all diagnostic state as \`## Events\` entries in the task log at \`{Task log path}\` per \`${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md\` (each attempt-result event carries a \`category\` inline key). Apply DR6 DIVERGENT if the most recent 2 failed attempts in the current phase share the same main failure_category (FC5).
 
     Include the following in the completion report:
     For Rust projects:
@@ -970,7 +970,7 @@ Required fields:
 
 - Do not mark the task as `[x]` (completion without a log is incomplete)
 - Report the error to the user and confirm whether to record the log manually or retry
-- If the `/log-implementation` skill is unavailable: Manually append the `## Summary` / `## Statistics` / `## Files Modified` / `## Files Created` / `## Artifacts` / `## Review Process` sections to the task log at `.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md` per `rules/task-log-format.md` TL5
+- If the `/log-implementation` skill is unavailable: Manually append the `## Summary` / `## Statistics` / `## Files Modified` / `## Files Created` / `## Artifacts` / `## Review Process` sections to the task log at `.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md` per `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL5
 
 ### 8. Complete the Task
 
@@ -1226,7 +1226,7 @@ Use the `/spec-status` skill at any time to check overall progress and task coun
 ### General Rules
 
 - Feature names use kebab-case
-- One **wave** in-progress at a time, and within a wave **only one task** is in-progress at a time (per `rules/serial-execution-policy.md`)
+- One **wave** in-progress at a time, and within a wave **only one task** is in-progress at a time (per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`)
 - Always search implementation logs before coding (step 2)
 - Follow TDD: tests first (RED), then implementation (GREEN), then refactor (REFACTOR)
 - **Implementation (parallel-worker) and review (review-worker) are separate agents** — parallel-worker does not commit, review-worker does not implement

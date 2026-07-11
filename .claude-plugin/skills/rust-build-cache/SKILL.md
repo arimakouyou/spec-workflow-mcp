@@ -112,5 +112,5 @@ In environments where sccache is not installed, the fallback path runs ordinary 
 
 - Universal constraint: `quality-checks` (QC1-QC3: canonical commands for cargo fmt/clippy/test)
 - Related Skills: `cargo-toml`, `axum`, `diesel`, `leptos`
-- Related Rule: `rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
+- Related Rule: `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
 - Related Agents: `parallel-worker`, `integ-test-worker`, `review-worker`

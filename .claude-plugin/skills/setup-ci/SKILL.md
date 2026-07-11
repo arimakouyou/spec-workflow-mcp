@@ -13,7 +13,7 @@ user-invokable: true
 
 # Setup CI
 
-Generate GitHub Actions CI/CD workflows that mirror the quality check commands defined in `.claude-plugin/rules/quality-checks.md`. Ensures parity between local agent-chain quality checks and external CI.
+Generate GitHub Actions CI/CD workflows that mirror the quality check commands defined in `${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md`. Ensures parity between local agent-chain quality checks and external CI.
 
 **P4-02 compliance**: This skill generates 5 base CI/CD configuration files and satisfies the harness-maturity-check P4-02 requirement (5 or more CI/CD configuration files). Options (`--with-sast`, etc.) generate additional files.
 
@@ -296,7 +296,7 @@ Next steps:
 
 ## Source of Truth
 
-The CI workflow commands MUST match `.claude-plugin/rules/quality-checks.md` exactly.
+The CI workflow commands MUST match `${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md` exactly.
 CI-specific setup steps (tool installation etc.) are permitted as prerequisites, but the quality check commands themselves must be identical.
 If `quality-checks.md` is updated, re-running `/setup-ci` regenerates the workflow with updated commands.
 

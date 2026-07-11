@@ -47,9 +47,9 @@ Call `advisor()` at the following points:
 ### Required Reference Files
 
 - `tests/integration/helpers/` — Common helpers (TestContext, etc.)
-- `.claude-plugin/skills/integration-test/references/test-patterns.md` — Rust integration test patterns
-- `.claude-plugin/skills/integration-test/references/test-case-design.md` — Test case design
-- `.claude-plugin/skills/integration-test/references/quality-gate.md` — Quality criteria
+- `${CLAUDE_PLUGIN_ROOT}/skills/integration-test/references/test-patterns.md` — Rust integration test patterns
+- `${CLAUDE_PLUGIN_ROOT}/skills/integration-test/references/test-case-design.md` — Test case design
+- `${CLAUDE_PLUGIN_ROOT}/skills/integration-test/references/quality-gate.md` — Quality criteria
 
 ### Self Quality Check (build cache aware)
 
@@ -110,9 +110,9 @@ Helper addition request:
 ### Required Reference Files
 
 - `tests/Integration/Helpers/` — Common helpers (WebApplicationFactory fixtures, container lifecycle, etc.)
-- `.claude-plugin/skills/integration-test-dotnet/references/test-patterns.md` — .NET test implementation patterns
-- `.claude-plugin/skills/integration-test-dotnet/references/test-case-design.md` — Test case design
-- `.claude-plugin/skills/integration-test-dotnet/references/quality-gate.md` — Quality criteria
+- `${CLAUDE_PLUGIN_ROOT}/skills/integration-test-dotnet/references/test-patterns.md` — .NET test implementation patterns
+- `${CLAUDE_PLUGIN_ROOT}/skills/integration-test-dotnet/references/test-case-design.md` — Test case design
+- `${CLAUDE_PLUGIN_ROOT}/skills/integration-test-dotnet/references/quality-gate.md` — Quality criteria
 
 ### Self Quality Check (build cache aware)
 

@@ -48,7 +48,7 @@ Before reading the tests, load project-level instance information from steering 
 - `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)**. Use this table to decide where new source files MUST be placed and how they MUST be named. Do not invent a placement if the rule exists.
 - `{project-path}/.spec-workflow/steering/product.md` — product principles and non-goals (skip if absent; used only to resolve ambiguity).
 
-**When steering docs are absent**: Skip the load step entirely. In Output Notes, record `steering: absent — pre-approval dependency check and file placement rule check skipped`. The caller (spec-implement orchestrator) will see this note and treat it as an expected legacy condition rather than a missed check. Do not block implementation on missing steering docs — steering docs are optional (see `steering-doc/SKILL.md`). General engineering policies (design principles, style, security) live in `.claude-plugin/rules/` and are already applied project-wide — do not re-read them here.
+**When steering docs are absent**: Skip the load step entirely. In Output Notes, record `steering: absent — pre-approval dependency check and file placement rule check skipped`. The caller (spec-implement orchestrator) will see this note and treat it as an expected legacy condition rather than a missed check. Do not block implementation on missing steering docs — steering docs are optional (see `steering-doc/SKILL.md`). General engineering policies (design principles, style, security) live in `${CLAUDE_PLUGIN_ROOT}/rules/` and are already applied project-wide — do not re-read them here.
 
 ### 1. Read and Understand the Tests
 
@@ -60,7 +60,7 @@ Before reading the tests, load project-level instance information from steering 
 
 ### 1.5 Load Evidence (Selective)
 
-If the task carries an `_Evidence:` line (`.claude-plugin/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files** before implementing.
+If the task carries an `_Evidence:` line (`${CLAUDE_PLUGIN_ROOT}/rules/evidence-coverage.md` EC2) — resolved by the orchestrator to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` paths — read **only those files** before implementing.
 
 - Evidence files capture the relevant existing-code context (current contracts, callers, branches) that informed this task's design. Loading them up-front avoids re-reading the codebase for behavior the spec already anchored.
 - Do **not** read other EV files from the spec's `evidence/` directory — they are for other tasks. Loading them is wasteful and can introduce unrelated constraints.

@@ -52,8 +52,8 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 > - **50+ スキル** — spec ライフサイクル全段階（request-spec → requirements → design → test-design → tasks → implement → archive）に加え、統合テスト（Rust / .NET）、TDD、CI 生成、mutation testing、arch test 生成、PR コメント対応など
 > - **7 専門サブエージェント** — Implementer ロール（parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker / wave-harness-worker）と Reviewer ロール（review-worker / integ-test-auditor）に整理。`Language:` 引数で **Rust / .NET 両言語サポート**
 > - **17 ルール** — プロジェクトアーキテクチャ、QC1-QC13 品質チェック、OWASP セキュリティ、設計原則、型安全（TS-R1-R5 / TS-C1-C5）、failure taxonomy（FC1-FC6）、L1-L5 段階的執行モデル
-> - **17 フック** — spec 注入、テスト実行確認、design.md 整合チェック、arch test 再生成促し、ビルドキャッシュ、差分検出式セキュリティ監査、加えて **計測 framework**（`_wrap.sh` + `timing-logger-pre/post.sh`）が Hook / Tool / Phase / Rule のイベントを `.implement-session/metrics.jsonl` に記録
-> - **ヘルパースクリプト** — 実装セッション状態管理（`session-manage.sh`）、レートリミット自動再開ラッパー（`auto-resume.sh`）、メトリクス集計（`aggregate-metrics.sh` の `hooks` / `phases` / `rules` / `speedup` サブコマンド）
+> - **16 フック** — spec 注入、テスト実行確認、design.md 整合チェック、arch test 再生成促し、ビルドキャッシュ、差分検出式セキュリティ監査、フェーズ進行同意確認
+> - **ヘルパースクリプト** — 実装セッション状態管理（`session-manage.sh`）、レートリミット自動再開ラッパー（`auto-resume.sh`）
 
 > **プラグインフック利用時の前提：**
 >
@@ -315,11 +315,8 @@ your-project/
   marketplace.json         # マーケットプレイスリスティング
   .mcp.json                # MCP サーバー設定
 
-  hooks/                   # 17 個のイベント駆動フック
+  hooks/                   # 16 個のイベント駆動フック
     hooks.json             # フック登録 (PreToolUse / PostToolUse / Stop / SessionStart / UserPromptSubmit)
-    _wrap.sh               # 計測ラッパー (所要時間 / exit code / preview を記録)
-    timing-logger-pre.sh   # PreToolUse: tool 開始時刻記録
-    timing-logger-post.sh  # PostToolUse: tool 所要時間 + rule_read 記録
     inject-spec.sh         # UserPromptSubmit: spec context 注入
     inject-skill-hint.sh   # PreToolUse Edit|Write: skill discovery hint
     inject-build-cache.sh  # PreToolUse Bash: cargo / dotnet ビルドキャッシュ hint
@@ -330,15 +327,16 @@ your-project/
     auto-verify-spec.sh    # PostToolUse Edit|Write: spec 整合チェック
     detect-new-files.sh    # PostToolUse Write: spec 未言及ファイル検出
     design-conformance-check.sh  # PostToolUse Edit|Write: design.md とコードの乖離検出
+    module-boundary-check.sh     # PostToolUse Edit|Write: モジュール境界違反チェック
     arch-test-regen-hint.sh      # PostToolUse Edit|Write: arch test 再生成促し
     verify-tests-run.sh    # Stop: テスト実行履歴チェック
     log-implementation.sh  # Stop: 実装ログ skeleton 自動生成
+    confirm-phase-progression.sh # Stop: フェーズ進行同意確認
     resume-hint.sh         # SessionStart: 再開コンテキスト注入
 
   scripts/                 # ヘルパースクリプト (ユーザー実行可)
-    session-manage.sh      # 実装セッション状態管理 + Phase メトリクス
+    session-manage.sh      # 実装セッション状態管理
     auto-resume.sh         # レートリミット自動再開ラッパー (claude --print ループ)
-    aggregate-metrics.sh   # メトリクス集計 (summary / hooks / tools / phases / rules / speedup)
 
   skills/                  # 50+ スキル (抜粋)
     spec-request-spec/     # リクエスト仕様作成

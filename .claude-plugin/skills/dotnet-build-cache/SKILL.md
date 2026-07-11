@@ -21,7 +21,7 @@ Unlike Rust's sccache, .NET relies on built-in cache mechanisms.
 
 - Rust build cache -> `rust-build-cache` Skill
 - Detailed `actions/cache` setup in CI workflows -> `setup-ci` Skill
-- Agent parallelism control -> `rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
+- Agent parallelism control -> `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
 
 ## MSBuild Incremental Build
 
@@ -89,5 +89,5 @@ dotnet restore
 
 - Universal constraints: `quality-checks` (QC12)
 - Related Skills: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`
-- Related Rule: `rules/serial-execution-policy.md`
+- Related Rule: `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`
 - Related Agents: `parallel-worker`, `integ-test-worker`, `review-worker`

@@ -5,7 +5,7 @@ description: "Verify spec-to-spec and spec-to-test-to-implementation consistency
 
 # Spec Verify (Harness-as-Code Verification)
 
-Cross-check the consistency of `requirements.md` ⇔ `design.md` ⇔ `test-design.md` ⇔ `tasks.md` within a single spec directory. Report missing references, dangling references, cycles, and coverage gaps per `.claude-plugin/rules/spec-dependency-graph.md` SD1-SD7.
+Cross-check the consistency of `requirements.md` ⇔ `design.md` ⇔ `test-design.md` ⇔ `tasks.md` within a single spec directory. Report missing references, dangling references, cycles, and coverage gaps per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD1-SD7.
 
 This skill is the self-verification counterpart to `/spec-impact-analyze` — impact-analyze tells you **what needs revisiting when upstream changes**, spec-verify tells you **whether the spec set is internally consistent right now**.
 
@@ -47,7 +47,7 @@ For each file, read the YAML frontmatter. If absent:
 
 ### 2. Extract IDs from Content
 
-Parse each file's body for IDs, using the heading conventions from `.claude-plugin/rules/spec-dependency-graph.md` SD1:
+Parse each file's body for IDs, using the heading conventions from `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD1:
 
 | File | Heading pattern | Captured ID |
 |------|-----------------|-------------|

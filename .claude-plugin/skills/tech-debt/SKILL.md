@@ -63,7 +63,7 @@ NEXT_ID=$(printf "%04d" $((${MAX_ID:-0} + 1)))
 
 ### Step 3: File Creation
 
-Following the template in `.claude-plugin/skills/tech-debt/references/tech-debt-template.md`,
+Following the template in `${CLAUDE_PLUGIN_ROOT}/skills/tech-debt/references/tech-debt-template.md`,
 create `.claude/_docs/tech-debt/TD-{NEXT_ID}-{slug}.md`.
 
 The slug is derived from the title converted to kebab-case (e.g., "Legacy auth middleware" -> `legacy-auth-middleware`).

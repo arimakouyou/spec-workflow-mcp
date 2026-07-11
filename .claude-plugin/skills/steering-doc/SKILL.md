@@ -21,7 +21,7 @@ Create project-level guidance documents that inform all future spec-driven devel
 | **tech.md** | Technology stack, approved external dependencies, constraints, ADR summary | `.spec-workflow/steering/tech.md` |
 | **structure.md** | Directory layout, File Placement Rules (P4-01), project-specific conventions | `.spec-workflow/steering/structure.md` |
 
-General engineering policies (design principles, dependency direction, naming, style, security, testing, documentation) are authoritative in `.claude-plugin/rules/` and must NOT be duplicated into steering documents.
+General engineering policies (design principles, dependency direction, naming, style, security, testing, documentation) are authoritative in `${CLAUDE_PLUGIN_ROOT}/rules/` and must NOT be duplicated into steering documents.
 
 ## Inputs
 
@@ -66,16 +66,16 @@ Follow the template structure exactly for consistency.
 **For tech.md:**
 - Analyze the existing codebase to detect technology stack (package.json, Cargo.toml, *.csproj, etc.)
 - Record project-specific instance data only: languages, approved dependencies, storage, integrations, constraints
-- Detect deviations from `.claude-plugin/rules/project-architecture.md`; document them rather than restating the standard
+- Detect deviations from `${CLAUDE_PLUGIN_ROOT}/rules/project-architecture.md`; document them rather than restating the standard
 - Populate the ADR summary table from `.claude/_docs/adr/INDEX.md` if any ADRs exist
 - Formal decisions belong to ADRs (`.claude/_docs/adr/`, managed by the `/adr` skill). Lightweight chronological notes go to `.spec-workflow/steering/logs/tech-decisions.md`
-- DO NOT duplicate policies that are already in `.claude-plugin/rules/` (security, type safety, error handling, testing, etc.); link to them instead
+- DO NOT duplicate policies that are already in `${CLAUDE_PLUGIN_ROOT}/rules/` (security, type safety, error handling, testing, etc.); link to them instead
 
 **For structure.md:**
 - Capture the actual top-level directory layout as the instance record for this project
 - Fill in File Placement Rules (P4-01) so that any new file's target directory is uniquely determined
-- Record deviations from `.claude-plugin/rules/project-architecture.md` if any
-- Fill Project-Specific Conventions only with rules NOT already covered by `.claude-plugin/rules/*-style.md`; otherwise state `Status: N/A — follows .claude-plugin/rules/*-style.md`
+- Record deviations from `${CLAUDE_PLUGIN_ROOT}/rules/project-architecture.md` if any
+- Fill Project-Specific Conventions only with rules NOT already covered by `${CLAUDE_PLUGIN_ROOT}/rules/*-style.md`; otherwise state `Status: N/A — follows ${CLAUDE_PLUGIN_ROOT}/rules/*-style.md`
 - DO NOT restate naming conventions, import order, module boundaries, code organization principles, or documentation standards that are already enforced by rules/
 
 #### Step C: Create the Document
@@ -136,21 +136,21 @@ Agent({
     2. SPECIFICITY: Content must be specific to this project, not generic boilerplate
     3. COMPLETENESS: All tables must have concrete entries, not placeholder rows. Sections that do not apply must read \`Status: N/A — {{reason}}\` rather than being blank
     4. ACTIONABILITY: Guidance must be clear enough to inform future spec development
-    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`.claude-plugin/rules/\`. Flag any of the following as issues (each section name maps to the \`.claude-plugin/rules/\` file that already owns it):
+    5. RULES NON-DUPLICATION: The document must not restate policies already enforced by \`${CLAUDE_PLUGIN_ROOT}/rules/\`. Flag any of the following as issues (each section name maps to the \`${CLAUDE_PLUGIN_ROOT}/rules/\` file that already owns it):
        - For structure.md:
-         * \`Naming Conventions\` → owned by \`.claude-plugin/rules/*-style.md\` (rust-style.md / csharp-style.md / axum.md / etc.)
-         * \`Import Patterns\` → owned by \`.claude-plugin/rules/*-style.md\`
-         * \`Code Structure Patterns\` → owned by \`.claude-plugin/rules/design-principles.md\` / \`.claude-plugin/rules/*-style.md\`
-         * \`Code Organization Principles\` → owned by \`.claude-plugin/rules/design-principles.md\`
-         * \`Module Boundaries\` → owned by \`.claude-plugin/rules/design-principles.md\` / \`.claude-plugin/rules/project-architecture.md\`
-         * \`Documentation Standards\` → owned by \`.claude-plugin/rules/doc-crossref.md\` / \`.claude-plugin/rules/doc-freshness.md\`
+         * \`Naming Conventions\` → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/*-style.md\` (rust-style.md / csharp-style.md / axum.md / etc.)
+         * \`Import Patterns\` → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/*-style.md\`
+         * \`Code Structure Patterns\` → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md\` / \`${CLAUDE_PLUGIN_ROOT}/rules/*-style.md\`
+         * \`Code Organization Principles\` → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md\`
+         * \`Module Boundaries\` → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md\` / \`${CLAUDE_PLUGIN_ROOT}/rules/project-architecture.md\`
+         * \`Documentation Standards\` → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/doc-crossref.md\` / \`${CLAUDE_PLUGIN_ROOT}/skills/doc-freshness/SKILL.md\`
        - For tech.md:
-         * \`Prohibited Patterns\` containing general language-level prohibitions → owned by \`.claude-plugin/rules/*-style.md\` / \`.claude-plugin/rules/security.md\`
-         * Generic security policies → owned by \`.claude-plugin/rules/security.md\`
-         * Generic testing policies → owned by \`.claude-plugin/rules/flaky-test-management.md\` / \`.claude-plugin/rules/regression-test-policy.md\`
-         * Generic documentation policies → owned by \`.claude-plugin/rules/doc-crossref.md\` / \`.claude-plugin/rules/doc-freshness.md\`
-       - Generic restatements of design principles D1–D6 → owned by \`.claude-plugin/rules/design-principles.md\`
-       In each case, the fix is to remove the duplicated content and link to the authoritative \`.claude-plugin/rules/\` file named above.
+         * \`Prohibited Patterns\` containing general language-level prohibitions → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/*-style.md\` / \`${CLAUDE_PLUGIN_ROOT}/rules/security.md\`
+         * Generic security policies → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/security.md\`
+         * Generic testing policies → owned by \`${CLAUDE_PLUGIN_ROOT}/skills/flaky-test-management/SKILL.md\` / \`${CLAUDE_PLUGIN_ROOT}/skills/regression-test-policy/SKILL.md\`
+         * Generic documentation policies → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/doc-crossref.md\` / \`${CLAUDE_PLUGIN_ROOT}/skills/doc-freshness/SKILL.md\`
+       - Generic restatements of design principles D1–D6 → owned by \`${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md\`
+       In each case, the fix is to remove the duplicated content and link to the authoritative \`${CLAUDE_PLUGIN_ROOT}/rules/\` file named above.
     6. ADR LINKAGE (tech.md only): The Architecture Decision Records section should either contain a populated summary table matching \`.claude/_docs/adr/INDEX.md\`, or show \`Status: N/A — no ADRs yet\` if none exist.
 
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
@@ -200,7 +200,7 @@ After steering doc creation is finished, check the state of `CLAUDE.md` at the p
 
 1. **Existence**: Does an agent-facing instruction file exist at the project root?
 2. **Conciseness**: Aim for under 100 lines; defer details via pointers to other files
-3. **Pointer design**: Compose concrete rules and patterns as references to `.claude-plugin/rules/` or steering docs
+3. **Pointer design**: Compose concrete rules and patterns as references to `${CLAUDE_PLUGIN_ROOT}/rules/` or steering docs
 
 **Recommended structure:**
 
@@ -217,9 +217,9 @@ After steering doc creation is finished, check the state of `CLAUDE.md` at the p
 {List of primary technologies. See .spec-workflow/steering/tech.md for details}
 
 ## Coding Rules
-- Rule index: under the `.claude-plugin/rules/` directory
-- Style: `.claude-plugin/rules/rust-style.md`
-- Security: `.claude-plugin/rules/security.md`
+- Rule index: under the `${CLAUDE_PLUGIN_ROOT}/rules/` directory
+- Style: `${CLAUDE_PLUGIN_ROOT}/rules/rust-style.md`
+- Security: `${CLAUDE_PLUGIN_ROOT}/rules/security.md`
 
 ## Workflow
 - Adopt spec-driven development via spec-workflow
@@ -238,5 +238,5 @@ If CLAUDE.md does not exist, propose the structure above to the user. If it exis
 - Never proceed if approval delete fails
 - Must have approved status AND successful cleanup before next document
 - tech.md: formal architectural decisions go to ADRs under `.claude/_docs/adr/` (use the `/adr` skill); lightweight chronological notes go to `.spec-workflow/steering/logs/tech-decisions.md`
-- Do not duplicate general engineering policies from `.claude-plugin/rules/` into steering documents; link to them instead
+- Do not duplicate general engineering policies from `${CLAUDE_PLUGIN_ROOT}/rules/` into steering documents; link to them instead
 - When the user requests the full steering-doc set, complete documents in the specified sequence (no skipping); users may still request or update individual documents directly.

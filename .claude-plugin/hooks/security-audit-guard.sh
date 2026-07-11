@@ -14,6 +14,11 @@
 
 set -euo pipefail
 
+# jq が無ければ入力 JSON を解析できないため dormant（他 hooks と同じ fail-open 方針）
+if ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
+
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
@@ -21,6 +26,9 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 if ! echo "$COMMAND" | grep -qE '^\s*git\s+commit'; then
   exit 0
 fi
+
+# ブロック理由は stderr に出す必要がある（exit 2 時に Claude へ渡るのは stderr のみ）
+exec 1>&2
 
 AUDIT_TIMEOUT=120
 
@@ -84,7 +92,7 @@ FAIL=false
 if [ "$CHECK_RUST" = true ] && [ -f Cargo.toml ] && [ -f Cargo.lock ]; then
   if command -v cargo-audit >/dev/null 2>&1; then
     set +e
-    timeout "${AUDIT_TIMEOUT}s" cargo audit --quiet 2>&1
+    CARGO_AUDIT_OUTPUT=$(timeout "${AUDIT_TIMEOUT}s" cargo audit --quiet 2>&1)
     RC=$?
     set -e
     if [ "$RC" -eq 124 ]; then
@@ -92,6 +100,7 @@ if [ "$CHECK_RUST" = true ] && [ -f Cargo.toml ] && [ -f Cargo.lock ]; then
       FAIL=true
     elif [ "$RC" -ne 0 ]; then
       echo "⛔ [security-audit] cargo audit: 脆弱性が検出されました"
+      printf '%s\n' "$CARGO_AUDIT_OUTPUT" | tail -10
       echo "   詳細: cargo audit を実行して確認してください"
       FAIL=true
     fi
@@ -110,7 +119,7 @@ if [ "$CHECK_NODE" = true ] && [ -f package.json ]; then
       FAIL=true
     elif [ "$RC" -ne 0 ]; then
       echo "⛔ [security-audit] npm audit: 高/重大な脆弱性が検出されました"
-      echo "$AUDIT_OUTPUT" | grep -iE '(high|critical)' | head -5
+      printf '%s\n' "$AUDIT_OUTPUT" | grep -iE '(high|critical)' | head -5
       echo "   修正: npm audit fix を実行するか、脆弱なパッケージを更新してください"
       FAIL=true
     fi
@@ -128,7 +137,7 @@ if [ "$CHECK_NODE" = true ] && [ -f package.json ]; then
       FAIL=true
     elif [ "$RC" -ne 0 ]; then
       echo "⛔ [security-audit] yarn audit: 高/重大な脆弱性が検出されました"
-      echo "$YARN_OUTPUT" | tail -10
+      printf '%s\n' "$YARN_OUTPUT" | tail -10
       FAIL=true
     fi
   elif [ -f pnpm-lock.yaml ] && command -v pnpm >/dev/null 2>&1; then
@@ -141,7 +150,7 @@ if [ "$CHECK_NODE" = true ] && [ -f package.json ]; then
       FAIL=true
     elif [ "$RC" -ne 0 ]; then
       echo "⛔ [security-audit] pnpm audit: 高/重大な脆弱性が検出されました"
-      echo "$PNPM_OUTPUT" | tail -10
+      printf '%s\n' "$PNPM_OUTPUT" | tail -10
       FAIL=true
     fi
   fi
@@ -157,9 +166,9 @@ if [ "$CHECK_DOTNET" = true ]; then
     if [ "$RC" -eq 124 ]; then
       echo "⛔ [security-audit] dotnet list package --vulnerable が ${AUDIT_TIMEOUT}s 以内に完了しませんでした（fail-close）"
       FAIL=true
-    elif echo "$DOTNET_OUTPUT" | grep -qE "(Critical|High)"; then
+    elif printf '%s\n' "$DOTNET_OUTPUT" | grep -qE "(Critical|High)"; then
       echo "⛔ [security-audit] dotnet: 高/重大な脆弱性が検出されました"
-      echo "$DOTNET_OUTPUT" | grep -E "(Critical|High)" | head -10
+      printf '%s\n' "$DOTNET_OUTPUT" | grep -E "(Critical|High)" | head -10
       echo "   修正: 脆弱なパッケージを更新してください"
       FAIL=true
     fi

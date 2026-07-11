@@ -7,6 +7,11 @@
 
 set -euo pipefail
 
+# jq が無ければ入力 JSON を解析できないため dormant（他 hooks と同じ fail-open 方針）
+if ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
+
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
@@ -14,6 +19,9 @@ COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 if ! echo "$COMMAND" | grep -qE '^\s*git\s+commit'; then
   exit 0
 fi
+
+# ブロック理由は stderr に出す必要がある（exit 2 時に Claude へ渡るのは stderr のみ）
+exec 1>&2
 
 FAIL=false
 

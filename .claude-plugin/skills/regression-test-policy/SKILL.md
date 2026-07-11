@@ -187,5 +187,5 @@ Acceptance criteria defined in the Requirements-Test Traceability Matrix in `tes
 
 ## References
 
-- spec-workflow templates: under `.claude-plugin/templates/`
+- spec-workflow templates: under `${CLAUDE_PLUGIN_ROOT}/templates/`
 - Place the Traceability Matrix at `.spec-workflow/specs/{spec-id}/test-design.md`

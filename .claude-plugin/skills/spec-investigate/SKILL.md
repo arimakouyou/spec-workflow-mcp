@@ -7,7 +7,7 @@ description: "Phase 0.5 of spec-driven development: collect existing-code eviden
 
 Collect and structure **evidence** from the existing codebase so requirements, design, and test-design phases can cite specific files and line ranges instead of re-reading code from scratch. The output is a set of small topic-scoped files under `.spec-workflow/specs/{spec-name}/evidence/` plus an index `manifest.md`. This phase is **not** gated by dashboard approval — it produces supporting material, not a contract — but a self-check validates coverage before control passes to `/spec-requirements`.
 
-This skill is opt-in: it runs only for specs whose `request-spec.md` declares a concrete `task_type` (see `.claude-plugin/rules/task-types.md`). Legacy specs bypass it entirely.
+This skill is opt-in: it runs only for specs whose `request-spec.md` declares a concrete `task_type` (see `${CLAUDE_PLUGIN_ROOT}/rules/task-types.md`). Legacy specs bypass it entirely.
 
 ## Prerequisites Check (MANDATORY — DO NOT SKIP)
 
@@ -16,7 +16,7 @@ This skill is opt-in: it runs only for specs whose `request-spec.md` declares a 
    - If `task_type` is missing → treat the spec as legacy. Do **not** write any evidence. Stop and tell the user: "This spec has no task_type declared, so evidence collection is skipped. Proceed with `/spec-requirements`." Exit cleanly.
    - If `task_type: legacy` → same as above, stop and forward to `/spec-requirements`.
    - Otherwise proceed.
-3. Read `.claude-plugin/rules/task-types.md` (TT2, TT3) and, if it exists, `.spec-workflow/user-config/task-types.yml`. Compute the **required evidence categories** for the declared `task_type`. Unknown `task_type` → STOP and ask the user to fix `request-spec.md`.
+3. Read `${CLAUDE_PLUGIN_ROOT}/rules/task-types.md` (TT2, TT3) and, if it exists, `.spec-workflow/user-config/task-types.yml`. Compute the **required evidence categories** for the declared `task_type`. Unknown `task_type` → STOP and ask the user to fix `request-spec.md`.
 
 ## Inputs
 
@@ -76,7 +76,7 @@ Each file:
 - Is 50–150 lines, scoped to a single topic
 - Fills `sources:` as a YAML list of entries, each with `path:` (real file path) and `lines:` (e.g. `L10-L45`); see evidence-template.md
 - Names: EV-{category}-001.md, EV-{category}-002.md, ...
-- **The file name stem and the frontmatter `ev_id:` MUST match exactly** — both carry the same `EV-{category}-{NNN}` string (per `.claude-plugin/rules/spec-dependency-graph.md` SD1). A mismatch will FAIL the EC1 integrity check.
+- **The file name stem and the frontmatter `ev_id:` MUST match exactly** — both carry the same `EV-{category}-{NNN}` string (per `${CLAUDE_PLUGIN_ROOT}/rules/spec-dependency-graph.md` SD1). A mismatch will FAIL the EC1 integrity check.
 - Quotes only what is needed to establish the fact (avoid full-file dumps)
 
 Return a short summary listing each file created with its topic and the list of sources (path:Lstart-Lend).
@@ -132,7 +132,7 @@ Agent({
     Inputs:
     - Manifest: .spec-workflow/specs/{spec-name}/evidence/manifest.md
     - task_type from .spec-workflow/specs/{spec-name}/request-spec.md frontmatter
-    - Required categories per .claude-plugin/rules/task-types.md TT2 (and TT4 overrides if .spec-workflow/user-config/task-types.yml exists)
+    - Required categories per ${CLAUDE_PLUGIN_ROOT}/rules/task-types.md TT2 (and TT4 overrides if .spec-workflow/user-config/task-types.yml exists)
 
     Checks:
     1. COVERAGE: Every required category for the declared task_type has at least one EV-*.md file under evidence/{category}/

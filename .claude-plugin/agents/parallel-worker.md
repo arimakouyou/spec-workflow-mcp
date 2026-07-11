@@ -15,7 +15,7 @@ permissionMode: bypassPermissions
 
 - TDD implementation (Red→Green→Refactor)
 - Quality checks (rustfmt + clippy + cargo test)
-- **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification. For Leptos frontend components, follow the patterns in `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md` — test extracted logic functions, signal state, and computations rather than `view!` macro output.
+- **RED phase**: When `Test design doc path` is provided, read test-design.md and reference the corresponding UT specifications (UT-N.M) for the target component. Write test cases that match the defined Input / Expected Output / Verification. For Leptos frontend components, follow the patterns in `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-rust/references/leptos-frontend-testing.md` — test extracted logic functions, signal state, and computations rather than `view!` macro output.
 - Review and commit are the responsibility of review-worker
 - Return the completion report as your final response — that is the orchestrator's input channel
 
@@ -30,7 +30,7 @@ Call `advisor()` at the following points in your TDD workflow:
 
 ## Diagnostic Reasoning Protocol
 
-Apply `diagnostic-reasoning.md` (DR1-DR6) and `failure-taxonomy.md` (FC1-FC6) at every retry point in the TDD cycle. All diagnostic state lives in the task log (`task.log.md`) — see `rules/task-log-format.md` (TL4 event taxonomy).
+Apply `${CLAUDE_PLUGIN_ROOT}/rules/diagnostic-reasoning.md` (DR1-DR6) and `${CLAUDE_PLUGIN_ROOT}/rules/failure-taxonomy.md` (FC1-FC6) at every retry point in the TDD cycle. All diagnostic state lives in the task log (`task.log.md`) — see `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` (TL4 event taxonomy).
 
 ### Task Log Path
 
@@ -40,7 +40,7 @@ The orchestrator passes the absolute task log path in the launch prompt:
 Task log path: {project-root}/.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md
 ```
 
-- **On task start**: If the file does not yet exist, create it with the `# Task Log` header + `## Metadata` section + empty `## Events` section per `rules/task-log-format.md` TL3. If it already exists (resume / rework), open it and read the existing `## Events` to learn prior state.
+- **On task start**: If the file does not yet exist, create it with the `# Task Log` header + `## Metadata` section + empty `## Events` section per `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL3. If it already exists (resume / rework), open it and read the existing `## Events` to learn prior state.
 - **On compaction recovery**: Re-read the task log to recover phase state, prior attempts, and rework history. The log is the single source of truth.
 
 ### Intra-Agent Retries (GREEN phase, quality checks)
@@ -98,7 +98,7 @@ When retry limits approach (per advisor-usage.md), include your current diagnosi
 
 When the task's `_Prompt` contains Leptos frontend concerns (`#[component]`, `view!`, signal, Callback, `pages/` / `components/` directories):
 
-- **RED phase**: Follow the patterns in `.claude-plugin/skills/tdd-skills-rust/references/leptos-frontend-testing.md`, extract logic from the component, and write tests. Do not write tests for `view!` macro output
+- **RED phase**: Follow the patterns in `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-rust/references/leptos-frontend-testing.md`, extract logic from the component, and write tests. Do not write tests for `view!` macro output
 - **GREEN phase**: First implement the extracted logic function under test, then wire it into the `#[component]` and `view!` macro
 - **Quality checks**: After `cargo test` passes, verify WASM compilation with `cargo leptos build` (follow the existing Leptos Full-Stack Projects section)
 - **Component Test (CT) (added in H, dapper-hardening)**: Verification of `view!` output / DOM wiring / Suspense / Resource is **CT responsibility**. Write with `wasm-bindgen-test` per `tdd-skills-rust/references/leptos-frontend-testing.md` section 6 + `quality-checks.md` QC14. Run CT with `cargo test --target wasm32-unknown-unknown`
@@ -151,7 +151,7 @@ For the detailed flow, see the RT1 section of `regression-test-policy/SKILL.md`.
 
 ## Quality Checks (all must pass)
 
-**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (authoritative source)**.
+**Quality check commands are defined in `${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md` (authoritative source)**.
 Detect the project type and run the relevant QC items:
 
 | Project type | Detection condition | Applicable QC items |
@@ -177,7 +177,7 @@ Do not restate the commands inside this agent (single source of truth).
 
 When the task's `_Prompt` contains .NET concerns (`.cs`, `.csproj`, `DbContext`, `Controller`, `Endpoint`, ASP.NET Core patterns):
 
-- **RED phase**: Write xUnit tests following the patterns in `.claude-plugin/skills/tdd-skills-dotnet/`
+- **RED phase**: Write xUnit tests following the patterns in `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-dotnet/`
 - **GREEN phase**: Write the implementation under test
 - **Quality checks**: After `dotnet test` passes, for Blazor projects verify WASM compilation with `dotnet publish -p:PublishTrimmed=true`
 
@@ -185,7 +185,7 @@ When the task's `_Prompt` contains .NET concerns (`.cs`, `.csproj`, `DbContext`,
 
 When the task's `_Prompt` contains Blazor frontend concerns (`.razor`, `@bind`, `RenderMode`, `pages/` / `components/` directories):
 
-- **RED phase**: Follow the patterns in `.claude-plugin/skills/tdd-skills-dotnet/references/blazor-testing.md`, extract logic from code-behind, and write tests. Do not write tests for `.razor` rendering output
+- **RED phase**: Follow the patterns in `${CLAUDE_PLUGIN_ROOT}/skills/tdd-skills-dotnet/references/blazor-testing.md`, extract logic from code-behind, and write tests. Do not write tests for `.razor` rendering output
 - **GREEN phase**: First implement the extracted logic function under test, then wire it into the `.razor` component
 - **Quality checks**: After `dotnet test` passes, verify WASM compilation with `dotnet publish -c Release -p:PublishTrimmed=true`
 
@@ -337,7 +337,7 @@ When the retry limit is reached, return the following instead of a normal comple
 
 ## Task Log (consolidated state + diagnosis)
 
-The task log replaces the legacy `state.md` and `diagnosis.md`. See `rules/task-log-format.md` for the full format spec.
+The task log replaces the legacy `state.md` and `diagnosis.md`. See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` for the full format spec.
 
 ### Path
 
@@ -371,7 +371,7 @@ Use this absolute path for all reads and writes. The file lives in the main repo
 | Rework cycle started | `rework-start cycle=N` (followed by `attempt-*` events as in intra-agent retries) |
 | Rework cycle completed | `rework-complete cycle=N changed_files=...` |
 
-See `rules/task-log-format.md` TL4 for full event taxonomy and key conventions.
+See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL4 for full event taxonomy and key conventions.
 
 ## Agent Teams Rules
 

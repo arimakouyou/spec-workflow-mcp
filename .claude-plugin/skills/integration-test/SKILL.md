@@ -8,7 +8,7 @@ user-invokable: true
 # integration-test
 
 A skill that uses Agent Teams to create integration tests under `tests/integration/`.
-A single Worker (alpha) implements the tests sequentially, and Pentagon reviews them at the quality gate. Concurrent Worker launches are prohibited per `rules/serial-execution-policy.md`.
+A single Worker (alpha) implements the tests sequentially, and Pentagon reviews them at the quality gate. Concurrent Worker launches are prohibited per `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`.
 
 Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
 
@@ -115,7 +115,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
    - Identify repository: analyze query logic from `src/db/repository/{domain}.rs`
    - Identify model: check Diesel models from `src/models/{domain}.rs`
    - Identify external dependencies: find trait-based dependencies (e.g., external API clients)
-3. **Worker assignment**: launch only alpha (a single Worker) and have it handle all targets sequentially. Concurrent Worker launches are prohibited (`rules/serial-execution-policy.md`).
+3. **Worker assignment**: launch only alpha (a single Worker) and have it handle all targets sequentially. Concurrent Worker launches are prohibited (`${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`).
 
 4. **On `--dry-run`**: output the following and exit
 
@@ -140,7 +140,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
 
    Keep this in session memory so that each sub-agent launch can include the relevant slice in its prompt.
 
-3. **Create the job log** per `rules/task-log-format.md`:
+3. **Create the job log** per `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md`:
    - If a spec context is available (`--spec <name>` or detected from cwd): path is `.spec-workflow/specs/{spec-name}/integ-test-runs/{timestamp}.log.md`
    - If no spec context: path is `.spec-workflow/integ-test-runs/{timestamp}.log.md`
    - `{timestamp}` is ISO 8601 UTC with separators stripped (e.g., `20260520T143200`)
@@ -149,7 +149,7 @@ Tech stack: Axum + Diesel + diesel-async + Valkey (redis-rs) + testcontainers-rs
 
 ### P2: Per-Domain Loop (Implement + Review)
 
-Process the target list one domain at a time. For each domain, Command also appends events to the job log at each transition (`rules/task-log-format.md` TL4 integration-test events). The Worker and Pentagon do not touch the log themselves — Command extracts info from their final responses and writes the entries.
+Process the target list one domain at a time. For each domain, Command also appends events to the job log at each transition (`${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL4 integration-test events). The Worker and Pentagon do not touch the log themselves — Command extracts info from their final responses and writes the entries.
 
 #### P2.1: Launch alpha (Worker)
 

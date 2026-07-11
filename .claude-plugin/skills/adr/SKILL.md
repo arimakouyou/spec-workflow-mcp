@@ -49,7 +49,7 @@ Proposed → Accepted → (Deprecated | Superseded by ADR-NNNN)
    ```
    Extract the number and increment. If no ADRs exist, start with `0001`.
 
-2. **Create the ADR file** using the template at `.claude-plugin/skills/adr/references/adr-template.md`:
+2. **Create the ADR file** using the template at `${CLAUDE_PLUGIN_ROOT}/skills/adr/references/adr-template.md`:
    - Replace `{{NUMBER}}` with zero-padded number (e.g., `0001`)
    - Replace `{{TITLE}}` with the decision title
    - Replace `{{DATE}}` with today's date (YYYY-MM-DD)

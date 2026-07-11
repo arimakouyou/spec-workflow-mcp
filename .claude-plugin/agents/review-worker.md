@@ -25,7 +25,7 @@ The orchestrator passes the absolute task log path in the launch prompt:
 Task log path: {project-root}/.spec-workflow/specs/{spec-name}/task-logs/{taskId}.log.md
 ```
 
-Use this absolute path for all task-log reads and writes. The file lives in the main repo's `.spec-workflow/` directory, not in the worktree. See `rules/task-log-format.md` for the full format spec.
+Use this absolute path for all task-log reads and writes. The file lives in the main repo's `.spec-workflow/` directory, not in the worktree. See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` for the full format spec.
 
 ### Events Emitted by review-worker
 
@@ -35,7 +35,7 @@ Use this absolute path for all task-log reads and writes. The file lives in the 
 | At review end (each cycle) | `cycle-end n=N verdict={commit|rework|escalate} findings_count=K` (with `severities` detail when findings exist) |
 | After successful commit | `commit hash={short-hash}` |
 
-Append-only: never Edit existing entries. See `rules/task-log-format.md` TL4 for the full event format.
+Append-only: never Edit existing entries. See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL4 for the full event format.
 
 ### Reading the Task Log
 
@@ -57,7 +57,7 @@ Call `advisor()` at the following points:
 
 ## Quality Checks (all must pass)
 
-**Quality check commands are defined in `.claude-plugin/rules/quality-checks.md` (authoritative source)**.
+**Quality check commands are defined in `${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md` (authoritative source)**.
 Before committing, review-worker re-runs the applicable QC items and confirms all pass:
 
 | Project type | Detection condition | Applicable QC items |
@@ -89,15 +89,15 @@ This code has passed two stages: parallel-worker (TDD) and test engineer (fronte
 ### A. Style and Conventions
 
 Refer to the language-specific style rules and relevant framework rules:
-- **Rust**: `.claude-plugin/rules/rust-style.md`, `axum` Skill, `diesel` Skill, `leptos` Skill
-- **C#/.NET**: `.claude-plugin/rules/csharp-style.md`, `aspnet-core` Skill, `entity-framework-core` Skill, `blazor` Skill
+- **Rust**: `${CLAUDE_PLUGIN_ROOT}/rules/rust-style.md`, `axum` Skill, `diesel` Skill, `leptos` Skill
+- **C#/.NET**: `${CLAUDE_PLUGIN_ROOT}/rules/csharp-style.md`, `aspnet-core` Skill, `entity-framework-core` Skill, `blazor` Skill
 - Compliance with project rules
 - Validity of naming (whether types, functions, and variables accurately express their intent)
 - Code consistency (whether style and patterns are aligned with existing code)
 
 ### B. Design and Structure
 
-Refer to `.claude-plugin/rules/design-principles.md`. Pay particular attention to the following:
+Refer to `${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md`. Pay particular attention to the following:
 
 - **Separation of concerns**: Does each function/struct have a single responsibility? Is business logic leaking into handlers?
 - **Consistency of error handling**: Missing conversions to the common error type, inappropriate use of `unwrap()`, and information content of error messages
@@ -107,7 +107,7 @@ Refer to `.claude-plugin/rules/design-principles.md`. Pay particular attention t
 
 ### C. Security (OWASP Top 10 + Authentication/Authorization)
 
-Refer to `.claude-plugin/rules/security.md`. Check the following against the diff:
+Refer to `${CLAUDE_PLUGIN_ROOT}/rules/security.md`. Check the following against the diff:
 
 | # | Aspect | What to check |
 |---|--------|--------------|
@@ -171,7 +171,7 @@ For UI component tasks, additionally check the following:
 
 ### F. Design Conformance
 
-Refer to `.claude-plugin/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
+Refer to `${CLAUDE_PLUGIN_ROOT}/rules/design-conformance.md`. Read the approved `design.md` and compare with the implementation:
 
 - **DB Schema** (DC1): Does the migration's table definition (column names, types, constraints, indexes) match design.md?
 - **API** (DC2): Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
