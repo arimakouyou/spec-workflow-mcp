@@ -258,13 +258,6 @@ npm run dev:dashboard
 npm run build:dashboard
 ```
 
-### VSCode Extension Development
-```bash
-cd vscode-extension
-npm install
-npm run compile
-# Press F5 in VSCode to launch extension host
-```
 
 ## 📚 Documentation Standards
 

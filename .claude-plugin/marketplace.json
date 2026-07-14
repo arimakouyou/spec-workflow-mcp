@@ -4,13 +4,13 @@
     "name": "arimakouyou"
   },
   "metadata": {
-    "description": "Spec Workflow MCP provides structured spec-driven development with a sequential workflow (Requirements → Design → Tasks), real-time web dashboard, and VSCode extension support. Includes human approval gates at each stage and project steering guidance."
+    "description": "Spec Workflow MCP provides structured spec-driven development with a sequential workflow (Requirements → Design → Tasks) and real-time web dashboard. Includes human approval gates at each stage and project steering guidance."
   },
   "plugins": [
     {
       "name": "spec-workflow-mcp",
       "version": "2.2.30",
-      "description": "MCP server for structured spec-driven development with real-time web dashboard and VSCode extension.",
+      "description": "MCP server for structured spec-driven development with real-time web dashboard.",
       "author": {
         "name": "arimakouyou"
       },

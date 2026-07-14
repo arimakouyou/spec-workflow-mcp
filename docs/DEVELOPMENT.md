@@ -109,9 +109,6 @@ spec-workflow-mcp/
 │   ├── index.html         # Dashboard UI
 │   ├── styles.css         # Dashboard styles
 │   └── script.js          # Dashboard JavaScript
-├── vscode-extension/      # VSCode extension
-│   ├── src/               # Extension source
-│   └── package.json       # Extension manifest
 ├── tests/                 # Test files
 ├── docs/                  # Documentation
 └── package.json           # Project configuration
@@ -438,20 +435,6 @@ docs: update configuration guide
    npm publish
    ```
 
-### VSCode Extension
-
-1. **Update extension version** in `vscode-extension/package.json`
-
-2. **Build extension**:
-   ```bash
-   cd vscode-extension
-   npm run package
-   ```
-
-3. **Publish to marketplace**:
-   ```bash
-   vsce publish
-   ```
 
 ## Performance Optimization
 
@@ -518,7 +501,7 @@ if (safePath.includes('..')) {
 - [MCP SDK Documentation](https://github.com/anthropics/mcp-sdk)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Node.js Best Practices](https://github.com/goldbergyoni/nodebestpractices)
-- [VSCode Extension API](https://code.visualstudio.com/api)
+
 
 ## Related Documentation
 

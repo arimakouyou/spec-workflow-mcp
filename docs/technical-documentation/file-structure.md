@@ -110,42 +110,7 @@ src/
 └── types.ts                        # TypeScript type definitions
 ```
 
-### VS Code Extension Structure  
-```
-vscode-extension/
-├── src/
-│   ├── extension.ts                 # Extension entry point
-│   ├── extension/
-│   │   ├── providers/               # VS Code providers
-│   │   │   └── SidebarProvider.ts   # Sidebar webview provider
-│   │   ├── services/                # Business logic services
-│   │   │   ├── ApprovalCommandService.ts      # Approval commands
-│   │   │   ├── ApprovalEditorService.ts       # Approval editor integration
-│   │   │   ├── ArchiveService.ts              # Archive functionality
-│   │   │   ├── CommentModalService.ts         # Comment modal handling
-│   │   │   ├── FileWatcher.ts                 # File system watching
-│   │   │   └── SpecWorkflowService.ts         # Main workflow service
-│   │   ├── types.ts                 # Extension type definitions
-│   │   └── utils/                   # Utility functions
-│   │       ├── colorUtils.ts        # Color manipulation
-│   │       ├── logger.ts            # Logging functionality
-│   │       └── taskParser.ts        # Task parsing for extension
-│   └── webview/                     # Webview components (React)
-│       ├── App.tsx                  # Main webview application
-│       ├── components/              # Reusable UI components
-│       ├── hooks/                   # React hooks
-│       ├── lib/                     # Utility libraries
-│       └── main.tsx                 # Webview entry point
-├── webview-assets/                  # Static webview assets
-│   └── sounds/                      # Audio notification files
-│       ├── approval-pending.wav     # Approval request sound
-│       └── task-completed.wav       # Task completion sound
-├── icons/                          # Extension icons
-│   ├── activity-bar-icon.svg       # Activity bar icon
-│   └── spec-workflow.svg           # General extension icon
-├── package.json                    # Extension manifest & dependencies
-└── README.md                       # Extension documentation
-```
+
 
 ## 📋 File Naming Conventions
 

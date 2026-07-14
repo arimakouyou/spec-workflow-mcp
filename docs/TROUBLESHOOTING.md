@@ -234,7 +234,6 @@ netstat -an | findstr :3000  # Windows
 1. Check browser console for JavaScript errors
 2. Verify you're on the correct spec page
 3. Ensure document has pending approval status
-4. Try using VSCode extension instead (if available)
 
 ## File System Issues
 
@@ -273,36 +272,6 @@ netstat -an | findstr :3000  # Windows
    ```
 3. Run from a directory you own (not system directories)
 
-## VSCode Extension Issues
-
-### Extension Not Loading
-
-**Error**: Spec Workflow icon not appearing in Activity Bar
-
-**Solutions**:
-1. Verify extension is installed:
-   - Open Extensions (Ctrl+Shift+X)
-   - Search "Spec Workflow MCP"
-   - Check if installed and enabled
-2. Reload VSCode window:
-   - Ctrl+Shift+P → "Developer: Reload Window"
-3. Check extension output:
-   - View → Output → Select "Spec Workflow" from dropdown
-4. Ensure project has `.spec-workflow` directory
-
-### Extension Commands Not Working
-
-**Error**: Commands fail or show errors
-
-**Solutions**:
-1. Open project folder that contains `.spec-workflow`
-2. Check VSCode is using correct workspace
-3. View extension logs for specific errors
-4. Try reinstalling extension:
-   ```bash
-   code --uninstall-extension arimakouyou.spec-workflow-mcp
-   code --install-extension arimakouyou.spec-workflow-mcp
-   ```
 
 ## Configuration Issues
 
@@ -378,11 +347,7 @@ netstat -an | findstr :3000  # Windows
 
 **Solutions**:
 1. Restart services periodically
-2. Limit dashboard refresh rate:
-   ```json
-   // VSCode settings
-   "specWorkflow.tasks.refreshInterval": 10000
-   ```
+2. Enable dashboard-only mode or refresh the dashboard manually if needed.
 3. Archive completed specs
 4. Clear browser cache for dashboard
 

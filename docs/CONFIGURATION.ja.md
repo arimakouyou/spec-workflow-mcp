@@ -186,7 +186,7 @@ dashboardOnly = false
 # オプション：en, ja, zh, es, pt, de, fr, ru, it, ko, ar
 lang = "en"
 
-# サウンド通知（VSCode拡張機能のみ）
+# サウンド通知
 [notifications]
 enabled = true
 volume = 0.5
@@ -379,17 +379,6 @@ npx -y @arimakouyou/spec-workflow-mcp@latest \
   /path/to/project-a
 ```
 
-## VSCode拡張機能の設定
-
-VSCode拡張機能には独自の設定があります：
-
-1. VSCode設定を開く（Cmd/Ctrl + ,）
-2. 「Spec Workflow」を検索
-3. 設定：
-   - 言語設定
-   - サウンド通知
-   - アーカイブの表示
-   - 自動更新間隔
 
 ## 設定のトラブルシューティング
 
@@ -436,5 +425,5 @@ VSCode拡張機能には独自の設定があります：
 ## 関連ドキュメント
 
 - [ユーザーガイド](USER-GUIDE.ja.md) - 設定されたサーバーの使用
-- [インターフェースガイド](INTERFACES.ja.md) - ダッシュボードと拡張機能の設定
+- [インターフェースガイド](INTERFACES.ja.md) - ダッシュボードの設定
 - [トラブルシューティング](TROUBLESHOOTING.ja.md) - 一般的な設定問題

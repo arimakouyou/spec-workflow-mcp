@@ -130,40 +130,7 @@ function validateI18nFiles() {
     validateInterpolationConsistency(frontendTranslations, 'Frontend', errors);
   }
   
-  // Check VSCode extension locale files
-  const vscodeLocalesDir = path.resolve(__dirname, '../vscode-extension/src/webview/locales');
-  const vscodeFiles = supportedLanguages.map(lang => `${lang}.json`);
-  const vscodeTranslations = {};
-  
-  console.log(`📁 Checking VSCode extension locales in: ${vscodeLocalesDir}`);
-  
-  if (!existsSync(vscodeLocalesDir)) {
-    warnings.push(`VSCode extension locales directory not found: ${vscodeLocalesDir}`);
-  } else {
-    for (const file of vscodeFiles) {
-      const filePath = path.join(vscodeLocalesDir, file);
-      
-      if (!existsSync(filePath)) {
-        warnings.push(`VSCode extension locale file missing: ${file}`);
-      } else {
-        try {
-          const content = readFileSync(filePath, 'utf8');
-          const parsed = JSON.parse(content);
-          const lang = file.replace('.json', '');
-          vscodeTranslations[lang] = parsed;
-          console.log(`✅ VSCode ${file}: Valid JSON`);
-        } catch (parseError) {
-          errors.push(`VSCode ${file}: Invalid JSON - ${parseError.message}`);
-        }
-      }
-    }
-  }
-  
-  // Validate VSCode interpolation consistency
-  if (Object.keys(vscodeTranslations).length > 1) {
-    console.log('🔍 Validating VSCode interpolation variables...');
-    validateInterpolationConsistency(vscodeTranslations, 'VSCode', errors);
-  }
+
   
   // Report results
   console.log('\n📊 Validation Results:');

@@ -234,7 +234,6 @@ netstat -an | findstr :3000  # Windows
 1. ブラウザコンソールでJavaScriptエラーを確認
 2. 正しい仕様ページにいるか確認
 3. ドキュメントが承認保留ステータスになっているか確認
-4. VSCode拡張機能を使用してみる（利用可能な場合）
 
 ## ファイルシステムの問題
 
@@ -273,36 +272,6 @@ netstat -an | findstr :3000  # Windows
    ```
 3. 所有するディレクトリから実行（システムディレクトリではない）
 
-## VSCode拡張機能の問題
-
-### 拡張機能が読み込まれない
-
-**エラー**: アクティビティバーにSpec Workflowアイコンが表示されない
-
-**解決策**:
-1. 拡張機能がインストールされているか確認:
-   - 拡張機能を開く（Ctrl+Shift+X）
-   - "Spec Workflow MCP"を検索
-   - インストールされて有効になっているか確認
-2. VSCodeウィンドウをリロード:
-   - Ctrl+Shift+P → "Developer: Reload Window"
-3. 拡張機能の出力を確認:
-   - View → Output → ドロップダウンから"Spec Workflow"を選択
-4. プロジェクトに`.spec-workflow`ディレクトリがあることを確認
-
-### 拡張機能のコマンドが機能しない
-
-**エラー**: コマンドが失敗またはエラーを表示
-
-**解決策**:
-1. `.spec-workflow`を含むプロジェクトフォルダを開く
-2. VSCodeが正しいワークスペースを使用しているか確認
-3. 特定のエラーについて拡張機能ログを確認
-4. 拡張機能を再インストールしてみる:
-   ```bash
-   code --uninstall-extension arimakouyou.spec-workflow-mcp
-   code --install-extension arimakouyou.spec-workflow-mcp
-   ```
 
 ## 設定の問題
 
@@ -378,11 +347,7 @@ netstat -an | findstr :3000  # Windows
 
 **解決策**:
 1. サービスを定期的に再起動
-2. ダッシュボードのリフレッシュレートを制限:
-   ```json
-   // VSCode設定
-   "specWorkflow.tasks.refreshInterval": 10000
-   ```
+2. 必要に応じてダッシュボードのみモードを有効化するか、ダッシュボードをリフレッシュします。
 3. 完了した仕様をアーカイブ
 4. ダッシュボードのブラウザキャッシュをクリア
 

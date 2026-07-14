@@ -1,9 +1,8 @@
 # Spec Workflow MCP
 
 [![npm version](https://img.shields.io/npm/v/@arimakouyou/spec-workflow-mcp)](https://www.npmjs.com/package/@arimakouyou/spec-workflow-mcp)
-[![VSCode Extension](https://vsmarketplacebadges.dev/version-short/arimakouyou.spec-workflow-mcp.svg)](https://marketplace.visualstudio.com/items?itemName=arimakouyou.spec-workflow-mcp)
 
-A Model Context Protocol (MCP) server for structured spec-driven development with real-time dashboard and VSCode extension.
+A Model Context Protocol (MCP) server for structured spec-driven development with real-time dashboard.
 
 ## ☕ Support This Project
 
@@ -30,7 +29,6 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 - **Structured Development Workflow** - Sequential spec creation (Request Spec → Requirements → Design → Test Design → Tasks)
 - **Real-Time Web Dashboard** - Monitor specs, tasks, and progress with live updates
 - **Rich Markdown Preview** - Render Mermaid diagrams as SVG in dashboard document and review previews
-- **VSCode Extension** - Integrated sidebar dashboard for VSCode users
 - **Approval Workflow** - Complete approval process with revisions
 - **Task Progress Tracking** - Visual progress bars and detailed status
 - **Implementation Logs** - Searchable logs of all task implementations with code statistics
@@ -79,7 +77,7 @@ Add to your MCP configuration (see client-specific setup below):
 
 ### Step 2: Choose your interface
 
-**Option A: Web Dashboard** (Required for CLI users)
+### Step 2: Choose Interface (Web Dashboard)
 Start the dashboard (runs on port 5000 by default):
 ```bash
 npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
@@ -88,10 +86,6 @@ npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
 The dashboard will be accessible at: http://localhost:5000
 
 > **Note:** Only one dashboard instance is needed. All your projects will connect to the same dashboard.
-
-**Option B: VSCode Extension** (Recommended for VSCode users)
-
-Install [Spec Workflow MCP Extension](https://marketplace.visualstudio.com/items?itemName=arimakouyou.spec-workflow-mcp) from the VSCode marketplace.
 
 ## 📝 How to Use
 
@@ -340,7 +334,7 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workfl
 - [Configuration Guide](docs/CONFIGURATION.md) - Command-line options, config files
 - [User Guide](docs/USER-GUIDE.md) - Comprehensive usage examples
 - [Workflow Process](docs/WORKFLOW.md) - Development workflow and best practices
-- [Interfaces Guide](docs/INTERFACES.md) - Dashboard and VSCode extension details
+- [Interfaces Guide](docs/INTERFACES.md) - Dashboard details
 - [Prompting Guide](docs/PROMPTING-GUIDE.md) - Advanced prompting examples
 - [Tools Reference](docs/TOOLS-REFERENCE.md) - Complete tools documentation
 - [Development](docs/DEVELOPMENT.md) - Contributing and development setup

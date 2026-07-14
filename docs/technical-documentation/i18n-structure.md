@@ -35,22 +35,10 @@ The project supports 11 languages:
   }
   ```
 
-### 2. VSCode Extension Webview (`vscode-extension/src/webview/locales/`)
-- **Purpose**: Translations for the VSCode extension's webview UI
-- **Structure**: Starts with keys like `header`, `tabs`, `overview`
-- **Usage**: Used in the VSCode extension's React-based webview
-- **Example keys**:
-  ```json
-  {
-    "header": { "title": "...", "support": "..." },
-    "tabs": { "overview": "...", "steering": "..." },
-    "overview": { ... }
-  }
-  ```
 
 ### 3. Dashboard Frontend (`src/dashboard_frontend/src/locales/`)
 - **Purpose**: Translations for the web dashboard UI
-- **Structure**: Similar to VSCode but with dashboard-specific sections
+- **Structure**: Sections for dashboard widgets, settings, navigation
 - **Usage**: Used in the standalone web dashboard
 - **Example keys**:
   ```json
@@ -61,15 +49,12 @@ The project supports 11 languages:
   }
   ```
 
-## Why Different Structures?
-
 Each component serves a different purpose and has unique translation needs:
 
 1. **Backend MCP Server**: Focuses on tool descriptions, error messages, and workflow guidance
-2. **VSCode Extension**: Provides a simplified project management interface within VSCode
-3. **Dashboard Frontend**: Offers a comprehensive web-based project dashboard
+2. **Dashboard Frontend**: Offers a comprehensive web-based project dashboard
 
-The different structures are **intentional and correct** - they are not inconsistencies but rather tailored translation sets for each component's specific requirements.
+The different structures are **intentional and correct** - they are tailored translation sets for each component's specific requirements.
 
 ## Validation
 
@@ -92,17 +77,14 @@ To add a new language:
    - `src/core/i18n.ts`
    - `scripts/validate-i18n.js`
 
-2. Create translation files in all three locations:
+2. Create translation files in both locations:
    - `src/locales/{lang}.json`
-   - `vscode-extension/src/webview/locales/{lang}.json`
    - `src/dashboard_frontend/src/locales/{lang}.json`
 
-3. Update language selectors:
-   - VSCode: `vscode-extension/src/webview/App.tsx`
+3. Update language selector:
    - Dashboard: `src/dashboard_frontend/src/components/LanguageSelector.tsx`
 
-4. Import and register translations in i18n configurations:
-   - `vscode-extension/src/webview/i18n.ts`
+4. Import and register translations in i18n configuration:
    - `src/dashboard_frontend/src/i18n.ts`
 
 ## Bundle Size Considerations
