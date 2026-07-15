@@ -23,11 +23,11 @@ async function createConfig() {
     server: {
       proxy: {
         '/api': {
-          target: `http://localhost:${dashboardPort}`,
+          target: `http://127.0.0.1:${dashboardPort}`,
           changeOrigin: true,
         },
         '/ws': {
-          target: `ws://localhost:${dashboardPort}`,
+          target: `ws://127.0.0.1:${dashboardPort}`,
           ws: true,
         },
       },
