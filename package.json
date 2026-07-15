@@ -1,6 +1,6 @@
 {
   "name": "@arimakouyou/spec-workflow-mcp",
-  "version": "2.2.29",
+  "version": "2.2.30",
   "description": "MCP server for spec-driven development workflow with real-time web dashboard",
   "main": "dist/index.js",
   "type": "module",
