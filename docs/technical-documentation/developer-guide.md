@@ -23,10 +23,6 @@ cd spec-workflow-mcp
 # Install dependencies
 npm install
 
-# Install VS Code extension dependencies (optional)
-cd vscode-extension
-npm install
-cd ..
 
 # Build everything
 npm run build
@@ -222,64 +218,6 @@ export class MultiProjectDashboardServer {
 
   private async getMyData(project: Project) {
     // Implementation
-  }
-}
-```
-
-### Working with VS Code Extension
-
-#### Development Setup
-```bash
-cd vscode-extension
-npm install
-
-# Open in VS Code
-code .
-
-# Press F5 to launch Extension Development Host
-```
-
-#### Extension Structure
-```
-vscode-extension/
-├── src/
-│   ├── extension.ts           # Main extension entry
-│   ├── extension/
-│   │   ├── providers/         # View providers
-│   │   ├── services/          # Business logic  
-│   │   └── utils/            # Helper functions
-│   └── webview/              # Webview components
-├── package.json              # Extension manifest
-└── README.md                # Extension documentation
-```
-
-#### Adding New Command
-```typescript
-// src/extension.ts
-export function activate(context: vscode.ExtensionContext) {
-  const myCommand = vscode.commands.registerCommand(
-    'spec-workflow.myCommand',
-    async () => {
-      // Command implementation
-      vscode.window.showInformationMessage('My command executed!');
-    }
-  );
-
-  context.subscriptions.push(myCommand);
-}
-```
-
-```json
-// package.json
-{
-  "contributes": {
-    "commands": [
-      {
-        "command": "spec-workflow.myCommand",
-        "title": "My Command",
-        "category": "Spec Workflow"
-      }
-    ]
   }
 }
 ```
@@ -547,19 +485,7 @@ npm run build
 npm publish
 ```
 
-### VS Code Extension Publishing
-```bash
-cd vscode-extension
 
-# Install VSCE
-npm install -g @vscode/vsce
-
-# Package extension
-vsce package
-
-# Publish to marketplace
-vsce publish
-```
 
 ---
 

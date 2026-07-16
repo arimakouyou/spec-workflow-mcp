@@ -38,8 +38,6 @@ docs
 .env
 .env.*
 
-# VSCode extension
-vscode-extension
 
 # Temporary files
 tmp

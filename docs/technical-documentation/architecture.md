@@ -10,7 +10,6 @@
 graph TB
     subgraph "Client Layer"
         AI[AI Assistant]
-        VS[VSCode Extension] 
         WEB[Web Dashboard]
     end
     

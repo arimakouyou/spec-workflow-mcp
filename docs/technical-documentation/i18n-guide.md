@@ -1,6 +1,6 @@
 # Internationalization (i18n) Guide
 
-This project implements comprehensive internationalization support across all components: React frontend, VSCode extension, and backend MCP tools.
+This project implements comprehensive internationalization support across the React frontend and backend MCP tools.
 
 ## Architecture Overview
 
@@ -9,10 +9,6 @@ This project implements comprehensive internationalization support across all co
 - **Location**: `src/dashboard_frontend/src/i18n.ts`
 - **Translation Files**: `src/dashboard_frontend/src/locales/`
 
-### VSCode Extension  
-- **Framework**: `vscode-nls` compatibility with `react-i18next` for webviews
-- **Location**: `vscode-extension/src/webview/i18n.ts`
-- **Translation Files**: `vscode-extension/src/webview/locales/`
 
 ### Backend (MCP Tools)
 - **Framework**: Custom lightweight solution with async loading
@@ -61,19 +57,7 @@ function MyComponent() {
 }
 ```
 
-### VSCode Extension Webview
 
-```typescript
-import { useTranslation } from 'react-i18next';
-
-function WebviewComponent() {
-  const { t } = useTranslation();
-  
-  return (
-    <button>{t('actions.approve')}</button>
-  );
-}
-```
 
 ## Translation File Structure
 
@@ -130,7 +114,6 @@ t('welcome.message', {
 
 1. **Backend**: Add new JSON file in `src/locales/`
 2. **Frontend**: Add new JSON file in `src/dashboard_frontend/src/locales/`
-3. **VSCode Extension**: Add new JSON files in `vscode-extension/src/webview/locales/`
 4. **Update validation script**: Add language code to `scripts/validate-i18n.js`
 
 ## Error Handling
@@ -270,10 +253,6 @@ describe('translate function', () => {
 - Check localStorage for saved preferences
 - Ensure language selector is working
 
-**VSCode extension translations missing**
-- Check that translation files are included in extension bundle
-- Verify `package.json` contributes configuration
-- Test in VSCode extension development host
 
 ### Critical Issue: "ReferenceError: t is not defined"
 
@@ -291,9 +270,7 @@ Components using `t('translation.key')` without having the `useTranslation` hook
 #### Fixed Components (v0.0.30+)
 The following components were affected and have been fixed:
 
-**VSCode Extension:**
-- `CommentModal.tsx` - Comment editing interface
-- `comment-modal.tsx` - Modal wrapper component  
+
 
 **Dashboard Frontend:**
 - `VolumeControl.tsx` - Notification volume controls

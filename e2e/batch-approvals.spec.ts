@@ -1,15 +1,35 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Batch Approvals Feature', () => {
+  let projectId: string;
+
+  test.beforeAll(async ({ request }) => {
+    // Register the current project manually in the dashboard registry
+    const projectPath = process.cwd();
+    const response = await request.post('/api/projects/add', {
+      data: { projectPath }
+    });
+    expect(response.ok()).toBeTruthy();
+    const result = await response.json();
+    projectId = result.projectId;
+  });
+
   test.beforeEach(async ({ page }) => {
-    // Navigate to the approvals page
-    await page.goto('/');
+    // Navigate to the approvals page directly
+    await page.goto('/#/approvals');
 
     // Wait for the app to load
     await page.waitForLoadState('networkidle');
 
-    // Navigate to Approvals tab
-    await page.click('button:has-text("Approvals"), [data-testid="approvals-tab"]');
+    // Select the registered project from the dropdown if not already selected
+    const toggle = page.locator('[data-testid="project-dropdown-toggle"]');
+    const selectedProjectName = await toggle.textContent();
+    if (!selectedProjectName?.includes('spec-workflow-mcp')) {
+      await toggle.click();
+      await page.click(`[data-testid="project-dropdown-item-${projectId}"]`);
+    }
+
+    // Wait for approvals list to load
     await page.waitForTimeout(1000);
   });
 
@@ -82,8 +102,8 @@ test.describe('Batch Approvals Feature', () => {
     await page.waitForTimeout(300);
 
     // Verify batch action buttons are visible
-    const approveButton = page.locator('button:has-text("Approve")');
-    const rejectButton = page.locator('button:has-text("Reject")');
+    const approveButton = page.locator('button:has-text("Approve Selected")');
+    const rejectButton = page.locator('button:has-text("Reject Selected")');
 
     await expect(approveButton).toBeVisible();
     await expect(rejectButton).toBeVisible();
@@ -108,7 +128,7 @@ test.describe('Batch Approvals Feature', () => {
     await page.waitForTimeout(300);
 
     // Click reject button
-    await page.click('button:has-text("Reject")');
+    await page.click('button:has-text("Reject Selected")');
     await page.waitForTimeout(500);
 
     // Verify feedback modal appears
@@ -154,7 +174,7 @@ test.describe('Batch Approvals Feature', () => {
     await page.waitForTimeout(300);
 
     // Click approve button
-    await page.click('button:has-text("Approve")');
+    await page.click('button:has-text("Approve Selected")');
     await page.waitForTimeout(1000);
 
     // Look for undo toast or success notification

@@ -276,7 +276,7 @@ dashboardOnly = false
 # Options: en, ja, zh, es, pt, de, fr, ru, it, ko, ar
 lang = "en"
 
-# Sound notifications (VSCode extension only)
+# Sound notifications
 [notifications]
 enabled = true
 volume = 0.5
@@ -469,17 +469,6 @@ npx -y @arimakouyou/spec-workflow-mcp@latest \
   /path/to/project-a
 ```
 
-## VSCode Extension Configuration
-
-The VSCode extension has its own settings:
-
-1. Open VSCode Settings (Cmd/Ctrl + ,)
-2. Search for "Spec Workflow"
-3. Configure:
-   - Language preference
-   - Sound notifications
-   - Archive visibility
-   - Auto-refresh interval
 
 ## Troubleshooting Configuration
 
@@ -526,5 +515,5 @@ The VSCode extension has its own settings:
 ## Related Documentation
 
 - [User Guide](USER-GUIDE.md) - Using the configured server
-- [Interfaces Guide](INTERFACES.md) - Dashboard and extension settings
+- [Interfaces Guide](INTERFACES.md) - Dashboard settings
 - [Troubleshooting](TROUBLESHOOTING.md) - Common configuration issues

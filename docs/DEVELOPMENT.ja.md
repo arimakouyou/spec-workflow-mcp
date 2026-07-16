@@ -109,9 +109,6 @@ spec-workflow-mcp/
 │   ├── index.html         # ダッシュボードUI
 │   ├── styles.css         # ダッシュボードスタイル
 │   └── script.js          # ダッシュボードJavaScript
-├── vscode-extension/      # VSCode拡張機能
-│   ├── src/               # 拡張機能ソース
-│   └── package.json       # 拡張機能マニフェスト
 ├── tests/                 # テストファイル
 ├── docs/                  # ドキュメント
 └── package.json           # プロジェクト設定
@@ -438,20 +435,6 @@ docs: update configuration guide
    npm publish
    ```
 
-### VSCode拡張機能
-
-1. **拡張機能のバージョンを更新**（`vscode-extension/package.json`）
-
-2. **拡張機能をビルド**：
-   ```bash
-   cd vscode-extension
-   npm run package
-   ```
-
-3. **マーケットプレイスに公開**：
-   ```bash
-   vsce publish
-   ```
 
 ## パフォーマンス最適化
 
@@ -518,7 +501,7 @@ if (safePath.includes('..')) {
 - [MCP SDKドキュメント](https://github.com/anthropics/mcp-sdk)
 - [TypeScriptハンドブック](https://www.typescriptlang.org/docs/)
 - [Node.jsベストプラクティス](https://github.com/goldbergyoni/nodebestpractices)
-- [VSCode拡張機能API](https://code.visualstudio.com/api)
+
 
 ## 関連ドキュメント
 

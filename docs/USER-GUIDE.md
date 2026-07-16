@@ -96,7 +96,7 @@ Provides:
 
 ### Viewing Spec Documents
 
-Use the dashboard or VSCode extension to:
+Use the dashboard to:
 - Read requirements documents
 - Review design documents
 - Review test design documents
@@ -246,8 +246,7 @@ Manage completed specs:
 Change interface language:
 
 1. **Dashboard**: Settings → Language
-2. **VSCode Extension**: Extension Settings → Language
-3. **Config file**: `lang = "ja"` (or other language code)
+2. **Config file**: `lang = "ja"` (or other language code)
 
 ## Best Practices
 

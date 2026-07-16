@@ -13,10 +13,6 @@ cd spec-workflow-mcp
 # Install dependencies
 npm install
 
-# Install VS Code extension dependencies (optional)
-cd vscode-extension
-npm install
-cd ..
 
 # Build everything to verify setup
 npm run build
@@ -349,9 +345,6 @@ npm run dev
 npm run dev:dashboard
 # Test all pages and features
 
-# 3. VS Code extension (if modified)
-cd vscode-extension
-# Press F5 in VS Code to test
 
 # 4. Build process
 npm run clean

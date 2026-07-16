@@ -1,9 +1,8 @@
 # Spec Workflow MCP
 
 [![npm version](https://img.shields.io/npm/v/@arimakouyou/spec-workflow-mcp)](https://www.npmjs.com/package/@arimakouyou/spec-workflow-mcp)
-[![VSCode Extension](https://vsmarketplacebadges.dev/version-short/arimakouyou.spec-workflow-mcp.svg)](https://marketplace.visualstudio.com/items?itemName=arimakouyou.spec-workflow-mcp)
 
-リアルタイムダッシュボードとVSCode拡張機能を備えた、構造化された仕様駆動開発のためのModel Context Protocol (MCP) サーバーです。
+リアルタイムダッシュボードを備えた、構造化された仕様駆動開発のためのModel Context Protocol (MCP) サーバーです。
 
 ## ☕ このプロジェクトを支援する
 
@@ -31,7 +30,6 @@
 
 - **構造化された開発ワークフロー** - 順次仕様作成（要求仕様 → 要件 → 設計 → テスト設計 → タスク）
 - **リアルタイムWebダッシュボード** - ライブ更新で仕様、タスク、進捗を監視
-- **VSCode拡張機能** - VSCodeユーザー向けの統合サイドバーダッシュボード
 - **承認ワークフロー** - 改訂を含む完全な承認プロセス
 - **タスク進捗追跡** - ビジュアル進捗バーと詳細なステータス
 - **実装ログ** - コード統計を含むすべてのタスク実装の検索可能なログ
@@ -79,7 +77,7 @@ MCP設定に追加します（以下のクライアント固有のセットア�
 
 ### ステップ2: インターフェースを選択する
 
-**オプションA: Webダッシュボード**（CLIユーザーに必須）
+### ステップ2: インターフェース（Webダッシュボード）
 ダッシュボードを起動します（デフォルトポート5000で実行）：
 ```bash
 npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
@@ -88,10 +86,6 @@ npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
 ダッシュボードは以下のURLでアクセス可能です：http://localhost:5000
 
 > **注意：** ダッシュボードインスタンスは1つだけ必要です。すべてのプロジェクトが同じダッシュボードに接続します。
-
-**オプションB: VSCode拡張機能**（VSCodeユーザーに推奨）
-
-VSCodeマーケットプレイスから[Spec Workflow MCP Extension](https://marketplace.visualstudio.com/items?itemName=arimakouyou.spec-workflow-mcp)をインストールします。
 
 ## 📝 使い方
 
@@ -285,7 +279,7 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workfl
 - [設定ガイド](docs/CONFIGURATION.ja.md) - コマンドラインオプション、設定ファイル
 - [ユーザーガイド](docs/USER-GUIDE.ja.md) - 包括的な使用例
 - [ワークフロープロセス](docs/WORKFLOW.ja.md) - 開発ワークフローとベストプラクティス
-- [インターフェースガイド](docs/INTERFACES.ja.md) - ダッシュボードとVSCode拡張機能の詳細
+- [インターフェースガイド](docs/INTERFACES.ja.md) - ダッシュボードの詳細
 - [プロンプティングガイド](docs/PROMPTING-GUIDE.ja.md) - 高度なプロンプティング例
 - [ツールリファレンス](docs/TOOLS-REFERENCE.ja.md) - 完全なツールドキュメント
 - [開発](docs/DEVELOPMENT.ja.md) - 貢献と開発セットアップ
