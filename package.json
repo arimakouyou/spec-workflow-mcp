@@ -67,7 +67,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@heroicons/react": "^2.2.0",
-    "@mdxeditor/editor": "^3.50.0",
+    "@mdxeditor/editor": "^4.0.4",
     "@playwright/test": "^1.58.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.13",
@@ -76,7 +76,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@types/ws": "^8.5.13",
-    "@vitejs/plugin-react": "^4.3.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.0.15",
     "clsx": "^2.1.1",
     "highlight.js": "^11.9.0",
@@ -94,7 +94,7 @@
     "tailwindcss": "^4.1.13",
     "tsx": "^4.7.0",
     "typescript": "^5.7.2",
-    "vite": "^7.2.7",
+    "vite": "^8.1.4",
     "vitest": "^4.0.15"
   }
 }
