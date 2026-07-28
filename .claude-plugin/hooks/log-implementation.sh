@@ -11,7 +11,7 @@
 #   - Hook: 安全網。最低限のスケルトン（summary=(auto-logged)、artifact 空）のみ
 #
 # 動作:
-#   - 実装セッション中（.implement-session.json 存在）のみ動作
+#   - 実装セッションがアクティブな間（.implement-session.lock 存在）のみ動作
 #   - tasks.md から [x] にマークされた current task を検出
 #   - .spec-workflow/specs/{spec_id}/task-logs/{taskId}.log.md (task-log-format.md TL2 準拠) を対象に append
 #   - 既に ## Summary section があれば idempotent (no-op)
@@ -28,9 +28,13 @@ fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 SESSION_FILE="${PROJECT_DIR}/.implement-session.json"
+LOCKFILE="${PROJECT_DIR}/.implement-session.lock"
 
-# 実装セッション中でなければ何もしない（dormant）
-if [ ! -f "$SESSION_FILE" ]; then
+# 実装セッションがアクティブでなければ何もしない（未開始 / end 済みなら dormant）。
+# `session-manage.sh end` は lockfile のみ削除しセッション本体を参考情報として残すため、
+# アクティブ判定には lockfile を使う。セッション終了後に task log を書き足さないための
+# ガードでもある（issue #79）
+if [ ! -f "$LOCKFILE" ] || [ ! -f "$SESSION_FILE" ]; then
   exit 0
 fi
 

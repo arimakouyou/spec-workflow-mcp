@@ -10,8 +10,8 @@
 #   - 新規なら spec.md 内に該当パスの言及があるかを検査
 #   - 無ければ warning を context に返す（ブロックはしない）
 #
-# トリガ: .implement-session.json が存在する場合のみ動作（実装セッション中のみ）。
-# Orchestrator が同ファイルを書き出すまでは dormant 状態で no-op。
+# トリガ: 実装セッションがアクティブな間（.implement-session.lock が存在する間）のみ動作。
+# セッション未開始、および `session-manage.sh end` 後は dormant 状態で no-op。
 
 set -euo pipefail
 
@@ -21,9 +21,12 @@ fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 SESSION_FILE="${PROJECT_DIR}/.implement-session.json"
+LOCKFILE="${PROJECT_DIR}/.implement-session.lock"
 
-# 実装セッション中のみ動作（現状 Orchestrator 未実装のため dormant）
-if [ ! -f "$SESSION_FILE" ]; then
+# 実装セッションがアクティブな間のみ動作（未開始 / end 済みなら dormant）。
+# `session-manage.sh end` は lockfile のみ削除しセッション本体を参考情報として残すため、
+# アクティブ判定には lockfile を使う（issue #79）
+if [ ! -f "$LOCKFILE" ] || [ ! -f "$SESSION_FILE" ]; then
   exit 0
 fi
 

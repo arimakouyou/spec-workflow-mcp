@@ -90,7 +90,7 @@ In the subsequent Task Cycle:
 
 - Call `session-manage.sh start-task {task-id}` at the start of each task
 - Call `session-manage.sh complete-task {task-id} {commit-hash}` after marking each task complete (after the `[x]` mark)
-- Call `session-manage.sh end` to release the lockfile when all waves are done or on interruption
+- Call `session-manage.sh end` to release the lockfile when all waves are done or on interruption. The hooks above key their dormancy off the lockfile, so they all go dormant at this point (the session file itself is preserved as a resume hint)
 
 > **Note**: The session file is not the "source of truth". It may be lost before update due to rate limits etc., so the hook side is designed with the premise that the actual git state takes precedence. Best-effort updates are sufficient.
 
