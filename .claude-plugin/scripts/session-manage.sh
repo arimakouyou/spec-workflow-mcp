@@ -17,7 +17,8 @@
 #   mark-failure <category> [detail]     — last_failure_* を更新
 #   clear-failure                        — last_failure_* をクリア
 #   end                                  — lockfile 削除 + セッションを完了マーク（本体は保持）
-#                                          hook は全て dormant に戻る
+#                                          lockfile 判定の hook は dormant に戻る
+#                                          （resume-hint は除く。上記の注記を参照）
 #   archive                              — セッション本体を archived に退避（spec-archive 時）
 #
 # 特徴:
