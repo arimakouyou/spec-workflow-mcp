@@ -57,14 +57,14 @@ function initRepo(name: string, files: Record<string, string>): string {
   return dir;
 }
 
-/** hook を「git commit の PreToolUse」として実行し exit code を返す */
-function runHook(repoDir: string, binDir?: string): number {
+/** hook を PreToolUse Bash として実行し exit code を返す */
+function runHook(repoDir: string, binDir?: string, command = 'git commit -m "x"'): number {
   const env = { ...process.env };
   if (binDir) env.PATH = `${binDir}:${process.env.PATH}`;
   const result = spawnSync('bash', [HOOK], {
     cwd: repoDir,
     env,
-    input: JSON.stringify({ tool_input: { command: 'git commit -m "x"' } }),
+    input: JSON.stringify({ tool_input: { command } }),
     encoding: 'utf8',
   });
   return result.status ?? -1;
@@ -158,5 +158,28 @@ describe('security-audit-guard.sh hook', () => {
   it('依存関係の変更が無いコミットは audit せず素通しする', () => {
     const repo = initRepo('no-dep-change', { 'README.md': '# hello' });
     expect(runHook(repo)).toBe(0);
+  });
+
+  // `git commit` の判定は POSIX ERE で書く必要がある。`\s` は GNU 拡張で、
+  // 非対応環境では文字 `s` として解釈され判定が常に外れる（ガードが丸ごと素通しする）
+  describe('git commit の判定', () => {
+    function vulnerableRepo(name: string): { repo: string; bin: string } {
+      const repo = initRepo(name, { 'packages.lock.json': '{}', 'app.csproj': '<Project/>' });
+      const out = join(repo, 'dotnet-output.txt');
+      writeOutputFixture(out, i => `   > Vulnerable.Pkg.${i}   1.0.0   1.0.0   High`, 10);
+      const bin = join(repo, 'fakebin');
+      writeFakeTool(bin, 'dotnet', out, 0);
+      return { repo, bin };
+    }
+
+    it('先頭に空白があるコミットでも発火する', () => {
+      const { repo, bin } = vulnerableRepo('commit-leading-space');
+      expect(runHook(repo, bin, '  git   commit -m "x"')).toBe(2);
+    });
+
+    it('commit 以外のコマンドでは発火しない', () => {
+      const { repo, bin } = vulnerableRepo('non-commit-command');
+      expect(runHook(repo, bin, 'ls -la')).toBe(0);
+    });
   });
 });

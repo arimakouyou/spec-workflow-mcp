@@ -30,7 +30,9 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
 # git commit 以外は素通し
-if ! grep -qE '^\s*git\s+commit' <<< "$COMMAND"; then
+# 空白は `[[:space:]]` を使う。`\s` は POSIX ERE に無い GNU 拡張で、非対応環境では
+# 文字 `s` として解釈され `git commit` 判定が常に外れる（= ガードが丸ごと素通しする）
+if ! grep -qE '^[[:space:]]*git[[:space:]]+commit' <<< "$COMMAND"; then
   exit 0
 fi
 
@@ -53,7 +55,7 @@ else
   for cargo_file in $(echo "$STAGED" | grep -E '(^|/)Cargo\.toml$' || true); do
     [ -n "$cargo_file" ] || continue
     CARGO_DIFF=$(git diff --cached -- "$cargo_file" 2>/dev/null || true)
-    if grep -qE '^\+.*(dependencies|\.version\s*=)' <<< "$CARGO_DIFF"; then
+    if grep -qE '^\+.*(dependencies|\.version[[:space:]]*=)' <<< "$CARGO_DIFF"; then
       CHECK_RUST=true
       break
     fi
