@@ -239,7 +239,8 @@ cmd_clear_failure() {
 }
 
 cmd_end() {
-  # lockfile だけ削除（＝非アクティブ）。session 本体は参考情報として残す
+  # lockfile だけ削除（＝非アクティブ）。session 本体は参考情報として残す。
+  # lockfile を dormancy 判定に使う hook（verify-tests-run）はこの時点で dormant になる
   rm -f "$LOCKFILE"
 
   if [ -f "$SESSION_FILE" ] && have_jq; then
