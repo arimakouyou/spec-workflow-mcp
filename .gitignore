@@ -144,7 +144,6 @@ CLAUDE.md
 !.claude/rules/
 !.claude/hooks/
 !.claude/_docs/
-!.claude/hooks/
 !.claude/settings.json
 .serena
 AGENTS.md
@@ -161,3 +160,10 @@ spec-workflow-mcp.code-workspace
 
 # Other
 social-post.md
+
+# テスト・ランタイム出力
+playwright-report/
+test-results/
+.tmp-test-approvals/
+tmp/
+.antigravitycli/
