@@ -44,7 +44,9 @@ GIT_STATUS=$(git status --short 2>/dev/null | head -20 || echo "(git status unav
 GIT_LAST_COMMIT=$(git log --oneline -1 2>/dev/null || echo "(no commits)")
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "(no branch)")
 
-TOUCHED_FILES=$(jq -r '.phase_checkpoint.green_files_touched[]? // empty' "$SESSION_FILE" 2>/dev/null | head -10)
+# `|| true`: head が先に終了すると jq が SIGPIPE で 141 終了し、pipefail + errexit で
+# スクリプト自体が中断される（= resume context が一切出なくなる）
+TOUCHED_FILES=$(jq -r '.phase_checkpoint.green_files_touched[]? // empty' "$SESSION_FILE" 2>/dev/null | head -10 || true)
 
 cat <<EOF
 <session_resume_context>

@@ -11,6 +11,13 @@
 #   - 各 audit コマンドを `timeout ${AUDIT_TIMEOUT}s` で実行
 #   - 120s 以内に完了しない場合は exit 2 でコミットを阻止する
 #   - これにより Claude Code 側の hook timeout（non-blocking）へフォールバックすることを防ぐ
+#
+# 実装上の注意（issue #79 と同種の SIGPIPE 対策）:
+#   - `set -o pipefail` 下で `... | grep -q` / `... | head -N` を使うと、読み手が
+#     短絡終了した際に書き手が SIGPIPE(141) で落ち、パイプライン全体が 141 になる。
+#     判定に使えば脆弱性の見逃し、単独実行なら errexit でスクリプトごと中断し
+#     `exit 2` に到達しない（いずれも fail-open）。
+#   - このため変数の検査は here-string、出力の打ち切りは `grep -m N` を使う。
 
 set -euo pipefail
 
@@ -23,7 +30,9 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
 # git commit 以外は素通し
-if ! echo "$COMMAND" | grep -qE '^\s*git\s+commit'; then
+# 空白は `[[:space:]]` を使う。`\s` は POSIX ERE に無い GNU 拡張で、非対応環境では
+# 文字 `s` として解釈され `git commit` 判定が常に外れる（= ガードが丸ごと素通しする）
+if ! grep -qE '^[[:space:]]*git[[:space:]]+commit' <<< "$COMMAND"; then
   exit 0
 fi
 
@@ -40,13 +49,13 @@ CHECK_NODE=false
 CHECK_DOTNET=false
 
 # Rust: Cargo.lock の変更 or Cargo.toml の依存セクション追加
-if echo "$STAGED" | grep -qE '(^|/)Cargo\.lock$'; then
+if grep -qE '(^|/)Cargo\.lock$' <<< "$STAGED"; then
   CHECK_RUST=true
 else
   for cargo_file in $(echo "$STAGED" | grep -E '(^|/)Cargo\.toml$' || true); do
     [ -n "$cargo_file" ] || continue
     CARGO_DIFF=$(git diff --cached -- "$cargo_file" 2>/dev/null || true)
-    if echo "$CARGO_DIFF" | grep -qE '^\+.*(dependencies|\.version\s*=)'; then
+    if grep -qE '^\+.*(dependencies|\.version[[:space:]]*=)' <<< "$CARGO_DIFF"; then
       CHECK_RUST=true
       break
     fi
@@ -54,13 +63,13 @@ else
 fi
 
 # Node.js: lockfile の変更 or package.json の依存セクション変更
-if echo "$STAGED" | grep -qE '(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$'; then
+if grep -qE '(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$' <<< "$STAGED"; then
   CHECK_NODE=true
 else
   for pkg_file in $(echo "$STAGED" | grep -E '(^|/)package\.json$' || true); do
     [ -n "$pkg_file" ] || continue
     PKG_DIFF=$(git diff --cached -- "$pkg_file" 2>/dev/null || true)
-    if echo "$PKG_DIFF" | grep -qE '"(dependencies|devDependencies|peerDependencies|optionalDependencies|overrides|resolutions)"'; then
+    if grep -qE '"(dependencies|devDependencies|peerDependencies|optionalDependencies|overrides|resolutions)"' <<< "$PKG_DIFF"; then
       CHECK_NODE=true
       break
     fi
@@ -68,13 +77,13 @@ else
 fi
 
 # .NET: packages.lock.json / Directory.Packages.props / csproj の PackageReference 変更
-if echo "$STAGED" | grep -qE '(^|/)(packages\.lock\.json|Directory\.Packages\.props)$'; then
+if grep -qE '(^|/)(packages\.lock\.json|Directory\.Packages\.props)$' <<< "$STAGED"; then
   CHECK_DOTNET=true
 else
   for csproj_file in $(echo "$STAGED" | grep -E '\.csproj$' || true); do
     [ -n "$csproj_file" ] || continue
     CSPROJ_DIFF=$(git diff --cached -- "$csproj_file" 2>/dev/null || true)
-    if echo "$CSPROJ_DIFF" | grep -qE '^\+.*<PackageReference'; then
+    if grep -qE '^\+.*<PackageReference' <<< "$CSPROJ_DIFF"; then
       CHECK_DOTNET=true
       break
     fi
@@ -119,7 +128,7 @@ if [ "$CHECK_NODE" = true ] && [ -f package.json ]; then
       FAIL=true
     elif [ "$RC" -ne 0 ]; then
       echo "⛔ [security-audit] npm audit: 高/重大な脆弱性が検出されました"
-      printf '%s\n' "$AUDIT_OUTPUT" | grep -iE '(high|critical)' | head -5
+      grep -iE -m 5 '(high|critical)' <<< "$AUDIT_OUTPUT" || true
       echo "   修正: npm audit fix を実行するか、脆弱なパッケージを更新してください"
       FAIL=true
     fi
@@ -166,9 +175,9 @@ if [ "$CHECK_DOTNET" = true ]; then
     if [ "$RC" -eq 124 ]; then
       echo "⛔ [security-audit] dotnet list package --vulnerable が ${AUDIT_TIMEOUT}s 以内に完了しませんでした（fail-close）"
       FAIL=true
-    elif printf '%s\n' "$DOTNET_OUTPUT" | grep -qE "(Critical|High)"; then
+    elif grep -qE "(Critical|High)" <<< "$DOTNET_OUTPUT"; then
       echo "⛔ [security-audit] dotnet: 高/重大な脆弱性が検出されました"
-      printf '%s\n' "$DOTNET_OUTPUT" | grep -E "(Critical|High)" | head -10
+      grep -E -m 10 "(Critical|High)" <<< "$DOTNET_OUTPUT" || true
       echo "   修正: 脆弱なパッケージを更新してください"
       FAIL=true
     fi

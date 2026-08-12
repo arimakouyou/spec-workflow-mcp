@@ -12,6 +12,12 @@
 #
 # 出典: dapper-hardening-orchestrator.md 根本原因 A（A）
 # 関連事例: dojin-viewer Phase 1 完了後の「Auto Mode のため Wave 2 へ進みます」幻覚
+#
+# 実装上の注意（issue #79 と同種の SIGPIPE 対策）:
+#   変数の検査に `echo "$VAR" | grep -q` を使うと、grep が最初のマッチで即終了した際に
+#   echo が SIGPIPE(141) で落ち、pipefail によりパイプライン全体が偽になる。
+#   $RECENT_LINES は transcript 200 行分で 64KB（パイプバッファ）を容易に超えるため、
+#   進行宣言を検出できず素通しする（fail-open）。検査は here-string で行うこと。
 
 set -euo pipefail
 
@@ -57,7 +63,7 @@ PROGRESSION_PATTERNS=(
 
 DETECTED=""
 for PATTERN in "${PROGRESSION_PATTERNS[@]}"; do
-  if echo "$RECENT_LINES" | grep -qE "$PATTERN"; then
+  if grep -qE "$PATTERN" <<< "$RECENT_LINES"; then
     DETECTED="$PATTERN"
     break
   fi
@@ -96,7 +102,7 @@ CONSENT_PATTERNS=(
 
 CONSENT_FOUND=0
 for PATTERN in "${CONSENT_PATTERNS[@]}"; do
-  if echo "$LAST_USER_MSG" | grep -qE "$PATTERN"; then
+  if grep -qE "$PATTERN" <<< "$LAST_USER_MSG"; then
     CONSENT_FOUND=1
     break
   fi
@@ -104,14 +110,14 @@ done
 
 # 英単語系は単語単位マッチ（-w）+ 大文字小文字無視で判定（"look" の "ok" 等への誤爆防止）
 # 注意: grep -E の \b は POSIX ERE で保証されない（GNU 拡張）。移植性のため -w を使う
-if [ "$CONSENT_FOUND" -eq 0 ] && echo "$LAST_USER_MSG" | grep -qiwE 'continue|ok|okay|yes|auto'; then
+if [ "$CONSENT_FOUND" -eq 0 ] && grep -qiwE 'continue|ok|okay|yes|auto' <<< "$LAST_USER_MSG"; then
   CONSENT_FOUND=1
 fi
 
 # 単一文字選択（option choose）: メッセージ全体が選択肢 1〜2 文字のときのみ同意扱い
 # （旧実装の文字クラス一致は「A〜E や数字を1文字でも含む」あらゆる文章を同意と誤認していた）
 TRIMMED_MSG=$(printf '%s' "$LAST_USER_MSG" | tr -d '[:space:]')
-if [ "$CONSENT_FOUND" -eq 0 ] && printf '%s' "$TRIMMED_MSG" | grep -qE '^[αβγδεA-E0-9]{1,2}$'; then
+if [ "$CONSENT_FOUND" -eq 0 ] && grep -qE '^[αβγδεA-E0-9]{1,2}$' <<< "$TRIMMED_MSG"; then
   CONSENT_FOUND=1
 fi
 
