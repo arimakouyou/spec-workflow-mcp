@@ -9,8 +9,8 @@
 #   - .spec-workflow/specs/{spec_id}/*.md を全て stdout に出力
 #   - Claude Code は UserPromptSubmit hook の stdout を context 先頭に配置する
 #
-# トリガ: .implement-session.json が存在する場合のみ動作（実装セッション中のみ）。
-# Orchestrator が同ファイルを書き出すまでは dormant 状態で no-op。
+# トリガ: 実装セッションがアクティブな間（.implement-session.lock が存在する間）のみ動作。
+# セッション未開始、および `session-manage.sh end` 後は dormant 状態で no-op。
 #
 # 注意:
 #   - 毎ターン注入するので AutoCompact の影響を受けない（常に先頭に来る）
@@ -24,9 +24,12 @@ fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 SESSION_FILE="${PROJECT_DIR}/.implement-session.json"
+LOCKFILE="${PROJECT_DIR}/.implement-session.lock"
 
-# 実装セッション中でなければ何もしない（現状 Orchestrator 未実装のため dormant）
-if [ ! -f "$SESSION_FILE" ]; then
+# 実装セッションがアクティブでなければ何もしない（未開始 / end 済みなら dormant）。
+# `session-manage.sh end` は lockfile のみ削除しセッション本体を参考情報として残すため、
+# アクティブ判定には lockfile を使う（issue #79）
+if [ ! -f "$LOCKFILE" ] || [ ! -f "$SESSION_FILE" ]; then
   exit 0
 fi
 

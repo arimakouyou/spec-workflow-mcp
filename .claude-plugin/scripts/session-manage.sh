@@ -3,8 +3,11 @@
 #
 # Implementation session state manager. Creates and maintains
 # `.implement-session.json` and `.implement-session.lock` at the project root
-# so that dormant hooks（inject-spec / resume-hint / verify-tests-run /
-# detect-new-files / log-implementation）become active during /spec-implement.
+# so that dormant hooks（inject-spec / verify-tests-run / detect-new-files /
+# log-implementation）become active during /spec-implement.
+# これらの hook は lockfile の存在を dormancy 判定に使うため、`end` で一斉に dormant に
+# 戻る。resume-hint だけはセッション本体を見て "Active: yes/no" を報告する役割のため、
+# lockfile が無くても動作する。
 #
 # Subcommands:
 #   init <spec_id>                       — 新規セッション作成（ロック取得）
@@ -14,6 +17,8 @@
 #   mark-failure <category> [detail]     — last_failure_* を更新
 #   clear-failure                        — last_failure_* をクリア
 #   end                                  — lockfile 削除 + セッションを完了マーク（本体は保持）
+#                                          lockfile 判定の hook は dormant に戻る
+#                                          （resume-hint は除く。上記の注記を参照）
 #   archive                              — セッション本体を archived に退避（spec-archive 時）
 #
 # 特徴:
@@ -240,7 +245,8 @@ cmd_clear_failure() {
 
 cmd_end() {
   # lockfile だけ削除（＝非アクティブ）。session 本体は参考情報として残す。
-  # lockfile を dormancy 判定に使う hook（verify-tests-run）はこの時点で dormant になる
+  # hook の dormancy 判定は lockfile の存在なので、この時点で全て dormant に戻る
+  # （resume-hint のみセッション本体を見て "Active: no" を報告する役割のため対象外）
   rm -f "$LOCKFILE"
 
   if [ -f "$SESSION_FILE" ] && have_jq; then

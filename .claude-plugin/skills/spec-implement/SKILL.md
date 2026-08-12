@@ -90,7 +90,7 @@ In the subsequent Task Cycle:
 
 - Call `session-manage.sh start-task {task-id}` at the start of each task
 - Call `session-manage.sh complete-task {task-id} {commit-hash}` after marking each task complete (after the `[x]` mark)
-- Call `session-manage.sh end` to release the lockfile when all waves are done or on interruption
+- Call `session-manage.sh end` to release the lockfile when all waves are done or on interruption. `inject-spec.sh` / `verify-tests-run.sh` / `detect-new-files.sh` / `log-implementation.sh` key their dormancy off the lockfile, so they go dormant at this point. `resume-hint.sh` is the exception: it keys off the session file, which `end` preserves as a resume hint, and reports `Active: no` on the next session start
 
 > **Note**: The session file is not the "source of truth". It may be lost before update due to rate limits etc., so the hook side is designed with the premise that the actual git state takes precedence. Best-effort updates are sufficient.
 
