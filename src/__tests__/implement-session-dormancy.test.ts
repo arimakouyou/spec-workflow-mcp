@@ -91,21 +91,33 @@ describe('実装セッション連動 hook の dormancy', () => {
   });
 
   describe('detect-new-files.sh', () => {
-    const input = (dir: string) => ({
-      tool_name: 'Write',
-      tool_input: { file_path: join(dir, 'src', 'unexpected.ts') },
-    });
+    const REL_TARGET = join('src', 'unexpected.ts');
+
+    /**
+     * PostToolUse(Write) の実状況を再現する。Write 実行後なので対象ファイルは
+     * ディスク上に存在する。hook 側の `realpath --relative-to` は最終要素以外の
+     * 存在を要求するため、作らずに呼ぶと raw 絶対パスの fallback 経路に落ちて
+     * 相対パス処理の退行を検出できない。
+     */
+    const writeTarget = (dir: string): { tool_name: string; tool_input: { file_path: string } } => {
+      const filePath = join(dir, REL_TARGET);
+      mkdirSync(join(dir, 'src'), { recursive: true });
+      writeFileSync(filePath, 'export const x = 1;\n');
+      return { tool_name: 'Write', tool_input: { file_path: filePath } };
+    };
 
     it('セッションがアクティブなら spec 未言及の新規ファイルを警告する', () => {
       const dir = makeProject('detect-active', true);
-      const run = runHook('detect-new-files.sh', dir, input(dir));
+      const run = runHook('detect-new-files.sh', dir, writeTarget(dir));
       expect(run.status).toBe(0);
       expect(run.stdout).toContain('<new_file_warning>');
+      // 絶対パスではなくプロジェクト相対パスで報告されること
+      expect(run.stdout).toContain(`\`${REL_TARGET}\``);
     });
 
     it('end 後（lockfile なし）は警告しない', () => {
       const dir = makeProject('detect-ended', false);
-      const run = runHook('detect-new-files.sh', dir, input(dir));
+      const run = runHook('detect-new-files.sh', dir, writeTarget(dir));
       expect(run.status).toBe(0);
       expect(run.stdout).toBe('');
     });
