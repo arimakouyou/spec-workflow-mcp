@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
@@ -42,7 +42,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write   # version bump コミットを main に push するため
+      id-token: write   # npm trusted publishing（OIDC）に必須
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,11 +51,16 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.sha }}
 
+      # trusted publishing は npm 11.5.1 以上 / Node 22.14.0 以上が必要。
+      # Node 24 系には要件を満たす npm が同梱される。
+      # registry-url は指定しない: setup-node が .npmrc に
+      # `_authToken=${NODE_AUTH_TOKEN}` を書き込み、空展開されると npm が
+      # 「認証済み」と誤認して OIDC 交換を開始せず ENEEDAUTH / E404 になる。
+      # registry.npmjs.org は npm の既定値なので指定は不要。
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
@@ -74,9 +80,10 @@ jobs:
           git commit -m "chore: bump version to v${VERSION} [skip ci]"
           git push origin HEAD:main
 
+      # trusted publishing（OIDC）で認証するため NODE_AUTH_TOKEN は渡さない。
+      # provenance attestation は OIDC publish 時に自動生成される。
       - name: Publish to npm
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || 'latest' }}
         run: npm publish --access public --tag "${NPM_TAG}"
 
