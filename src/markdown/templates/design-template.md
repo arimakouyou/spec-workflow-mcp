@@ -137,6 +137,8 @@ graph TD
 
 ## Data Models
 
+> **スニペット互換性（spec-design Step B Check 19 で検証）**: 各 MOD のコード片は、本書が指定するライブラリでそのまま写経して成立する形で書くこと。指定ライブラリの仕様とスニペットが衝突する場合（例: Rust thiserror 指定時に `source` という名前のフィールド、serde の enum への `rename_all` はバリアント名のみでフィールド名には `rename_all_fields` が別途必要）、必要な属性・エスケープをスニペット自体か直下の注記に含める。
+
 ### MOD-1: [Model Name]
 ```
 [Define the structure of Model1 in your language]
@@ -171,6 +173,7 @@ graph TD
 
 | Layer | Directory | 責務 |
 |-------|-----------|------|
+| [例: bootstrap] | [例: src/bootstrap.rs, src/main.rs] | [例: 起動シーケンス。全レイヤーを束ねる合成ルート] |
 | [例: handlers] | [例: src/handlers/] | [例: HTTP リクエスト処理、バリデーション] |
 | [例: services] | [例: src/services/] | [例: ビジネスロジック、ドメインルール] |
 | [例: infra] | [例: src/infra/] | [例: DB アクセス、外部 API 呼び出し] |
@@ -179,6 +182,7 @@ graph TD
 
 | From (依存元) | Allowed (許可) | Forbidden (禁止) |
 |--------------|---------------|-----------------|
+| [例: bootstrap] | [例: handlers, services, infra（全レイヤー）] | [例: —] |
 | [例: handlers] | [例: services, infra] | [例: —] |
 | [例: services] | [例: infra] | [例: handlers] |
 | [例: infra] | [例: —] | [例: handlers, services] |
@@ -186,6 +190,11 @@ graph TD
 > **structure.md との整合**: ここで定義したレイヤーは `.spec-workflow/steering/structure.md` の
 > Directory Organization および File Placement Rules と一致していること。
 > `/generate-arch-tests` を使用するとこの定義に基づくアーキテクチャテストを自動生成できる。
+
+> **整合ルール（spec-design Step B Check 18 LAYER_DEPENDENCY_CLOSURE で機械検証）**:
+> 1. **合成ルート**: main / bootstrap は両入口アダプタと全下位レイヤーを束ねるため、通常レイヤーには置けない。専用の最上位行を必ず定義する（未定義だと実装フェーズで配置先が judgement call になる）
+> 2. **トレイトの所属レイヤーはシグネチャに現れる型で決まる**: Architecture for Testability で宣言する DI 注入トレイト（Clock / RNG / Store 等）がドメイン型を引数・戻り値に取るなら、そのトレイトはドメイン層のポートであり、本番実装のみを外側レイヤーに置く。「横断的関心事は最下層」を適用してよいのは上位層の型を参照しない型（純粋なエラー型・設定型）だけ。トレイト定義を最下層に置いたままシグネチャが上位層の型を返すと、依存方向表と矛盾する
+> 3. **全量割り当て**: レイヤー定義表と共有型定義表で、すべての DES-N と MOD-N の配置先を漏れなく決めること。DES の Interfaces / Dependencies に現れる各型の配置レイヤーへの参照辺が、依存方向表で許可されていることを確認する
 
 ### 共有型定義
 
@@ -202,6 +211,8 @@ graph TD
 - 共有型は依存方向ルールの最下層に配置し、全レイヤーからアクセス可能にする
 - API 境界の型は OpenAPI 定義（`/generate-api-docs`）と整合させる
 - 型の重複定義を避け、単一の定義元（Single Source of Truth）を維持する
+- 本書で定義するすべての MOD-N（実行時状態を含む）をこの表のいずれかの行（配置先）に対応させる。配置先の無い型は実装フェーズで置き場所が judgement call になる（Check 18）
+- 原則に例外を設ける場合（例: 特定の API 型をドメイン層のインターフェースで直接使う）は、その例外を原則の直下に明記する。書かれていない例外は実装レビューで設計違反として扱われる（Check 21）
 
 > **P5-06 対応**: このテーブルが埋められていることで、モジュール間の型定義が管理されていることを示す。
 
