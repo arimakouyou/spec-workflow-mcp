@@ -580,6 +580,7 @@ Same strict process — verbal approval is never accepted.
 
 - Feature names use kebab-case
 - One spec at a time
+- Cite locations by stable anchor (ID / heading / table row key / verbatim phrase / symbol), never by line number — `rules/doc-crossref.md` "Reference Form". A `file:line` reference is stale after the first revision of the target
 - Every design.md component must have UT specs
 - Every requirement must appear in the Traceability Matrix
 - Test cases must be concrete (no placeholders in Input/Expected Output/Verification)

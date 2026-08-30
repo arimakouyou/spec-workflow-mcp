@@ -94,6 +94,7 @@ Refer to the language-specific style rules and relevant framework rules:
 - Compliance with project rules
 - Validity of naming (whether types, functions, and variables accurately express their intent)
 - Code consistency (whether style and patterns are aligned with existing code)
+- **No line-number citations** (`${CLAUDE_PLUGIN_ROOT}/rules/doc-crossref.md` "Reference Form"): a `file:line` reference in a code comment, doc comment, task log, tasks.md carried-concern text, or the refactor backlog is Minor — auto-fix by replacing it with a stable anchor (ID / heading / row key / verbatim phrase / symbol). Apply the same rule to your own findings and report: cite `IT-41 VP2`, `DES-2 AppBootstrap::run`, not `test-design.md:1225`
 
 ### B. Design and Structure
 

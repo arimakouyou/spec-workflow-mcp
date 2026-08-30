@@ -566,6 +566,7 @@ Formal approval — verbal approval is not accepted.
 
 - Feature names use kebab-case
 - One spec at a time
+- Cite locations by stable anchor (ID / heading / table row key / verbatim phrase / symbol), never by line number — `rules/doc-crossref.md` "Reference Form". A `file:line` reference is stale after the first revision of the target
 - **Do not start Wave 2 before Wave 1 is complete** — user confirmation is required
 - **Verbal confirmation is allowed for Wave 1** — formal approval tool not required
 - **Formal approval is required after Wave 2** — verbal approval is not accepted

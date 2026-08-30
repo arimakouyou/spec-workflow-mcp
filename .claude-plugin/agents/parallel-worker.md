@@ -372,6 +372,8 @@ Use this absolute path for all reads and writes. The file lives in the main repo
 | Rework cycle started | `rework-start cycle=N` (followed by `attempt-*` events as in intra-agent retries) |
 | Rework cycle completed | `rework-complete cycle=N changed_files=...` |
 
+In every log entry, handoff, and code comment, cite locations by stable anchor (ID / heading / row key / verbatim phrase / symbol), never by `file:line` — `${CLAUDE_PLUGIN_ROOT}/rules/doc-crossref.md` "Reference Form". Line numbers drift on the next revision and the log is read long after.
+
 See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL4 for full event taxonomy and key conventions.
 
 ## Agent Teams Rules
