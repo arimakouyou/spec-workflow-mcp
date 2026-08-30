@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **spec-design: design.md の整合性チェックを追加** - Module Boundaries の authoring rules に 6（合成ルート main / bootstrap は通常レイヤーに置けず専用の配置先を持つ）・7（トレイトの所属レイヤーはシグネチャに現れる型で決まる）・8（全 DES-N / MOD-N に配置先を漏れなく割り当てる）を追加し、Architecture for Testability の DI トレイトにも配置の注意書きを追加。Self-Review に check 18 LAYER_DEPENDENCY_CLOSURE（Dependencies と Interfaces のシグネチャ型から依存グラフを導出し、依存方向ルールとの矛盾・配置先の無い DES / MOD を検出）、19 SNIPPET_LIBRARY_COMPATIBILITY（MOD のコード片が指定ライブラリでそのまま compile できるか。thiserror の `source` フィールド名、serde `rename_all` の struct-variant フィールド等）、20 PROSE_IDENTIFIER_XREF（散文中の識別子がスニペット / MOD / DES / ライブラリ API に実在するか）、21 PRINCIPLE_INTERFACE_CONSISTENCY（宣言した設計原則と DES の Interfaces が矛盾しないか）を追加。design-template に bootstrap 行・整合ルール・スニペット互換性の注記を追加
+- **spec-tasks: check 26 DESIGN_OBLIGATION_COVERAGE** - DES / MOD に属さない design.md の散文が課す実行義務（CI ジョブ・ワークフロー・ビルドゲート・テスト実行）にも対応するタスクが存在することを Self-Review で検証
+
+### Fixed
+
+- **ダッシュボードが「Prism is not defined」で起動不能になる問題を修正** - `@lexical/code` が読み込む prismjs の言語定義はグローバル `Prism` を前提とするが、バンドル後の評価順によっては core より先に評価されアプリ全体が起動しなかった。エントリ最先頭の `prism-setup.ts` で core を評価しグローバルを確立する
+
+- **confirm-phase-progression.sh の過剰ブロックを修正** - Phase/Wave 進行宣言の検出対象を「今ターンの最終 assistant 発言」（Stop フック入力の `last_assistant_message`）に限定。従来は transcript の `tail -n 200` を丸ごと grep しており、tool_result・過去の発言・ユーザー発話に含まれる文字列で誤ブロックしていた（実測: 本リポジトリの 12 transcript で 4 件 → 0 件、specrail の実ブロック 57 件 → 0 件、specrail 全 885 assistant 発言の総当たりでも 0 件）。あわせて以下を修正:
+  - `stop_hook_active` を参照し、ブロック起因の再入では素通しする（従来はブロック文言自体が次回の検出に一致してループしうる状態だった）
+  - 進行宣言パターンのうち、概念名の単独一致（`Auto Mode` / `継続モード`）と通常の日本語に一致するもの（`続行します`）を廃止し、進行・省略を表す語との共起を必須化。規範の説明・引用・ユーザーへの問い返し（「省略してはならない」「進みますか？」）は一致箇所の文単位で除外
+  - 正規表現からロケール依存の構文（否定文字クラス・回数指定）を排除し、`LC_ALL=C` でも判定が変わらないことを検証
+  - 「直近のユーザー発話」の抽出から、スラッシュコマンドの入出力・`system-reminder`・割り込み通知・`isMeta` エントリを除外（従来は `<local-command-stdout>` を発話として採用し、同意なし扱いでブロックしていた）
+  - ユーザー発話が特定できない場合は fail-open（ブロックしない）
+  - フック自身の仕組みを話題にしている発言（ブロック文言の引用、パターンの自己分析、取り下げ）を除外。specrail の履歴では、誤検知を説明する発言がそれ自体で再ブロックされていた
+  - サブエージェント完了通知（`<task-notification>`）を「直近のユーザー発話」から除外。`type="user"` / `isMeta=false` で記録されるためユーザーの「進めて」を毎回上書きしており、1 タスクあたり 3 エージェントを回す並列実装では停止のたびにブロックされていた（全 transcript で 409 件と最多の混入源）。`bash-input` / `bash-stdout`（`!` 実行の入出力）も同様に除外
+  - ダッシュボード承認（「承認した」「承認済み」等）を同意として認識。フェーズ遷移のゲートは承認ワークフローであり（`spec-design/SKILL.md:572`、`spec-requirements/SKILL.md:203`）、承認済みと伝えられた直後の Phase 遷移をブロックするのは仕様と矛盾していた。否定形（「まだ承認されていない」）は同意として扱わない
+
 ### Fixed (plugin v2.2.30)
 
 - **Stop フックのブロック不能を修正** - `verify-tests-run.sh` / `confirm-phase-progression.sh` が `exit 1` を使用しており実際にはブロックできていなかった問題を `exit 2` に修正(Claude Code のフックブロックは exit 2 のみ有効)
