@@ -124,6 +124,7 @@ When the task has `_BugFix: true_`, or when the `_Prompt` Role is `Bug Fixer`, f
 
 3. **REFACTOR phase**:
    - Refactor as usual and confirm all tests PASS
+   - **Out-of-scope candidates go to the backlog** (`${CLAUDE_PLUGIN_ROOT}/rules/refactor-backlog.md` RB2/RB3): when you notice restructuring that touches files other tasks own — duplication with a sibling file, a helper two tests should share, a placement or naming that spans files — do not do it here and do not drop it. Append an `RF-NNN` row to `.spec-workflow/specs/{spec-name}/refactor-backlog.md` (create the file on first use) with Files / Symptom / Proposed change, and list the IDs under `known_concerns` in the handoff. This applies to every task's REFACTOR phase, not only bug fixes. Writing the second copy of an existing test structure is the moment to record it
 
 4. **Completion report**:
    - In addition to the normal completion report, record the following:
@@ -370,6 +371,8 @@ Use this absolute path for all reads and writes. The file lives in the main repo
 | Handoff to review-worker (task end) | `handoff` (with `summary`, `known_concerns` details) |
 | Rework cycle started | `rework-start cycle=N` (followed by `attempt-*` events as in intra-agent retries) |
 | Rework cycle completed | `rework-complete cycle=N changed_files=...` |
+
+In every log entry, handoff, and code comment, cite locations by stable anchor (ID / heading / row key / verbatim phrase / symbol), never by `file:line` — `${CLAUDE_PLUGIN_ROOT}/rules/doc-crossref.md` "Reference Form". Line numbers drift on the next revision and the log is read long after.
 
 See `${CLAUDE_PLUGIN_ROOT}/rules/task-log-format.md` TL4 for full event taxonomy and key conventions.
 

@@ -119,6 +119,7 @@ Parse the tool requirements table from these two files:
 
 1. `.spec-workflow/specs/{spec-name}/design.md` → `## Required Build Tools` section
 2. `.spec-workflow/specs/{spec-name}/test-design.md` → `#### Required Test Tools` section
+3. `${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md` → the quality-check tools for the detected project type (Rust: `cargo-audit`, `cargo-deny`, `cargo-udeps` + `nightly` toolchain, `cargo-mutants` if declared; Node.js: `knip` if configured; .NET: `snitch`, `dotnet-project-licenses`). Add any of these that the two tables above omit as Required=Yes entries with a `<tool> --version` Check Command (for udeps: `cargo +nightly udeps --version`). This is a backstop for specs whose design.md predates spec-design derivation rule 8; a quality-check tool that is absent must surface here as MISSING_REQUIRED, never as a per-task `skip` that repeats for the life of the project
 
 If either section is missing, emit a warning log (`[tool-verify] WARNING: Required Tools section missing in {filename} — skipping tool verification for that file`) and verify only the section that exists. If both are missing, emit `[tool-verify] WARNING: No Required Tools sections found in design.md or test-design.md — skipping tool verification` and proceed to the Task Cycle (backward compatibility).
 
@@ -230,7 +231,7 @@ Parse `.spec-workflow/specs/{spec-name}/tasks.md` and compute execution waves ba
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/session-manage.sh" start-task {task-id}
 ```
 
-**PhaseReview exclusion during wave computation**: Tasks with `_PhaseReview: true` are always excluded from wave computation. PhaseReview is processed alone after all regular tasks in the phase complete.
+**PhaseReview / PhaseRefactor exclusion during wave computation**: Tasks with `_PhaseReview: true` or `_PhaseRefactor: true` are always excluded from wave computation. After all regular tasks in the phase complete, the PhaseRefactor task is processed alone (Step 3.6), then the PhaseReview task alone.
 
 **No `_DependsOn:` metadata**: If no tasks in the Phase have `_DependsOn:`, all non-PhaseReview tasks form Wave 0. Process them serially per the rule above (one at a time).
 
@@ -274,6 +275,16 @@ Look at the task's `_Prompt` field for structured guidance:
 - **_Requirements**: Which requirements this implements
 - **_Evidence**: EV-{category}-{NNN} IDs that scope the existing-code context (`${CLAUDE_PLUGIN_ROOT}/rules/evidence-coverage.md`). For each listed ID, resolve to `.spec-workflow/specs/{spec-name}/evidence/{category}/EV-{category}-{NNN}.md` and pass the resolved paths to the TDD subagent. Do **not** list evidence files that are not referenced by this task's `_Evidence` line — those belong to other tasks
 - **Success**: How to know you're done
+
+### 3.6 Phase Refactor Tasks
+
+If the task has `_PhaseRefactor: true_`, it runs through the normal worktree → parallel-worker → review-worker → merge cycle (steps 3-8) with these differences (`${CLAUDE_PLUGIN_ROOT}/rules/refactor-backlog.md` RB4):
+
+1. **Scope comes from the backlog, not from `File:`**. Before launching parallel-worker, read `.spec-workflow/specs/{spec-name}/refactor-backlog.md`. If the file is absent or has no `open` row whose Files belong to this Phase or earlier, mark the task `[x]` directly with a task-log entry `refactor-backlog: none` and skip to the PhaseReview task — do not create a worktree
+2. **Prompt**: pass parallel-worker the `_Prompt` of the task plus the full text of every in-scope row, and state: "REFACTOR only — no RED / GREEN. Do not change any test expectation, public API, or design.md. Run the full quality checks after each row. Update each row's Status and Resolved in"
+3. **No UT verification step for new tests** (step 5 checks that the existing suite is unchanged in count and all passing; a test count that decreased is a finding)
+4. **review-worker** reviews it as a normal task; category D for this task is: every in-scope row is `done` / `deferred` / `rejected` with a reason, and the diff is behavior-preserving
+5. The task counts toward the same 3-rework limit as other tasks
 
 ### 3.5 Phase Review Tasks
 

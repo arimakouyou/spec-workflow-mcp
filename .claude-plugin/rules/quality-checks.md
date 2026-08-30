@@ -168,9 +168,9 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --quiet 2>&1 | head -20 || true
 - Used as supplementary information when review-worker Category A (Style) checks for the presence of doc comments
 - Combined with the doc comment gap analysis of `/generate-api-docs`, this improves natural-language description coverage for API schemas
 
-## QC4: Dependency Analysis (Optional Tools)
+## QC4: Dependency Analysis
 
-Additional checks for dependency hygiene and security. These tools are optional — they run when installed and are skipped when unavailable. Agents must detect availability before running.
+Additional checks for dependency hygiene and security. **The tools are required to be installed**; their presence is verified once by spec-implement Step 0 (via the design.md Required Build Tools table and the quality-checks backstop in Step 0.1), where a missing tool is reported as MISSING_REQUIRED and the user is asked to install it. "Advisory" below describes how a tool's **findings** are treated, not whether the tool may be absent. The skip rows in the availability table exist only so that a per-task run does not crash if the environment changed after Step 0; a skip must be logged, and a skip that repeats across tasks is an environment defect to raise with the user, not a state to carry forward. Agents must detect availability before running.
 
 > **Note**: sccache (`RUSTC_WRAPPER`) is **not** applied to these commands. `cargo audit` does not invoke the compiler, and `cargo-udeps` uses `+nightly` which has unreliable sccache compatibility.
 
@@ -220,7 +220,7 @@ fi
 | cargo-audit | No | — | Skip with log: "cargo-audit not installed, skipping vulnerability check" |
 | cargo-udeps | Yes | Yes | Run `cargo +nightly udeps --quiet`. Warn on findings |
 | cargo-udeps | Yes | No | Skip with log: "nightly toolchain unavailable, skipping udeps" |
-| cargo-udeps | No | — | Skip silently |
+| cargo-udeps | No | — | Skip with log: "cargo-udeps not installed, skipping unused-dependency check" (should have been caught at Step 0 — report as environment defect) |
 
 ## QC5: Leptos Full-Stack (WASM Frontend) Build Verification
 

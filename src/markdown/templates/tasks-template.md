@@ -48,7 +48,11 @@ depends_on:
   - _TestFocus: Service resolution, dependency chain, lifetime management_
   - _Prompt: Role: Backend Developer with expertise in dependency injection | Task: Register FeatureService in DI container following requirement 3.1, configuring appropriate lifetime and dependencies using existing patterns | Restrictions: Must follow existing DI patterns, do not create circular dependencies | Success: FeatureService is properly registered and resolvable, dependencies correctly configured_
 
-- [ ] 1.4 Review and commit Phase 1
+- [ ] 1.4 Refactor Phase 1 from the backlog
+  - _PhaseRefactor: true_
+  - _Prompt: Role: Refactoring engineer | Task: Consume every open entry of .spec-workflow/specs/{spec-name}/refactor-backlog.md whose files belong to Phase 1 or earlier, per rules/refactor-backlog.md RB4 | Restrictions: Behavior-preserving only — no test expectation changes, no public API changes, no design.md changes, no new features; mark entries that would need any of those as deferred or rejected with a reason | Success: No open backlog entry remains for Phase 1, all existing tests pass, quality checks pass. An absent or empty backlog completes the task as a no-op_
+
+- [ ] 1.5 Review and commit Phase 1
   - _PhaseReview: true_
   - _Prompt: Role: Code reviewer | Task: Review all Phase 1 changes for code quality, consistency, and correctness. Run full test suite and verify all tests pass. Stage and commit with a summary of Phase 1 deliverables. | Success: All tests pass, code review complete, changes committed_
 

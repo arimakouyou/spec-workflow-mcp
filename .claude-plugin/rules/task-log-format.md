@@ -8,6 +8,9 @@ Single, append-only Markdown file capturing all per-task durable state for the s
 
 This rule is the **authoritative format spec**. Agents (`parallel-worker`, `review-worker`), skills (`spec-implement`, `integration-test`, `integration-test-dotnet`, `log-implementation`), and the dashboard parser (`src/dashboard/implementation-log-manager.ts`) all reference this file.
 
+> **Reference form**: cite locations in log entries by stable anchor (`IT-41 VP2`, `DES-2 AppBootstrap::run`, a heading or table-row key, a grep-able verbatim phrase), never by `file:line` — see `doc-crossref.md` "Reference Form". Logs are read after the cited file has been revised.
+
+
 ## TL1: Why a Task Log
 
 - **Compaction / yield / crash resilience**: durable on disk, agents can resume from it
