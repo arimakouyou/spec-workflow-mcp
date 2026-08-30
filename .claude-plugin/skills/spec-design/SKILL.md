@@ -430,6 +430,7 @@ Derivation rules:
 5. Required column: only `Yes` (required) or `Recommended` (recommended). Tools required for E2E tests (Playwright, Chrome, etc.) must be listed as Required=Yes at design time
 6. Min Version must reflect the latest stable verified in step 3.5. Do not use default values from AI training data
 7. Container Architecture Base Image tags (e.g., `rust:X.YZ-slim`) must match the Required Build Tools Min Version. Mismatches FAIL Wave 2 Self-Review
+8. **Quality-check tools are build tools**: every tool that `${CLAUDE_PLUGIN_ROOT}/rules/quality-checks.md` runs for the project type must appear in the table with Required=Yes — for Rust: `cargo-audit`, `cargo-deny`, `cargo-udeps` plus the `nightly` toolchain it needs (Check Command `cargo +nightly udeps --version`), and `cargo-mutants` when mutation testing is declared; for Node.js: `knip` when configured; for .NET: `snitch`, `dotnet-project-licenses`. A quality check that quality-checks.md labels "advisory" is advisory in its **findings**, not in its **presence**: the tool must still be installed, otherwise the check is skipped for the entire project lifetime and nobody is prompted to install it. Listing them here is what makes spec-implement Step 0 verify them before the first task
 
 #### Excluded Test Environments
 

@@ -211,8 +211,9 @@ Task granularity is determined by the number of **responsibilities**, not just t
 
 Group tasks into phases using `## Phase N: Title` headings. Each phase is a **vertical slice** — a testable, committable increment that delivers end-to-end value.
 
-- 1 phase = 2-5 implementation tasks + 1 review task
-- Each phase ends with a `_PhaseReview: true_` task for review and commit
+- 1 phase = 2-5 implementation tasks + 1 refactor task + 1 review task
+- Each phase ends with a `_PhaseRefactor: true_` task followed by a `_PhaseReview: true_` task
+  - The refactor task consumes `.spec-workflow/specs/{spec-name}/refactor-backlog.md` (`${CLAUDE_PLUGIN_ROOT}/rules/refactor-backlog.md`): restructuring that implementation and review tasks noticed but could not do within their own scope (cross-file duplication, shared helpers, placement). It has no `_TestFocus` (behavior-preserving, no new tests) and no `File:` list (its files are whatever the backlog names). Always generate it, even though the backlog does not exist at planning time — an empty backlog completes the task as a no-op
 - Phases are ordered by dependency (core → API → UI → integration)
 
 ### 3.6 IT / ST / E2E Test Tasks (revised by J-5)
@@ -242,10 +243,10 @@ Based on the IT / ST / E2E specs in test-design.md, place test tasks at the appr
 #### Placement order
 
 ```
-Phase N (backend implementation):  ... → IT-N tasks → PhaseReview
-Phase M (UI implementation):       ... → CT-N tasks (after H implementation) → PhaseReview
-Phase L (feature completion):      ... → ST-N tasks → PhaseReview
-Final Phase:                       E2E-N tasks → Final PhaseReview
+Phase N (backend implementation):  ... → IT-N tasks → PhaseRefactor → PhaseReview
+Phase M (UI implementation):       ... → CT-N tasks (after H implementation) → PhaseRefactor → PhaseReview
+Phase L (feature completion):      ... → ST-N tasks → PhaseRefactor → PhaseReview
+Final Phase:                       E2E-N tasks → PhaseRefactor → Final PhaseReview
 ```
 
 ### 3.7 TDD Task Design Rules
@@ -311,9 +312,13 @@ This is critical for implementation quality. Each task needs a `_Prompt` field w
   - _TestFocus: Happy Path: success paths for all CRUD operations | Boundary Values: list with 0 / 1 / many records | Error Handling: find with nonexistent ID, create with duplicate key, DB connection error | Edge Cases: concurrent updates_
   - _Prompt: Role: Backend Developer | Task: Implement UserRepository with CRUD operations using diesel-async | Restrictions: All methods must return Result<T, AppError> | Success: All CRUD methods are implemented and tests pass_
 
-- [ ] 1.3 Review and commit Phase 1
+- [ ] 1.3 Refactor Phase 1 from the backlog
+  - _PhaseRefactor: true_
+  - _Prompt: Role: Refactoring engineer | Task: Consume every open entry of .spec-workflow/specs/{spec-name}/refactor-backlog.md whose files belong to Phase 1 or earlier, per rules/refactor-backlog.md RB4 | Restrictions: Behavior-preserving only — no test expectation changes, no public API changes, no design.md changes, no new features; mark entries that would need any of those as deferred or rejected with a reason | Success: No open backlog entry remains for Phase 1, every touched entry has a Resolved in value, all existing tests pass, quality checks pass. An absent or empty backlog completes the task as a no-op_
+
+- [ ] 1.4 Review and commit Phase 1
   - _PhaseReview: true_
-  - _Prompt: Role: Code reviewer | Task: Review all Phase 1 changes, run tests, commit | Success: All tests pass, committed_
+  - _Prompt: Role: Code reviewer | Task: Review all Phase 1 changes, run tests, verify the refactor backlog per rules/refactor-backlog.md RB5, commit | Success: All tests pass, no open backlog entry for Phase 1, committed_
 ```
 
 #### UI Component task template (added by D, dapper-hardening)
@@ -418,7 +423,7 @@ depends_on:
 ---
 ```
 
-Per-task metadata (`_Requirements:` / `_Leverage:` / `_DependsOn:` / `_PhaseReview:` / `_TDDSkip:` / `_TestFocus:`) is preserved as before (SD6).
+Per-task metadata (`_Requirements:` / `_Leverage:` / `_DependsOn:` / `_PhaseReview:` / `_PhaseRefactor:` / `_TDDSkip:` / `_TestFocus:`) is preserved as before (SD6).
 
 Task status markers:
 - `- [ ]` = Pending
@@ -498,8 +503,8 @@ Agent({
     6. No placeholder text, descriptions specific enough for AI implementation
     7. PHASE STRUCTURE: Tasks are grouped under ## Phase headings with vertical slices
     8. TDD: No standalone unit test tasks (e.g., 'write tests', 'create unit tests'). IT/E2E test tasks are allowed as separate tasks.
-    9. Every non-PhaseReview task has a _TestFocus field
-    10. Each phase ends with a _PhaseReview: true_ task
+    9. Every task that is neither _PhaseReview nor _PhaseRefactor has a _TestFocus field; _PhaseRefactor tasks must NOT have one
+    10. Each phase ends with a _PhaseRefactor: true_ task immediately followed by a _PhaseReview: true_ task (rules/refactor-backlog.md RB4); the _PhaseRefactor _Prompt must reference refactor-backlog.md and state the behavior-preserving Restrictions
     11. DEPENDENCIES: _DependsOn references point to valid task IDs within the same Phase. No circular dependencies. No self-references. Tasks that use types/models/outputs created by another task declare the dependency.
     12. TEST-DESIGN TRACEABILITY: Read test-design.md —
         every UT spec must have a corresponding task with matching _TestFocus,

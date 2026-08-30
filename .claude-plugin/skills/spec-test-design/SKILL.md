@@ -195,6 +195,7 @@ Agent({
     - Every component in design.md must have a UT spec
     - Each UT must cover the applicable categories among the 4
     - Each test case's Input / Expected Output / Verification must be concrete (no placeholders)
+    - Expected Output / Verification must be deterministic: never a disjunction ("key absent or null", "A or B", "either"). A disjunction cannot kill the mutation that switches between the alternatives. For the producer side (serialization, response construction) pin exactly one form; if design.md leaves the form undecided, report it as a design gap instead of writing the disjunction. For the consumer side (deserialization, parsing) that must tolerate several input forms, write one test case per accepted form (e.g., UT-N.a: key absent → `None`, UT-N.b: `null` → `None`), each with a single expected result
     - Leptos frontend component UT specs target extractable logic (signals, validation, computation), not HTML rendering
 
     Test technology context:
@@ -240,6 +241,7 @@ Agent({
     Quality criteria:
     - An IT spec must exist for components whose `Test Layers:` field in design.md DES-N includes `IT-N` or `IT` (consistent with K-2)
     - Each IT must record Components, Interaction, Technology, Preconditions, Steps, Expected Result, and Verification Points
+    - Expected Result / Verification Points must be deterministic — no disjunctions ("key absent or null", "A or B"). Pin one form for what the system under test produces; if design.md does not decide the form, report the design gap rather than writing the disjunction. Tolerance of several input forms on the consuming side is verified by one IT (or UT) per form, never by a single "either" condition (detected by Step B Check 25)
     - **IT specs that include UI verification / DOM operations are not allowed** (detected by Step B Check 15)
 
     Test technology context:
@@ -544,6 +546,7 @@ Agent({
             - Total fenced-block lines in the document exceed 120 lines.
           For each violation FAIL with rule_id EC3; fix_hint: 'Move fixture-like or harness-like excerpts to an evidence file under evidence/test-harness/ (or a more specific category) and leave a brief summary + citation'. Markdown tables and ASCII diagrams are NOT counted.
     24. PER-TESTCASE EVIDENCE (evidence-coverage.md EC2, per UT/IT/E2E): Apply this check only when check 22 routed to full enforcement (non-legacy classified task_type). Every '#### UT-N.M:', '### IT-N:', and '### E2E-N:' section must cite at least one EV-... that anchors the behavior under test. If a case exercises a truly new behavior with no existing-code anchor, use '<!-- no-evidence: {reason} -->' (per-artifact waiver per EC2) with a non-empty reason inside the section. Missing both = FAIL rule_id EC2_perTestCase with fix_hint 'Cite the EV that captures the current or expected behavior the test guards (typically EV-contract-current-*, EV-branches-*, or EV-regressions-*).'
+    25. DETERMINISTIC_EXPECTATION: No Expected Output / Expected Result / Verification Points cell may contain a disjunction over the observed result (patterns: "or `null`", "存在しないか", "か `null`", "either", "A or B", "いずれか"). A disjunction cannot kill the mutation that switches between its alternatives. Producer-side cases must pin exactly one form (if design.md leaves it undecided, FAIL with fix_hint pointing at the design.md section that must decide it). Consumer-side tolerance must be expressed as one test case per accepted input form, each with a single expected result. FAIL rule_id DETERMINISTIC_EXPECTATION with location and the disjunctive text.
 
     Reporting: for EC1/EC2/EC3 issues, include fields rule_id, location, message, fix_hint.
     Mode: check — DO NOT modify the file. List all issues with location and suggested fix.
@@ -580,6 +583,7 @@ Same strict process — verbal approval is never accepted.
 - Every design.md component must have UT specs
 - Every requirement must appear in the Traceability Matrix
 - Test cases must be concrete (no placeholders in Input/Expected Output/Verification)
+- Expected results must be deterministic: no disjunctions ("absent or null"). Producer pins one form; consumer tolerance is one case per accepted form
 - Approval requests: filePath only, never content
 - Never accept verbal approval — dashboard/VS Code extension only
 - Never proceed if approval delete fails

@@ -104,6 +104,7 @@ Refer to `${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md`. Pay particular atte
 - **Dependency direction**: Is dependency strictly one-way from upper to lower layers? Are there any reverse or circular dependencies?
 - **Minimizing public API**: Unnecessary `pub`, exposure of internal implementation details
 - **YAGNI**: Unnecessary abstractions or speculative implementations
+- **Out-of-scope restructuring → backlog, not prose** (`${CLAUDE_PLUGIN_ROOT}/rules/refactor-backlog.md` RB2/RB3): a B or E observation that is a quality improvement rather than a defect and that touches files outside this task (duplication with sibling files, a helper several tests should share, placement across modules) is appended as an `RF-NNN` row to `.spec-workflow/specs/{spec-name}/refactor-backlog.md` and listed under the `refactor_backlog` key of the completion report. It is not a finding, it is not fixed by the reviewer, and it is not left as a free-text "consider in Phase Review" concern — the Phase's `_PhaseRefactor` task consumes the rows
 
 ### C. Security (OWASP Top 10 + Authentication/Authorization)
 
@@ -125,6 +126,7 @@ Refer to `${CLAUDE_PLUGIN_ROOT}/rules/security.md`. Check the following against 
 - Confirm each item in the `_Prompt` **Success** criteria one by one, and verify all are satisfied
 - Verify that the requirements referenced in `_Requirements` are reflected in the implementation
 - Verify that the constraints in `_Restrictions` are not violated
+- **Unmet requirement = reject (rework), not a user decision**: When the implementation does not satisfy a requirement (any clause of an acceptance criterion in requirements.md, a `_Requirements` entry, or a `_Restrictions` constraint), the requirement is the standard and the implementation is what is wrong. File it as `spec_mismatch/requirement_missing` or `restriction_violated` and return `review_action: rework` so the implementer fixes it (adding the missing behavior and the test that pins it). Do **not** present "relax / remove the requirement" as a resolution option, and do not escalate the unmet clause as a user decision. This applies equally when the clause was dropped during hand-off (e.g., the `_Prompt` in tasks.md transcribed only part of the criterion): the requirement in requirements.md still governs. The approved test-design.md is part of the standard too: when a test specification (Steps / Expected Result / Verification Points) can be satisfied by the implementation without contradicting requirements.md or design.md — e.g., an output ordering, a token the log line must contain — an implementation that does not satisfy it is rework, and the test is written to the spec as approved. The document precedence `requirements.md > design.md > test-design.md` resolves genuine contradictions between documents only; it does not license the implementer to ignore details that only test-design.md specifies. Reserve `review_action: escalate` for the cases where the implementer cannot resolve it: (i) the requirement is self-contradictory or contradicts design.md, (ii) satisfying it requires a change to design.md, or (iii) the rework limit (3 cycles) has been exhausted. In those cases, state in the finding which side you assess as defective and why.
 - **(H-5 extension) Behavioral evidence verification of Success criteria**: When the `_Success` field has **no behavioral evidence** (only static checks such as grep / string presence / "confirmed that it is implemented"), file `review_action: escalate`:
   - Examples of behavioral evidence: UT-N PASS / CT-N PASS / IT-N PASS / smoke PASS / DOM observation
   - The composition "grep + behavioral evidence" is OK (grep alone is not OK)
@@ -176,6 +178,7 @@ Refer to `${CLAUDE_PLUGIN_ROOT}/rules/design-conformance.md`. Read the approved 
 - **DB Schema** (DC1): Does the migration's table definition (column names, types, constraints, indexes) match design.md?
 - **API** (DC2): Do endpoint paths, methods, request bodies, response types, and status codes match design.md?
 - **Data Model** (DC3): Do the fields of Model/DTO match the definitions in design.md?
+- **Surplus = reject (rework), not a user decision** (DC1–DC3): Conformance is two-sided. Anything the implementation exposes that design.md does not define — an extra response key, DTO field, column, endpoint, status code, or side effect — is a deviation even when every defined item is present and all tests pass. Compare the implemented set against the designed set in both directions (`implemented − designed` must be empty, not just `designed − implemented`). File the surplus as `spec_mismatch/design_conformance_violation` and return `review_action: rework` with the instruction to **remove** it (and any test that pins it). Do not offer "add it to design.md" as a resolution; the implementer does not get to extend the contract. Escalate instead only when you assess that the surplus is actually required to satisfy a requirement (then a design.md change is needed and the user decides) — state that assessment and its evidence in the finding.
 - **Module Boundaries** (DC4): Does the implementation conform to the `## Module Boundaries` Layer/Directory contract and the dependency direction rules in design.md?
   - **Adherence judgment is by Layer Directory prefix, NOT by exact path match against individual cells**: a file located under any `Directory` listed in the Layer Definitions table is conforming, even if its exact path differs from a cell elsewhere in design.md
   - **Recognize facade pair annotations**: cells containing `Re-exports X from Y` / `re-exported from` / `facade` (typically in the Cross-cutting concerns sub-table) describe a facade + impl pair. **Both files are expected**; flagging one of them as a "deviation" is a false positive
@@ -212,7 +215,9 @@ Branch processing based on the severity of findings. review-worker is a **review
 |----------|----------------|--------|--------------------------------|
 | **Minor** | A (Style and conventions), G (API Docs) | review-worker auto-fixes (rustfmt, naming corrections, etc.) and continues. For G, report running `/generate-api-docs` as a recommendation | `quality_check_failure/format_violation`, `quality_check_failure/lint_violation` (warning equivalent), `spec_mismatch/api_contract_mismatch` |
 | **Moderate** | B (Design), C (Security), E (Tests), E2 (TDD) | **Send back to parallel-worker**. Request re-implementation including the findings, then re-review after correction | `test_failure/*`, `quality_check_failure/lint_violation` (equivalent to -D warnings), `quality_check_failure/mutation_survived`, `quality_check_failure/wasm_build_failure`, `quality_check_failure/trim_aot_incompatibility`, `spec_mismatch/test_design_missing` |
-| **Critical** | D (Spec non-conformance), F (Design conformance violation), C (blocking vulnerabilities) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer | `quality_check_failure/dependency_vulnerability`, `spec_mismatch/design_conformance_violation`, `spec_mismatch/requirement_missing`, `spec_mismatch/restriction_violated` |
+| **Critical** | D (Spec non-conformance: implementation does not satisfy a requirement / restriction) | **Send back to parallel-worker** (`review_action: rework`). The requirement is the standard; the implementer adds the missing behavior and its test. Never offer relaxing the requirement as a resolution. Escalate only under the conditions listed in D (spec self-contradiction, design.md change required, rework limit exhausted) | `spec_mismatch/requirement_missing`, `spec_mismatch/restriction_violated` |
+| **Critical** | F (Design conformance violation: surplus in DC1–DC3 — the implementation exposes something design.md does not define) | **Send back to parallel-worker** (`review_action: rework`) with the instruction to remove the surplus. Never offer extending design.md as a resolution. Escalate only when the surplus is assessed as required by a requirement (see F) | `spec_mismatch/design_conformance_violation` |
+| **Critical** | F (Design conformance violation: missing / mismatched DC1–DC3 items, DC4 module-boundary violations), C (blocking vulnerabilities) | **Report to user** and request a decision. Deviations from the design require revision of design.md and cannot be changed unilaterally by the implementer | `quality_check_failure/dependency_vulnerability`, `spec_mismatch/design_conformance_violation` |
 
 **Note**: `failure-taxonomy.md` (FC1-FC6) defines the cross-worker shared vocabulary. When authoring `findings`, pick a `severity` that matches FC3. The `failure_category` / `failure_subcategory` fields in each finding must be consistent with the `severity`.
 
@@ -277,11 +282,15 @@ findings:
   - category: D|F|C
     severity: Critical
     failure_category: <FC1 main category — typically spec_mismatch or quality_check_failure>
-    failure_subcategory: <FC1 subcategory — e.g., design_conformance_violation, requirement_missing, dependency_vulnerability>
+    failure_subcategory: <FC1 subcategory — e.g., design_conformance_violation, dependency_vulnerability; requirement_missing / restriction_violated only under the D escalate conditions>
     issue: <description of the spec non-conformance>
     prompt_success_criteria: <the Success criteria that was checked>
+    assessment: <which side is defective — implementation / design.md / requirements.md / test-design.md — and the evidence>
+    recommendation: <the single resolution you recommend>
     question: <items to confirm with the user>
 ```
+
+`assessment` and `recommendation` are mandatory. An escalation is a request for authorization of a specific resolution, not a menu of alternatives: do not list "change the implementation" and "relax the spec" side by side as equal options. A requirement that the implementation fails to satisfy is not escalated at all (see D); it is sent back as rework.
 
 ### Limit on Re-reviews
 
@@ -335,6 +344,19 @@ Phase Review covers Phase-wide concerns that conventional per-task review cannot
 
 For each perspective, always record the verification result in `observations` (when "checked-ok", state specifically what was checked).
 
+### Refactor backlog gate (`${CLAUDE_PLUGIN_ROOT}/rules/refactor-backlog.md` RB5)
+
+Read `.spec-workflow/specs/{spec-name}/refactor-backlog.md` (absent = empty):
+
+| State | Action |
+|-------|--------|
+| No `open` row whose Files belong to this Phase or earlier | pass — record `refactor_backlog: clean` |
+| An `open` row remains in scope | `review_action: rework` naming the Phase's `_PhaseRefactor` task as the root cause (it did not consume its scope) |
+| A `deferred` row with no Phase / condition in `Resolved in` | treat as `open` |
+| Final Phase Review: any `deferred` row | `review_action: rework` — by the end of the spec every row is `done` or `rejected` |
+
+Quality & maintainability candidates that the Phase Review itself discovers are appended to the backlog as new rows, not carried as prose concerns.
+
 ### Additions to the completion report
 
 For Phase Review, add the following keys to the completion report:
@@ -384,6 +406,7 @@ git commit -m "<scope>: <summary of changes>"
     - api_docs: pass|skip|advisory
 - observations: <Review Observation Log — always record the verification result for all categories (A-G), regardless of review_action>
 - auto_fixed: <list of auto-fixed Minor problems (record an empty list [] even when zero)>
+- refactor_backlog: <RF-NNN ids appended to refactor-backlog.md by this review, or none; for PhaseReview: clean|open>
 - integration-verification: <required for PhaseReview only; omit for normal task reviews>
     - build: pass|fail|skip
     - integration-tests: pass|fail|skip
@@ -418,6 +441,7 @@ git commit -m "<scope>: <summary of changes>"
     - api_docs: pass|skip|advisory
 - observations: <Review Observation Log — always record the verification result for all categories (A-G), regardless of review_action>
 - auto_fixed: <list of auto-fixed Minor problems (record an empty list [] even when zero)>
+- refactor_backlog: <RF-NNN ids appended to refactor-backlog.md by this review, or none; for PhaseReview: clean|open>
 - integration-verification: <required for PhaseReview only; omit for normal task reviews>
     - build: pass|fail|skip
     - integration-tests: pass|fail|skip

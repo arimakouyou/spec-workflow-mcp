@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **refactor-backlog と `_PhaseRefactor` タスク** - 実装・レビュー中に気づいたが担当タスクの範囲外で行えないリファクタリング（兄弟ファイルとの重複、共有すべきヘルパ、配置）を `.spec-workflow/specs/{spec}/refactor-backlog.md` に `RF-NNN` 行として残し、各 Phase の PhaseReview 直前に置く `_PhaseRefactor: true_` タスクで消化する仕組みを追加（`rules/refactor-backlog.md` RB1〜RB5）。parallel-worker の REFACTOR フェーズと review-worker の B/E 観察が行を追記し、Phase Review は open 行が残っていれば `_PhaseRefactor` タスクを rework、最終 Phase Review は deferred 行も許容しない。spec-tasks は毎 Phase に生成（backlog が空なら no-op）、spec-implement Step 3.6 で backlog をスコープとして実行、task-validator は `_PhaseRefactor` タスクに `_TestFocus` 警告を出さない。tasks-template にも反映（specrail approval-gate `_CarriedConcerns5`（IT-8/9/11 の 3 ファイル重複）がどこにも着地しなかった件の再発防止）
+
+### Changed
+
+- **review-worker: 要求未達は利用者判断ではなく差し戻し（rework）にする** - 実装が requirements.md の受入基準・`_Requirements`・`_Restrictions` を満たしていない場合（`spec_mismatch/requirement_missing` / `restriction_violated`）、従来は Critical → 「利用者に判断を求める」として escalate され、申し送りでは「実装を直す」と「要件を緩める」が対等な選択肢として並んでいた。要求が基準であり実装側の欠陥として扱い、`review_action: rework` で実装者へ差し戻す。要件を緩める案を解決策として提示することを禁止し、escalate は spec 自体の矛盾・design.md 変更が必要・rework 上限到達の 3 条件に限定。承認済み test-design.md の Steps / VP も基準に含め、上位文書と矛盾しない限り実装側が満たす（文書の権威順は矛盾解消のための規則であり、test-design.md だけが規定する細部を無視する根拠にしない。specrail ST-11 の `_CarriedConcerns24` の再発防止）。escalate 報告様式に `assessment`（どちら側の欠陥か）と `recommendation`（推奨する解決策 1 つ）を必須化。`failure-taxonomy.md` の対応表も同期（specrail approval-gate 3.37 Phase Review の finding [7] / `_CarriedConcerns16` の再発防止）
+- **review-worker: design.md に無いものを実装した「余剰」も差し戻し（rework）にする** - DC1〜DC3（スキーマ / API / DTO）の照合を双方向にし、design.md が定義していない応答キー・フィールド・エンドポイント・副作用を実装が持つ場合は `spec_mismatch/design_conformance_violation` として `review_action: rework`（余剰を除去、固定しているテストも除去）。「design.md に追記する」を解決策として提示することを禁止。要件を満たすために必要と見立てた場合のみ escalate（同 3.37 finding [1]（MCP status 応答の `approvalId`）および未報告の delete 応答 `approvalId` の再発防止）
+- **品質チェックツールを Step 0 のツール存在確認の対象にする** - `quality-checks.md` QC4 が「optional — 無ければ skip」だったため、`cargo-udeps` 等が未インストールでも誰にも促されず全タスクで skip が続いていた（specrail approval-gate `_CarriedConcerns35`）。spec-design の Required Build Tools 導出規則 8 で品質チェックツール（Rust: cargo-audit / cargo-deny / cargo-udeps + nightly / cargo-mutants、Node: knip、.NET: snitch / dotnet-project-licenses）を Required=Yes で表に載せることを必須化し、spec-implement Step 0.1 に quality-checks.md 由来のバックストップ（表に無ければ Required として追加）を追加。QC4 の「advisory」は結果の扱いであってツール不在の許容ではないと明記し、`cargo-udeps` 不在の「Skip silently」をログ付き skip + 環境欠陥の報告に変更
+- **spec-test-design: 検証条件の選言を禁止（Check 25 DETERMINISTIC_EXPECTATION）** - Expected Output / Expected Result / Verification Points に「キーが存在しないか `null`」のような選言を書くことを禁止。選言は両者を切り替える変異を殺せず、実装側で固定方針が分裂する（specrail approval-gate IT-7 は緩く・IT-11 は厳しく固定した `_CarriedConcerns6` の再発防止）。生成側は 1 形式に固定（design.md が未決なら design の欠落として報告）、受信側の寛容さは受け付ける形式ごとに 1 ケースずつ検証する。UT / IT の生成指示・Self-Review check・Rules に追加
 ### Fixed (plugin v2.2.30)
 
 - **Stop フックのブロック不能を修正** - `verify-tests-run.sh` / `confirm-phase-progression.sh` が `exit 1` を使用しており実際にはブロックできていなかった問題を `exit 2` に修正(Claude Code のフックブロックは exit 2 のみ有効)

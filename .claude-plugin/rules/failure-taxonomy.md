@@ -55,8 +55,8 @@ Correspondence with the Severity Classification (Minor / Moderate / Critical) in
 | `quality_check_failure` | `dependency_vulnerability` | C | Critical | blocking (cannot commit) |
 | `quality_check_failure` | `mutation_survived` | E | Moderate | Send back as insufficient tests |
 | `quality_check_failure` | `wasm_build_failure` / `trim_aot_incompatibility` | B | Moderate | |
-| `spec_mismatch` | `design_conformance_violation` | F | Critical | escalate to user |
-| `spec_mismatch` | `requirement_missing` / `restriction_violated` | D | Critical | escalate to user |
+| `spec_mismatch` | `design_conformance_violation` | F | Critical | Surplus (implementation exposes a key / field / column / endpoint / behavior design.md does not define): send back (rework) to remove it. Missing / mismatched items and DC4 module-boundary violations: escalate to user (see `review-worker.md` F) |
+| `spec_mismatch` | `requirement_missing` / `restriction_violated` | D | Critical | send back (rework) — the requirement is the standard, the implementer fixes the implementation. Escalate only when the spec is self-contradictory, a design.md change is required, or the rework limit is exhausted (see `review-worker.md` D) |
 | `spec_mismatch` | `api_contract_mismatch` | G | Minor | Report as a `/generate-api-docs` recommendation |
 | `spec_mismatch` | `test_design_missing` | E | Moderate | send back |
 
@@ -64,7 +64,7 @@ Correspondence between severity and action (re-stated from existing rules in `re
 
 - **Minor** -> auto-fix or advisory
 - **Moderate** -> send back to parallel-worker (up to 3 reworks)
-- **Critical** -> escalate to user
+- **Critical** -> escalate to user, except D (`requirement_missing` / `restriction_violated`) and F surplus (`design_conformance_violation` where the implementation adds what design.md does not define), which are sent back to parallel-worker as rework
 
 ### Correspondence with External Severity Scales (Source of Truth)
 
