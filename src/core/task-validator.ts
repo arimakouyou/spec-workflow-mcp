@@ -288,14 +288,16 @@ export function validateTasksMarkdown(content: string): ValidationResult {
     // Check for _TestFocus field
     let hasTestFocus = false;
     let hasPhaseReview = false;
+    let hasPhaseRefactor = false;
     for (let lineIdx = lineIndex + 1; lineIdx < endLine; lineIdx++) {
       const trimmedLine = lines[lineIdx].trim();
       if (trimmedLine.includes('_TestFocus:')) hasTestFocus = true;
       if (trimmedLine.includes('_PhaseReview:')) hasPhaseReview = true;
+      if (trimmedLine.includes('_PhaseRefactor:')) hasPhaseRefactor = true;
     }
 
     // Warn if non-phase-review task is missing _TestFocus
-    if (!hasPhaseReview && !hasTestFocus && taskId) {
+    if (!hasPhaseReview && !hasPhaseRefactor && !hasTestFocus && taskId) {
       warnings.push({
         line: lineNum,
         taskId,

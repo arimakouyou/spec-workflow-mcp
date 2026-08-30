@@ -174,8 +174,9 @@ fi
 #   - "進行": 否定/質問にも一致（"進行しないで" / "進行状況は？"）
 #   - "自動" / "オート": 本フックが防ぐ "Auto Mode" 概念そのものを同意扱いするのは自己矛盾
 #   - "それで" / "そのまま": 曖昧（"それで？" / "そのままにして"=触るな）
-# ダッシュボード承認はフェーズ遷移の正規のゲート（spec-design/SKILL.md:572、
-# spec-requirements/SKILL.md:203 — approved になれば check-approval が次フェーズを自動起動）。
+# ダッシュボード承認はフェーズ遷移の正規のゲート（spec-design/SKILL.md ・
+# spec-requirements/SKILL.md の「`check-approval` fetches status once」節、
+# approved になれば check-approval が次フェーズを自動起動）。
 # 「承認した」と伝えられた直後の Phase 遷移をブロックするのは仕様と矛盾する。
 # 受動形（承認され）は「承認されていない」と一致するため除外。
 CONSENT_PATTERNS=(

@@ -2,6 +2,23 @@
 
 Verifies referential consistency across spec-workflow documents.
 
+## Reference Form: Anchors, Not Line Numbers
+
+**Never cite a location by line number** (`design.md:923`, `bootstrap.rs:400`, `test-design.md:1409-1410`) in anything that is committed — spec documents (requirements / design / test-design / tasks and their `_Prompt` / carried-concern text), task logs, ADRs, the refactor backlog, code comments, and commit messages. Line numbers are correct only for the revision they were written against: the specrail `approval-gate` spec cited `design.md:923` for the network-isolation rule in 13 places, and one design.md revision moved that row to line 984 while line 923 became an unrelated `### API-6` heading — every citation silently pointed at the wrong text and nothing detected it.
+
+Cite a **stable anchor** instead, most specific first:
+
+| Target | Anchor form | Example |
+|--------|-------------|---------|
+| A spec entity | Its ID | `REQ-9` criterion 4, `DES-2`, `MOD-6`, `IT-41`, `ST-11 VP1`, `API-3` |
+| A section | Heading text | design.md「Architecture for Testability」→「External I/O isolation」 |
+| A table row | Row key | External I/O isolation の行「ネットワーク（内向き・バインド挙動そのもの）」 |
+| Prose without an ID | A short verbatim phrase in backticks, grep-able | design.md「`代替ポートを自動探索せず`」 |
+| Code | Path + symbol | `crates/specrail/src/bootstrap.rs` `AppBootstrap::run` の `TcpListener::bind` |
+| Carried concerns / backlog rows | Their own IDs | `_CarriedConcerns12`, `RF-003` |
+
+Line numbers are acceptable only in transient tool output and chat, where the reader has the same revision in front of them. A `file:line` form in a committed document is a review finding (category A, Minor, auto-fix by replacing it with an anchor); a `file:line` whose target has moved is category D (the citation no longer says what it claims).
+
 ## Verification Targets
 
 ### References Between Spec Documents

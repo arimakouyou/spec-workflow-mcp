@@ -157,6 +157,18 @@ describe('task-validator', () => {
       });
     });
 
+    describe('phase refactor tasks', () => {
+      it('should not warn about missing _TestFocus on a _PhaseRefactor task', () => {
+        const content = `- [ ] 1.4 Refactor Phase 1 from the backlog
+  - _PhaseRefactor: true_
+  - _Prompt: Role: Refactoring engineer | Task: Consume the refactor backlog | Restrictions: Behavior-preserving only | Success: No open entry remains_
+`;
+        const result = validateTasksMarkdown(content);
+        expect(result.valid).toBe(true);
+        expect(result.warnings.some(w => w.field === 'testFocus')).toBe(false);
+      });
+    });
+
     describe('mixed valid and invalid tasks', () => {
       it('should report errors only for invalid tasks', () => {
         const content = `- [ ] 1. Valid task
