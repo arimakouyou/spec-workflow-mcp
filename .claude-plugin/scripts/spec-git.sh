@@ -96,9 +96,13 @@ commit|record)
   bash "$SPEC_SCRIPTS_DIR/spec-state.sh" "$spec" "$root" --ready >/dev/null || gate G1 "仕様が ready でない(spec-state.sh で確認)"
   bash "$SPEC_SCRIPTS_DIR/spec-lint.sh" "$spec" "$root" >/dev/null 2>&1 || gate G1 "spec-lint が通らない"
 
-  # G2 手順の実行記録がそろっている
-  review="$(json review)"
-  [[ "$(jq -r '.verdict // empty' <<<"$review")" == commit ]] || gate G2 "review-worker の verdict: commit が記録されていない(runs/$task/review.json)"
+  # G2 手順の実行記録がそろっている(ツール確認タスクは確認そのものが記録)
+  if [[ "$type" == tools ]]; then
+    bash "$SPEC_SCRIPTS_DIR/spec-tools-check.sh" "$spec" "$root" > "$runs/$task/tools.tsv" || gate G2 "必須ツールが揃っていない(spec-tools-check.sh)"
+  else
+    review="$(json review)"
+    [[ "$(jq -r '.verdict // empty' <<<"$review")" == commit ]] || gate G2 "review-worker の verdict: commit が記録されていない(runs/$task/review.json)"
+  fi
   case "$type" in
     des-logic|des-types|des-ui|des-adapter|des-wiring|des-config|tst-*|it|st|smk|refactor|final)
       [[ "$(jq -r '.status // empty' <<<"$(json impl)")" == "done" ]] || gate G2 "実装の完了(status: done)が記録されていない(runs/$task/impl.json)" ;;
@@ -204,6 +208,9 @@ commit|record)
       [[ -f "$runs/$task/$r.json" ]] || continue
       echo "## $r"; echo; echo '```json'; jq . "$runs/$task/$r.json"; echo '```'; echo
     done
+    if [[ -f "$runs/$task/tools.tsv" ]]; then
+      echo "## tools"; echo; echo '```'; cat "$runs/$task/tools.tsv"; echo '```'; echo
+    fi
   } > "$sdir/task-logs/$task.md"
   rfs="$(jq -c '(.rf // [])[]' "$runs/$task/"*.json 2>/dev/null || true)"
   if [[ -n "$rfs" ]]; then
