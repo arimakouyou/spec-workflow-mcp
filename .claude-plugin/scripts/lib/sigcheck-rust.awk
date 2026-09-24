@@ -54,7 +54,7 @@ END {
   libline = 0
 
   # --- Cargo.toml ------------------------------------------------------------------
-  print "[package]\nname = \"spec-sigcheck\"\nversion = \"0.0.0\"\nedition = \"2021\"\npublish = false\n\n[lib]\npath = \"src/lib.rs\"\n\n[dependencies]" > cargo
+  print "[package]\nname = \"" crate "\"\nversion = \"0.0.0\"\nedition = \"2021\"\npublish = false\n\n[lib]\npath = \"src/lib.rs\"\n\n[dependencies]" > cargo
   for (i = 1; i <= nid; i++) {
     id = ids[i]; if (id !~ /^DEP-/) continue
     feats = F[id, "Features"]; ver = F[id, "Version"]

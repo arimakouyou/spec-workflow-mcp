@@ -16,6 +16,7 @@ index="$(spec_index "$root" "$spec")"
 row="$(bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" --tsv | awk -F'\t' -v k="$key" '$1 == k')"
 [[ -n "$row" ]] || { echo "error: タスク $key は tasks にない" >&2; exit 1; }
 IFS=$'\t' read -r _ type phase title tests _ <<<"$row"
+[[ "$tests" == "-" ]] && tests=""
 
 slice() { bash "$SPEC_SCRIPTS_DIR/spec-slice.sh" "$spec" "$1" "$root"; printf '\n'; }
 field() { awk -F'\t' -v id="$1" -v f="$2" '$1 == "field" && $3 == id && $4 == f { print $5; exit }' <<<"$index"; }

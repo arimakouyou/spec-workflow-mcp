@@ -108,7 +108,8 @@ END {
   add_task("FINAL", "final", maxphase + 1, "E2E と全層の実行・最終レビュー・PR", e2e)
 
   if (mode == "tsv") {
-    for (i = 1; i <= nt; i++) print tkey[i] "\t" ttype[i] "\t" tphase[i] "\t" ttitle[i] "\t" ttests[i] "\t" ((tkey[i] in isdone) ? "done" : "open")
+    # 空欄は "-" にする(read は連続したタブを 1 つの区切りとみなすため、空欄があると列がずれる)
+    for (i = 1; i <= nt; i++) print tkey[i] "\t" ttype[i] "\t" tphase[i] "\t" ttitle[i] "\t" (ttests[i] == "" ? "-" : ttests[i]) "\t" ((tkey[i] in isdone) ? "done" : "open")
     exit
   }
 

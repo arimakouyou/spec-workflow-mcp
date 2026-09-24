@@ -24,7 +24,8 @@ done
 root="$(spec_project_root "$rootarg")"
 sdir="$(spec_dir "$root" "$spec")"
 
-done_keys="$(spec_done_keys "$root" "$spec")"
+# SPEC_PLAN_EXTRA_DONE: これから作るコミットで完了するタスク(spec-git.sh commit が tasks.md を同梱するときに使う)
+done_keys="$(spec_done_keys "$root" "$spec") ${SPEC_PLAN_EXTRA_DONE:-}"
 
 if [[ "$mode" == tsv ]]; then
   spec_index "$root" "$spec" | gawk -v done="$done_keys" -v mode=tsv -f "$SPEC_LIB_DIR/spec-plan.awk"

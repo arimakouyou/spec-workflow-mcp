@@ -118,7 +118,7 @@ BEGIN {
   allow["requirements.md"] = "Requirements,Non-Functional,Journeys,Out of Scope"; need["requirements.md"] = "Requirements"
   allow["design.md"] = "Overview,Phases,Layers,Components,Types,APIs,Test Support,Dependencies,Tools,Decisions,Excluded Tests"; need["design.md"] = "Overview,Phases,Layers,Components"
   allow["test-design.md"] = "Unit Tests,Component Tests,Integration Tests,System Tests,E2E Tests"; need["test-design.md"] = ""
-  techneed = "Stack,Test Commands,Test Layout,Wiring Files,Health,Sigcheck"
+  techneed = "Stack,Test Commands,Quality Commands,Test Layout,Wiring Files,Health,Sigcheck"
   # task_type ごとの必須 EV カテゴリ
   evreq["feature-add"] = "code,contract"; evreq["feature-modify"] = "code,contract,tests"; evreq["bugfix"] = "code,tests,regressions"
   evreq["refactor"] = "code,tests"; evreq["legacy-migration"] = "code,contract,tests"; evreq["greenfield"] = "lib"; evreq["legacy"] = ""

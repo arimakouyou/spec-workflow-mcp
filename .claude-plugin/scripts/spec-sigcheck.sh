@@ -47,15 +47,24 @@ if [[ "$task_type" != "greenfield" && -f "$root/Cargo.toml" ]]; then
     | jq -r '[.packages[] | select(any(.targets[]; any(.kind[]; . == "lib"))) | "\(.name) \(.manifest_path | rtrimstr("/Cargo.toml"))"] | join(";")' || true)"
 fi
 
-gawk -v outdir="$work" -v overlay_crates="$overlay" -f "$SPEC_LIB_DIR/sigcheck-rust.awk" "$index"
+# 生成する crate の名前は実行ごとに変える(依存のビルド結果は共有しつつ、生成 crate の成果物は実行間で混ざらない)
+crate="sigcheck_$(basename "$work" | tr -c 'A-Za-z0-9\n' '_')"
+gawk -v outdir="$work" -v crate="$crate" -v overlay_crates="$overlay" -f "$SPEC_LIB_DIR/sigcheck-rust.awk" "$index"
 
 target="${SPEC_SIGCHECK_TARGET:-${XDG_CACHE_HOME:-$HOME/.cache}/spec-workflow/sigcheck-target}"
 mkdir -p "$target"
+# 依存のビルド結果を共有する target を使うので、同時実行は直列にする
+exec 9>"$target/.spec-sigcheck.lock"
+flock 9
+# 生成 crate の成果物だけを消す(依存のビルド結果は残す)
+cleanup_artifacts() { find "$target" -maxdepth 4 -name "*${crate}*" -exec rm -rf {} + 2>/dev/null || true; }
 if CARGO_TARGET_DIR="$target" cargo check --quiet --message-format short --manifest-path "$work/Cargo.toml" 2> "$work/cargo.err"; then
   echo "sigcheck: コンパイル成功($spec、$([[ -n "$overlay" ]] && echo overlay || echo standalone))"
+  cleanup_artifacts
   rm -rf "$work"
   exit 0
 fi
+cleanup_artifacts
 
 # 生成コードの行 → ID に対応づけて報告する
 gawk -F'\t' '

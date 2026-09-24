@@ -19,6 +19,15 @@ greenfield では、ここに書く値は計画値として扱う。P0 のブー
 | IT | [cargo test --test 'it_*'] |
 | ST | [コマンド または -] |
 | E2E | [コマンド または -] |
+| SMK | [スモークテストのコマンド または -] |
+
+## Quality Commands
+
+| Check | Command |
+|---|---|
+| format | [cargo fmt --check] |
+| lint | [cargo clippy --all-targets -- -D warnings] |
+| audit | [cargo audit または -] |
 
 ## Test Layout
 

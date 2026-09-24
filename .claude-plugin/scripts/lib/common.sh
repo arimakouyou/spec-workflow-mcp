@@ -20,6 +20,24 @@ spec_project_root() {
 spec_dir() { printf '%s/.spec-workflow/specs/%s\n' "$1" "$2"; }
 steering_dir() { printf '%s/.spec-workflow/steering\n' "$1"; }
 
+# steering/tech.md の表(## <section> の | key | value |)から値を引く。
+# 行が無ければ空文字を返し、`-` はそのまま返す。引数: <project-root> <section> <key>
+tech_table_value() {
+  local root="$1" section="$2" key="$3"
+  awk -v s="## $section" -v k="$key" '
+    $0 == s { p = 1; next } /^## / { p = 0 }
+    p && /^\|/ { n = split($0, c, /\|/); a = c[2]; b = c[3]; gsub(/^[ \t]+|[ \t]+$/, "", a); gsub(/^[ \t]+|[ \t]+$/, "", b)
+                 if (a == k) { print b; exit } }' "$(steering_dir "$root")/tech.md"
+}
+
+# steering/tech.md の箇条書き(## <section> の - Key: value)から値を引く。引数: <project-root> <section> <key>
+tech_list_value() {
+  local root="$1" section="$2" key="$3"
+  awk -v s="## $section" -v k="$key" '
+    $0 == s { p = 1; next } /^## / { p = 0 }
+    p && index($0, "- " k ":") == 1 { sub("^- " k ":[ \t]*", ""); print; exit }' "$(steering_dir "$root")/tech.md"
+}
+
 # コミット trailer から完了済みのタスクキーを求める(空白区切り)。引数: <project-root> <spec>
 # Spec-Task: で完了、Spec-Reopen: で再オープン。キーごとに新しい方の出来事が有効。
 spec_done_keys() {

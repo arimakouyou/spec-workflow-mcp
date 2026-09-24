@@ -120,6 +120,14 @@ tech.md owns project-wide technical facts. Required sections:
 | IT | cargo test --test '*' |
 | ST | cargo test --test 'st_*' |
 | E2E | npx playwright test |
+| SMK | cargo test --test 'smoke_*' |
+
+## Quality Commands
+| Check | Command |
+|---|---|
+| format | cargo fmt --check |
+| lint | cargo clippy --all-targets -- -D warnings |
+| audit | cargo audit |
 
 ## Test Layout
 - UT: {stem}_tests.rs beside the source file, included via #[cfg(test)] #[path] mod tests
@@ -137,7 +145,8 @@ tech.md owns project-wide technical facts. Required sections:
 - Language: rust
 ```
 
-- A layer the project does not use is written as `| CT | - |`.
+- A layer the project does not use is written as `| CT | - |`. `SMK` runs the smoke tests the `P{n}-SMK` tasks write.
+- `Quality Commands` are run by the commit gate (G8) and the phase check. A check the project does not use is `-`.
 - `Sigcheck` is `rust`, `dotnet`, or `unsupported (<reason>)`. A missing `Sigcheck` section is L23.
 - In greenfield projects these values are *planned* values. They become real when the P0 bootstrap completes (§7).
 

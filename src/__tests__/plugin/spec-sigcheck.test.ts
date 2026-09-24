@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'child_process';
-import { cpSync, mkdtempSync } from 'fs';
+import { cpSync, mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -58,9 +58,12 @@ describe.skipIf(!hasCargo)('spec-sigcheck', () => {
   for (const name of listCases()) {
     it(`${name} は設計段階でコンパイルエラーになる`, { timeout: 600_000 }, () => {
       const { root, expectId, expectMsg } = applyCase(name);
+      const design = readFileSync(join(root, '.spec-workflow/specs/todo-api/design.md'), 'utf-8');
+      expect(design, 'ケースが見本を書き換えていない').not.toBe(readFileSync(join(OK, '.spec-workflow/specs/todo-api/design.md'), 'utf-8'));
       const r = sigcheck(root);
-      expect(r.status).toBe(1);
-      expect(r.rows.some((row) => row.id === expectId && row.msg.includes(expectMsg))).toBe(true);
+      const detail = `stdout:\n${r.stdout}\nstderr:\n${r.stderr}`;
+      expect(r.status, detail).toBe(1);
+      expect(r.rows.some((row) => row.id === expectId && row.msg.includes(expectMsg)), detail).toBe(true);
     });
   }
 });
