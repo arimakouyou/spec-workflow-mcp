@@ -1,90 +1,45 @@
 ---
 name: check-approval
-description: "Synchronously check the status of a pending approval request via the approvals MCP tool (no polling). Use when the user has been prompted to approve via the dashboard / VS Code extension and wants to resume the workflow after they approved. Triggers on: 'check approval', 'approval status', or programmatic invocation during spec workflow approval gates."
+description: "Check an approval request once (no polling) and, when approved, clean it up, commit the approved spec documents and move to the next phase according to the fixed transition table. Use after the user approved in the dashboard. Triggers on: 'check approval', 'approval status', '承認を確認', or '/check-approval <approvalId>'."
 ---
 
-# Check Approval Status
-
-Fetch the current status of a pending approval request in one shot. **No polling.** If the approval is still pending, instruct the user to approve via the dashboard / VS Code extension and re-invoke this skill.
-
-## Usage
+# Check Approval
 
 ```
-/check-approval <approvalId> next:/spec-requirements
+/check-approval <approvalId>
 ```
 
-The `next:` parameter is optional. When provided, `check-approval` invokes the specified skill after a successful approval and cleanup. When omitted, it reports success and waits for the caller's next step.
+The next step is decided by the transition table below, not by the caller.
 
-## Process
+## Procedure
 
-### 1. Parse Parameters
+1. Call the `approvals` MCP tool: `action: "status"`, `approvalId: <approvalId>`.
+2. Branch on `status`:
 
-Extract the following from the invocation:
+| Status | Action |
+|---|---|
+| `pending` | Tell the user to approve or reject in the dashboard, then run `/check-approval <approvalId>` again. Stop. |
+| `needs-revision` / `rejected` | Show the reviewer's comments and annotations. Run the phase skill of that document again in revise mode, passing the comments. It re-runs spec-review and requests a new approval. Stop. |
+| `approved` | Continue with step 3. |
 
-- `<approvalId>` — the approval ID to check (required)
-- `next:<skill-name>` — the skill to invoke after approval (optional). Format: `next:/skill-name`
+3. `approvals action:"delete" approvalId:<approvalId>`. If it fails, report the error and stop.
+4. Record the approved documents in git: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-git.sh docs <spec>`. This commits only `.spec-workflow/specs/<spec>/` and `.spec-workflow/approvals/<spec>/`. For steering, use `steering` as the spec name.
+5. Check the whole spec: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-state.sh <spec>`.
+   - If any document is `stale` or `modified`, open the **first** one in dependency order with its phase skill in revise mode. Pass it the upstream diff (`.spec-workflow/approvals/<spec>/content/<old-sha>.md` vs the current upstream file) and the lint output. Stop here.
+6. Transition by the document that was just approved:
 
-### 2. Fetch Approval Status (one-shot)
+| Approved | Next |
+|---|---|
+| steering (product / tech / structure) | when all three are approved: `/spec-request-spec` |
+| request-spec | `/spec-investigate`. If `task_type: legacy`, go to `/spec-requirements` instead. |
+| requirements | `/spec-design` |
+| design | `/spec-test-design` |
+| test-design | Generate tasks with `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-plan.sh <spec>`, run `spec-git.sh docs <spec>` again, and report that the spec is ready for `/spec-implement <spec>`. |
 
-Call the `approvals` MCP tool with `action: 'status'`:
-
-```
-approvals action:"status" approvalId:"<approvalId>"
-```
-
-Read the returned `status` field. Possible values: `pending`, `approved`, `needs-revision`, `rejected`.
-
-### 3. Handle Result
-
-Branch on the `status` field:
-
-#### `pending`
-
-The reviewer has not acted yet.
-
-1. Report: "Approval is still pending. Please approve or reject via the dashboard / VS Code extension, then re-run `/check-approval <approvalId>`."
-2. Do NOT block. Return control to the caller so the user can proceed out-of-band.
-3. Do NOT auto-transition.
-
-#### `approved`
-
-1. Report: "Approval granted."
-2. **Immediately run cleanup**: `approvals action:"delete" approvalId:"<approvalId>"`.
-   - If delete fails: report the error and ask the user to retry. Do NOT proceed.
-   - If delete succeeds: report "Cleanup complete."
-3. **Auto-transition** (if `next:` parameter was provided):
-   - Report: "Proceeding to next phase: `{skill-name}`"
-   - Invoke the next skill via the Skill tool. For example, if the parameter was `next:/spec-requirements`, invoke the skill `spec-requirements`.
-   - Do NOT wait for user input between cleanup and invoking the next skill.
-4. **No auto-transition** (if `next:` was omitted):
-   - Report: "Approval approved and cleaned up. Ready for next steps."
-
-#### `needs-revision`
-
-1. Report the reviewer's comments from the approval response.
-2. Tell the user: "Revision requested. Please review the comments above."
-3. Do NOT auto-transition. The calling skill should update the document, re-run self-review, request a NEW approval (obtaining a new `approvalId`), then run `/check-approval <newApprovalId>` again (include `next:` if auto-transition is needed).
-
-#### `rejected`
-
-1. Report the rejection reason.
-2. Tell the user: "Approval was rejected. Please review the feedback."
-3. Do NOT auto-transition. The calling skill should revise the document, request a NEW approval, then run `/check-approval <newApprovalId>` again.
-
-## Why No Polling
-
-Polling (the previous 60-minute Bash loop) was removed because:
-
-- Spec approval is the designated **human-in-the-loop** gate. A long Bash block added no value over letting the user explicitly say "continue" after approving.
-- Polling held a Bash process open, blocking other tool calls and inflating perceived latency.
-- One-shot `action:"status"` achieves the same result with zero wait time and clearer control flow.
-
-If you need the previous auto-resume behavior, re-invoke `/check-approval <approvalId>` after approving via the dashboard. The caller skill remains in the same logical step.
+Invoke the next skill directly, without waiting for user input. The user's approval in the dashboard is the consent to proceed.
 
 ## Rules
 
-- This skill only checks status and performs cleanup — it does not modify spec documents.
-- Verbal approval is NEVER accepted — only dashboard / VS Code extension approval counts.
-- `approvals action:'delete'` must succeed before the workflow can proceed.
-- If `delete` fails, do not proceed — ask the user to retry.
-- The `next:` parameter triggers auto-transition ONLY on the `approved` path — never on `pending`, `needs-revision`, or `rejected`.
+- Verbal approval is never accepted. Only the dashboard approval counts. The server records it in the approval ledger.
+- Never poll. One status call per invocation.
+- This skill does not edit spec documents.
