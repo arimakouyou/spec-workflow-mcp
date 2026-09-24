@@ -214,6 +214,41 @@ describe('spec-reopen', () => {
   });
 });
 
+describe('spec-git 開始前からある利用者のファイル', () => {
+  it('開始前からの未追跡ファイルは G0 / G3 に影響せず、discard で消えず、コミットにも入らない', async () => {
+    const root = await prepared();
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    writeFileSync(join(root, '.claude/notes.md'), 'mine');
+
+    expect(sg(root, 'start', SPEC, 'DES-2').status).toBe(0);
+    writeImpl(root);
+    expect(sg(root, 'discard', SPEC, 'DES-2').status).toBe(0);
+    expect(existsSync(join(root, '.claude/notes.md'))).toBe(true);
+    expect(existsSync(join(root, 'src/domain/todo.rs'))).toBe(false);
+
+    expect(sg(root, 'start', SPEC, 'DES-2').status).toBe(0);
+    writeImpl(root);
+    expect(sg(root, 'checkpoint', SPEC, 'DES-2', 'src/domain/todo_tests.rs').status).toBe(0);
+    writeRuns(root, 'DES-2', okRuns);
+    const r = sg(root, 'commit', SPEC, 'DES-2');
+    expect(r.stderr).toBe('');
+    expect(git(root, ['ls-files', '.claude/notes.md'])).toBe('');
+    expect(git(root, ['ls-files', 'src/domain/todo.rs'])).toContain('src/domain/todo.rs');
+    expect(existsSync(join(root, '.claude/notes.md'))).toBe(true);
+  });
+
+  it('.gitignore が spec 文書を除外していれば、docs は理由を示して止まる', async () => {
+    const root = await prepared();
+    git(root, ['rm', '-rq', '--cached', '.spec-workflow']);
+    writeFileSync(join(root, '.gitignore'), '.spec-workflow\n');
+    git(root, ['add', '.gitignore']);
+    git(root, ['commit', '-qm', 'ignore spec-workflow']);
+    const r = sg(root, 'docs', SPEC);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('.gitignore');
+  });
+});
+
 describe('spec-git その他', () => {
   it('docs は文書以外がステージされていれば拒否する', async () => {
     const root = await prepared();

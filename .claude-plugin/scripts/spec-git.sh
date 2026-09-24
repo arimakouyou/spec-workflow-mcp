@@ -34,9 +34,29 @@ ensure_ignore() {
   done
 }
 
-# .spec-workflow の外で変更・追加されたパス
-changed_outside() {
-  g status --porcelain -uall -- . ':(exclude).spec-workflow' | awk '{ p = substr($0, 4); sub(/^.* -> /, "", p); print p }'
+# .spec-workflow の外で変更された追跡済みファイル
+tracked_changes() {
+  g status --porcelain -uno -- . ':(exclude).spec-workflow' | awk '{ p = substr($0, 4); sub(/^.* -> /, "", p); print p }'
+}
+# .spec-workflow の外にある未追跡ファイル(.gitignore 対象は除く)
+untracked_now() {
+  g ls-files --others --exclude-standard -- . ':(exclude).spec-workflow'
+}
+# spec の最初の start の時点で既にあった未追跡ファイルは利用者のもので、触らない。
+# それ以降に増えた未追跡ファイルは、タスクが作ったものとして扱う。
+untracked_base="$runs/untracked.base"
+untracked_new() {
+  if [[ -f "$untracked_base" ]]; then untracked_now | grep -vxF -f "$untracked_base" || true; else untracked_now; fi
+}
+# タスクが変更したパス(追跡済みの変更 + 開始後に増えた未追跡ファイル)
+changed_since_start() { { tracked_changes; untracked_new; } | sort -u | grep -v '^$' || true; }
+
+# spec 文書を .gitignore が除外していないか(除外されていると文書も実装もコミットできない)
+ensure_trackable() {
+  local probe="$1"
+  if g check-ignore -q "$probe" 2>/dev/null; then
+    die ".gitignore が ${probe#"$root"/} を除外している。spec 文書を追跡できるよう、.gitignore から .spec-workflow の除外を外す(または !.spec-workflow/specs/ を追加する)"
+  fi
 }
 
 task_row() { bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" --tsv | awk -F'\t' -v k="$1" '$1 == k'; }
@@ -55,10 +75,14 @@ commit_with_trailers() { # subject, extra trailer lines...
 case "$cmd" in
 start)
   [[ -n "$task" ]] || die "task が必要"
+  ensure_trackable "$sdir/design.md"
   ensure_ignore
-  dirty="$(changed_outside)"
-  [[ -z "$dirty" ]] || gate G0 "作業ツリーが clean でない(前のタスクの残り):\n$dirty"
+  dirty="$(tracked_changes)"
+  [[ -z "$dirty" ]] || gate G0 "追跡済みファイルに未コミットの変更がある(前のタスクの残り):\n$dirty"
   mkdir -p "$runs/$task"
+  [[ -f "$untracked_base" ]] || untracked_now > "$untracked_base"
+  left="$(untracked_new)"
+  [[ -z "$left" ]] || gate G0 "spec の開始後に増えた未追跡ファイルがある(前のタスクの残りなら spec-git.sh discard、利用者のファイルなら .gitignore に加える):\n$left"
   attempt=$(( $(jq -r '.attempt // 0' "$runs/$task/start.json" 2>/dev/null || echo 0) + 1 ))
   jq -n --arg t "$task" --arg b "$(g rev-parse HEAD)" --arg at "$(date -u +%FT%TZ)" --argjson n "$attempt" \
     '{task: $t, base: $b, at: $at, attempt: $n}' > "$runs/$task/start.json"
@@ -112,7 +136,7 @@ commit|record)
       [[ "$(jq -r '.verdict // empty' <<<"$(json verify)")" == pass ]] || gate G2 "検証役の verdict: pass が記録されていない(runs/$task/verify.json)" ;;
   esac
 
-  changed="$(changed_outside)"
+  changed="$(changed_since_start)"
   if [[ "$cmd" == record ]]; then
     [[ -z "$changed" ]] || gate G3 "record はコード変更を含められない:\n$changed"
   else
@@ -229,15 +253,19 @@ commit|record)
   [[ -s "$sdir/handoffs.jsonl" ]] || rm -f "$sdir/handoffs.jsonl"
   SPEC_PLAN_EXTRA_DONE="$task" bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" 2>/dev/null
   inputs="$(bash "$SPEC_SCRIPTS_DIR/spec-brief.sh" "$spec" "$task" "$root" --inputs-only 2>/dev/null | sha256sum | cut -c1-12)"
-  g add -A -- . ':(exclude).spec-workflow/approvals'
+  # 追跡済みの変更と、開始後に増えたファイルだけを載せる(開始前からの未追跡ファイルは利用者のもの)
+  g add -u -- . ':(exclude).spec-workflow/approvals'
+  mapfile -t new_files < <(untracked_new)
+  (( ${#new_files[@]} == 0 )) || g add -- "${new_files[@]}"
+  g add -- "$sdir" .spec-workflow/.gitignore
   case "$type" in des-*) kind="feat" ;; tst-*|it|st|smk|final) kind="test" ;; refactor) kind="refactor" ;; *) kind="chore" ;; esac
   commit_with_trailers "$kind($spec): $task $title" "Spec-Task: $task" "Spec-Inputs: $inputs" "Spec-Attempt: $attempt"
   echo "spec-git: $task をコミット($(g rev-parse --short HEAD))"
   ;;
 
 docs)
-  if [[ "$spec" == steering ]]; then paths=(.spec-workflow/steering .spec-workflow/approvals/steering)
-  else paths=(".spec-workflow/specs/$spec" ".spec-workflow/approvals/$spec"); fi
+  if [[ "$spec" == steering ]]; then paths=(.spec-workflow/steering .spec-workflow/approvals/steering); ensure_trackable "$root/.spec-workflow/steering/tech.md"
+  else paths=(".spec-workflow/specs/$spec" ".spec-workflow/approvals/$spec"); ensure_trackable "$sdir/design.md"; fi
   staged="$(g diff --cached --name-only)"
   if [[ -n "$staged" ]]; then
     other="$(grep -vE "^($(printf '%s|' "${paths[@]}" | sed 's/|$//'))(/|$)" <<<"$staged" || true)"
@@ -262,7 +290,12 @@ discard)
   [[ -n "$task" ]] || die "task が必要"
   [[ -f "$runs/$task/start.json" ]] || die "$task は start されていない(clean な開始点が無いので破棄しない)"
   g restore -SW -- . ':(exclude).spec-workflow'
-  g clean -fdq -- . ':(exclude).spec-workflow'
+  # 開始後に増えたファイルだけを消す(開始前からの未追跡ファイルは残す)
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
+    rm -f -- "$root/$f"
+    rmdir -p --ignore-fail-on-non-empty -- "$(dirname "$root/$f")" 2>/dev/null || true
+  done < <(untracked_new)
   echo "spec-git: $task の変更を破棄した(.spec-workflow を除く)"
   ;;
 

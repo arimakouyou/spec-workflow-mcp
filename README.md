@@ -48,7 +48,7 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 
 > **What the plugin includes:**
 >
-> - **MCP server** with the `approvals` tool and the approval ledger
+> - **MCP server** with the `approvals` tool and the approval ledger (`@arimakouyou/spec-workflow-mcp@^3`; the v2 workflow does not work with a 2.x server, which writes no ledger)
 > - **Spec workflow skills**: steering-doc, spec-request-spec, spec-investigate, spec-requirements, spec-design, spec-test-design, spec-review, check-approval, spec-change, spec-implement, spec-status, spec-archive, plus TDD / integration-test procedures and framework references (Rust / .NET)
 > - **8 sub-agents**: spec-author / spec-reviewer (documents), impl-worker / integ-test-worker (implementation), unit-test-engineer / frontend-test-engineer / integ-test-auditor (read-only verification), review-worker (the only committer)
 > - **Deterministic scripts** (Bash): document lint (`spec-lint.sh`), signature compile check (`spec-sigcheck.sh`), task generation (`spec-plan.sh`), briefs, the commit gate (`spec-git.sh`, G0-G9), reopen after spec changes
