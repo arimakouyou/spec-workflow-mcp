@@ -20,6 +20,19 @@ spec_project_root() {
 spec_dir() { printf '%s/.spec-workflow/specs/%s\n' "$1" "$2"; }
 steering_dir() { printf '%s/.spec-workflow/steering\n' "$1"; }
 
+# コミット trailer から完了済みのタスクキーを求める(空白区切り)。引数: <project-root> <spec>
+# Spec-Task: で完了、Spec-Reopen: で再オープン。キーごとに新しい方の出来事が有効。
+spec_done_keys() {
+  local root="$1" spec="$2"
+  git -C "$root" rev-parse --git-dir >/dev/null 2>&1 || return 0
+  git -C "$root" log --reverse --format='%(trailers:key=Spec,valueonly,separator=%x20)%x09%(trailers:key=Spec-Task,valueonly,separator=%x20)%x09%(trailers:key=Spec-Reopen,valueonly,separator=%x20)' 2>/dev/null \
+    | gawk -F'\t' -v spec="$spec" '
+        { s = $1; gsub(/[[:space:]]/, "", s); if (s != spec) next
+          n = split($2, a, /[[:space:]]+/); for (i = 1; i <= n; i++) if (a[i] != "") st[a[i]] = "done"
+          n = split($3, b, /[[:space:]]+/); for (i = 1; i <= n; i++) if (b[i] != "") st[b[i]] = "open" }
+        END { for (k in st) if (st[k] == "done") printf "%s ", k }'
+}
+
 # spec の索引(TSV)を標準出力に書く。引数: <project-root> <spec>
 spec_index() {
   local root="$1" spec="$2" sdir stdir f
