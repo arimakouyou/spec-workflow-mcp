@@ -1,7 +1,7 @@
 ---
 name: dotnet-build-cache
 description: |
-  Build cache configuration for every agent that runs the dotnet command in a .NET project. Covers MSBuild incremental builds (enabled by default, no configuration needed), the NuGet package cache (`~/.nuget/packages` is auto-shared and safe for concurrent access), the prohibition on sharing `bin/` / `obj/` (absolute-path differences across worktrees), the optimization chain `dotnet restore -> build --no-restore -> test --no-build`, hot reload via `dotnet watch`, what to target with `actions/cache` in CI, and troubleshooting via `dotnet clean` / `dotnet nuget locals all --clear`. Reference immediately before running dotnet build / test / publish, or before launching .NET parallel-worker / integ-test-worker. Triggers on: 'dotnet build cache', 'NuGet cache', 'MSBuild incremental build', 'dotnet restore --no-restore', '.NET ビルドキャッシュ', 'dotnet build / test / publish 実行前', 'NuGet キャッシュ設定'.
+  Build cache configuration for every agent that runs the dotnet command in a .NET project. Covers MSBuild incremental builds (enabled by default, no configuration needed), the NuGet package cache (`~/.nuget/packages` is auto-shared and safe for concurrent access), the prohibition on sharing `bin/` / `obj/` (absolute-path differences across worktrees), the optimization chain `dotnet restore -> build --no-restore -> test --no-build`, hot reload via `dotnet watch`, what to target with `actions/cache` in CI, and troubleshooting via `dotnet clean` / `dotnet nuget locals all --clear`. Reference immediately before running dotnet build / test / publish, or before launching .NET impl-worker / integ-test-worker. Triggers on: 'dotnet build cache', 'NuGet cache', 'MSBuild incremental build', 'dotnet restore --no-restore', '.NET ビルドキャッシュ', 'dotnet build / test / publish 実行前', 'NuGet キャッシュ設定'.
 allowed-tools: [Read, Bash, Grep]
 ---
 
@@ -15,13 +15,13 @@ Unlike Rust's sccache, .NET relies on built-in cache mechanisms.
 - Immediately before running dotnet build / test / publish
 - Configuring the NuGet cache in CI (deciding what to target with `actions/cache`)
 - Pre-processing before parallel `dotnet` command execution within a worktree
-- Before launching .NET-flavored `parallel-worker` / `integ-test-worker`
+- Before launching .NET-flavored `impl-worker` / `integ-test-worker`
 
 ## Out of Scope
 
 - Rust build cache -> `rust-build-cache` Skill
 - Detailed `actions/cache` setup in CI workflows -> `setup-ci` Skill
-- Agent parallelism control -> `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
+- Agent parallelism control -> agents run one at a time across the plugin, enforced by `${CLAUDE_PLUGIN_ROOT}/hooks/guard-agent.sh`
 
 ## MSBuild Incremental Build
 
@@ -89,5 +89,5 @@ dotnet restore
 
 - Universal constraints: `quality-checks` (QC12)
 - Related Skills: `csproj`, `aspnet-core`, `entity-framework-core`, `blazor`, `setup-ci`
-- Related Rule: `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md`
-- Related Agents: `parallel-worker`, `integ-test-worker`, `review-worker`
+- Related Hook: `${CLAUDE_PLUGIN_ROOT}/hooks/guard-agent.sh` (agents run one at a time)
+- Related Agents: `impl-worker`, `integ-test-worker`, `review-worker`

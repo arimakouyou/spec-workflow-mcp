@@ -582,4 +582,4 @@ builder.Services.Configure<HostOptions>(options =>
 ## Related Rules / Skills
 
 - Universal constraints: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-C1-C5), `api-validation` Skill (AV-C1-C5)
-- Related Skills: `csproj`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet`
+- Related Skills: `csproj`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `tdd-skills-dotnet`, `spec-impl-integ`

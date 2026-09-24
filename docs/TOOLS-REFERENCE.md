@@ -461,6 +461,28 @@ MCP defines two interface types — **Tools** and **Prompts** — plus the plugi
 }
 ```
 
+**承認台帳**(契約: `.claude-plugin/contract/approval-ledger-v1.md`)
+
+`.spec-workflow/specs/{spec}/{request-spec,requirements,design,test-design}.md` と `.spec-workflow/steering/{product,tech,structure}.md` は、台帳で管理する。
+
+| 操作 | 台帳の動作 |
+|---|---|
+| request | 上流が承認済みかつ未変更であることを確かめる。request-spec はさらに steering 3 文書が承認済みであることを確かめる。依頼時点の本文の sha256 を `metadata.ledger` に記録する |
+| approve(ダッシュボード) | 依頼時点から本文が変わっていないことを確かめ、`approvals/{spec}/ledger.json` と `content/{sha}.md` に記録する |
+| undo | 台帳を 1 つ前の承認に戻す |
+| status | `ledger`(依頼時点の sha256 と上流の sha256)を返す |
+
+拒否されたときのエラーコード:
+
+- `TASKS_GENERATED`: tasks.md は生成物で、承認の対象ではない
+- `UPSTREAM_NOT_APPROVED:<doc>`
+- `UPSTREAM_MODIFIED:<doc>`
+- `STEERING_NOT_APPROVED:<doc>`
+- `STEERING_MODIFIED:<doc>`
+- `CONTENT_CHANGED`
+
+上流が再承認されると、下流の文書は `stale` になる。状態は `.claude-plugin/scripts/spec-state.sh` で確認できる。
+
 ### get-approval-status
 
 **Purpose**: Checks the approval status of a document.

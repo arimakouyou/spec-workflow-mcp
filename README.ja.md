@@ -28,7 +28,9 @@
 
 ## ✨ 主な機能
 
-- **構造化された開発ワークフロー** - 順次仕様作成（要求仕様 → 要件 → 設計 → テスト設計 → タスク）
+- **構造化された開発ワークフロー** - 順次仕様作成(steering → 要求仕様 → 要件 → 設計 → テスト設計)。タスクは承認済みの文書から生成する
+- **事実の単一所有** - 名前・シグネチャ・パス・テストケースはそれぞれ 1 つの文書だけが所有し、他の文書は ID で参照する。決定的な lint で強制する
+- **承認台帳** - 上流の文書を再承認すると、下流の承認は自動で失効する
 - **リアルタイムWebダッシュボード** - ライブ更新で仕様、タスク、進捗を監視
 - **承認ワークフロー** - 改訂を含む完全な承認プロセス
 - **タスク進捗追跡** - ビジュアル進捗バーと詳細なステータス
@@ -46,19 +48,15 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 
 > **プラグインに含まれるもの：**
 >
-> - **MCP サーバー** — 仕様駆動開発ワークフロー用
-> - **50+ スキル** — spec ライフサイクル全段階（request-spec → requirements → design → test-design → tasks → implement → archive）に加え、統合テスト（Rust / .NET）、TDD、CI 生成、mutation testing、arch test 生成、PR コメント対応など
-> - **7 専門サブエージェント** — Implementer ロール（parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker / wave-harness-worker）と Reviewer ロール（review-worker / integ-test-auditor）に整理。`Language:` 引数で **Rust / .NET 両言語サポート**
-> - **17 ルール** — プロジェクトアーキテクチャ、QC1-QC13 品質チェック、OWASP セキュリティ、設計原則、型安全（TS-R1-R5 / TS-C1-C5）、failure taxonomy（FC1-FC6）、L1-L5 段階的執行モデル
-> - **16 フック** — spec 注入、テスト実行確認、design.md 整合チェック、arch test 再生成促し、ビルドキャッシュ、差分検出式セキュリティ監査、フェーズ進行同意確認
-> - **ヘルパースクリプト** — 実装セッション状態管理（`session-manage.sh`）、レートリミット自動再開ラッパー（`auto-resume.sh`）
+> - **MCP サーバー** — `approvals` ツールと承認台帳
+> - **spec フローの skill** — steering-doc、spec-request-spec、spec-investigate、spec-requirements、spec-design、spec-test-design、spec-review、check-approval、spec-change、spec-implement、spec-status、spec-archive。加えて TDD と統合テストの手順、フレームワーク別の参照(Rust / .NET)
+> - **8 つのサブエージェント** — spec-author / spec-reviewer(文書)、impl-worker / integ-test-worker(実装)、unit-test-engineer / frontend-test-engineer / integ-test-auditor(読み取り専用の検証)、review-worker(唯一のコミット主体)
+> - **決定的なスクリプト(Bash)** — 文書の lint(`spec-lint.sh`)、シグネチャのコンパイル確認(`spec-sigcheck.sh`)、タスク生成(`spec-plan.sh`)、brief、コミットゲート(`spec-git.sh`、G0-G9)、仕様変更後の再オープン
+> - **フック** — exit 2 でフローを強制する guard-edit / guard-git / guard-agent / guard-approval-request と、record-subagent / stop-failure / session-start
+>
+> フロー全体は [PLUGIN_FLOWS.ja.md](PLUGIN_FLOWS.ja.md) を参照。
 
-> **プラグインフック利用時の前提：**
->
-> - `jq` — すべてのフックで JSON 解析に使用（必須）
-> - GNU coreutils (`timeout`) — `security-audit-guard.sh` の fail-close タイムアウト処理で使用（Linux は標準搭載、macOS は `brew install coreutils` で導入が必要）
->
-> これらは本プラグインのフックを使用するときのみ必要です。MCP サーバーと Web ダッシュボード自体はこれらに依存しません。
+> **プラグインのスクリプトとフックの前提:** `bash`、`jq`、`gawk`、`sha256sum`、`git`。Rust のシグネチャ確認には `cargo`。MCP サーバーと Web ダッシュボードはこれらに依存しない。
 
 ### 方法2: 手動 MCP 設定
 
@@ -89,13 +87,15 @@ npx -y @arimakouyou/spec-workflow-mcp@latest --dashboard
 
 ## 📝 使い方
 
-会話でspec-workflowに言及するだけです：
+Claude Code プラグインでの使い方:
 
-- **「ユーザー認証の仕様を作成して」** - 完全な仕様ワークフローを作成
-- **「仕様一覧を表示して」** - すべての仕様とそのステータスを表示
-- **「user-auth仕様のタスク1.2を実行して」** - 特定のタスクを実行
+- **`/steering-doc`** - プロジェクトの steering 文書を作る(初回のみ)
+- **`/spec-request-spec`** - 新しい spec を始める。ダッシュボードで承認して `/check-approval` を実行すると、次の段階へ進む
+- **`/spec-implement <spec>`** - 承認済みの spec をタスクごとに実装する
+- **`/spec-change <spec>`** - 承認済みの文書を変更する。下流の文書と影響を受けるタスクが追従する
+- **`/spec-status <spec>`** - 文書の状態と進捗を表示する
 
-[その他の例を見る →](docs/PROMPTING-GUIDE.ja.md)
+フロー全体は [PLUGIN_FLOWS.ja.md](PLUGIN_FLOWS.ja.md) を参照。
 
 ## 🔧 MCPクライアントセットアップ
 
@@ -292,13 +292,11 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workfl
 ```
 your-project/
   .spec-workflow/
-    approvals/
-    archive/
-    specs/
-    steering/
-    templates/
-    user-templates/
-    config.example.toml
+    approvals/<spec>/ledger.json   # 承認台帳(MCP サーバーだけが書く)
+    approvals/<spec>/content/      # 承認された本文(sha256 ごと)
+    archive/specs/
+    specs/<spec>/                  # request-spec、requirements、design、test-design、tasks(生成物)、evidence/、task-logs/
+    steering/                      # product.md、tech.md、structure.md
 ```
 
 ### プラグイン構造（`.claude-plugin/` で配布）
@@ -309,70 +307,35 @@ your-project/
   marketplace.json         # マーケットプレイスリスティング
   .mcp.json                # MCP サーバー設定
 
-  hooks/                   # 16 個のイベント駆動フック
-    hooks.json             # フック登録 (PreToolUse / PostToolUse / Stop / SessionStart / UserPromptSubmit)
-    inject-spec.sh         # UserPromptSubmit: spec context 注入
-    inject-skill-hint.sh   # PreToolUse Edit|Write: skill discovery hint
-    inject-build-cache.sh  # PreToolUse Bash: cargo / dotnet ビルドキャッシュ hint
-    lockfile-guard.sh      # PreToolUse Bash: lockfile 整合性ガード
-    format-check-guard.sh  # PreToolUse Bash: フォーマットチェック
-    security-audit-guard.sh # PreToolUse Bash: 差分検出式セキュリティ監査 (fail-close)
-    post-edit.sh           # PostToolUse Edit|Write: 編集後自動整形
-    auto-verify-spec.sh    # PostToolUse Edit|Write: spec 整合チェック
-    detect-new-files.sh    # PostToolUse Write: spec 未言及ファイル検出
-    design-conformance-check.sh  # PostToolUse Edit|Write: design.md とコードの乖離検出
-    module-boundary-check.sh     # PostToolUse Edit|Write: モジュール境界違反チェック
-    arch-test-regen-hint.sh      # PostToolUse Edit|Write: arch test 再生成促し
-    verify-tests-run.sh    # Stop: テスト実行履歴チェック
-    log-implementation.sh  # Stop: 実装ログ skeleton 自動生成
-    confirm-phase-progression.sh # Stop: フェーズ進行同意確認
-    resume-hint.sh         # SessionStart: 再開コンテキスト注入
+  hooks/                   # フローを強制するフック(exit 2)とセッションの文脈
+    hooks.json
+    session-start.sh       # SessionStart: 実装の状態と次のタスク
+    guard-edit.sh          # PreToolUse Edit|Write: 承認済み文書・生成物・台帳を守る
+    guard-git.sh           # PreToolUse Bash: コミットは spec-git.sh 経由だけ
+    guard-agent.sh         # PreToolUse Agent: 直列・タスクと agent の対応・順序
+    guard-approval-request.sh # PreToolUse approvals: 依頼の前に lint と sigcheck
+    record-subagent.sh     # SubagentStop: agent の最終 JSON を記録
+    stop-failure.sh        # StopFailure: 中断を記録
+    post-edit.sh           # PostToolUse Edit|Write: フォーマッタ
 
-  scripts/                 # ヘルパースクリプト (ユーザー実行可)
-    session-manage.sh      # 実装セッション状態管理
-    auto-resume.sh         # レートリミット自動再開ラッパー (claude --print ループ)
+  scripts/                 # 決定的な Bash ツール
+    spec-lint.sh           # 文書の lint(L01-L26)
+    spec-sigcheck.sh       # design のシグネチャをコンパイル(Rust)
+    spec-state.sh          # 承認台帳による文書の状態
+    spec-plan.sh           # tasks.md の生成
+    spec-next.sh / spec-brief.sh / spec-trace.sh
+    spec-git.sh            # 唯一のコミット経路(ゲート G0-G9)
+    spec-reopen.sh         # 仕様変更で影響を受けるタスク
+    ...
 
-  skills/                  # 50+ スキル (抜粋)
-    spec-request-spec/     # リクエスト仕様作成
-    spec-requirements/     # 要件作成
-    spec-design/           # 設計ドキュメント作成
-    spec-test-design/      # テスト設計作成
-    spec-tasks/            # タスク分割
-    spec-implement/        # 実装ワークフロー (Orchestrator)
-    spec-review/           # コードレビュー
-    spec-archive/          # 完了 spec の自動アーカイブ
-    integration-test/      # Rust 統合テスト
-    integration-test-dotnet/ # .NET 統合テスト
-    tdd-skills/            # TDD ワークフロー
-    tdd-skills-rust/       # Rust TDD パターン
-    tdd-skills-dotnet/     # .NET TDD パターン (xUnit + NSubstitute / Moq)
-    cargo-mutants/         # Mutation testing
-    setup-ci/              # GitHub Actions CI 生成 (基本 5 + オプション)
-    generate-arch-tests/   # アーキテクチャテスト生成 (L4 構造テスト)
-    handle-pr-comments/    # PR レビュー対応
-    knowhow-capture/       # ナレッジキャプチャ
-    feedback-loop/         # 失敗 → ルール昇格 / 降格ループ
-    resource-aware-parallelism/  # CPU / メモリ認識並列制御
+  contract/                # 承認台帳の契約 v1 と共有フィクスチャ(TS / Bash / Rust)
+  templates/docs/          # 文書テンプレート(プラグインが所有)
 
-  agents/                  # 7 個の専門サブエージェント
-    parallel-worker.md         # TDD コア (Implementer)
-    wave-harness-worker.md     # wave-harness 並列フレームワーク用
-    unit-test-engineer.md      # ユニットテスト (Rust + C#/.NET)
-    frontend-test-engineer.md  # Leptos フロントテスト
-    integ-test-worker.md       # 統合テスト (Rust + .NET、Language: 引数で分岐)
-    integ-test-auditor.md      # 統合テスト監査 (Rust + .NET、read-only L3)
-    review-worker.md           # コードレビュー + commit + Phase Review (Reviewer)
-
-  rules/                   # 17 ルール
-    quality-checks.md      # QC1-QC13 品質チェック (lint / test / coverage / mutation)
-    enforcement-levels.md  # L1-L5 段階的執行モデル + 昇格 / 降格基準
-    security.md            # OWASP Top 10 + 認証認可
-    design-principles.md   # SOLID + 依存方向ルール
-    design-conformance.md  # 承認済み design.md からの逸脱防止
-    type-safety.md         # TS-R1-R5 (Rust) + TS-C1-C5 (C#)
-    failure-taxonomy.md    # FC1-FC6 worker 横断 failure 共通語彙
-    diagnostic-reasoning.md # DR1-DR6 リトライ / divergent 思考プロトコル
-    ...                    # 計 17 ルール
+  skills/                  # spec フロー、TDD / 統合テストの手順、フレームワーク別の参照
+  agents/                  # spec-author、spec-reviewer、impl-worker、integ-test-worker、
+                           # unit-test-engineer、frontend-test-engineer、integ-test-auditor、review-worker
+  rules/                   # doc-format.md(文書の文法)、test-taxonomy.md、verdict.md、
+                           # quality-checks.md、security.md、design-principles.md、type-safety.md ほか
 ```
 
 ## 🛠️ 開発

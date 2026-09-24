@@ -170,7 +170,7 @@ async fn update_user(/* ... */) -> Result<User, AppError> {
 ## Related Rules / Skills
 
 - Universal constraints: `design-principles` (D4: error handling), `security` (A5: authentication / sessions)
-- Related Skills: `axum` (store MultiplexedConnection in AppState), `diesel` (DB + cache two-tier composition), `integration-test` (boot Valkey via testcontainers)
+- Related Skills: `axum` (store MultiplexedConnection in AppState), `diesel` (DB + cache two-tier composition), `spec-impl-integ` (boot Valkey via testcontainers)
 
 ## References
 

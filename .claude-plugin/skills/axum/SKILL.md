@@ -170,4 +170,4 @@ async fn shutdown_signal() {
 ## Related Rules / Skills
 
 - Universal constraints: `rust-style`, `design-principles` (D1-D7), `security` (A1-A10), `type-safety` (TS-R1-R5), `api-validation` Skill (AV-R1-R5)
-- Related Skills: `diesel`, `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test`
+- Related Skills: `diesel`, `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-integ`

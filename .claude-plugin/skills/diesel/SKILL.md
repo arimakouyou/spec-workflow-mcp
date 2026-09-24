@@ -190,4 +190,4 @@ DROP TABLE users;
 ## Related Rules / Skills
 
 - Universal constraints: `rust-style`, `design-principles`, `security` (A1-A10: SQL injection etc.), `type-safety` (TS-R1-R5)
-- Related Skills: `axum` (store DbPool in AppState), `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `integration-test` (DB tests with testcontainers), `spec-tasks`, `spec-test-design`
+- Related Skills: `axum` (store DbPool in AppState), `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-integ` (DB tests with testcontainers), `spec-test-design`

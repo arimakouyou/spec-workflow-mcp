@@ -1,5 +1,7 @@
 # Prompting Guide
 
+> **Note (v3):** This document describes the pre-v2 workflow driven by MCP prompts, which have been removed. The current Claude Code plugin workflow is described in [PLUGIN_FLOWS.ja.md](../PLUGIN_FLOWS.ja.md).
+
 A comprehensive guide with examples and best practices for interacting with Spec Workflow MCP through AI assistants.
 
 ## Quick Reference

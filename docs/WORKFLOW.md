@@ -1,5 +1,7 @@
 # Workflow Process Guide
 
+> **Note (v3):** This document describes the pre-v2 workflow driven by MCP prompts, which have been removed. The current Claude Code plugin workflow is described in [PLUGIN_FLOWS.ja.md](../PLUGIN_FLOWS.ja.md).
+
 This guide explains the complete spec-driven development workflow and best practices for using Spec Workflow MCP.
 
 ## Overview

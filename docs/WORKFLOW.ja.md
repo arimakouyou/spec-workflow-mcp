@@ -1,5 +1,7 @@
 # ワークフロープロセスガイド
 
+> **注意(v3):** この文書は、廃止した MCP prompts による v2 以前のフローを説明している。現行の Claude Code プラグインのフローは [PLUGIN_FLOWS.ja.md](../PLUGIN_FLOWS.ja.md) を参照。
+
 このガイドでは、Spec Workflow MCPを使用するための完全な仕様駆動開発ワークフローとベストプラクティスについて説明します。
 
 ## 概要

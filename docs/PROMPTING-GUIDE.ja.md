@@ -1,5 +1,7 @@
 # プロンプティングガイド
 
+> **注意(v3):** この文書は、廃止した MCP prompts による v2 以前のフローを説明している。現行の Claude Code プラグインのフローは [PLUGIN_FLOWS.ja.md](../PLUGIN_FLOWS.ja.md) を参照。
+
 AIアシスタントを通じてSpec Workflow MCPと対話するための包括的なガイドで、例とベストプラクティスを掲載しています。
 
 ## クイックリファレンス

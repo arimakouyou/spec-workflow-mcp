@@ -15,13 +15,13 @@ Detect staleness of documents, rule files, and ADRs in the repository and prompt
 - Manual periodic audits (90/120/180-day thresholds)
 - Update decisions after stale document detection
 - Additional judgment based on ADR status (`Proposed` / `Accepted` / `Deprecated` / `Superseded`)
-- Drift detection between implementation and documentation at Phase Review (Expert Team Review)
+- Drift detection between implementation and documentation at the phase review (`P{n}-REVIEW`, review-worker)
 - Integration with the `tech-debt` Skill (detecting neglected Open entries)
 
 ## Out of Scope
 
 - Document writing style/structure -> each Skill / template
-- Spec document consistency verification -> `spec-verify` / `spec-impact-analyze` Skill
+- Spec document consistency verification -> `scripts/spec-lint.sh` (deterministic consistency checks) / `scripts/spec-reopen.sh` (completed tasks a spec change affects)
 - CI workflow setup -> `setup-ci` Skill
 
 ## Monitoring Targets
@@ -78,7 +78,7 @@ ADRs receive additional judgment based on the status field:
 
 ## Integration with review-worker
 
-At Phase Review (step 3.5.2 Expert Team Review), the quality / maintainability reviewer confirms:
+At the phase review (`P{n}-REVIEW`), review-worker confirms:
 
 - Whether documents related to the changed modules have become Stale
 - Whether the implementation has drifted from the documentation

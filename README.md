@@ -26,7 +26,9 @@ A Model Context Protocol (MCP) server for structured spec-driven development wit
 
 ## ✨ Key Features
 
-- **Structured Development Workflow** - Sequential spec creation (Request Spec → Requirements → Design → Test Design → Tasks)
+- **Structured Development Workflow** - Sequential spec creation (Steering → Request Spec → Requirements → Design → Test Design), with tasks generated from the approved documents
+- **Single Source of Truth per Fact** - Every name, signature, path and test case is owned by exactly one document; other documents refer to it by ID, and a deterministic lint enforces it
+- **Approval Ledger** - Re-approving an upstream document makes downstream approvals stale automatically
 - **Real-Time Web Dashboard** - Monitor specs, tasks, and progress with live updates
 - **Rich Markdown Preview** - Render Mermaid diagrams as SVG in dashboard document and review previews
 - **Approval Workflow** - Complete approval process with revisions
@@ -46,19 +48,15 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 
 > **What the plugin includes:**
 >
-> - **MCP server** for spec-driven development workflow
-> - **50+ skills** covering the full spec lifecycle (request-spec → requirements → design → test-design → tasks → implement → archive) plus integration testing (Rust / .NET), TDD, CI generation, mutation testing, arch test generation, PR comment handling, and more
-> - **6 specialized sub-agents** organized as Implementer (parallel-worker / unit-test-engineer / frontend-test-engineer / integ-test-worker) and Reviewer (review-worker / integ-test-auditor) roles, with **multi-language support** (Rust + .NET via `Language:` argument)
-> - **17 rules** covering project architecture, QC1-QC13 quality checks, OWASP security, design principles, type safety (TS-R1-R5 / TS-C1-C5), failure taxonomy (FC1-FC6), and L1-L5 enforcement levels with promotion criteria
-> - **16 hooks** for spec injection, test verification, design conformance check, arch test regeneration, build cache, diff-aware security audit, and phase progression confirmation
-> - **Helper scripts** for implementation session management (`session-manage.sh`) and rate-limit auto-resume wrapper (`auto-resume.sh`)
+> - **MCP server** with the `approvals` tool and the approval ledger
+> - **Spec workflow skills**: steering-doc, spec-request-spec, spec-investigate, spec-requirements, spec-design, spec-test-design, spec-review, check-approval, spec-change, spec-implement, spec-status, spec-archive, plus TDD / integration-test procedures and framework references (Rust / .NET)
+> - **8 sub-agents**: spec-author / spec-reviewer (documents), impl-worker / integ-test-worker (implementation), unit-test-engineer / frontend-test-engineer / integ-test-auditor (read-only verification), review-worker (the only committer)
+> - **Deterministic scripts** (Bash): document lint (`spec-lint.sh`), signature compile check (`spec-sigcheck.sh`), task generation (`spec-plan.sh`), briefs, the commit gate (`spec-git.sh`, G0-G9), reopen after spec changes
+> - **Hooks** that enforce the flow with exit 2: guard-edit, guard-git, guard-agent, guard-approval-request, record-subagent, stop-failure, session-start
+>
+> See [PLUGIN_FLOWS.ja.md](PLUGIN_FLOWS.ja.md) for the whole flow.
 
-> **Prerequisites for the plugin hooks:**
->
-> - `jq` — required by every hook for JSON parsing
-> - GNU coreutils (`timeout`) — required by `security-audit-guard.sh` for fail-close audit timeouts (preinstalled on Linux; install via `brew install coreutils` on macOS)
->
-> These utilities are only required when the plugin hooks run; the MCP server and web dashboard do not depend on them.
+> **Prerequisites for the plugin scripts and hooks:** `bash`, `jq`, `gawk`, `sha256sum`, `git`; `cargo` for the Rust signature check. The MCP server and web dashboard do not depend on them.
 
 ### Option 2: Manual MCP Configuration
 
@@ -89,13 +87,15 @@ The dashboard will be accessible at: http://localhost:5000
 
 ## 📝 How to Use
 
-Simply mention spec-workflow in your conversation:
+With the Claude Code plugin:
 
-- **"Create a spec for user authentication"** - Creates complete spec workflow
-- **"List my specs"** - Shows all specs and their status
-- **"Execute task 1.2 in spec user-auth"** - Runs a specific task
+- **`/steering-doc`** - Create the project steering documents (first time only)
+- **`/spec-request-spec`** - Start a new spec; each approved document leads to the next phase automatically (`/check-approval` after approving in the dashboard)
+- **`/spec-implement <spec>`** - Implement the approved spec task by task
+- **`/spec-change <spec>`** - Change an approved document; downstream documents and affected tasks follow
+- **`/spec-status <spec>`** - Show document states and progress
 
-[See more examples →](docs/PROMPTING-GUIDE.md)
+The full flow is described in [PLUGIN_FLOWS.ja.md](PLUGIN_FLOWS.ja.md).
 
 ## 🔧 MCP Client Setup
 
@@ -347,13 +347,11 @@ SPEC_WORKFLOW_HOME=/workspace/.spec-workflow-mcp npx -y @arimakouyou/spec-workfl
 ```
 your-project/
   .spec-workflow/
-    approvals/
-    archive/
-    specs/
-    steering/
-    templates/
-    user-templates/
-    config.example.toml
+    approvals/<spec>/ledger.json   # approval ledger (written by the MCP server only)
+    approvals/<spec>/content/      # approved document contents by sha256
+    archive/specs/
+    specs/<spec>/                  # request-spec, requirements, design, test-design, tasks (generated), evidence/, task-logs/
+    steering/                      # product.md, tech.md, structure.md
 ```
 
 ### Plugin Structure (distributed via `.claude-plugin/`)
@@ -364,68 +362,35 @@ your-project/
   marketplace.json         # Marketplace listing
   .mcp.json                # MCP server configuration
 
-  hooks/                   # 16 event-driven hooks
-    hooks.json             # Hook registrations (PreToolUse / PostToolUse / Stop / SessionStart / UserPromptSubmit)
-    inject-spec.sh         # UserPromptSubmit: spec context injection
-    inject-skill-hint.sh   # PreToolUse Edit|Write: skill discovery hint
-    inject-build-cache.sh  # PreToolUse Bash: cargo / dotnet build cache hint
-    lockfile-guard.sh      # PreToolUse Bash: lockfile integrity guard
-    format-check-guard.sh  # PreToolUse Bash: format check
-    security-audit-guard.sh # PreToolUse Bash: diff-aware security audit (fail-close)
-    post-edit.sh           # PostToolUse Edit|Write: post-edit formatter
-    auto-verify-spec.sh    # PostToolUse Edit|Write: spec consistency check
-    detect-new-files.sh    # PostToolUse Write: orphan file detection
-    design-conformance-check.sh  # PostToolUse Edit|Write: design.md vs code drift
-    module-boundary-check.sh     # PostToolUse Edit|Write: module boundary violation check
-    arch-test-regen-hint.sh      # PostToolUse Edit|Write: arch test regeneration prompt
-    verify-tests-run.sh    # Stop: test runner execution check
-    log-implementation.sh  # Stop: implementation log skeleton auto-generation
-    confirm-phase-progression.sh # Stop: phase progression consent check
-    resume-hint.sh         # SessionStart: resume context injection
+  hooks/                   # Enforcement hooks (exit 2) and session context
+    hooks.json
+    session-start.sh       # SessionStart: implementation state and next task
+    guard-edit.sh          # PreToolUse Edit|Write: approved documents, generated files, ledger
+    guard-git.sh           # PreToolUse Bash: commits only through spec-git.sh
+    guard-agent.sh         # PreToolUse Agent: one agent at a time, task/agent mapping, order
+    guard-approval-request.sh # PreToolUse approvals: lint + sigcheck before a request
+    record-subagent.sh     # SubagentStop: record the agent's final JSON
+    stop-failure.sh        # StopFailure: record interruptions for resume
+    post-edit.sh           # PostToolUse Edit|Write: formatter
 
-  scripts/                 # Helper scripts (user-invokable)
-    session-manage.sh      # Implementation session state manager
-    auto-resume.sh         # Rate-limit auto-resume wrapper (claude --print loop)
+  scripts/                 # Deterministic Bash tools
+    spec-lint.sh           # Document lint (L01-L26)
+    spec-sigcheck.sh       # Compile the design's signatures (Rust)
+    spec-state.sh          # Document states from the approval ledger
+    spec-plan.sh           # Generate tasks.md
+    spec-next.sh / spec-brief.sh / spec-trace.sh
+    spec-git.sh            # The only commit path (gates G0-G9)
+    spec-reopen.sh         # Tasks affected by a spec change
+    ...
 
-  skills/                  # 50+ skills (excerpt below)
-    spec-request-spec/     # Request spec creation
-    spec-requirements/     # Requirements creation
-    spec-design/           # Design document creation
-    spec-test-design/      # Test design creation
-    spec-tasks/            # Task breakdown
-    spec-implement/        # Implementation workflow (Orchestrator)
-    spec-review/           # Code review
-    spec-archive/          # Auto-archive completed specs
-    integration-test/      # Rust integration testing
-    integration-test-dotnet/ # .NET integration testing
-    tdd-skills/            # TDD workflow
-    tdd-skills-rust/       # Rust TDD patterns
-    tdd-skills-dotnet/     # .NET TDD patterns (xUnit + NSubstitute / Moq)
-    cargo-mutants/         # Mutation testing
-    setup-ci/              # GitHub Actions CI generation (5 base + optional add-ons)
-    generate-arch-tests/   # Architecture test generation (L4 structural)
-    handle-pr-comments/    # PR review response
-    knowhow-capture/       # Knowledge capture
-    feedback-loop/         # Failure → rule promotion / demotion loop
-  agents/                  # 6 specialized sub-agents
-    parallel-worker.md         # TDD core (Implementer; launched serially per `rules/serial-execution-policy.md`)
-    unit-test-engineer.md      # Unit test engineer (Rust + C#/.NET)
-    frontend-test-engineer.md  # Leptos frontend test engineer
-    integ-test-worker.md       # Integration test (Rust + .NET via Language: argument)
-    integ-test-auditor.md      # Integration test auditor (Rust + .NET, read-only L3)
-    review-worker.md           # Code review + commit + Phase Review (Reviewer)
+  contract/                # Approval ledger contract v1 + shared fixtures (TS / Bash / Rust)
+  templates/docs/          # Document templates (owned by the plugin)
 
-  rules/                   # 18 rules
-    quality-checks.md      # QC1-QC13 quality enforcement (lint / test / coverage / mutation)
-    enforcement-levels.md  # L1-L5 model + promotion / demotion criteria
-    security.md            # OWASP Top 10 + auth/authz
-    design-principles.md   # SOLID + dependency direction
-    design-conformance.md  # Prevent drift from approved design.md
-    type-safety.md         # TS-R1-R5 (Rust) + TS-C1-C5 (C#)
-    failure-taxonomy.md    # FC1-FC6 cross-worker failure vocabulary
-    diagnostic-reasoning.md # DR1-DR6 retry / divergent thinking protocol
-    serial-execution-policy.md # All subagent launches are serial-only
-    ...                    # 18 rules total
+  skills/                  # Spec workflow, TDD / integration procedures, framework references
+  agents/                  # spec-author, spec-reviewer, impl-worker, integ-test-worker,
+                           # unit-test-engineer, frontend-test-engineer, integ-test-auditor, review-worker
+  rules/                   # doc-format.md (document grammar), test-taxonomy.md, verdict.md,
+                           # quality-checks.md, security.md, design-principles.md, type-safety.md, ...
 ```
 
 ## 🛠️ Development

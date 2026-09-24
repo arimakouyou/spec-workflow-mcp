@@ -184,4 +184,4 @@ dotnet nuget why <project> <package>
 ## Related Rules / Skills
 
 - Universal constraints: `csharp-style`, `quality-checks` (QC12)
-- Related Skills: `aspnet-core`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `setup-ci`, `tdd-skills-dotnet`, `integration-test-dotnet`
+- Related Skills: `aspnet-core`, `entity-framework-core`, `blazor`, `dotnet-build-cache`, `setup-ci`, `tdd-skills-dotnet`, `spec-impl-integ`
