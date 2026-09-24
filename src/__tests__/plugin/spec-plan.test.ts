@@ -1,58 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join, resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { SpecLedger } from '../../core/spec-ledger.js';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { approveAll, copyFixture, FIXTURES, git, run, S, SPEC } from './helpers.js';
 
 // spec-plan.sh / spec-next.sh / spec-brief.sh の回帰テスト。
 // tasks.md は design / test-design とコミット trailer だけから決定的に生成され、
 // 次のタスクは台帳が ready のときだけ返り、brief は承認済み文書の断片だけで組み立てられることを確かめる。
-
-const HERE = resolve(fileURLToPath(import.meta.url), '..');
-const REPO = resolve(HERE, '../../..');
-const SCRIPTS = join(REPO, '.claude-plugin/scripts');
-const FIXTURES = join(REPO, 'tests/fixtures/plugin');
-const SPEC = 'todo-api';
-const S = `.spec-workflow/specs/${SPEC}`;
-
-function run(script: string, args: string[], cwd?: string) {
-  return spawnSync('bash', [join(SCRIPTS, script), ...args], { encoding: 'utf-8', cwd });
-}
-
-function git(root: string, args: string[]) {
-  const r = spawnSync('git', ['-c', 'user.name=test', '-c', 'user.email=test@example.invalid', ...args], {
-    cwd: root,
-    encoding: 'utf-8'
-  });
-  if (r.status !== 0) throw new Error(r.stderr);
-  return r.stdout;
-}
-
-/** 見本を独立した git リポジトリとしてコピーする */
-function copyFixture(): string {
-  const root = join(mkdtempSync(join(tmpdir(), 'spec-plan-')), 'p');
-  cpSync(join(FIXTURES, 'todo-ok'), root, { recursive: true });
-  git(root, ['init', '-q']);
-  git(root, ['add', '-A']);
-  git(root, ['commit', '-q', '-m', 'init']);
-  return root;
-}
-
-/** steering と 4 文書をすべて承認済みにする */
-async function approveAll(root: string) {
-  const l = new SpecLedger(join(root, '.spec-workflow/approvals'), async (rel) => (existsSync(join(root, rel)) ? join(root, rel) : null));
-  const files = [
-    '.spec-workflow/steering/product.md', '.spec-workflow/steering/tech.md', '.spec-workflow/steering/structure.md',
-    `${S}/request-spec.md`, `${S}/requirements.md`, `${S}/design.md`, `${S}/test-design.md`
-  ];
-  let n = 0;
-  for (const fp of files) {
-    const meta = await l.checkRequest(fp);
-    await l.recordApproval({ id: `a${++n}`, filePath: fp, metadata: { ledger: meta } });
-  }
-}
 
 describe('spec-plan', () => {
   it('見本の tasks.md は正解ファイルと一致する(決定的に生成される)', () => {
