@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { approveAll, copyFixture, git, run, S, SPEC } from './helpers.js';
+import { approveAll, copyFixture, git, ledgerFor, run, S, SPEC } from './helpers.js';
 
 // spec-git.sh(唯一のコミット経路とゲート G0-G9)の回帰テスト。
 // テストコマンドは tech.md で `true` に差し替え、ゲートの判定だけを確かめる。
@@ -185,6 +185,32 @@ describe('spec-git verdict / reopen', () => {
     const r = sg(root, 'commit', SPEC, 'P1-REFACTOR');
     expect(r.stderr).toBe('');
     expect(readFileSync(join(root, S, 'refactor-backlog.md'), 'utf-8')).toContain('| RF-001 | DES-2 | done |');
+  });
+});
+
+describe('spec-reopen', () => {
+  it('仕様の変更で入力が変わった完了済みタスクだけを再オープンする', async () => {
+    const root = await started();
+    writeRuns(root, 'DES-2', okRuns);
+    expect(sg(root, 'commit', SPEC, 'DES-2').status).toBe(0);
+
+    // 変更なし → 候補なし
+    expect(run('spec-reopen.sh', [SPEC, root]).stdout).toBe('');
+
+    // design の DES-2 を変更して再承認する(spec-change の後の状態)
+    const fp = `${S}/design.md`;
+    writeFileSync(join(root, fp), readFileSync(join(root, fp), 'utf-8').replace('- Purpose: 検証済みのタイトルと Todo を表す', '- Purpose: 検証済みのタイトルと Todo を不変の値として表す'));
+    const l = ledgerFor(root);
+    const meta = await l.checkRequest(fp);
+    await l.recordApproval({ id: 'change-1', filePath: fp, metadata: { ledger: meta } });
+
+    const r = run('spec-reopen.sh', [SPEC, root]);
+    expect(r.stdout).toMatch(/^reopen\tDES-2\t[0-9a-f]{12}\t[0-9a-f]{12}$/m);
+    expect(r.stdout.split('\n').filter(Boolean)).toHaveLength(1);
+
+    const applied = run('spec-reopen.sh', [SPEC, root, '--apply']);
+    expect(applied.status, applied.stderr).toBe(0);
+    expect(run('spec-plan.sh', [SPEC, root, '--tsv']).stdout).toMatch(/^DES-2\t.*\topen$/m);
   });
 });
 

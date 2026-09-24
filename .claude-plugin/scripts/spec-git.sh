@@ -228,7 +228,7 @@ commit|record)
   jq -c --arg from "$task" '(.handoffs // [])[] | {from: $from, to: .to, text: .text}' "$runs/$task/"*.json 2>/dev/null >> "$sdir/handoffs.jsonl" || true
   [[ -s "$sdir/handoffs.jsonl" ]] || rm -f "$sdir/handoffs.jsonl"
   SPEC_PLAN_EXTRA_DONE="$task" bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" 2>/dev/null
-  inputs="$(bash "$SPEC_SCRIPTS_DIR/spec-brief.sh" "$spec" "$task" "$root" 2>/dev/null | sha256sum | cut -c1-12)"
+  inputs="$(bash "$SPEC_SCRIPTS_DIR/spec-brief.sh" "$spec" "$task" "$root" --inputs-only 2>/dev/null | sha256sum | cut -c1-12)"
   g add -A -- . ':(exclude).spec-workflow/approvals'
   case "$type" in des-*) kind="feat" ;; tst-*|it|st|smk|final) kind="test" ;; refactor) kind="refactor" ;; *) kind="chore" ;; esac
   commit_with_trailers "$kind($spec): $task $title" "Spec-Task: $task" "Spec-Inputs: $inputs" "Spec-Attempt: $attempt"

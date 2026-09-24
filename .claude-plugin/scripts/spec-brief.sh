@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # タスクに渡す資料(brief)を、承認済み文書の断片だけから組み立てる。
 # tasks.md には事実を書かないので、実装する側が読むのはこの brief と、そこに載った ID の正本だけ。
-# 使い方: spec-brief.sh <spec> <task-key> [project-root]
+# 使い方: spec-brief.sh <spec> <task-key> [project-root] [--inputs-only]
+#   --inputs-only  承認済み文書に由来する断片だけを出す(申し送り・前回のレビュー指摘を除く)。
+#                  コミット trailer の Spec-Inputs と、仕様変更後の再オープン判定(spec-reopen.sh)に使う
 set -euo pipefail
 # shellcheck source=lib/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
-spec="${1:?usage: spec-brief.sh <spec> <task-key> [project-root]}"
-key="${2:?usage: spec-brief.sh <spec> <task-key> [project-root]}"
-root="$(spec_project_root "${3:-}")"
+inputs_only=0; args=()
+for a in "$@"; do if [[ "$a" == --inputs-only ]]; then inputs_only=1; else args+=("$a"); fi; done
+spec="${args[0]:?usage: spec-brief.sh <spec> <task-key> [project-root] [--inputs-only]}"
+key="${args[1]:?usage: spec-brief.sh <spec> <task-key> [project-root] [--inputs-only]}"
+root="$(spec_project_root "${args[2]:-}")"
 sdir="$(spec_dir "$root" "$spec")"
 tech="$(steering_dir "$root")/tech.md"
 
@@ -106,6 +110,8 @@ case "$type" in
     for t in $(list "$tests"); do slice "$t"; done
     ;;
 esac
+
+(( inputs_only )) && exit 0
 
 # 自分宛ての申し送りと、前回のレビュー指摘
 if [[ -f "$sdir/handoffs.jsonl" ]]; then

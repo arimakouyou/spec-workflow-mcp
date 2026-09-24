@@ -22,7 +22,7 @@ The next step is decided by the transition table below, not by the caller.
 | `needs-revision` / `rejected` | Show the reviewer's comments and annotations. Run the phase skill of that document again in revise mode, passing the comments. It re-runs spec-review and requests a new approval. Stop. |
 | `approved` | Continue with step 3. |
 
-3. `approvals action:"delete" approvalId:<approvalId>`. If it fails, report the error and stop.
+3. `approvals action:"delete" approvalId:<approvalId>`. If it fails, report the error and stop. If the document is listed in `.spec-workflow/specs/<spec>/.change-open` (or `.spec-workflow/steering/.change-open`), remove its line: the change is approved and the document is immutable again.
 4. Record the approved documents in git: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-git.sh docs <spec>`. This commits only `.spec-workflow/specs/<spec>/` and `.spec-workflow/approvals/<spec>/`. For steering, use `steering` as the spec name.
 5. Check the whole spec: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-state.sh <spec>`.
    - If any document is `stale` or `modified`, open the **first** one in dependency order with its phase skill in revise mode. Pass it the upstream diff (`.spec-workflow/approvals/<spec>/content/<old-sha>.md` vs the current upstream file) and the lint output. Stop here.
