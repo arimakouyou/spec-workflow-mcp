@@ -86,7 +86,7 @@ Fields are list items directly under a definition heading, before any sub-headin
 - Symbols declared by a code block:
   - **MOD `Definition`**: the type name. Its members are the enum variants or the struct fields.
   - **DES / TST `Interfaces`**: every trait name, every `impl` target type, and every top-level `fn`. The members of a trait or impl are its methods. A method name alone (`DES-4:create`) also resolves when it is unique within the block. Otherwise write `DES-4:TodoService::create`.
-- **Line numbers are forbidden everywhere** (`file.ext:123`, `#L123`) (L03). The only exception is `sources:` in evidence frontmatter. There each entry is `path:Lx-Ly@<commit>` for code, or a URL for external documentation (category `lib`).
+- **Line numbers are forbidden everywhere** (`file.ext:123`, `#L123`) (L03). The only exception is `sources:` in evidence frontmatter. There each entry is `path:Lx-Ly@<commit>` for code, or `crate:<name>@<version>:<item path>` (for example `crate:axum@0.8:axum::extract::rejection::JsonRejection`) for an external library (category `lib`). The item path identifies the documentation page without a URL.
 
 ### 2.6 Code tokens
 

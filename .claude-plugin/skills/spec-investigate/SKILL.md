@@ -24,7 +24,7 @@ Read `task_type` from `request-spec.md` frontmatter. The required categories are
 For each category, launch one read-only Explore agent. Launch them one per message, serially. Ask each agent for:
 
 - one topic per finding
-- the sources as `path:Lx-Ly@<commit>` (code) or URL (lib)
+- the sources as `path:Lx-Ly@<commit>` (code) or `crate:<name>@<version>:<item path>` (lib)
 - the decisive lines verbatim
 - what they establish
 

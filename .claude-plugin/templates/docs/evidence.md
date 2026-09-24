@@ -4,7 +4,7 @@ category: [code | contract | tests | regressions | lib | …]
 spec: [spec-name]
 topic: [この根拠が扱う論点 1 つ]
 sources:
-  - [path/to/file.ext:Lstart-Lend@<commit>]
+  - [path/to/file.ext:Lstart-Lend@<commit>(コード)、または crate:<name>@<version>:<item path>(外部ライブラリ)]
 ---
 
 # [論点の名前]
