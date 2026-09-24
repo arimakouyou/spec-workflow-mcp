@@ -305,7 +305,7 @@ steering が未承認なら、steering-doc を先に実行させる。steering �
 
 - session-start.sh(SessionStart。stdout がモデルに届く)
 - guard-edit.sh、guard-approval-request.sh、guard-agent.sh、guard-git.sh(exit 2 で拒否)
-- record-subagent.sh(SubagentStart / SubagentStop)
+- record-subagent.sh(SubagentStart / SubagentStop)。Agent ツールは既定で非同期に起動し、PostToolUse(Agent) は起動直後に発火する(B0 の実測、docs/plugin/hook-probe.md)。そのため直列実行用のロックは SubagentStop で解除する。末尾 JSON の出力契約が欠けている場合は exit 2 で出し直させる(`stop_hook_active` が true のときは二重にブロックしない)
 - stop-failure.sh
 - post-edit.sh(維持)
 
