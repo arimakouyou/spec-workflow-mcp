@@ -151,6 +151,43 @@ describe('spec-git commit', () => {
   });
 });
 
+describe('spec-git verdict / reopen', () => {
+  const verdict = (root: string, task: string, body: unknown) =>
+    run('spec-git.sh', ['verdict', SPEC, task], { cwd: root, input: JSON.stringify(body) });
+
+  it('verdict は形式を検査して review.json に記録する', async () => {
+    const root = await prepared();
+    expect(verdict(root, 'DES-2', { task: 'DES-2', verdict: 'maybe' }).status).toBe(1);
+    expect(verdict(root, 'DES-2', { task: 'DES-2', verdict: 'rework' }).status).toBe(1);
+    expect(verdict(root, 'DES-2', { task: 'DES-3', verdict: 'commit' }).status).toBe(1);
+    expect(verdict(root, 'DES-2', { task: 'DES-2', verdict: 'rework', rework_from: 'green', findings: [] }).status).toBe(0);
+    expect(JSON.parse(readFileSync(join(root, S, 'runs/DES-2/review.json'), 'utf-8')).verdict).toBe('rework');
+  });
+
+  it('完了済みのタスクを再オープンすると未完了に戻り、rf_done は backlog の行を done にする', async () => {
+    const root = await started();
+    writeRuns(root, 'DES-2', okRuns);
+    expect(sg(root, 'commit', SPEC, 'DES-2').status).toBe(0);
+    expect(readFileSync(join(root, S, 'tasks.md'), 'utf-8')).toContain('- [x] DES-2 ');
+
+    expect(sg(root, 'reopen', SPEC, 'DES-2', 'Title の仕様変更').status).toBe(0);
+    expect(git(root, ['log', '-1', '--format=%B'])).toContain('Spec-Reopen: DES-2');
+    expect(readFileSync(join(root, S, 'tasks.md'), 'utf-8')).toContain('- [ ] DES-2 ');
+    expect(sg(root, 'reopen', SPEC, 'DES-2').status).toBe(1);
+
+    // P1-REFACTOR が RF-001 を消化する
+    expect(sg(root, 'start', SPEC, 'P1-REFACTOR').status).toBe(0);
+    writeRuns(root, 'P1-REFACTOR', {
+      impl: { task: 'P1-REFACTOR', status: 'done', tests: { files: [] }, rf_done: ['RF-001'] },
+      verify: { task: 'P1-REFACTOR', verdict: 'pass' },
+      review: { task: 'P1-REFACTOR', verdict: 'commit' }
+    });
+    const r = sg(root, 'commit', SPEC, 'P1-REFACTOR');
+    expect(r.stderr).toBe('');
+    expect(readFileSync(join(root, S, 'refactor-backlog.md'), 'utf-8')).toContain('| RF-001 | DES-2 | done |');
+  });
+});
+
 describe('spec-git その他', () => {
   it('docs は文書以外がステージされていれば拒否する', async () => {
     const root = await prepared();

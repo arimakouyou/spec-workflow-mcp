@@ -8,12 +8,14 @@
 #   spec-git.sh docs       <spec>                    承認済み文書と承認台帳だけをコミット                   … check-approval
 #   spec-git.sh archive    <spec>                    spec を archive/specs/ へ移してコミット                … review-worker(FINAL)
 #   spec-git.sh discard    <spec> <task>             失敗したタスクの変更を .spec-workflow を除いて破棄     … オーケストレーター
+#   spec-git.sh verdict    <spec> <task> < json      review-worker の判定を runs/<task>/review.json に記録   … review-worker
+#   spec-git.sh reopen     <spec> <task> [理由]      完了済みタスクを再オープン(Spec-Reopen trailer)       … オーケストレーター / spec-change
 # 誰が呼べるかは hooks/guard-git.sh が agent_type で制限する。
 set -euo pipefail
 # shellcheck source=lib/common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
-cmd="${1:?usage: spec-git.sh <start|checkpoint|commit|record|docs|archive|discard> <spec> [task]}"
+cmd="${1:?usage: spec-git.sh <start|checkpoint|commit|record|docs|archive|discard|verdict|reopen> <spec> [task]}"
 spec="${2:?spec が必要}"
 task="${3:-}"
 root="$(spec_project_root "${SPEC_PROJECT_ROOT:-}")"
@@ -212,6 +214,10 @@ commit|record)
       n=$((n + 1)); printf '| RF-%03d | %s | open | %s |\n' "$n" "$task" "$(jq -r 'if type == "string" then . else .text end' <<<"$rf")" >> "$bl"
     done <<<"$rfs"
   fi
+  # リファクタタスクが消化した RF 行を done にする
+  for id in $(jq -r '(.rf_done // [])[]' "$runs/$task/"*.json 2>/dev/null || true); do
+    [[ -f "$sdir/refactor-backlog.md" ]] && sed -i "s/^| $id | \\([^|]*\\) | open | /| $id | \\1 | done | /" "$sdir/refactor-backlog.md"
+  done
   jq -c --arg from "$task" '(.handoffs // [])[] | {from: $from, to: .to, text: .text}' "$runs/$task/"*.json 2>/dev/null >> "$sdir/handoffs.jsonl" || true
   [[ -s "$sdir/handoffs.jsonl" ]] || rm -f "$sdir/handoffs.jsonl"
   SPEC_PLAN_EXTRA_DONE="$task" bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" 2>/dev/null
@@ -251,6 +257,31 @@ discard)
   g restore -SW -- . ':(exclude).spec-workflow'
   g clean -fdq -- . ':(exclude).spec-workflow'
   echo "spec-git: $task の変更を破棄した(.spec-workflow を除く)"
+  ;;
+
+verdict)
+  [[ -n "$task" ]] || die "task が必要"
+  v="$(cat)"
+  jq -e --arg t "$task" '.task == $t and (.verdict | IN("commit", "rework", "escalate"))' <<<"$v" >/dev/null \
+    || die "判定 JSON が不正({task: \"$task\", verdict: commit|rework|escalate, ...} が必要)"
+  if [[ "$(jq -r .verdict <<<"$v")" == rework ]]; then
+    jq -e '.rework_from | IN("red", "green")' <<<"$v" >/dev/null || die "rework には rework_from: red|green が必要"
+  fi
+  mkdir -p "$runs/$task"
+  jq . <<<"$v" > "$runs/$task/review.json"
+  jq -c . <<<"$v" >> "$runs/$task/history.jsonl"
+  echo "spec-git: $task の判定を記録($(jq -r .verdict <<<"$v"))"
+  ;;
+
+reopen)
+  [[ -n "$task" ]] || die "task が必要"
+  reason="${4:-再オープン}"
+  state="$(bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" --tsv | awk -F'\t' -v k="$task" '$1 == k { print $6 }')"
+  [[ "$state" == "done" ]] || die "$task は完了済みではない(状態: ${state:-不明})"
+  g commit -q --allow-empty -m "$(printf 'chore(%s): %s を再オープン — %s\n\nSpec: %s\nSpec-Reopen: %s' "$spec" "$task" "$reason" "$spec" "$task")"
+  SPEC_PLAN_EXTRA_DONE="" bash "$SPEC_SCRIPTS_DIR/spec-plan.sh" "$spec" "$root" 2>/dev/null
+  if ! g diff --quiet -- "$sdir/tasks.md"; then g add -- "$sdir/tasks.md"; g commit -q --amend --no-edit; fi
+  echo "spec-git: $task を再オープン"
   ;;
 
 *) die "未知のサブコマンド: $cmd" ;;

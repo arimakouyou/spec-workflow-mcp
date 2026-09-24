@@ -21,7 +21,7 @@ Provides TDD principles and practices based on the teachings of t-wada (Takuto W
 - Zero external dependencies (direct calls to clock / RNG / env / fs / HTTP / DB are forbidden; only via Mock)
 - Order-independent and deterministic (FIRST principles)
 
-For details, see the 6 `_TestFocus` categories (`spec-tasks/SKILL.md`) and the Test Taxonomy / QC15 sections of `quality-checks.md`.
+For details, see the layers, the five categories and the FIRST properties in `${CLAUDE_PLUGIN_ROOT}/rules/test-taxonomy.md`. In the spec workflow each test carries a `// @test <ID>` marker matching test-design.md, and is written in RED against a stub copied verbatim from the design `Interfaces` (see the `spec-impl-tdd` skill).
 
 ## Pre-check: Know-how Reference
 
