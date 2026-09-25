@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **grilling**: request-spec・requirements・design 骨格の各 Phase で、spec-author を起動する前に判断をユーザーと確定する手順を加えた(`rules/grilling.md`、mattpocock/skills の grilling skill を参考にした)。確定した判断は `DECISIONS` として spec-author に渡し、渡されていない判断は `open_decisions` として返させる。design 骨格の確認は、1 回だけの確認からこの手順に置き換えた
+- **grilling の JEV 回答**: 各ラウンドの問いはまず JEV に答えさせ、閾値(noul ≥0.85 / ≤0.15、choice は最大確率 ≥0.6 かつ差 ≥0.2、score は最大確率 ≥0.5)を満たさなかった問いだけをユーザーに尋ねる。判定は `scripts/spec-grill-jev.sh` が行う(watany-dev/jev-playground の gril-jev skill を参考にした)。jevcli が無いか失敗したときは全問をユーザーに尋ねる。request-spec の task_type の分類も先に JEV に尋ねる
+
+## [3.0.0] - 2026-09-24
+
+### Redesign (BREAKING) — spec フローの作り直し(v2)
+
+specrail approval-gate では、design.md / test-design.md / tasks.md の間で書き写した中身が食い違い、引数・戻り値の型の不一致も続いた。これを、チェックを増やすのではなく構造で防ぐように作り直した。計画は `.claude/_docs/plans/glittery-squishing-book.md`、全体像は `PLUGIN_FLOWS.ja.md`。
+
+- **事実の単一所有**: 1 つの事実を所有する文書は 1 つだけにした。`rules/doc-format.md` が文法と lint コード L01-L26 を定義し、`scripts/spec-lint.sh` が強制する。型や関数には限定参照(`` `MOD-N:Type` `` / `` `DES-N:fn` ``)で触れ、行番号による参照は禁止する
+- **design 段階のシグネチャ・コンパイルゲート**: `scripts/spec-sigcheck.sh` を追加した。Interfaces・MOD・DEP・Held-as・Layers から stub の crate を生成し、承認前に `cargo check` で確かめる
+- **承認台帳**: `contract/approval-ledger-v1.md` を追加した。上流が再承認されると下流は stale になる。request の前提条件、依頼後に本文が変わった場合の CONTENT_CHANGED、tasks.md の依頼拒否を含む
+- **tasks.md の生成物化**: `scripts/spec-plan.sh` が design / test-design とコミット trailer から生成する。承認は不要で、手編集は禁止する
+- **実装ループ**:
+  - 各 agent は `spec-brief.sh` の断片だけを入力にする。
+  - RED で Interfaces をそのまま写した stub を作り、テストは test-design だけから書く。
+  - コミットは `spec-git.sh`(ゲート G0-G9)経由だけで、判定の定義は `rules/verdict.md` に一本化した。
+  - タスクごとの worktree、マージコミット、bookkeeping コミットは廃止した。
+- **仕様変更**: `spec-change` と `spec-reopen.sh` を追加した。入力が変わった完了済みタスクだけを再オープンする
+- **フック**: 強制は exit 2 で行う(guard-edit / guard-git / guard-agent / guard-approval-request / record-subagent / stop-failure / session-start)。PreToolUse / PostToolUse の素の stdout はモデルに届かないため、ヒント系のフックは廃止した(`docs/plugin/hook-probe.md`)
+- **agents**: spec-author / spec-reviewer / impl-worker を追加し、parallel-worker を廃止した。検証役は読み取り専用で JSON を返す
+- **削除**:
+  - skill: spec-tasks、spec-verify、spec-graph、spec-impact-analyze、spec-e2e-implement、spec-impl-test-write / code / test-run、log-implementation、integration-test(-dotnet)
+  - rule: 12 本
+  - hook: 15 本
+  - script: session-manage.sh / auto-resume.sh
+  - MCP: テンプレートのコピーと MCP prompts
+  - task-validator
+
+### Added
+
 - **refactor-backlog と `_PhaseRefactor` タスク** - 実装・レビュー中に気づいたが担当タスクの範囲外で行えないリファクタリング（兄弟ファイルとの重複、共有すべきヘルパ、配置）を `.spec-workflow/specs/{spec}/refactor-backlog.md` に `RF-NNN` 行として残し、各 Phase の PhaseReview 直前に置く `_PhaseRefactor: true_` タスクで消化する仕組みを追加（`rules/refactor-backlog.md` RB1〜RB5）。parallel-worker の REFACTOR フェーズと review-worker の B/E 観察が行を追記し、Phase Review は open 行が残っていれば `_PhaseRefactor` タスクを rework、最終 Phase Review は deferred 行も許容しない。spec-tasks は毎 Phase に生成（backlog が空なら no-op）、spec-implement Step 3.6 で backlog をスコープとして実行、task-validator は `_PhaseRefactor` タスクに `_TestFocus` 警告を出さない。tasks-template にも反映（specrail approval-gate `_CarriedConcerns5`（IT-8/9/11 の 3 ファイル重複）がどこにも着地しなかった件の再発防止）
 - **spec-design: design.md の整合性チェックを追加** - Module Boundaries の authoring rules に 6（合成ルート main / bootstrap は通常レイヤーに置けず専用の配置先を持つ）・7（トレイトの所属レイヤーはシグネチャに現れる型で決まる）・8（全 DES-N / MOD-N に配置先を漏れなく割り当てる）を追加し、Architecture for Testability の DI トレイトにも配置の注意書きを追加。Self-Review に check 18 LAYER_DEPENDENCY_CLOSURE（Dependencies と Interfaces のシグネチャ型から依存グラフを導出し、依存方向ルールとの矛盾・配置先の無い DES / MOD を検出）、19 SNIPPET_LIBRARY_COMPATIBILITY（MOD のコード片が指定ライブラリでそのまま compile できるか。thiserror の `source` フィールド名、serde `rename_all` の struct-variant フィールド等）、20 PROSE_IDENTIFIER_XREF（散文中の識別子がスニペット / MOD / DES / ライブラリ API に実在するか）、21 PRINCIPLE_INTERFACE_CONSISTENCY（宣言した設計原則と DES の Interfaces が矛盾しないか）を追加。design-template に bootstrap 行・整合ルール・スニペット互換性の注記を追加
 - **spec-tasks: check 26 DESIGN_OBLIGATION_COVERAGE** - DES / MOD に属さない design.md の散文が課す実行義務（CI ジョブ・ワークフロー・ビルドゲート・テスト実行）にも対応するタスクが存在することを Self-Review で検証

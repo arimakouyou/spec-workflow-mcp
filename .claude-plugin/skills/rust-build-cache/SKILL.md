@@ -1,7 +1,7 @@
 ---
 name: rust-build-cache
 description: |
-  Build cache configuration for all agents that run cargo commands in Rust projects. Uses sccache as the `RUSTC_WRAPPER` to share compilation results across worktrees and accelerate build, test, and lint. Sharing `CARGO_TARGET_DIR` is forbidden (file-lock contention); the Cargo registry cache and incremental compilation require no setup. Covers handling when cargo-nextest is in use, recovery from corrupted sccache caches, and fallback in environments without sccache installed. Reference this immediately before running cargo fmt/clippy/test/build, and before launching compile-heavy agents such as parallel-worker or integ-test-worker. Triggers on: 'rust build cache', 'sccache setup', 'cargo build cache', 'worktree cache strategy', 'Rust ビルドキャッシュ', 'sccache 設定', 'cargo キャッシュ'.
+  Build cache configuration for all agents that run cargo commands in Rust projects. Uses sccache as the `RUSTC_WRAPPER` to share compilation results across worktrees and accelerate build, test, and lint. Sharing `CARGO_TARGET_DIR` is forbidden (file-lock contention); the Cargo registry cache and incremental compilation require no setup. Covers handling when cargo-nextest is in use, recovery from corrupted sccache caches, and fallback in environments without sccache installed. Reference this immediately before running cargo fmt/clippy/test/build, and before launching compile-heavy agents such as impl-worker or integ-test-worker. Triggers on: 'rust build cache', 'sccache setup', 'cargo build cache', 'worktree cache strategy', 'Rust ビルドキャッシュ', 'sccache 設定', 'cargo キャッシュ'.
 allowed-tools: [Read, Bash, Grep]
 ---
 
@@ -13,7 +13,7 @@ Sharing compilation results across worktrees significantly accelerates build, te
 ## Scope
 
 - Immediately before running cargo fmt / clippy / test / build
-- Pre-processing before launching `parallel-worker` / `integ-test-worker` / `review-worker`
+- Pre-processing before launching `impl-worker` / `integ-test-worker` / `review-worker`
 - Accelerating Rust jobs in CI environments
 - Sharing compilation results during parallel implementation that uses worktrees
 
@@ -112,5 +112,5 @@ In environments where sccache is not installed, the fallback path runs ordinary 
 
 - Universal constraint: `quality-checks` (QC1-QC3: canonical commands for cargo fmt/clippy/test)
 - Related Skills: `cargo-toml`, `axum`, `diesel`, `leptos`
-- Related Rule: `${CLAUDE_PLUGIN_ROOT}/rules/serial-execution-policy.md` (subagent launch is serial-only across the plugin)
-- Related Agents: `parallel-worker`, `integ-test-worker`, `review-worker`
+- Related Hook: `${CLAUDE_PLUGIN_ROOT}/hooks/guard-agent.sh` (agent launch is serial-only across the plugin)
+- Related Agents: `impl-worker`, `integ-test-worker`, `review-worker`

@@ -22,7 +22,7 @@ Addresses P6-07, P6-08, and P6-09.
 
 - General test code style -> `tdd-skills` / `tdd-skills-rust` / `tdd-skills-dotnet`
 - Establishing regression tests -> `regression-test-policy` Skill
-- Integration test fixture design -> `integration-test` / `integration-test-dotnet` Skill
+- Integration test fixture design -> `spec-impl-integ` Skill
 
 ## FT1: Definition and Classification (P6-07)
 
@@ -191,5 +191,5 @@ Guidelines for preventing flaky tests.
 
 ## Related Rules / Skills
 
-- Universal constraints: `quality-checks` (QC3, QC12), `diagnostic-reasoning` (DR1-DR6), `failure-taxonomy` (FC1-FC6)
-- Related Skills: `regression-test-policy`, `tdd-skills`, `tdd-skills-rust`, `tdd-skills-dotnet`, `integration-test`, `integration-test-dotnet`, `setup-ci`
+- Universal constraints: `quality-checks` (QC3, QC12), `verdict` (§2 categories, §3 findings, §4 diagnosis before retry)
+- Related Skills: `regression-test-policy`, `tdd-skills`, `tdd-skills-rust`, `tdd-skills-dotnet`, `spec-impl-integ`, `setup-ci`

@@ -7,7 +7,6 @@ always_apply: true
 Design principles to apply during code reviews and implementation.
 These serve as the project's **taste invariants** — subjective quality criteria that
 are enforced by AI code review (review-worker) alongside deterministic checks.
-See `hybrid-inspection.md` for the full inspection model.
 
 ## D1: Separation of Concerns
 

@@ -182,9 +182,8 @@ Defines the minimum mutation score thresholds. Falling below a threshold indicat
 
 | Level | Threshold | Applicable scenario | Behavior |
 |--------|------|---------|------|
-| Advisory | 60% | During TDD implementation (parallel-worker) | Warning only, does not block |
+| Per task | — (every surviving mutant) | During TDD implementation (unit-test-engineer, task diff) | Finding → rework (`verdict` §2) |
 | Blocking | 70% | Weekly CI check (`--with-scheduled`) | Creates an Issue |
-| Strict | 80% | At Phase Review | Decided by the quality lead in the Expert Team Review |
 
 ### CI integration (P3-11)
 
@@ -207,7 +206,7 @@ The threshold check is performed in the weekly Issue creation step.
 
 ## Integration with Other Workflows
 
-- **TDD implementation** (`parallel-worker`): Automatically runs `cargo mutants --no-shuffle -vV --in-diff git.diff` after quality checks pass. Survived mutants trigger supplementary test writing (up to 2 retries)
+- **TDD implementation** (`spec-impl-tdd`): the `unit-test-engineer` verifier runs `cargo mutants --in-diff` on the task diff when design declares the tool (`TOOL-N`). Each surviving mutant is a finding that sends the task back to rework
 - **Standalone invocation**: Run `/cargo-mutants --base-branch main` to verify test quality for recent changes
 - **Periodic audit**: Run on the full codebase periodically to find coverage gaps (can be automated via `--with-scheduled`)
 

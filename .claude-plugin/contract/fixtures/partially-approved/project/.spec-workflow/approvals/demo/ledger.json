@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "entries": {
+    "request-spec": {
+      "sha256": "9f22390856b357c1f4a1d06629138ccf5be2a5668d15c95d9fb1f5ab08cedc63",
+      "approvalId": "a1",
+      "approvedAt": "2026-09-01T00:00:00.000Z",
+      "upstream": {}
+    }
+  },
+  "history": []
+}

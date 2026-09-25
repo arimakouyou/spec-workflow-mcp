@@ -1,0 +1,10 @@
+{
+  "id": "approval_pending_1",
+  "title": "t",
+  "filePath": ".spec-workflow/specs/demo/design.md",
+  "type": "document",
+  "status": "pending",
+  "createdAt": "2026-09-02T00:00:00.000Z",
+  "category": "spec",
+  "categoryName": "demo"
+}

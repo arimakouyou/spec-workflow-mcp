@@ -304,5 +304,5 @@ In review-worker category C (Security), verify:
 
 ## Related Rules / Skills
 
-- Universal constraints: `security` (A1-A10), `type-safety` (TS-R1-R5, TS-C1-C5), `design-principles`, `enforcement-levels` (L1-L5)
+- Universal constraints: `security` (A1-A10), `type-safety` (TS-R1-R5, TS-C1-C5), `design-principles`
 - Related Skills: `axum` (Rust Extractor), `aspnet-core` (`[ApiController]` / Minimal API), `spec-design` (DTO schema definition)

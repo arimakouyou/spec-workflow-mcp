@@ -419,4 +419,4 @@ public class TransactionalTestBase : IAsyncLifetime
 ## Related Rules / Skills
 
 - Universal constraints: `csharp-style`, `design-principles` (D1-D7), `security` (A1-A10: SQL injection, etc.), `type-safety` (TS-C1-C5)
-- Related Skills: `csproj`, `aspnet-core` (AppState / DI setup), `dotnet-build-cache`, `tdd-skills-dotnet`, `integration-test-dotnet` (Testcontainers PostgreSql)
+- Related Skills: `csproj`, `aspnet-core` (AppState / DI setup), `dotnet-build-cache`, `tdd-skills-dotnet`, `spec-impl-integ` (Testcontainers PostgreSql)

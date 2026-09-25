@@ -4,6 +4,7 @@ import { join, isAbsolute, resolve, basename } from 'path';
 import chokidar from 'chokidar';
 import { diffLines, Change } from 'diff';
 import { PathUtils } from '../core/path-utils.js';
+import { SpecLedger } from '../core/spec-ledger.js';
 
 export interface ApprovalComment {
   type: 'selection' | 'general';
@@ -105,6 +106,7 @@ export class ApprovalStorage extends EventEmitter {
   public projectPath: string; // Workflow root path (.spec-workflow location)
   public originalProjectPath: string; // Original workflow root path for display/registry
   public fileResolutionPath: string; // Base path for resolving approval filePath artifacts
+  public readonly ledger: SpecLedger; // 承認台帳(contract/approval-ledger-v1.md)
   private approvalsDir: string;
   private watcher?: chokidar.FSWatcher;
   private pendingEmit: NodeJS.Timeout | null = null;
@@ -139,6 +141,7 @@ export class ApprovalStorage extends EventEmitter {
     // Falls back to workflow root path when files only exist in shared .spec-workflow root.
     this.fileResolutionPath = resolve(options.fileResolutionPath ?? translatedPath);
     this.approvalsDir = PathUtils.getApprovalsPath(resolvedPath);
+    this.ledger = new SpecLedger(this.approvalsDir, (p) => this.resolveExistingFilePath(p));
   }
 
   async start(): Promise<void> {
@@ -350,6 +353,11 @@ export class ApprovalStorage extends EventEmitter {
       throw new Error(`Approval ${id} not found`);
     }
 
+    // 承認は台帳への記録が成功した場合だけ成立させる(レビュー後の変更・上流の未承認は拒否)
+    if (status === 'approved') {
+      await this.ledger.recordApproval(approval);
+    }
+
     // Capture snapshot before status change for certain transitions
     if (status === 'needs-revision') {
       try {
@@ -389,6 +397,10 @@ export class ApprovalStorage extends EventEmitter {
     const approval = await this.getApproval(id);
     if (!approval) {
       throw new Error(`Approval ${id} not found`);
+    }
+
+    if (approval.status === 'approved') {
+      await this.ledger.revertApproval(approval);
     }
 
     // Revert to pending state

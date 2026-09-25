@@ -10,116 +10,21 @@ paths:
 
 # Quality Check Commands
 
-Unified command specification for quality checks run by parallel-worker, review-worker, and other agents. All agents must use the commands defined in this rule.
+Unified command specification for quality checks run by impl-worker, review-worker, and other agents. All agents must use the commands defined in this rule.
 
 > **CI Parity**: These commands are also used by the `/setup-ci` skill to generate GitHub Actions CI workflow YAML. CI templates may include additional setup steps (tool installation etc.) as prerequisites, but the quality check commands themselves must be identical. Re-run `/setup-ci` after updating this file to keep CI in sync.
 
 > **Build Cache**: When running these commands, apply the Rust build cache configuration as described in `rust-build-cache` Skill (e.g., by using a single Bash snippet that both configures the cache and runs the `cargo` commands, or by using a per-command `RUSTC_WRAPPER=sccache cargo ...` prefix).
 
-> **Hook Enforcement**: The following checks are also enforced via plugin hooks (`.claude-plugin/hooks/`):
+> **Hook Enforcement**: The following checks are also enforced by a plugin hook (`.claude-plugin/hooks/`) and the commit gate:
 > - **Auto-format (PostToolUse)**: `post-edit.sh` — QC1 rustfmt, QC6 prettier, QC10 markdownlint, QC12 dotnet format (auto-fix on Edit/Write)
-> - **Format guard (PreToolUse)**: `format-check-guard.sh` — QC1/QC6/QC12 format check (blocking on git commit)
-> - **Lockfile guard (PreToolUse)**: `lockfile-guard.sh` — QC9 lockfile verification (blocking on git commit)
-> - **Security audit (PreToolUse)**: `security-audit-guard.sh` — QC4/QC6/QC12 vulnerability audit (blocking on git commit)
+> - **Commit gate**: `scripts/spec-git.sh` G8 — runs tech.md `Quality Commands` `format` / `lint`, and `audit` when a lockfile changes (blocking on the task commit)
 
 ---
 
 ## Test Taxonomy
 
-> The **canonical definition of test taxonomy** referenced by spec-test-design / spec-tasks / parallel-worker / review-worker / spec-verify.
-> Source: `.claude/_docs/plans/dapper-hardening-orchestrator.md` root cause J (J-3).
-
-Each test layer has a **clearly defined scope of responsibility**, and tests outside that scope must be assigned to a different layer. Scope violations such as writing per-feature tests in E2E, including UI verification in IT, or putting full integration into smoke are prohibited.
-
-### 7-Layer Test Taxonomy
-
-| Layer | Responsibility | Scope | Typical runtime | fixture | When to run |
-|---|------|------|:--------:|:------:|:------:|
-| **UT** (Unit Test) | pure logic (spec satisfaction + absence of out-of-spec behavior) | single function | ms | none | every TDD cycle / Phase Review / PR / merge |
-| **CT** (Component Test) | component reactivity (mount -> signal -> DOM observation) | single component | seconds | mock signal | Phase Review / PR / merge |
-| **IT** (Integration Test) | **backend HTTP API only** | server crate | seconds to tens of seconds | real DB / TempDir | after backend Phase completion / PR / merge |
-| **ST** (System Test) | **full-stack of a single feature** (UI action -> backend -> UI update) | UI + server (one feature) | seconds to tens of seconds | real server + fixture | end of target feature Phase / PR / merge |
-| **smoke** | boot + wiring (all methods) + type boundaries | entire system | 30s to 2m | none | each Phase Review |
-| **E2E** (End-to-End) | **user journey only** | cross-feature | minutes to tens of minutes | real server + complete fixture | Final Gate only |
-| **Regression** (cross-cutting type) | prevent recurrence of known bugs | marked **across** all UT/CT/IT/ST/E2E layers | same as each layer | same as each layer | PR / merge (required) |
-
-### Details per Layer
-
-#### UT (Unit Test)
-- **What is verified**: spec satisfaction (happy path / boundary) + **absence of out-of-spec behavior** (no mutation / zero side effects / no panic on unexpected input)
-- **FIRST principle required**: Fast / Isolated / Repeatable / Self-Validating / Timely
-- **External dependencies prohibited**: direct calls to clock / RNG / env / fs / HTTP / DB are prohibited (only allowed via Mocks)
-- **Implementation**: Rust uses inline `#[cfg(test)] mod tests`, .NET uses xUnit, Node uses vitest, etc.
-- **`_TestFocus` 6 categories**: Happy Path / Boundary Values / Error Handling / Edge Cases / **Negative Assertions** / **Isolation Properties**
-
-#### CT (Component Test)
-- **What is verified**: mount the component and confirm reactivity works via signal updates and event dispatch
-- **Target**: behavior of Resource / Suspense / on:click / on:submit / Effect inside components in UI frameworks (Leptos / Blazor / React etc.)
-- **Implementation options**:
-  - Leptos: `wasm-bindgen-test` + `wasm-pack test --headless --chrome` (feasibility POC: `wasm-bindgen-test-leptos-poc.md`)
-  - .NET Blazor: bUnit
-  - React/Vue: @testing-library
-- **Out of scope**: pure logic (UT is sufficient) / real server communication (IT or ST)
-
-#### IT (Integration Test)
-- **What is verified**: behavior of backend HTTP API endpoints (status code / response body / DB state changes / authn/authz)
-- **Scope**: server crate only. **Do not include the frontend Resource -> server fn boundary** (include via CT or ST)
-- **Implementation**: direct Axum Router invocation via `tower::ServiceExt::oneshot` / endpoint tests via TestClient, etc.
-- **fixture**: real DB (TempDir / docker-compose.test.yml)
-- **Out of scope**: UI actions / DOM verification / pure logic
-
-#### ST (System Test)
-- **What is verified**: full-stack behavior of a single feature (user action in UI -> backend response -> UI update)
-- **Example targets**: "login feature only", "search feature only", "zoom feature only"
-- **Out of scope**: cross-feature flows (E2E responsibility) / pure logic (UT) / component reactivity alone (CT)
-- **Implementation**: Playwright / Selenium with a real server started + UI operations
-
-#### smoke
-- **What is verified**: 4-layer structure
-  - L1 Health: GET to `/health`, `/api/health`, `/healthz`
-  - L2 Wiring: extract path / method from each `### API-N:` in design.md. For all method x all endpoint combinations, **must not return 5xx** (POST/PUT/PATCH with empty body `{}`, DELETE with placeholder ID)
-  - L3 Auth: send to endpoints marked "Auth: required" in design.md without an Authorization header and expect 401
-  - L4 Input boundaries: send **type-boundary values** for each path/query/body field (empty String / maxLength+1 / int overflow / undefined enum value / omitted Optional / invalid UUID) and expect 400/422
-- **Out of scope**: business logic (verified in IT / UT) / composite boundaries (UT/IT) / business boundaries (IT/UT) / user journey (E2E)
-
-#### E2E (End-to-End)
-- **What is verified**: user journeys spanning multiple features (e.g., login -> search -> click result -> detail -> logout)
-- **Out of scope**: per-feature tests (ST responsibility) / single-endpoint response checks (IT or smoke responsibility)
-- **When to run**: Final Gate only. Not run inside Phases
-
-#### Regression (cross-cutting type)
-- **Position**: not a layer but a **type**. Markers are applied across all UT/CT/IT/ST/E2E layers
-- **Naming convention** (see `regression-test-policy/SKILL.md`):
-  - Rust: `fn regression_issue_NNN_<description>()` / TypeScript: `it('regression #NNN: ...')`
-- **CI gate**: at PR / merge, all regression-marked tests must PASS (planned to be gated by QC16)
-
-### Boundary Violation Patterns (common mistakes)
-
-#### UI verification leaks into IT
-- **Wrong**: including `assert dom.querySelector('[data-testid=...]')` in IT-N
-- **Correct**: UI verification belongs to CT (component alone), ST (full-stack single feature), or E2E (user journey)
-- **Detection**: `spec-test-design/SKILL.md` Step B Check 19 (TEST_LAYER_BOUNDARY)
-
-#### Per-feature tests leak into E2E
-- **Wrong**: calling a single-feature test like `e2e-zoom-rotate.spec.ts` an E2E test
-- **Correct**: assign to ST (`st-zoom-rotate.spec.ts` or equivalent)
-- **Detection**: `spec-test-design/SKILL.md` Step B Check 19
-
-#### Full integration leaks into smoke
-- **Wrong**: creating real data in smoke to verify business logic
-- **Correct**: smoke is wiring + type boundaries only. Business logic belongs in IT / UT
-- **Detection**: smoke runtime exceeds 5 minutes (warned in `spec-implement/SKILL.md` Step 3.5.1.5)
-
-#### ST that could be replaced by CT
-- **Question**: claimed "full-stack of a single feature" but the feature can be tested with CT without a real server
-- **Decision**: server fn core logic alone -> UT; UI + signal integration -> CT; UI -> server -> UI behavior observation required -> ST
-- **Detection**: in spec-test-design self-review, check "is starting the server really necessary?"
-
-### References
-
-- `regression-test-policy/SKILL.md`: Regression naming convention / CI gate / Traceability Matrix
-- `spec-test-design/SKILL.md`: per-layer Subagents (A: UT / B: IT / C: E2E / D: CT / E: ST) and Step B Checks
-- `.claude/_docs/plans/dapper-hardening-orchestrator.md`: starting point of J-3 and related items (K / I / H / E)
+The canonical test taxonomy (the layers UT / CT / IT / ST / smoke / E2E and the Regression marker, the UT / CT categories, the FIRST properties and where each layer runs) is defined only in `${CLAUDE_PLUGIN_ROOT}/rules/test-taxonomy.md`. This file does not repeat it.
 
 ---
 
@@ -129,7 +34,7 @@ Checks run pre-commit and per PR. Embedded into `ci.yml` and `scheduled-quality.
 
 ## QC1: rustfmt
 
-> 🔗 **Hook**: `post-edit.sh` (PostToolUse — auto-fix), `format-check-guard.sh` (PreToolUse — commit gate)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — auto-fix); commit gate: `scripts/spec-git.sh` G8 (tech.md `Quality Commands` `format`)
 
 ```bash
 cargo fmt --all -- --check
@@ -176,7 +81,7 @@ Additional checks for dependency hygiene and security. **The tools are required 
 
 ### cargo-audit (Security — blocking)
 
-> 🔗 **Hook**: `security-audit-guard.sh` (PreToolUse — commit gate)
+> 🔗 **Commit gate**: `scripts/spec-git.sh` G8 (tech.md `Quality Commands` `audit`, when a lockfile changes)
 
 ```bash
 cargo audit
@@ -275,7 +180,7 @@ The full check order becomes:
 
 ## QC6: Node.js Task-Level Quality Checks
 
-> 🔗 **Hook**: `post-edit.sh` (PostToolUse — prettier auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — npm audit commit gate)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — prettier auto-fix); commit gate: `scripts/spec-git.sh` G8 (tech.md `Quality Commands` `format` / `lint`, and `audit` when a lockfile changes)
 
 When the project is Node.js-based (detected by `package.json` existence without Rust indicators), use the following task-level quality checks.
 
@@ -354,7 +259,7 @@ npx knip --no-progress 2>&1 | head -50
 
 ## QC12: .NET Task-Level Quality Checks
 
-> 🔗 **Hook**: `post-edit.sh` (PostToolUse — dotnet format auto-fix), `format-check-guard.sh` (PreToolUse — commit gate), `security-audit-guard.sh` (PreToolUse — dotnet vulnerable commit gate)
+> 🔗 **Hook**: `post-edit.sh` (PostToolUse — dotnet format auto-fix); commit gate: `scripts/spec-git.sh` G8 (tech.md `Quality Commands` `format` / `lint`, and `audit` when a lockfile changes)
 
 When the project is .NET-based (detected by `*.sln` or `*.csproj` existence without Rust indicators), use the following task-level quality checks. Target: **.NET 10**.
 
@@ -540,7 +445,7 @@ Alternative tools:
 
 ## QC9: Lockfile Verification (P4-03)
 
-> 🔗 **Hook**: `lockfile-guard.sh` (PreToolUse — commit gate)
+> 🔗 **Commit gate**: blocks only when this check is part of a tech.md `Quality Commands` entry, which `scripts/spec-git.sh` G8 runs
 
 Verifies that the package manager's lockfile is committed to the repository.
 The absence of a lockfile leads to non-reproducible builds, so this is a **Blocking** check.
@@ -656,8 +561,8 @@ find . -name '*.md' -not -path '*/node_modules/*' -not -path '*/target/*' -not -
 > - **PR CI (`ci.yml`)**: Advisory (`continue-on-error: true`) — reports via PR comment
 > - **Weekly scan (`scheduled-quality.yml`)**: Advisory — creates an Issue on detection
 >
-> **Relationship to doc-crossref.md**: QC10 covers mechanical format verification and broken-link detection.
-> `doc-crossref.md` covers semantic reference integrity specific to spec-workflow (Requirements Traceability, etc.).
+> **Relationship to `doc-format.md` §2.5**: QC10 covers mechanical format verification and broken-link detection.
+> `doc-format.md` §2.5 covers references inside spec documents (refer by ID or heading, never by line number).
 
 ## QC11: SAST / Security-Focused Static Analysis (P6-04)
 
@@ -765,7 +670,7 @@ Confirm the build of artifacts succeeds. A build failure is FAIL immediately.
 Run when integration test files exist. Decision when they do not (in priority order):
 - design.md's Excluded Test Environments declares this integration test environment as excluded -> **SKIP (excluded by design)**
 - No such exclusion, and test-design.md defines the integration test specification -> **FAIL (missing implementation)** -- the test file must be created
-- Neither of the above, and test-design.md does not define the integration test specification -> **SKIP (not required by design)** -- log the reason and supplement via Expert Team Review
+- Neither of the above, and test-design.md does not define the integration test specification -> **SKIP (not required by design)** -- log the reason; review-worker checks it at the phase review (`P{n}-REVIEW`)
 
 **Objective criteria for "test-design.md defines an integration test specification"** (the orchestrator must follow this rule strictly):
 - A `## Integration Test Specifications` section heading exists in test-design.md
@@ -922,7 +827,7 @@ On environment-deficiency FAIL, escalate to the user with the missing tools clea
 - test-design.md defines an E2E test specification but the test file does not exist -> FAIL (missing implementation)
 - test-design.md defines an IT specification but the integration test file does not exist -> FAIL (missing implementation)
 
-On SKIP, always log the reason and supplement via Expert Team Review.
+On SKIP, always log the reason; review-worker checks it at the phase review (`P{n}-REVIEW`).
 
 ### Result judgment for integration verification
 
@@ -934,7 +839,7 @@ On SKIP, always log the reason and supplement via Expert Team Review.
 | **FAIL (smoke)** | Health check failed (no SKIP condition) | Analyze startup logs, identify the root cause, and send back |
 | **FAIL (environment deficiency)** | Required tool / runtime not installed | Report the missing tools to the user and present the Install Command from the Required Tools table. Stop the implementation (STOP) |
 | **FAIL (missing implementation)** | test-design.md has the test specification but no test file exists | Report to the user as missing test implementation |
-| **SKIP (not required by design)** | The test specification itself does not exist (undefined in the design doc) | Log the SKIP reason and proceed; supplement via Expert Team Review |
+| **SKIP (not required by design)** | The test specification itself does not exist (undefined in the design doc) | Log the SKIP reason and proceed; review-worker checks it at the phase review (`P{n}-REVIEW`) |
 | **SKIP (excluded by design)** | Explicitly excluded under design.md "Excluded Test Environments" | Log the exclusion reason and proceed |
 
 ## QC13: Branch Coverage (Advisory -> Phased Gating)
@@ -1130,9 +1035,9 @@ Details: `tdd-skills-dotnet/references/blazor-component-testing.md` (to be devel
 
 | Stage | Application |
 |------|------|
-| Initial (advisory) | Warning for components without a CT (detected by spec-tasks Step 7 Check 17/18) |
-| Mid | Require "CT-N PASS" in `_Success` for UI component tasks (H-4 / Check 18) |
-| Mature | review-worker Category E files Moderate findings for missing CTs (H-5) |
+| Initial | `scripts/spec-lint.sh` L11 rejects a Kind ui DES without a CT (blocking via commit gate G1) |
+| Mid | `frontend-test-engineer` reports a ui DES whose CTs never mount the component as a `missing` finding, which review-worker turns into rework (`rules/verdict.md` §2) |
+| Mature | `P{n}-REVIEW` runs every CT through `scripts/spec-phase-check.sh`; a failing CT blocks the phase review |
 
 ### Constraints confirmed in the POC
 
@@ -1244,7 +1149,7 @@ To be finalized in a future POC or I implementation extension. The Rust side is 
 ### Linkage
 
 - **K-3 (Architecture for Testability)**: design.md declares Mock points / Clock injection / RNG injection / External I/O isolation / Test fixtures. The calls forbidden by the QC15 lint are **only allowed via the Mocks declared in K-3**, establishing the design <-> enforcement round-trip loop
-- **I-1 (_TestFocus 6 categories)**: the two categories `Negative Assertions` / `Isolation Properties` directly correspond to QC15. Quality properties are guaranteed from the test design stage
+- **Test categories** (`rules/test-taxonomy.md` §2, §3): the `Negative` category and the Isolated property of FIRST directly correspond to QC15. Quality properties are guaranteed from the test design stage
 - **review-worker Category E (I-4)**: confirms "tests do not depend on clock / RNG / env"
 
 ### Notes
@@ -1302,9 +1207,9 @@ CI workflow template (generated by `/setup-ci`; revision required for J-9):
 
 ### Confirmation during Phase Review
 
-In `spec-implement/SKILL.md` Step 3.5.2 (review-worker delegation), confirm that regression tests have been implemented for the bug-related tasks fixed in this Phase:
+In the phase review (`P{n}-REVIEW`, `spec-impl-review` §4), confirm that regression tests have been implemented for the bug-related tasks fixed in this Phase:
 
-- The task has `_BugFix: true` + `_RegressionBugId: BUG-NNN` (spec-tasks Step 7 Check 21)
+- The bug has a test in test-design.md carrying `Regression: BUG-NNN` (`rules/test-taxonomy.md` §1)
 - A corresponding regression test exists (confirm by file grep)
 - The regression test is PASSING
 

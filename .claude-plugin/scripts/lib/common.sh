@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# spec-workflow v2 スクリプト共通の関数。source して使う。
+
+SPEC_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034  # source した側のスクリプトが使う
+SPEC_SCRIPTS_DIR="$(dirname "$SPEC_LIB_DIR")"
+
+# プロジェクトルートを決める(引数 > $SPEC_PROJECT_ROOT > カレントから .spec-workflow を上に探す)
+spec_project_root() {
+  local start="${1:-${SPEC_PROJECT_ROOT:-$PWD}}" dir
+  dir="$(cd "$start" && pwd)"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -d "$dir/.spec-workflow" ]]; then printf '%s\n' "$dir"; return 0; fi
+    dir="$(dirname "$dir")"
+  done
+  echo "error: .spec-workflow が見つからない(起点: $start)" >&2
+  return 1
+}
+
+spec_dir() { printf '%s/.spec-workflow/specs/%s\n' "$1" "$2"; }
+steering_dir() { printf '%s/.spec-workflow/steering\n' "$1"; }
+
+# steering/tech.md の表(## <section> の | key | value |)から値を引く。
+# 行が無ければ空文字を返し、`-` はそのまま返す。引数: <project-root> <section> <key>
+tech_table_value() {
+  local root="$1" section="$2" key="$3"
+  awk -v s="## $section" -v k="$key" '
+    $0 == s { p = 1; next } /^## / { p = 0 }
+    p && /^\|/ { n = split($0, c, /\|/); a = c[2]; b = c[3]; gsub(/^[ \t]+|[ \t]+$/, "", a); gsub(/^[ \t]+|[ \t]+$/, "", b)
+                 if (a == k) { print b; exit } }' "$(steering_dir "$root")/tech.md"
+}
+
+# steering/tech.md の箇条書き(## <section> の - Key: value)から値を引く。引数: <project-root> <section> <key>
+tech_list_value() {
+  local root="$1" section="$2" key="$3"
+  awk -v s="## $section" -v k="$key" '
+    $0 == s { p = 1; next } /^## / { p = 0 }
+    p && index($0, "- " k ":") == 1 { sub("^- " k ":[ \t]*", ""); print; exit }' "$(steering_dir "$root")/tech.md"
+}
+
+# コミット trailer から完了済みのタスクキーを求める(空白区切り)。引数: <project-root> <spec>
+# Spec-Task: で完了、Spec-Reopen: で再オープン。キーごとに新しい方の出来事が有効。
+spec_done_keys() {
+  local root="$1" spec="$2"
+  git -C "$root" rev-parse --git-dir >/dev/null 2>&1 || return 0
+  git -C "$root" log --reverse --format='%(trailers:key=Spec,valueonly,separator=%x20)%x09%(trailers:key=Spec-Task,valueonly,separator=%x20)%x09%(trailers:key=Spec-Reopen,valueonly,separator=%x20)' 2>/dev/null \
+    | gawk -F'\t' -v spec="$spec" '
+        { s = $1; gsub(/[[:space:]]/, "", s); if (s != spec) next
+          n = split($2, a, /[[:space:]]+/); for (i = 1; i <= n; i++) if (a[i] != "") st[a[i]] = "done"
+          n = split($3, b, /[[:space:]]+/); for (i = 1; i <= n; i++) if (b[i] != "") st[b[i]] = "open" }
+        END { for (k in st) if (st[k] == "done") printf "%s ", k }'
+}
+
+# spec の索引(TSV)を標準出力に書く。引数: <project-root> <spec>
+spec_index() {
+  local root="$1" spec="$2" sdir stdir f
+  sdir="$(spec_dir "$root" "$spec")"
+  stdir="$(steering_dir "$root")"
+  for f in tech.md product.md structure.md; do
+    [[ -f "$stdir/$f" ]] && gawk -v doc="$f" -f "$SPEC_LIB_DIR/spec-parse.awk" "$stdir/$f"
+  done
+  for f in request-spec.md requirements.md design.md test-design.md; do
+    [[ -f "$sdir/$f" ]] && gawk -v doc="$f" -f "$SPEC_LIB_DIR/spec-parse.awk" "$sdir/$f"
+  done
+  if [[ -d "$sdir/evidence" ]]; then
+    for f in "$sdir"/evidence/EV-*.md; do
+      [[ -f "$f" ]] && printf 'evfile\t%s\n' "$(basename "$f" .md)"
+    done
+  fi
+  printf 'spec\t%s\n' "$spec"
+}

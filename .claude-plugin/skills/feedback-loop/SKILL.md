@@ -6,7 +6,7 @@ description: |
   user corrections or recurring feedback are detected (FL3), the promotion path
   from know-how to rule/ADR/tech-debt (FL4), periodic knowledge audits at Phase
   Review completion (FL5), and the analysis and harness-improvement cycle for
-  agent failure patterns (reworkCount >= 2, review_action: escalate, etc.) (FL6).
+  agent failure patterns (reworkCount >= 2, verdict: escalate, etc.) (FL6).
   Reference this when starting a new task and you want to consult related
   know-how, when receiving a correction or a "remember this" instruction from
   the user, when the same feedback recurs two or more times, when judging
@@ -82,8 +82,8 @@ Detect the following signals as agent failure patterns:
 
 | Signal source | Detection condition | Data location |
 |-----------|---------|-----------|
-| reworkCount | >= 2 (rework occurred two or more times for the same task) | `reviewProcess.reworkCount` in `/log-implementation` |
-| review_action: escalate | review-worker decides user escalation is needed | review-worker completion report |
+| reworkCount | >= 2 (rework occurred two or more times for the same task) | `Attempt` in the task log `.spec-workflow/specs/<spec>/task-logs/<task>.md` (assembled by `scripts/spec-git.sh` at commit time) |
+| verdict: escalate | review-worker decides user escalation is needed | review-worker completion report |
 | FL3 same fix | Same fix occurs three or more times across sessions | Duplicate detection on know-how entries |
 
 ### Recording
@@ -91,7 +91,7 @@ Detect the following signals as agent failure patterns:
 Use `/knowhow-capture` to record failure patterns:
 
 - **Domain**: `agent-improvement`
-- **Pattern A** (immediate recording): when `review_action: escalate` occurs — a serious failure requiring user intervention
+- **Pattern A** (immediate recording): when `verdict: escalate` occurs — a serious failure requiring user intervention
 - **Pattern B** (proposal-based): when `reworkCount >= 2` or FL3 same-fix detection occurs — propose "Record as agent-improvement know-how?"
 - **Required fields**: agent name, failure type, occurrence frequency, root cause hypothesis
 
@@ -112,7 +112,7 @@ Based on the analysis, improve the harness with the following actions:
 |-------------|---------|----------------|
 | Repeated rework in a specific category | Clarify the rule, add counter-examples | Edit a rule file under `.claude-plugin/rules/` |
 | Agent misunderstands requirements | Strengthen instructions in skill/agent definitions | Edit .md under `.claude-plugin/agents/` or `skills/` |
-| Quality checks miss the issue | Add or strengthen check items | Update `quality-checks.md` + promote enforcement-levels |
+| Quality checks miss the issue | Add or strengthen check items | Update `quality-checks.md` + enforce mechanically (hook / script / type) rather than by prose rules |
 | Structural harness defect | Record as an architectural decision | Create an ADR via `/adr` (referencing the know-how entry) |
 
 - For significant changes, create an ADR via `/adr` and reference the original agent-improvement know-how entry as context.

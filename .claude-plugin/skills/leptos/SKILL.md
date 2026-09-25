@@ -405,4 +405,4 @@ For detailed test patterns, see TDD Skills (Rust) reference: [leptos-frontend-te
 ## Related Rules / Skills
 
 - Universal constraints: `rust-style`, `design-principles`, `security` (A1-A10), `type-safety` (TS-R1-R5)
-- Related Skills: `axum` (Router structure for SSR), `diesel` (DB access for SSR), `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-code`, `spec-impl-test-write`
+- Related Skills: `axum` (Router structure for SSR), `diesel` (DB access for SSR), `valkv-cache`, `cargo-toml`, `rust-build-cache`, `tdd-skills-rust`, `spec-impl-tdd`

@@ -4,7 +4,7 @@ import { ApprovalStorage } from '../dashboard/approval-storage.js';
 import { join, isAbsolute } from 'path';
 import { validateProjectPath, PathUtils } from '../core/path-utils.js';
 import { readFile } from 'fs/promises';
-import { validateTasksMarkdown, formatValidationErrors } from '../core/task-validator.js';
+import { LedgerError, LedgerMeta } from '../core/spec-ledger.js';
 import { validateMarkdownForMdx, formatMdxValidationIssues } from '../core/mdx-validator.js';
 
 /**
@@ -274,40 +274,24 @@ async function handleRequestApproval(
       }
     }
 
-    // Validate tasks.md format before allowing approval request
-    if (args.filePath.endsWith('tasks.md')) {
-      const content = markdownContent ?? await readFile(PathUtils.safeJoin(validatedProjectPath, args.filePath), 'utf-8');
-      const validationResult = validateTasksMarkdown(content);
-
-      if (!validationResult.valid) {
-        await approvalStorage.stop();
-
-        const errorMessages = formatValidationErrors(validationResult);
-
+    // 承認台帳の事前条件(tasks.md は生成物なので不可、上流は承認済みかつ未変更であること)
+    let ledgerMeta: LedgerMeta | null;
+    try {
+      ledgerMeta = await approvalStorage.ledger.checkRequest(args.filePath);
+    } catch (error) {
+      await approvalStorage.stop();
+      if (error instanceof LedgerError) {
         return {
           success: false,
-          message: 'Tasks document has format errors that must be fixed before approval',
-          data: {
-            errorCount: validationResult.errors.length,
-            warningCount: validationResult.warnings.length,
-            summary: validationResult.summary
-          },
+          message: error.message,
+          data: { code: error.code },
           nextSteps: [
-            'Fix the format errors listed below',
-            'Ensure each task has: checkbox (- [ ]), numeric ID (1.1), description',
-            'Ensure metadata uses underscores: _Requirements: ..._',
-            'Ensure _Prompt ends with underscore',
-            'Re-request approval after fixing',
-            ...errorMessages
+            'Resolve the upstream document state first (approve it, or re-request approval after its change)',
+            'Run spec-state.sh to see the state of every document in this spec'
           ]
         };
       }
-
-      // If there are warnings, include them but allow approval to proceed
-      if (validationResult.warnings.length > 0) {
-        // Warnings don't block approval, but will be included in the response
-        // This allows the user to see potential issues while still proceeding
-      }
+      throw error;
     }
 
     const approvalId = await approvalStorage.createApproval(
@@ -315,7 +299,8 @@ async function handleRequestApproval(
       args.filePath,
       args.category,
       args.categoryName,
-      args.type
+      args.type,
+      ledgerMeta ? { ledger: ledgerMeta } : undefined
     );
 
     await approvalStorage.stop();
@@ -466,6 +451,7 @@ async function handleGetApprovalStatus(
         canProceed,
         mustWait,
         blockNext: !canProceed,
+        ledger: approval.metadata?.ledger,
         dashboardUrl: context.dashboardUrl
       },
       nextSteps,

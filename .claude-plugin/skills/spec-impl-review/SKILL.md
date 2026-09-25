@@ -1,134 +1,71 @@
 ---
 name: spec-impl-review
-description: "TDD REFACTOR phase for spec-implement workflow. Reviews and refactors both test and production code for quality. Designed to run as a subagent — spawn it with the Agent tool. Triggers on: subagent calls from spec-implement orchestrator only."
+description: "Review and commit procedure for the v2 workflow (preloaded by review-worker): independent review of one task against its brief, verdict per rules/verdict.md, and the only path to commit (spec-git.sh). Also the phase review and the final review (archive + PR). / review-worker 用のレビューとコミットの手順。"
 ---
 
-# Code Reviewer — REFACTOR Phase (Subagent)
+# Review and commit
 
-This skill is designed to run as a **subagent** via the Agent tool. It reviews and refactors both test and production code, following TDD's REFACTOR phase.
+You are the only role that classifies an outcome and the only one that commits. Verdicts are defined in `${CLAUDE_PLUGIN_ROOT}/rules/verdict.md`. Read it first.
 
-## How the Calling Agent Should Invoke This
+## 1. Inputs
 
-```javascript
-Agent({
-  subagent_type: "general-purpose",
-  model: "opus",
-  description: "REFACTOR: Review and clean up",
-  prompt: `You are a TDD refactoring reviewer. Review and refactor the code written in the RED-GREEN phases.
+- The brief: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-brief.sh <SPEC> <TASK> <ROOT>`. It is the standard: the component, types, acceptance criteria and tests.
+- The change:
+  - `git -C <ROOT> status --porcelain -uall`
+  - `git -C <ROOT> diff`
+  - the untracked files it lists
+- The records: `.spec-workflow/specs/<SPEC>/runs/<TASK>/impl.json` (implementer) and `verify.json` (verifier).
+  - If the implementer returned `blocked`, classify it per verdict.md §2.
+  - A verifier `fail` is input to your review, not a verdict.
 
-    Project path: {project-path}
-    Spec name: {spec-name}
-    Task ID: {task-id}
-    Task prompt: {task _Prompt content}
-    Test files: {test-file-paths}
-    Implementation files: {implementation-file-paths}
-    Success criteria: {success criteria from _Prompt}
+## 2. Review (task)
 
-    Follow the /spec-impl-review skill instructions.
+Assume there are problems. For every aspect, record in `observations` what you checked, including "checked, no issue". Before answering "no findings", re-read the diff once.
 
-    Return the list of changes made and quality assessment.`
-})
-```
+| Aspect | Check |
+|---|---|
+| A. Spec | Every AC of the brief is satisfied, and every test `Then` is asserted as written. Nothing beyond design is exposed: compare in both directions, designed minus implemented and implemented minus designed |
+| B. Signatures | Every `Interfaces` line and every MOD definition appears unchanged in the Files. The gate G4 re-checks this, but name the deviation yourself |
+| C. Tests | One test per ID with `@test`. Values are asserted, not `is_ok()`. Negative cases exist. No clock, env, file system or network outside declared doubles. Nothing is `#[ignore]`d |
+| D. Design quality | See `${CLAUDE_PLUGIN_ROOT}/rules/design-principles.md`: single responsibility, error handling without `unwrap()` on fallible paths, no unnecessary `pub`, no speculative abstraction, dependency direction per the Layers table |
+| E. Security | See `${CLAUDE_PLUGIN_ROOT}/rules/security.md`: injection, authentication and authorization, input validation, sensitive data in responses and logs |
+| F. Style | See `${CLAUDE_PLUGIN_ROOT}/rules/rust-style.md` / `csharp-style.md` and the framework skills (axum, diesel, leptos, aspnet-core, entity-framework-core, blazor). No line-number citations in code or logs |
 
-## REFACTOR Phase Rules
+Improvements outside the task scope go to `rf[]`, not to findings.
 
-1. **Do NOT change test expectations** — assertions and expected values must stay the same
-2. **Do NOT add new features** — refactoring changes structure, not behavior
-3. **Tests must still pass after every change** — refactor in small, safe steps
-4. **Improve clarity and maintainability** — the goal is clean, readable code
+## 3. Verdict and commit
 
-## Execution Steps
+1. Write your verdict: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-git.sh verdict <SPEC> <TASK> <<'EOF'` followed by the JSON (§5).
+2. If the verdict is `commit`, run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-git.sh commit <SPEC> <TASK>`.
+   - If a gate fails (G3–G8), the implementation is not done. Record a new verdict `rework` with the gate message as a blocker finding.
+   - If G1 fails (the spec is not ready), the verdict is `escalate`.
+3. `rework` and `escalate` do not commit. The orchestrator discards or keeps the tree as the verdict requires.
 
-### 0. Load Project-Level Context (Steering) — **Authoritative Validator**
+## 4. Phase review (`P{n}-REVIEW`) and final review (`FINAL`)
 
-> **Responsibility split**: `spec-impl-code` and `spec-impl-test-write` read steering as *guidance* while writing code — they consult File Placement Rules (P4-01) and the approved dependency list, but they are **not** expected to perform a full steering audit. **This REFACTOR phase is the authoritative steering validator** for the implementation: impl-code / impl-test-write catch violations opportunistically, but impl-review is the last line of defense and must flag anything they missed.
+**Phase review**
 
-Before reviewing, load project-level instance information from steering documents **if they exist**:
+1. Read `.spec-workflow/specs/<SPEC>/runs/P{n}-REVIEW/phase-check.json`. The orchestrator ran `spec-phase-check.sh` just before.
+2. Read `refactor-backlog.md`.
+3. Review the phase as a whole: `git log` and `git diff` since the previous `P{n-1}-REVIEW` commit. Look for inconsistencies between the tasks of the phase.
+4. Decide:
+   - **commit**: phase-check is ok and no `open` RF row comes from this phase. Record it with `spec-git.sh record <SPEC> P{n}-REVIEW`.
+   - **rework**: list the tasks to reopen in `reopen: [...]`. The orchestrator reopens them.
 
-- `{project-path}/.spec-workflow/steering/tech.md` — approved external dependencies, technical constraints, ADR summary. Use this as the source of truth when checking whether the implementation introduced any unapproved dependency or diverged from recorded architectural decisions.
-- `{project-path}/.spec-workflow/steering/structure.md` — **File Placement Rules (P4-01)** and any Project-Specific Conventions. Use this to verify that new files were placed and named according to project rules.
-- `{project-path}/.spec-workflow/steering/product.md` — product principles / non-goals (used to flag scope creep).
+**Final review**
 
-Skip any file that does not exist. If steering is absent, record `steering: absent — full consistency check skipped` in the quality assessment output and rely on `${CLAUDE_PLUGIN_ROOT}/rules/` project-wide policies alone.
+1. Review as the phase review does, over the whole spec. Any open RF row blocks the final review.
+2. After `spec-git.sh commit <SPEC> FINAL`, run `spec-git.sh archive <SPEC>`.
+3. Run `/create-pr`. Put the spec name and the test results in the PR body.
 
-### 1. Read All Code
+## 5. Final message
 
-Read both the test files and implementation files to understand:
-- The full picture of what was built
-- How tests and production code relate
-- Current code quality and structure
+End with exactly one JSON block. It is the same object you passed to `spec-git.sh verdict`.
 
-### 2. Check Success Criteria
-
-Verify against the task's `_Prompt` Success criteria:
-- Are all success criteria addressed by the implementation?
-- Are there any gaps between what was asked and what was built?
-- Flag any unmet criteria (but do NOT add untested features to fix them)
-
-### 3. Apply Design Principles
-
-Reference `/tdd-skills` and `tdd-skills/references/tdd-and-design.md` for design guidance:
-
-**Production Code Refactoring:**
-- **Duplication**: Extract shared logic into helper functions
-- **Naming**: Improve variable, function, and class names for clarity
-- **Responsibility**: Split functions/classes that do too much (SRP)
-- **Error handling**: Ensure consistent and appropriate error handling
-- **Type safety**: Tighten types, remove `any` where possible
-- **Code organization**: Improve imports, ordering, grouping
-
-**Test Code Refactoring:**
-- **Readability**: Improve test names, add describe blocks for grouping
-- **DRY setup**: Extract repeated setup into `beforeEach` / fixtures
-- **Assertion clarity**: Use more specific matchers where available
-- **Test independence**: Ensure no shared mutable state between tests
-
-### 4. Perform Refactoring
-
-Make changes in small, incremental steps. For each change:
-- It should be a clear improvement in code quality
-- It must not change observable behavior
-- It must not change test expectations or add new assertions
-
-### 5. Assess Quality
-
-Evaluate the final code on:
-- **Correctness**: Does it meet the task requirements?
-- **Readability**: Is the code easy to understand?
-- **Maintainability**: Is it easy to modify in the future?
-- **Test coverage**: Do tests adequately cover the behavior?
-- **Consistency**: Does it follow existing codebase patterns?
-- **Steering Alignment** (only if steering docs exist):
-  - **File placement**: Are new source and test files placed per `structure.md` File Placement Rules (P4-01)? Flag any file placed outside the rule-mandated directory.
-  - **Approved dependencies**: Does every newly imported third-party dependency appear in `tech.md` "External Dependencies (Approved)"? Flag additions that do not.
-  - **ADR conformance**: Does the implementation contradict any Accepted ADR summarized in `tech.md`? Flag any such divergence.
-  - **Product scope**: Does the change stay within product scope (not quietly implementing a Non-Goal from `product.md`)?
-
-## Output Format
-
-Return to the calling agent:
-
-```
-## REFACTOR Phase Complete
-
-### Refactoring Changes
-- {file}: {what was changed and why}
-- ...
-
-### Quality Assessment
-- Correctness: {PASS/CONCERN} — {details}
-- Readability: {GOOD/FAIR/POOR} — {details}
-- Maintainability: {GOOD/FAIR/POOR} — {details}
-- Test coverage: {GOOD/FAIR/POOR} — {details}
-- Consistency: {GOOD/FAIR/POOR} — {details}
-- Steering alignment: {PASS/CONCERN/N/A} — {details; N/A if no steering docs exist}
-
-### Success Criteria Check
-- [ ] {criterion 1}: {met/unmet}
-- [ ] {criterion 2}: {met/unmet}
-
-### Concerns (if any)
-- {any issues that need attention}
-
-### Result: {CLEAN / NEEDS_ATTENTION}
+```json
+{"task": "DES-4", "verdict": "commit | rework | escalate", "rework_from": "red | green | null",
+ "escalation": {"kind": "a | b | c", "ids": ["DES-3", "REQ-1.2"], "assessment": "...", "recommendation": "..."},
+ "findings": [{"severity": "blocker | major | minor", "category": "spec_mismatch/requirement_missing", "ids": ["REQ-1.3"], "file": "src/domain/service.rs", "text": "..."}],
+ "observations": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "...", "F": "..."},
+ "reopen": [], "rf": [], "commit": "<sha or null>"}
 ```

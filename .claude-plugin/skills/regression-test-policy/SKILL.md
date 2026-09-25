@@ -182,7 +182,7 @@ Acceptance criteria defined in the Requirements-Test Traceability Matrix in `tes
 
 ## Related Rules / Skills
 
-- Universal constraints: `quality-checks` (QC3), `diagnostic-reasoning` (DR1-DR6: test failure diagnosis)
+- Universal constraints: `quality-checks` (QC3), `verdict` (§4: diagnosis before retry)
 - Related Skills: `tdd-skills`, `tdd-skills-rust`, `tdd-skills-dotnet`, `spec-test-design`, `flaky-test-management`
 
 ## References

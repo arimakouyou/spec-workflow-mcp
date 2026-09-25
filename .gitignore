@@ -153,6 +153,9 @@ opencodetmp
 
 # Spec Workflow MCP
 .spec-workflow
+# プラグインのテスト用フィクスチャの .spec-workflow は追跡する
+!tests/fixtures/plugin/*/.spec-workflow
+!.claude-plugin/contract/fixtures/*/project/.spec-workflow
 .claude-context
 .vscode/settings.json
 spec-workflow-mcp.code-workspace
