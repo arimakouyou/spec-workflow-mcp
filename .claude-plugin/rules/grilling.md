@@ -48,12 +48,12 @@ JEV is a judgement model that returns only probabilities over given answers. `je
    - A question with an open answer (a name, a free-form number) cannot be put to JEV. Turn it into a `choice` over concrete candidates, or leave it for the user.
 2. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-grill-jev.sh <request.json>`. It sorts the answers by fixed thresholds:
    - `noul`: a yes probability of at least 0.85, or at most 0.15
-   - `choice`: a confidence of at least 0.6 and a margin of at least 0.2 between the top two
+   - `choice`: a top probability of at least 0.6 and a margin of at least 0.2 between the top two
    - `score`: a top probability of at least 0.5
 
-   Questions that meet the threshold are under `decided`; the rest are under `undecided`.
+   The probabilities decide, not jevcli's `confidence` field, which can differ from the top probability. Questions that meet the threshold are under `decided`; the rest are under `undecided`.
 3. Take `decided` as settled, and record each one as answered by JEV, with its probability.
-4. On exit 1 (jevcli failed) or exit 4 (jevcli not installed), report the error in one line and put the whole frontier to the user. Never fill a failed answer with your own guess.
+4. On any non-zero exit (1: jevcli failed, 4: jevcli not installed, others: the response could not be read), report the error in one line and put the whole frontier to the user. Never fill a failed answer with your own guess.
 
 ## 5. Facts and decisions
 

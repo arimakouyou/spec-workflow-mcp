@@ -13,7 +13,7 @@ description: "Phase 0 of the v2 spec workflow: create the request specification 
 
 ## 2. Classify
 
-Agree the `task_type` with the user (AskUserQuestion):
+Put the `task_type` to JEV first, as a `choice` over the rows below with the user's description as the state (`${CLAUDE_PLUGIN_ROOT}/rules/grilling.md` §4). When JEV leaves it undecided or cannot be used, agree it with the user (AskUserQuestion). Show the result either way; the user may overturn a JEV answer.
 
 | task_type | Use when | Evidence collected in Phase 0.5 |
 |---|---|---|
