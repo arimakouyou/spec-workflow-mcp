@@ -25,17 +25,26 @@ Agree the `task_type` with the user (AskUserQuestion):
 | greenfield | no code yet | lib (external library contracts) |
 | legacy | evidence collection is not worth it (give `legacy_reason`) | none |
 
-## 3. Write
+## 3. Grill
+
+Settle the requests with the user by following `${CLAUDE_PLUGIN_ROOT}/rules/grilling.md` (read it first). Start the tree from the user's description and the task_type. It covers:
+
+- who needs what, and what problem each request solves
+- the observable outcome that shows each request is met
+- the boundary of each request and what is out of scope
+
+## 4. Write
 
 Launch `spec-workflow-mcp:spec-author` with:
 
 - `DOC: request-spec`, `MODE: create`
 - the user's description of what they want
 - the task_type
+- `DECISIONS`: the list the user confirmed in §3
 
 The request-spec owns only the requests (`RQ-N`) and the out-of-scope list. The technology and the runtime belong to steering tech.md and design, not here.
 
-## 4. Review and approve
+## 5. Review and approve
 
 1. Run `/spec-review` with `DOC: request-spec`.
 2. Request approval: `approvals action:"request"`, with

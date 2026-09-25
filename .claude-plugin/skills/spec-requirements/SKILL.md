@@ -9,12 +9,22 @@ description: "Phase 1 of the v2 spec workflow: write requirements.md — REQ-N w
 
 `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-state.sh <spec>`: request-spec must be `approved`. Otherwise stop and name the document to fix first.
 
-## 2. Write
+## 2. Grill
+
+Settle the requirement decisions with the user by following `${CLAUDE_PLUGIN_ROOT}/rules/grilling.md` (read it first). Start the tree from the approved RQs. Take the facts from `evidence/`. The interview covers:
+
+- for each RQ, the behaviour on the normal path
+- the behaviour on errors, on boundary inputs and in unusual states
+- each NFR number and the reason for it
+- the cross-feature journeys and where each one starts and ends
+
+## 3. Write
 
 Launch `spec-workflow-mcp:spec-author` with:
 
 - `DOC: requirements`
 - `MODE: create`, or `revise` together with the upstream diff and review comments
+- `DECISIONS`: the list the user confirmed in §2
 
 It writes to these rules:
 
@@ -25,7 +35,7 @@ It writes to these rules:
 - The evidence categories required by the task_type are cited.
 - No test layers and no implementation terms. Test-design owns the layers and design owns the code.
 
-## 3. Review and approve
+## 4. Review and approve
 
 1. Run `/spec-review` with `DOC: requirements`.
 2. Request approval: `approvals action:"request"`, with

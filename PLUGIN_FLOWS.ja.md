@@ -17,10 +17,10 @@
 
 ```mermaid
 flowchart TD
-  ST[steering-doc<br/>product / tech / structure] -->|承認| RS[spec-request-spec<br/>RQ-N, task_type, spec/&lt;name&gt; ブランチ]
+  ST[steering-doc<br/>product / tech / structure] -->|承認| RS[spec-request-spec<br/>grilling → RQ-N, task_type, spec/&lt;name&gt; ブランチ]
   RS -->|承認| INV[spec-investigate<br/>EV-*]
-  INV --> REQ[spec-requirements<br/>REQ / AC / NFR / JRN]
-  REQ -->|承認| DES[spec-design<br/>骨格 → ユーザー確認 → 詳細 + sigcheck]
+  INV --> REQ[spec-requirements<br/>grilling → REQ / AC / NFR / JRN]
+  REQ -->|承認| DES[spec-design<br/>骨格 → grilling → 詳細 + sigcheck]
   DES -->|承認| TD[spec-test-design<br/>UT/CT/IT/ST/E2E]
   TD -->|承認| PLAN[spec-plan.sh<br/>tasks.md を生成]
   PLAN --> IMP[spec-implement<br/>タスクごとに 実装 → 検証 → レビュー → コミット]
@@ -33,8 +33,9 @@ flowchart TD
 - 承認はダッシュボードでだけ行う。`/check-approval` は確認を 1 回だけ行い、承認されていれば文書をコミットして、固定の遷移表で次の段階へ進む。
 - 人が介入するのは次の 3 か所だけで、Phase の境界では止まらない。
   - 承認
-  - design の骨格の確認
+  - grilling(request-spec・requirements・design 骨格の各 Phase で、spec-author を起動する前に行う判断の確定。手順は `rules/grilling.md`)
   - escalate
+- grilling は、判断を依存関係の木に並べ、前提が確定した問いだけを 1 ラウンドにまとめて推奨回答付きで尋ねる。事実は evidence や Explore で調べ、ユーザーには尋ねない。確定した判断は `DECISIONS` として spec-author に渡し、spec-author は渡されていない判断を自分で決めずに `open_decisions` として返す。
 
 ## 3. 文書と事実の所有
 
@@ -151,7 +152,7 @@ PreToolUse / PostToolUse の素の stdout はモデルに届かない(実測: `d
 
 ### rules(skill と agent が明示的に Read する。プラグインの rules は自動ロードされない)
 
-doc-format.md、test-taxonomy.md、verdict.md、quality-checks.md、design-principles.md、security.md、type-safety.md、rust-style.md、csharp-style.md、error-message-guidelines.md、project-architecture.md、advisor-usage.md
+doc-format.md、test-taxonomy.md、verdict.md、quality-checks.md、design-principles.md、security.md、type-safety.md、rust-style.md、csharp-style.md、error-message-guidelines.md、project-architecture.md、advisor-usage.md、grilling.md
 
 ## 7. MCP サーバー
 

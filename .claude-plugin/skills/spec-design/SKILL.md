@@ -20,14 +20,14 @@ Launch `spec-workflow-mcp:spec-author` with `DOC: design`, `MODE: create`, scope
 - the Decisions
 - For greenfield, P0 must contain a `Kind: config` DES that creates the workspace, toolchain pin and CI.
 
-Then confirm the skeleton with the user (AskUserQuestion). Show:
+Then settle the skeleton with the user by following `${CLAUDE_PLUGIN_ROOT}/rules/grilling.md` (read it first). The skeleton's choices are the recommended answers. Build the tree in dependency order: a decision the layers depend on comes before the layers, and the layers come before the component split. The interview covers:
 
-- the layers and their allowed dependencies
-- the components per phase
-- the decisions with the alternatives rejected
+- each decision, with the alternatives it rejects
+- the layers and the dependencies each layer may have
+- the components in each phase
 - any component that satisfies many acceptance criteria. A DES is one implementation task, so propose splitting it.
 
-Proceed only on the user's answer. Apply the requested changes and ask again if needed.
+When the confirmed list changes the skeleton, launch `spec-author` again with `MODE: revise`, scope **skeleton** and `DECISIONS`: the confirmed list. Proceed to the detail only after the user confirms.
 
 ## 3. Detail
 

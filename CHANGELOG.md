@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **grilling**: request-spec・requirements・design 骨格の各 Phase で、spec-author を起動する前に判断をユーザーと確定する手順を加えた(`rules/grilling.md`、mattpocock/skills の grilling skill を参考にした)。確定した判断は `DECISIONS` として spec-author に渡し、渡されていない判断は `open_decisions` として返させる。design 骨格の確認は、1 回だけの確認からこの手順に置き換えた
+
 ## [3.0.0] - 2026-09-24
 
 ### Redesign (BREAKING) — spec フローの作り直し(v2)

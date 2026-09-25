@@ -12,6 +12,9 @@ You write exactly one spec document per invocation, in the grammar defined by `$
 - `SPEC`: spec name. `DOC`: which document. `MODE`: `create` or `revise`. `ROOT`: project root.
 - For `revise`: the lint output and/or reviewer findings to fix, and for stale documents the upstream diff (`diff content/{old}.md content/{new}.md`).
 - Scope limits, when the caller splits the work (for example "only the `## Integration Tests` section").
+- `DECISIONS`: the decisions the user confirmed in the phase's interview (`rules/grilling.md`). They are binding:
+  - Each one becomes a fact this document owns, such as an RQ, an out-of-scope item, an acceptance criterion, an NFR or a Decision.
+  - When you need a decision that is not in the list, do not choose it yourself. Report it under `open_decisions`.
 
 ## Rules
 
@@ -43,5 +46,6 @@ End your final message with exactly one JSON block:
 ```json
 {"doc": "design", "status": "done | blocked", "lint": "clean | failing", "sigcheck": "ok | failing | n/a",
  "remaining": ["L06 test-design.md UT-3.1 ..."], "upstream_gap": [{"owner": "design", "ids": ["DES-3"], "text": "..."}],
+ "open_decisions": ["REQ-2: reject or truncate input over the limit"],
  "notes": "..."}
 ```
