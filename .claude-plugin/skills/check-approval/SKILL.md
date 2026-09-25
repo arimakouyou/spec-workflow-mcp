@@ -19,7 +19,7 @@ The next step is decided by the transition table below, not by the caller.
 | Status | Action |
 |---|---|
 | `pending` | Tell the user to approve or reject in the dashboard, then run `/check-approval <approvalId>` again. Stop. |
-| `needs-revision` / `rejected` | Show the reviewer's comments and annotations. Run the phase skill of that document again in revise mode, passing the comments. It re-runs spec-review and requests a new approval. Stop. |
+| `needs-revision` / `rejected` | Show the reviewer's comments and annotations. Run the phase skill of that document again in revise mode, passing the comments. It re-runs its review (spec-review, or steering-reviewer for steering) and requests a new approval. Stop. |
 | `approved` | Continue with step 3. |
 
 3. `approvals action:"delete" approvalId:<approvalId>`. If it fails, report the error and stop. If the document is listed in `.spec-workflow/specs/<spec>/.change-open` (or `.spec-workflow/steering/.change-open`), remove its line: the change is approved and the document is immutable again.

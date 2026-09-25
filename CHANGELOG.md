@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **grilling**: request-spec・requirements・design 骨格の各 Phase で、spec-author を起動する前に判断をユーザーと確定する手順を加えた(`rules/grilling.md`、mattpocock/skills の grilling skill を参考にした)。確定した判断は `DECISIONS` として spec-author に渡し、渡されていない判断は `open_decisions` として返させる。design 骨格の確認は、1 回だけの確認からこの手順に置き換えた
 - **grilling の JEV 回答**: 各ラウンドの問いはまず JEV に答えさせ、閾値(noul ≥0.85 / ≤0.15、choice は最大確率 ≥0.6 かつ差 ≥0.2、score は最大確率 ≥0.5)を満たさなかった問いだけをユーザーに尋ねる。判定は `scripts/spec-grill-jev.sh` が行う(watany-dev/jev-playground の gril-jev skill を参考にした)。jevcli が無いか失敗したときは全問をユーザーに尋ねる。request-spec の task_type の分類も先に JEV に尋ねる
-- **steering-reviewer**: steering 3 文書を専用の agent でまとめてレビューする。観点は S1 product の原則との整合、S2 プロジェクト全体に当てはまる記述か、S3 文書間の整合、S4 抽出モードでコードと一致するか。greenfield の値は計画値なので、ライブラリやビルドツールの挙動と実施手順の細部は指摘しない(P0 の実行とコミットゲートで確かめる)
+- **steering-reviewer**: steering 3 文書を専用の agent でまとめてレビューする。観点は S1 product の原則との整合、S2 プロジェクト全体に当てはまる記述か、S3 文書間の整合、S4 抽出モードでコードと一致するか、S5 ビルドが通っても破れうる product の原則を確かめるテスト層があるか。greenfield の値は計画値なので、ライブラリやビルドツールの挙動と実施手順の細部は指摘しない(P0 の実行とコミットゲートで確かめる)
 
 ### Changed
 

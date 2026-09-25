@@ -28,10 +28,11 @@ Steering is a different layer from a spec. It has no IDs and no upstream documen
 | S2 | Is every statement project-wide, true for every spec? A decision only one feature needs (its API, its components, its extra dependency) belongs to that spec's design. |
 | S3 | Do the documents agree with each other: Stack, Test Commands, Quality Commands, Test Layout and Sigcheck within tech.md, and tech.md against the directories and packages in structure.md? |
 | S4 | Extract mode only: does every value match the code it was taken from (manifest versions, the test files that exist, the commands the project already runs)? |
+| S5 | Does every product.md principle that a passing build could still break (for example, what the shipped artifact must contain) have a Test Commands layer that exercises it (ST / SMK / E2E against that artifact)? Ask only that such a layer exists, not how it is written. |
 
 ## Not findings
 
-- **Library and build-tool behaviour in decide mode.** The values are planned values that the P0 bootstrap of the first spec makes real (`rules/doc-format.md` §3.2). Build order, generated files, configuration keys and runtime behaviour are verified there by running the build and the commit gates (G7 tests, G8 quality). Do not read library source to verify them and do not report them, unless two statements in the documents contradict each other (S3).
+- **Library and build-tool behaviour in decide mode.** The values are planned values that the P0 bootstrap of the first spec makes real (`rules/doc-format.md` §3.2). Build order, generated files, configuration keys and runtime behaviour are verified there by running the build and the commit gates (G7 tests, G8 quality). Do not read library source to verify them and do not report them, unless two statements in the documents contradict each other (S3). What execution cannot catch is covered by S5, not by reading library internals.
 - **Missing detail.** Steering records the decision. How it is carried out (build steps, configuration keys, code-level constants) is settled by the first spec's design and P0. Do not ask for more of it.
 
 ## Output

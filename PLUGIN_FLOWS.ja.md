@@ -30,7 +30,7 @@ flowchart TD
 ```
 
 - 各文書は spec-author が書き、`/spec-review` を通してから承認を依頼する。`/spec-review` の中身は、lint(design は sigcheck も)→ spec-reviewer → 修正で、最大 3 回。
-- steering は spec と層が違うので `/spec-review` を通さない。steering-doc が 3 文書を書き終えてから、lint → steering-reviewer → 修正を最大 3 回行う。観点は product との整合、プロジェクト全体に当てはまる記述か、文書間の整合、抽出モードでのコードとの一致。greenfield の値は計画値なので、ライブラリやビルドツールの挙動は P0 の実行で確かめ、レビューでは問わない。
+- steering は spec と層が違うので `/spec-review` を通さない。steering-doc が 3 文書を書き終えてから、lint → steering-reviewer → 修正を最大 3 回行う。観点は product との整合、プロジェクト全体に当てはまる記述か、文書間の整合、抽出モードでのコードとの一致、ビルドが通っても破れうる原則を確かめるテスト層があるか。greenfield の値は計画値なので、ライブラリやビルドツールの挙動は P0 の実行で確かめ、レビューでは問わない。
 - 承認はダッシュボードでだけ行う。`/check-approval` は確認を 1 回だけ行い、承認されていれば文書をコミットして、固定の遷移表で次の段階へ進む。
 - 人が介入するのは次の 3 か所だけで、それ以外では止まらない。
   - 承認
