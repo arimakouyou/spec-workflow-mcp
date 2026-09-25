@@ -32,7 +32,7 @@ Run the steps in order. Launch at most one Agent per message: agents run seriall
    - All clean → report `spec-review: pass` and return to the calling skill, which requests approval.
    - Still failing after 3 rounds → stop. Report the remaining findings to the user, one line each with IDs. Do not request approval.
    - `spec-author` reported an `upstream_gap` → stop. The upstream document must change first, so tell the user which document and IDs (`/spec-change`). Do not work around the gap in this document.
-   - `spec-author` reported `open_decisions` → put them to the user as one round (`rules/grilling.md` §5) and pass the answers as `DECISIONS` to the next revise.
+   - `spec-author` reported `open_decisions` → run one round on them (`rules/grilling.md` §3, JEV first) and pass the answers as `DECISIONS` to the next revise.
 
 ## Rules
 

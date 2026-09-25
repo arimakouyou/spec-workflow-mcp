@@ -35,7 +35,7 @@ flowchart TD
   - 承認
   - grilling(request-spec・requirements・design 骨格の各 Phase で、spec-author を起動する前に行う判断の確定。手順は `rules/grilling.md`)
   - escalate
-- grilling は、判断を依存関係の木に並べ、前提が確定した問いだけを 1 ラウンドにまとめて推奨回答付きで尋ねる。事実は evidence や Explore で調べ、ユーザーには尋ねない。確定した判断は `DECISIONS` として spec-author に渡し、spec-author は渡されていない判断を自分で決めずに `open_decisions` として返す。
+- grilling は、判断を依存関係の木に並べ、前提が確定した問いだけを 1 ラウンドにまとめる。各ラウンドはまず JEV に `scripts/spec-grill-jev.sh`(jevcli)で答えさせ、閾値を満たさなかった問いだけを推奨回答付きでユーザーに尋ねる。jevcli が無いか失敗したときは全問をユーザーに尋ねる。事実は evidence や Explore で調べ、ユーザーには尋ねない。確定した判断は `DECISIONS` として spec-author に渡し、spec-author は渡されていない判断を自分で決めずに `open_decisions` として返す。
 
 ## 3. 文書と事実の所有
 
@@ -148,6 +148,7 @@ PreToolUse / PostToolUse の素の stdout はモデルに届かない(実測: `d
 | spec-git | 唯一のコミット経路(start / checkpoint / verdict / commit / record / docs / archive / discard / reopen) |
 | spec-tools-check / spec-run-tests / spec-phase-check | ツール確認 / 層ごとのテスト実行 / Phase の機械検査 |
 | spec-reopen | 仕様変更で入力が変わった完了済みタスクを求める |
+| spec-grill-jev | grilling の問いを jevcli で JEV に答えさせ、閾値で決着 / 未決に分ける |
 | spec-resume-loop | 無人で再開する |
 
 ### rules(skill と agent が明示的に Read する。プラグインの rules は自動ロードされない)
