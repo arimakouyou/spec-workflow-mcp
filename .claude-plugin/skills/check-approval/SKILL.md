@@ -26,6 +26,7 @@ The next step is decided by the transition table below, not by the caller.
 4. Record the approved documents in git: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-git.sh docs <spec>`. This commits only `.spec-workflow/specs/<spec>/` and `.spec-workflow/approvals/<spec>/`. For steering, use `steering` as the spec name.
 5. Check the whole spec: `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-state.sh <spec>`.
    - If any document is `stale` or `modified`, open the **first** one in dependency order with its phase skill in revise mode. Pass it the upstream diff (`.spec-workflow/approvals/<spec>/content/<old-sha>.md` vs the current upstream file) and the lint output. Stop here.
+   - For steering, a `stale` document is not revised directly: run `/steering-doc` with `STALE: <doc>`. It re-reviews the document against the upstream change and rewrites it only when the review finds a defect (steering-doc §5).
 6. Transition by the document that was just approved:
 
 | Approved | Next |

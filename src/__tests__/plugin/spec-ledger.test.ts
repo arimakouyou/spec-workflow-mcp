@@ -189,3 +189,53 @@ describe('承認台帳: 操作', () => {
     expect((await storage.getApproval(id))?.status).toBe('pending');
   });
 });
+
+describe('承認台帳: steering の上流(同時に依頼し、変更は stale で伝える)', () => {
+  const steeringStates = (root: string) => {
+    const r = spawnSync('bash', [STATE_SH, 'steering', root], { encoding: 'utf-8' });
+    expect(r.status).toBe(0);
+    return parseStates(r.stdout);
+  };
+  const setup = () =>
+    project({ [`${STEER}/product.md`]: 'p', [`${STEER}/tech.md`]: 't', [`${STEER}/structure.md`]: 's', [`${S}/request-spec.md`]: 'rs' });
+
+  it('上流が未承認でも 3 文書を同時に依頼でき、下流から先に承認できる', async () => {
+    const root = setup();
+    const l = ledgerFor(root);
+    const metas = await Promise.all(['product', 'tech', 'structure'].map((d) => l.checkRequest(`${STEER}/${d}.md`)));
+    expect(metas[2]?.upstream).toEqual({ product: expect.any(String), tech: expect.any(String) });
+    for (const d of ['structure', 'tech', 'product']) await approve(l, `${STEER}/${d}.md`, `st-${d}`);
+    const all = { product: 'approved', tech: 'approved', structure: 'approved' };
+    expect(await l.states('steering', [])).toEqual(all);
+    expect(steeringStates(root)).toEqual(all);
+  });
+
+  it('上流を改訂して承認すると下流は stale になり、request-spec を依頼できない', async () => {
+    const root = setup();
+    const l = ledgerFor(root);
+    for (const d of ['product', 'tech', 'structure']) await approve(l, `${STEER}/${d}.md`, `st-${d}`);
+    const old = (await l.read('steering')).entries.tech.upstream.product;
+    writeFileSync(join(root, `${STEER}/product.md`), 'p v2');
+    await approve(l, `${STEER}/product.md`, 'st-product-2');
+    const expected = { product: 'approved', tech: 'stale', structure: 'stale' };
+    expect(await l.states('steering', [])).toEqual(expected);
+    expect(steeringStates(root)).toEqual(expected);
+    // 差分を取れるよう、承認時の上流の内容が保存されている
+    expect(readFileSync(join(root, `.spec-workflow/approvals/steering/content/${old}.md`), 'utf-8')).toBe('p');
+    await expectCode(l.checkRequest(`${S}/request-spec.md`), 'STEERING_STALE:tech');
+  });
+
+  it('stale の文書は内容を変えずに再承認すれば approved に戻る', async () => {
+    const root = setup();
+    const l = ledgerFor(root);
+    for (const d of ['product', 'tech', 'structure']) await approve(l, `${STEER}/${d}.md`, `st-${d}`);
+    writeFileSync(join(root, `${STEER}/product.md`), 'p v2');
+    await approve(l, `${STEER}/product.md`, 'st-product-2');
+    await approve(l, `${STEER}/tech.md`, 'st-tech-2');
+    await approve(l, `${STEER}/structure.md`, 'st-structure-2');
+    const all = { product: 'approved', tech: 'approved', structure: 'approved' };
+    expect(await l.states('steering', [])).toEqual(all);
+    expect(steeringStates(root)).toEqual(all);
+    expect(await l.checkRequest(`${S}/request-spec.md`)).not.toBeNull();
+  });
+});

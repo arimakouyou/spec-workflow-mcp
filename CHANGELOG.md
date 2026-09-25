@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **steering のレビュー**: steering-doc は `/spec-review` を使わず、3 文書を書き終えてから lint → steering-reviewer → spec-author の修正を最大 3 回行い、その後に各文書の承認を依頼する。`/spec-review` と spec-reviewer から steering を外した
+- **steering の上流と stale**: 承認台帳に steering の上流(tech ← product、structure ← product, tech)を定義した。spec と違い上流の承認は求めず(3 文書を同時に依頼・任意順に承認できる)、承認時に上流ファイルの現在の sha と内容を記録する。上流が後で変わると下流は stale になり、request-spec は `STEERING_STALE:<doc>` で拒否される。stale の文書は steering-doc §5 で上流の差分に照らして再レビューし、指摘が無ければ内容を変えずに再承認する(書き直すのは指摘があったときだけ)。guard-edit は stale の steering 文書の編集を許す。契約 `contract/approval-ledger-v1.md` §2・§4・§5・§6 を更新
 
 ## [3.0.0] - 2026-09-24
 

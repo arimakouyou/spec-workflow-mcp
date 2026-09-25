@@ -20,13 +20,17 @@ The server identifies a document by the approval request's `filePath` (relative 
 
 | Doc | Upstream (recorded) | Also required before request |
 |---|---|---|
-| request-spec | — | steering `product`, `tech`, `structure` approved and unmodified |
+| request-spec | — | steering `product`, `tech`, `structure` approved, unmodified and not stale |
 | requirements | request-spec | |
 | design | requirements | |
 | test-design | requirements, design | |
-| product / tech / structure | — | |
+| product | — | |
+| tech | product | |
+| structure | product, tech | |
 
-Steering is a gate, not a recorded upstream. Changing steering does not make a spec stale. It only blocks new request-spec requests until steering is re-approved.
+Steering is a gate, not a recorded upstream of a spec. Changing steering does not make a spec stale. It only blocks new request-spec requests until steering is re-approved.
+
+Within steering, the upstream is recorded but not required. The three documents are written together and requested together, so a steering request or approval does not need its upstream approved. It records the upstream file's current sha instead, and a later change to that file makes the document stale (§5).
 
 ## 3. Storage
 
@@ -64,17 +68,18 @@ Steering is a gate, not a recorded upstream. Changing steering does not make a s
 ### request (MCP tool `approvals`, action `request`)
 
 1. If the document is `tasks.md`, refuse with `TASKS_GENERATED`.
-2. For every recorded upstream `u`:
+2. For every recorded upstream `u` of a spec document:
    - no entry → refuse `UPSTREAM_NOT_APPROVED:<u>`
    - current sha of `u`'s file ≠ entry sha → refuse `UPSTREAM_MODIFIED:<u>`
-3. For request-spec, check each steering doc the same way → refuse `STEERING_NOT_APPROVED:<doc>` / `STEERING_MODIFIED:<doc>`.
+   For a steering document, nothing is refused. `upstream[u]` is the current sha of `u`'s file, omitted when the file does not exist.
+3. For request-spec, check each steering doc the same way → refuse `STEERING_NOT_APPROVED:<doc>` / `STEERING_MODIFIED:<doc>`, and refuse `STEERING_STALE:<doc>` when the doc is `stale` (§5).
 4. Store `metadata.ledger = { key, doc, contentSha256, upstream: { u: sha } }` on the approval request.
 
 ### approve (dashboard, including batch)
 
 1. If the current sha of the file ≠ `metadata.ledger.contentSha256`, refuse `CONTENT_CHANGED`. Nobody approves bytes they did not review.
 2. Re-run the upstream checks of `request`.
-3. Write `content/{sha}.md`, set `entries[doc]`, and append an `approved` history event.
+3. Write `content/{sha}.md`, set `entries[doc]`, and append an `approved` history event. For a steering document, also write `content/{upstream sha}.md` for each recorded upstream, so the diff is available when the document becomes stale.
 
 Reject and needs-revision do not touch the ledger.
 
@@ -98,11 +103,11 @@ Evaluate documents in dependency order.
 | `pending` | an approval request with this `filePath` has status `pending` |
 | `unapproved` | no ledger entry |
 | `modified` | current file sha ≠ entry sha |
-| `stale` | some upstream `u` is not `approved`, or entry.upstream[u] ≠ entries[u].sha256 |
+| `stale` | spec document: some upstream `u` is not `approved`, or entry.upstream[u] ≠ entries[u].sha256. Steering document: entry.upstream[u] ≠ current sha of `u`'s file for some upstream `u` |
 | `approved` | otherwise |
 
 A spec is **ready** for implementation when request-spec, requirements, design and test-design are all `approved`.
 
 ## 6. Error codes
 
-`TASKS_GENERATED`, `UPSTREAM_NOT_APPROVED:<doc>`, `UPSTREAM_MODIFIED:<doc>`, `STEERING_NOT_APPROVED:<doc>`, `STEERING_MODIFIED:<doc>`, `CONTENT_CHANGED`.
+`TASKS_GENERATED`, `UPSTREAM_NOT_APPROVED:<doc>`, `UPSTREAM_MODIFIED:<doc>`, `STEERING_NOT_APPROVED:<doc>`, `STEERING_MODIFIED:<doc>`, `STEERING_STALE:<doc>`, `CONTENT_CHANGED`.

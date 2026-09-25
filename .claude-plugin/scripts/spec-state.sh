@@ -35,6 +35,8 @@ upstream_of() {
     requirements) echo "request-spec" ;;
     design) echo "requirements" ;;
     test-design) echo "requirements design" ;;
+    tech) echo "product" ;;
+    structure) echo "product tech" ;;
     *) echo "" ;;
   esac
 }
@@ -44,6 +46,7 @@ pending="$(find "$approvals" -mindepth 2 -maxdepth 2 -name '*.json' ! -name ledg
   | xargs -0 -r jq -r 'select(.status? == "pending") | .filePath' 2>/dev/null | sed 's#^\./##' || true)"
 
 entry_sha() { [[ -f "$ledger" ]] && jq -r --arg d "$1" '.entries[$d].sha256 // empty' "$ledger" || true; }
+file_sha() { local f; f="$root/$(doc_path "$1")"; [[ -f "$f" ]] && sha256sum "$f" | cut -d' ' -f1 || true; }
 entry_up() { [[ -f "$ledger" ]] && jq -r --arg d "$1" --arg u "$2" '.entries[$d].upstream[$u] // empty' "$ledger" || true; }
 
 declare -A state
@@ -61,7 +64,10 @@ for doc in "${docs[@]}"; do
       else
         st=approved
         for u in $(upstream_of "$doc"); do
-          if [[ "${state[$u]}" != approved || "$(entry_up "$doc" "$u")" != "$(entry_sha "$u")" ]]; then st=stale; fi
+          if [[ "$key" == "steering" ]]; then
+            # steering は上流の承認を求めない。承認時に記録した上流ファイルの sha と現在の sha を比べる
+            if [[ "$(entry_up "$doc" "$u")" != "$(file_sha "$u")" ]]; then st=stale; fi
+          elif [[ "${state[$u]}" != approved || "$(entry_up "$doc" "$u")" != "$(entry_sha "$u")" ]]; then st=stale; fi
         done
       fi
     fi

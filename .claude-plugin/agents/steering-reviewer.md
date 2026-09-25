@@ -13,6 +13,8 @@ Steering is a different layer from a spec. It has no IDs and no upstream documen
 
 `MODE` (`decide` or `extract`, the mode steering-doc chose), `ROOT`.
 
+Optional: `STALE: <doc>` and the diff of its upstream since `<doc>` was approved. Then answer one question only: does `<doc>` still agree with the changed upstream (S1, S3)? Report findings on `<doc>` only. No finding means `<doc>` stays as it is.
+
 ## Procedure
 
 1. Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.sh _steering <ROOT>`. If it fails, stop and return `verdict: "fail"` with the lint output as a single finding.

@@ -18,6 +18,8 @@ Decide the mode from the repository:
 | A manifest (`Cargo.toml`, `*.csproj`, `package.json`, …) and source directories exist | **extract**: derive the facts from the code |
 | No code yet | **decide**: agree on the facts with the user, as *planned* values that the P0 bootstrap of the first spec makes real |
 
+When called with `STALE: <doc>` (from check-approval), or when spec-state reports a document `stale`, decide the mode and go to §5 for that document.
+
 ## 2. Decide mode: agree on the facts
 
 Ask the user with AskUserQuestion, one topic per question, offering concrete options:
@@ -64,4 +66,15 @@ Then, for each document written in this run:
    - `title: steering <doc>`
 2. Run `/check-approval <approvalId>`.
 
-When all three are approved, check-approval continues to `/spec-request-spec`.
+A revised document whose earlier request is still pending gets a new request. Tell the user to reject the older one in the dashboard: a pending request cannot be deleted, and approving it fails with `CONTENT_CHANGED`.
+
+When all three are approved and none is `stale`, check-approval continues to `/spec-request-spec`.
+
+## 5. Stale documents
+
+The ledger records, for tech (upstream: product) and structure (upstream: product, tech), the upstream file's sha at approval. When an upstream file changes afterwards (a revision after rejection, or a `/steering-doc` revise), the downstream document becomes `stale` (`contract/approval-ledger-v1.md` §5). A stale document is re-checked, not rewritten by default:
+
+1. Get the upstream diff: `.spec-workflow/approvals/steering/content/<recorded sha>.md` against the current upstream file. The recorded sha is `entries.<doc>.upstream.<upstream>` in `.spec-workflow/approvals/steering/ledger.json`.
+2. Launch `spec-workflow-mcp:steering-reviewer` with `MODE`, `ROOT`, `STALE: <doc>` and the diff.
+3. No finding names `<doc>` → request approval of `<doc>` unchanged (§4 approval steps). Approving it records the new upstream sha and clears `stale`.
+4. Findings name `<doc>` → launch `spec-author` with `MODE: revise` and those findings only, then run the §4 review loop and request approval.

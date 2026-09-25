@@ -44,6 +44,8 @@ if [[ "$rel" =~ ^\.spec-workflow/steering/(product|tech|structure)\.md$ ]]; then
   if [[ -f "$ledger" ]] && jq -e --arg d "$doc" '.entries[$d]' "$ledger" >/dev/null 2>&1; then
     marker="$root/.spec-workflow/steering/.change-open"
     if [[ -f "$marker" ]] && grep -qxF "$doc" "$marker"; then exit 0; fi
+    state="$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/spec-state.sh" steering "$root" 2>/dev/null | awk -F'\t' -v d="$doc" '$1 == d { print $2 }')"
+    [[ "$state" == stale || "$state" == pending ]] && exit 0
     deny "steering/$doc.md は承認済み。変更は /steering-doc で revise として開く(.spec-workflow/steering/.change-open に $doc を書く)"
   fi
   exit 0

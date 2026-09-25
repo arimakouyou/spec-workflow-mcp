@@ -45,8 +45,8 @@ export const UPSTREAM: Record<LedgerDoc, LedgerDoc[]> = {
   design: ['requirements'],
   'test-design': ['requirements', 'design'],
   product: [],
-  tech: [],
-  structure: []
+  tech: ['product'],
+  structure: ['product', 'tech']
 };
 
 export class LedgerError extends Error {
@@ -120,11 +120,19 @@ export class SpecLedger {
     return sha256(await fs.readFile(abs));
   }
 
-  /** 上流(と request-spec の場合は steering)が承認済みかつ未変更であることを確かめ、上流の sha を返す */
+  /**
+   * 上流(と request-spec の場合は steering)が承認済みかつ未変更であることを確かめ、上流の sha を返す。
+   * steering は 3 文書を同時に書いて同時に承認を依頼するので、上流の承認を求めず、上流ファイルの現在の sha を返す。
+   */
   async checkUpstream(target: LedgerTarget): Promise<Record<string, string>> {
     const ledger = await this.read(target.key);
     const upstream: Record<string, string> = {};
     for (const u of UPSTREAM[target.doc]) {
+      if (target.key === STEERING_KEY) {
+        const current = await this.currentSha({ key: target.key, doc: u });
+        if (current) upstream[u] = current;
+        continue;
+      }
       const entry = ledger.entries[u];
       if (!entry) throw new LedgerError(`UPSTREAM_NOT_APPROVED:${u}`, `${u} が承認されていない`);
       const current = await this.currentSha({ key: target.key, doc: u });
@@ -138,9 +146,20 @@ export class SpecLedger {
         if (!entry) throw new LedgerError(`STEERING_NOT_APPROVED:${s}`, `steering/${s}.md が承認されていない`);
         const current = await this.currentSha({ key: STEERING_KEY, doc: s });
         if (current !== entry.sha256) throw new LedgerError(`STEERING_MODIFIED:${s}`, `steering/${s}.md は承認後に変更されている`);
+        if (await this.steeringStale(s, entry)) {
+          throw new LedgerError(`STEERING_STALE:${s}`, `steering/${s}.md の承認後に上流の steering 文書が変わっている`);
+        }
       }
     }
     return upstream;
+  }
+
+  /** steering の文書が stale か: 承認時に記録した上流の sha が、上流ファイルの現在の sha と違う */
+  private async steeringStale(doc: LedgerDoc, entry: LedgerEntry): Promise<boolean> {
+    for (const u of UPSTREAM[doc]) {
+      if ((entry.upstream[u] ?? null) !== (await this.currentSha({ key: STEERING_KEY, doc: u }))) return true;
+    }
+    return false;
   }
 
   /** request 時の検査。対象外の文書なら null、tasks.md なら TASKS_GENERATED */
@@ -174,6 +193,13 @@ export class SpecLedger {
     const contentDir = join(this.approvalsDir, target.key, 'content');
     await fs.mkdir(contentDir, { recursive: true });
     await fs.writeFile(join(contentDir, `${current}.md`), content);
+    // steering の上流は未承認のこともあるので、stale になったときに差分を取れるよう上流の内容も保存する
+    if (target.key === STEERING_KEY) {
+      for (const [u, s] of Object.entries(upstream)) {
+        const uAbs = await this.resolveFile(documentPath({ key: STEERING_KEY, doc: u as LedgerDoc }));
+        if (uAbs) await fs.writeFile(join(contentDir, `${s}.md`), await fs.readFile(uAbs));
+      }
+    }
 
     const ledger = await this.read(target.key);
     const at = new Date().toISOString();
@@ -218,9 +244,9 @@ export class SpecLedger {
       const entry = ledger.entries[doc];
       if (!entry) { result[doc] = 'unapproved'; continue; }
       if ((await this.currentSha(target)) !== entry.sha256) { result[doc] = 'modified'; continue; }
-      const stale = UPSTREAM[doc].some(
-        (u) => result[u] !== 'approved' || entry.upstream[u] !== ledger.entries[u]?.sha256
-      );
+      const stale = key === STEERING_KEY
+        ? await this.steeringStale(doc, entry)
+        : UPSTREAM[doc].some((u) => result[u] !== 'approved' || entry.upstream[u] !== ledger.entries[u]?.sha256);
       result[doc] = stale ? 'stale' : 'approved';
     }
     return result;
