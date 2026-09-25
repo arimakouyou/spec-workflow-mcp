@@ -5,18 +5,18 @@ description: "The single checker for spec documents in the v2 workflow: determin
 
 # Spec Review
 
-Every spec document passes through this procedure before its approval request. The phase skills do not carry their own checklists: grammar is `rules/doc-format.md`, and the semantic checks are in the spec-reviewer agent.
+Every spec document passes through this procedure before its approval request. The phase skills do not carry their own checklists: grammar is `rules/doc-format.md`, and the semantic checks are in the spec-reviewer agent. Steering documents are not reviewed here: steering-doc reviews them with steering-reviewer.
 
 ## Inputs
 
-`SPEC`, `DOC` (steering / request-spec / requirements / design / test-design), `ROOT`.
+`SPEC`, `DOC` (request-spec / requirements / design / test-design), `ROOT`.
 
 ## Procedure
 
 Run the steps in order. Launch at most one Agent per message: agents run serially, and each Agent call returns only after the agent has finished.
 
 1. **Deterministic checks**
-   - Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.sh <SPEC> <ROOT>`. For steering documents use `_steering` as the spec name.
+   - Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.sh <SPEC> <ROOT>`.
    - For design, also run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-sigcheck.sh <SPEC> <ROOT>`.
      - Exit 3 means a required tool is missing, or the language is undeclared. Stop and report it. Never skip it.
      - `unsupported (<reason>)` is reported as-is in the approval request.

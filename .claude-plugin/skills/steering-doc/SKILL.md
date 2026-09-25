@@ -45,15 +45,23 @@ The templates are `${CLAUDE_PLUGIN_ROOT}/templates/docs/{product,tech,structure}
 
 ## 4. Review and approve
 
-For each document:
+Steering is not reviewed with `/spec-review`. It is the project layer, not a spec, and its checks compare the three documents with each other. Review them together once all three are written. Launch at most one Agent per message.
 
-1. Run `/spec-review` with `SPEC: _steering`, `DOC: steering`.
-2. Request approval: `approvals action:"request"`, with
+1. **Lint.** Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/spec-lint.sh _steering <ROOT>`. If it reports violations, launch `spec-author` with `MODE: revise` and the violations, once per document they name, and re-run (at most 3 rounds).
+2. **Review.** Launch `spec-workflow-mcp:steering-reviewer` with `MODE: decide | extract` (from §1) and `ROOT`.
+3. **Fix loop** (at most 3 rounds). If the verdict is `fail`, launch `spec-author` with `MODE: revise` and the findings, once per document they name. Then re-run steps 1 and 2.
+4. **Result.**
+   - Still failing after 3 rounds → stop. Report the remaining findings to the user, one line each with document and heading. Do not request approval.
+   - `spec-author` reported `open_decisions` → ask the user with AskUserQuestion and pass the answers as `DECISIONS` to the next revise.
+
+Then, for each document written in this run:
+
+1. Request approval: `approvals action:"request"`, with
    - `filePath: .spec-workflow/steering/<doc>.md`
    - `type: document`
    - `category: steering`
    - `categoryName: steering`
    - `title: steering <doc>`
-3. Run `/check-approval <approvalId>`.
+2. Run `/check-approval <approvalId>`.
 
 When all three are approved, check-approval continues to `/spec-request-spec`.

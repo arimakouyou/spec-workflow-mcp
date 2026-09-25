@@ -50,7 +50,7 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 >
 > - **MCP server** with the `approvals` tool and the approval ledger (`@arimakouyou/spec-workflow-mcp@^3`; the v2 workflow does not work with a 2.x server, which writes no ledger)
 > - **Spec workflow skills**: steering-doc, spec-request-spec, spec-investigate, spec-requirements, spec-design, spec-test-design, spec-review, check-approval, spec-change, spec-implement, spec-status, spec-archive, plus TDD / integration-test procedures and framework references (Rust / .NET)
-> - **8 sub-agents**: spec-author / spec-reviewer (documents), impl-worker / integ-test-worker (implementation), unit-test-engineer / frontend-test-engineer / integ-test-auditor (read-only verification), review-worker (the only committer)
+> - **9 sub-agents**: spec-author / spec-reviewer / steering-reviewer (documents), impl-worker / integ-test-worker (implementation), unit-test-engineer / frontend-test-engineer / integ-test-auditor (read-only verification), review-worker (the only committer)
 > - **Deterministic scripts** (Bash): document lint (`spec-lint.sh`), signature compile check (`spec-sigcheck.sh`), task generation (`spec-plan.sh`), briefs, the commit gate (`spec-git.sh`, G0-G9), reopen after spec changes
 > - **Hooks** that enforce the flow with exit 2: guard-edit, guard-git, guard-agent, guard-approval-request, record-subagent, stop-failure, session-start
 >
@@ -387,7 +387,7 @@ your-project/
   templates/docs/          # Document templates (owned by the plugin)
 
   skills/                  # Spec workflow, TDD / integration procedures, framework references
-  agents/                  # spec-author, spec-reviewer, impl-worker, integ-test-worker,
+  agents/                  # spec-author, spec-reviewer, steering-reviewer, impl-worker, integ-test-worker,
                            # unit-test-engineer, frontend-test-engineer, integ-test-auditor, review-worker
   rules/                   # doc-format.md (document grammar), test-taxonomy.md, verdict.md,
                            # quality-checks.md, security.md, design-principles.md, type-safety.md, ...

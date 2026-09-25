@@ -50,7 +50,7 @@ claude plugin add --from https://github.com/arimakouyou/spec-workflow-mcp
 >
 > - **MCP サーバー** — `approvals` ツールと承認台帳(`@arimakouyou/spec-workflow-mcp@^3`。台帳を書かない 2.x のサーバーでは v2 のフローは動かない)
 > - **spec フローの skill** — steering-doc、spec-request-spec、spec-investigate、spec-requirements、spec-design、spec-test-design、spec-review、check-approval、spec-change、spec-implement、spec-status、spec-archive。加えて TDD と統合テストの手順、フレームワーク別の参照(Rust / .NET)
-> - **8 つのサブエージェント** — spec-author / spec-reviewer(文書)、impl-worker / integ-test-worker(実装)、unit-test-engineer / frontend-test-engineer / integ-test-auditor(読み取り専用の検証)、review-worker(唯一のコミット主体)
+> - **9 つのサブエージェント** — spec-author / spec-reviewer / steering-reviewer(文書)、impl-worker / integ-test-worker(実装)、unit-test-engineer / frontend-test-engineer / integ-test-auditor(読み取り専用の検証)、review-worker(唯一のコミット主体)
 > - **決定的なスクリプト(Bash)** — 文書の lint(`spec-lint.sh`)、シグネチャのコンパイル確認(`spec-sigcheck.sh`)、タスク生成(`spec-plan.sh`)、brief、コミットゲート(`spec-git.sh`、G0-G9)、仕様変更後の再オープン
 > - **フック** — exit 2 でフローを強制する guard-edit / guard-git / guard-agent / guard-approval-request と、record-subagent / stop-failure / session-start
 >
@@ -332,7 +332,7 @@ your-project/
   templates/docs/          # 文書テンプレート(プラグインが所有)
 
   skills/                  # spec フロー、TDD / 統合テストの手順、フレームワーク別の参照
-  agents/                  # spec-author、spec-reviewer、impl-worker、integ-test-worker、
+  agents/                  # spec-author、spec-reviewer、steering-reviewer、impl-worker、integ-test-worker、
                            # unit-test-engineer、frontend-test-engineer、integ-test-auditor、review-worker
   rules/                   # doc-format.md(文書の文法)、test-taxonomy.md、verdict.md、
                            # quality-checks.md、security.md、design-principles.md、type-safety.md ほか

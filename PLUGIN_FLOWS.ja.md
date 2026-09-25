@@ -30,6 +30,7 @@ flowchart TD
 ```
 
 - 各文書は spec-author が書き、`/spec-review` を通してから承認を依頼する。`/spec-review` の中身は、lint(design は sigcheck も)→ spec-reviewer → 修正で、最大 3 回。
+- steering は spec と層が違うので `/spec-review` を通さない。steering-doc が 3 文書を書き終えてから、lint → steering-reviewer → 修正を最大 3 回行う。観点は product との整合、プロジェクト全体に当てはまる記述か、文書間の整合、抽出モードでのコードとの一致。greenfield の値は計画値なので、ライブラリやビルドツールの挙動は P0 の実行で確かめ、レビューでは問わない。
 - 承認はダッシュボードでだけ行う。`/check-approval` は確認を 1 回だけ行い、承認されていれば文書をコミットして、固定の遷移表で次の段階へ進む。
 - 人が介入するのは次の 3 か所だけで、それ以外では止まらない。
   - 承認
@@ -99,7 +100,7 @@ flowchart TD
 |---|---|
 | steering-doc | steering 3 文書(既存コードからの抽出、または greenfield で計画値を決める) |
 | spec-request-spec / spec-investigate / spec-requirements / spec-design / spec-test-design | 各フェーズの文書作成 |
-| spec-review | 唯一の検査器(lint / sigcheck → spec-reviewer → spec-author で修正) |
+| spec-review | spec 文書の唯一の検査器(lint / sigcheck → spec-reviewer → spec-author で修正)。steering は対象外 |
 | check-approval | 承認の確認、文書のコミット、stale の修正への振り分け、次の段階への遷移 |
 | spec-change | 承認済みの文書を変更する唯一の経路 |
 | spec-status / spec-archive | 状態の表示 / アーカイブ |
@@ -114,7 +115,8 @@ flowchart TD
 | agent | モデル | 役割 |
 |---|---|---|
 | spec-author | sonnet | 仕様文書を 1 本書く・直す |
-| spec-reviewer | opus | lint で判定できない意味の点だけをレビューする(読み取り専用) |
+| spec-reviewer | opus | spec 文書の、lint で判定できない意味の点だけをレビューする(読み取り専用) |
+| steering-reviewer | opus | steering 3 文書をまとめて、product との整合・全体性・文書間の整合をレビューする(読み取り専用) |
 | impl-worker | sonnet | DES / REFACTOR を TDD で実装する(コミットしない) |
 | integ-test-worker | sonnet | TST / IT / ST / SMK / E2E を実装する(本番コードは変更しない) |
 | unit-test-engineer / frontend-test-engineer | sonnet | UT / CT を検証する(読み取り専用) |

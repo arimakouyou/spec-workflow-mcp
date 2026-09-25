@@ -18,7 +18,7 @@ name="${sub##*:}"
 prompt="$(jq -r '.tool_input.prompt // empty' <<<"$input")"
 
 # 仕様の調査・文書作成は実装の順序と無関係
-case "$name" in Explore|spec-author|spec-reviewer) exit 0 ;; esac
+case "$name" in Explore|spec-author|spec-reviewer|steering-reviewer) exit 0 ;; esac
 
 spec="$(tr -d '[:space:]' < "$active")"
 task="$(sed -n 's/^TASK:[[:space:]]*\([^[:space:]]*\).*/\1/p' <<<"$prompt" | head -1)"
