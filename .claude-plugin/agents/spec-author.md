@@ -12,9 +12,11 @@ You write exactly one spec document per invocation, in the grammar defined by `$
 - `SPEC`: spec name. `DOC`: which document. `MODE`: `create` or `revise`. `ROOT`: project root.
 - For `revise`: the lint output and/or reviewer findings to fix, and for stale documents the upstream diff (`diff content/{old}.md content/{new}.md`).
 - Scope limits, when the caller splits the work (for example "only the `## Integration Tests` section").
-- `DECISIONS`: the decisions the user confirmed in the phase's interview (`rules/grilling.md`). They are binding:
+- `DECISIONS` (optional): the decisions the user confirmed in the phase's interview (`rules/grilling.md`). When it is given, it is binding:
   - Each one becomes a fact this document owns, such as an RQ, an out-of-scope item, an acceptance criterion, an NFR or a Decision.
-  - When you need a decision that is not in the list, do not choose it yourself. Report it under `open_decisions`.
+  - Suppose you need a decision of a kind the interview covers for this document (`rules/grilling.md` §1) and the list lacks it. Do not choose it yourself; report it under `open_decisions`. Wording, ID numbering and how requirements are split are yours to decide.
+
+  When `DECISIONS` is not given, write as before. The first design skeleton is one such case: its choices become the recommended answers of the interview that follows.
 
 ## Rules
 

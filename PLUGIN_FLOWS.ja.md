@@ -31,7 +31,7 @@ flowchart TD
 
 - 各文書は spec-author が書き、`/spec-review` を通してから承認を依頼する。`/spec-review` の中身は、lint(design は sigcheck も)→ spec-reviewer → 修正で、最大 3 回。
 - 承認はダッシュボードでだけ行う。`/check-approval` は確認を 1 回だけ行い、承認されていれば文書をコミットして、固定の遷移表で次の段階へ進む。
-- 人が介入するのは次の 3 か所だけで、Phase の境界では止まらない。
+- 人が介入するのは次の 3 か所だけで、それ以外では止まらない。
   - 承認
   - grilling(request-spec・requirements・design 骨格の各 Phase で、spec-author を起動する前に行う判断の確定。手順は `rules/grilling.md`)
   - escalate
