@@ -199,15 +199,39 @@ describe('承認台帳: steering の上流(同時に依頼し、変更は stale 
   const setup = () =>
     project({ [`${STEER}/product.md`]: 'p', [`${STEER}/tech.md`]: 't', [`${STEER}/structure.md`]: 's', [`${S}/request-spec.md`]: 'rs' });
 
-  it('上流が未承認でも 3 文書を同時に依頼でき、下流から先に承認できる', async () => {
+  it('上流が未承認でも依頼でき、下流から先に承認できる', async () => {
     const root = setup();
     const l = ledgerFor(root);
-    const metas = await Promise.all(['product', 'tech', 'structure'].map((d) => l.checkRequest(`${STEER}/${d}.md`)));
-    expect(metas[2]?.upstream).toEqual({ product: expect.any(String), tech: expect.any(String) });
+    const meta = await l.checkRequest(`${STEER}/structure.md`);
+    expect(meta?.upstream).toEqual({ product: expect.any(String), tech: expect.any(String) });
     for (const d of ['structure', 'tech', 'product']) await approve(l, `${STEER}/${d}.md`, `st-${d}`);
     const all = { product: 'approved', tech: 'approved', structure: 'approved' };
     expect(await l.states('steering', [])).toEqual(all);
     expect(steeringStates(root)).toEqual(all);
+  });
+
+  it('steering に承認待ちがあるうちは、別の文書も同じ文書も依頼できない(STEERING_PENDING)', async () => {
+    const root = setup();
+    const l = ledgerFor(root);
+    await expectCode(l.checkRequest(`${STEER}/tech.md`, [`./${STEER}/product.md`]), 'STEERING_PENDING:product');
+    await expectCode(l.checkRequest(`${STEER}/product.md`, [`${STEER}/product.md`]), 'STEERING_PENDING:product');
+    // spec 文書の承認待ちは steering の依頼を止めない
+    expect(await l.checkRequest(`${STEER}/tech.md`, [`${S}/request-spec.md`])).not.toBeNull();
+  });
+
+  it('ApprovalStorage 経由でも、承認後なら次の steering 文書を依頼できる', async () => {
+    const root = setup();
+    const storage = new ApprovalStorage(root);
+    const request = async (d: string) => {
+      const fp = `${STEER}/${d}.md`;
+      const pending = (await storage.getAllPendingApprovals()).map((a) => a.filePath);
+      const meta = await storage.ledger.checkRequest(fp, pending);
+      return storage.createApproval(d, fp, 'steering', 'steering', 'document', { ledger: meta });
+    };
+    const product = await request('product');
+    await expect(request('tech')).rejects.toThrow('STEERING_PENDING:product');
+    await storage.updateApproval(product, 'approved', 'ok');
+    await expect(request('tech')).resolves.toEqual(expect.any(String));
   });
 
   it('上流を改訂して承認すると下流は stale になり、request-spec を依頼できない', async () => {

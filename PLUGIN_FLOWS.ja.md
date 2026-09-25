@@ -56,7 +56,7 @@ flowchart TD
 
 - **台帳の中身**: 承認した本文の sha256 と、その時点の上流の sha256 を記録する。
 - **request の前提条件**: 上流が承認済みで、かつ未変更であること。request-spec の場合は、さらに steering が承認済みで、未変更かつ stale でないこと。
-- **steering の上流**: tech ← product、structure ← product, tech。3 文書を同時に依頼するため上流の承認は求めず、承認時の上流ファイルの sha を記録する。上流が後で変わると下流は stale になり、steering-doc が差分に照らして再レビューする。指摘が無ければ内容を変えずに再承認し、書き直すのは指摘があったときだけ。
+- **steering の上流**: tech ← product、structure ← product, tech。3 文書はまとめて書いてまとめてレビューし、承認は product → tech → structure の順に 1 本ずつ依頼する(承認待ちは取り下げられないので、steering の承認待ちは同時に 1 本だけ。2 本目はサーバーが `STEERING_PENDING` で拒否する)。上流の承認は求めず、承認時の上流ファイルの sha を記録する。上流が後で変わると下流は stale になり、steering-doc が差分に照らして再レビューする。指摘が無ければ内容を変えずに再承認し、書き直すのは指摘があったときだけ。
 - **approve の条件**: 依頼した時点から本文が変わっていないこと。
 - **文書の状態**: `pending` / `unapproved` / `modified` / `stale` / `approved` の 5 つ。4 文書がすべて `approved` のときだけ実装に入れる。
 

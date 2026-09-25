@@ -277,7 +277,8 @@ async function handleRequestApproval(
     // 承認台帳の事前条件(tasks.md は生成物なので不可、上流は承認済みかつ未変更であること)
     let ledgerMeta: LedgerMeta | null;
     try {
-      ledgerMeta = await approvalStorage.ledger.checkRequest(args.filePath);
+      const pendingPaths = (await approvalStorage.getAllPendingApprovals()).map((a) => a.filePath);
+      ledgerMeta = await approvalStorage.ledger.checkRequest(args.filePath, pendingPaths);
     } catch (error) {
       await approvalStorage.stop();
       if (error instanceof LedgerError) {

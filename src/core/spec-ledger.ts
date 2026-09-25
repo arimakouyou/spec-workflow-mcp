@@ -162,13 +162,22 @@ export class SpecLedger {
     return false;
   }
 
-  /** request 時の検査。対象外の文書なら null、tasks.md なら TASKS_GENERATED */
-  async checkRequest(filePath: string): Promise<LedgerMeta | null> {
+  /**
+   * request 時の検査。対象外の文書なら null、tasks.md なら TASKS_GENERATED。
+   * pendingPaths は status が pending の承認リクエストの filePath。steering は同時に 1 本しか承認待ちにしない
+   * (承認待ちは取り下げられないので、改訂すると古い依頼が残る)。
+   */
+  async checkRequest(filePath: string, pendingPaths: string[] = []): Promise<LedgerMeta | null> {
     const target = identifyDocument(filePath);
     if (target === 'tasks') {
       throw new LedgerError('TASKS_GENERATED', 'tasks.md は spec-plan.sh の生成物で、承認の対象ではない');
     }
     if (!target) return null;
+    if (target.key === STEERING_KEY) {
+      const pending = new Set(pendingPaths.map((p) => p.replace(/\\/g, '/').replace(/^\.\//, '')));
+      const busy = STEERING_DOCS.find((d) => pending.has(documentPath({ key: STEERING_KEY, doc: d })));
+      if (busy) throw new LedgerError(`STEERING_PENDING:${busy}`, `steering/${busy}.md が承認待ち。承認か差し戻しの後に依頼する`);
+    }
     const upstream = await this.checkUpstream(target);
     const contentSha256 = await this.currentSha(target);
     if (!contentSha256) throw new LedgerError('DOCUMENT_MISSING', `${documentPath(target)} が無い`);

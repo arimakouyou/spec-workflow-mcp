@@ -30,7 +30,7 @@ The server identifies a document by the approval request's `filePath` (relative 
 
 Steering is a gate, not a recorded upstream of a spec. Changing steering does not make a spec stale. It only blocks new request-spec requests until steering is re-approved.
 
-Within steering, the upstream is recorded but not required. The three documents are written together and requested together, so a steering request or approval does not need its upstream approved. It records the upstream file's current sha instead, and a later change to that file makes the document stale (§5).
+Within steering, the upstream is recorded but not required. The three documents are written and reviewed together, then requested one at a time (§4), so a steering request or approval does not need its upstream approved. It records the upstream file's current sha instead, and a later change to that file makes the document stale (§5).
 
 ## 3. Storage
 
@@ -68,6 +68,7 @@ Within steering, the upstream is recorded but not required. The three documents 
 ### request (MCP tool `approvals`, action `request`)
 
 1. If the document is `tasks.md`, refuse with `TASKS_GENERATED`.
+   If the document is a steering document and any steering document (itself included) has a `pending` request, refuse with `STEERING_PENDING:<pending doc>`. A pending request cannot be withdrawn, so only one steering document is pending at a time.
 2. For every recorded upstream `u` of a spec document:
    - no entry → refuse `UPSTREAM_NOT_APPROVED:<u>`
    - current sha of `u`'s file ≠ entry sha → refuse `UPSTREAM_MODIFIED:<u>`
@@ -110,4 +111,4 @@ A spec is **ready** for implementation when request-spec, requirements, design a
 
 ## 6. Error codes
 
-`TASKS_GENERATED`, `UPSTREAM_NOT_APPROVED:<doc>`, `UPSTREAM_MODIFIED:<doc>`, `STEERING_NOT_APPROVED:<doc>`, `STEERING_MODIFIED:<doc>`, `STEERING_STALE:<doc>`, `CONTENT_CHANGED`.
+`TASKS_GENERATED`, `UPSTREAM_NOT_APPROVED:<doc>`, `UPSTREAM_MODIFIED:<doc>`, `STEERING_NOT_APPROVED:<doc>`, `STEERING_MODIFIED:<doc>`, `STEERING_STALE:<doc>`, `STEERING_PENDING:<doc>`, `CONTENT_CHANGED`.

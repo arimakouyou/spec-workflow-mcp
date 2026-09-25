@@ -56,7 +56,7 @@ Steering is not reviewed with `/spec-review`. It is the project layer, not a spe
    - Still failing after 3 rounds → stop. Report the remaining findings to the user, one line each with document and heading. Do not request approval.
    - `spec-author` reported `open_decisions` → ask the user with AskUserQuestion and pass the answers as `DECISIONS` to the next revise.
 
-Then, for each document written in this run:
+Then request approval of **one** document: the first of product → tech → structure whose state (`spec-state.sh steering`) is not `approved`. Only one steering document is pending at a time. A pending request cannot be withdrawn, so a document revised while pending would leave its old request behind. The server refuses a second one with `STEERING_PENDING:<doc>`.
 
 1. Request approval: `approvals action:"request"`, with
    - `filePath: .spec-workflow/steering/<doc>.md`
@@ -66,9 +66,7 @@ Then, for each document written in this run:
    - `title: steering <doc>`
 2. Run `/check-approval <approvalId>`.
 
-A revised document whose earlier request is still pending gets a new request. Tell the user to reject the older one in the dashboard: a pending request cannot be deleted, and approving it fails with `CONTENT_CHANGED`.
-
-When all three are approved and none is `stale`, check-approval continues to `/spec-request-spec`.
+After each approval, check-approval requests the next document that is not `approved`. When all three are approved and none is `stale`, it continues to `/spec-request-spec`. When a rejection is revised, the review loop above also fixes the unapproved documents that no longer agree with it, before the next request.
 
 ## 5. Stale documents
 

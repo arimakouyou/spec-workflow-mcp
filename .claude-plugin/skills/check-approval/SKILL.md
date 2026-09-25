@@ -31,7 +31,7 @@ The next step is decided by the transition table below, not by the caller.
 
 | Approved | Next |
 |---|---|
-| steering (product / tech / structure) | when all three are approved: `/spec-request-spec` |
+| steering (product / tech / structure) | If a steering document is still `unapproved`, request approval of the first one in order product → tech → structure (steering-doc §4 approval steps, one at a time) and run `/check-approval` on it. When all three are approved: `/spec-request-spec` |
 | request-spec | `/spec-investigate`. If `task_type: legacy`, go to `/spec-requirements` instead. |
 | requirements | `/spec-design` |
 | design | `/spec-test-design` |
